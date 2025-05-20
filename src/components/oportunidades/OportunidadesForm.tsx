@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useOportunidades } from "./OportunidadesContext";
 import { Button } from "@/components/ui/button";
@@ -47,14 +46,15 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({ oportunida
   const [formData, setFormData] = useState<Partial<Oportunidade>>({
     empresa_origem_id: "",
     empresa_destino_id: "",
-    contato_id: "",
+    contato_id: undefined,
     valor: undefined,
     status: "em_contato",
     data_indicacao: new Date().toISOString(),
     observacoes: "",
     usuario_envio_id: user?.id || "",
     usuario_recebe_id: undefined,
-    motivo_perda: undefined
+    motivo_perda: undefined,
+    data_fechamento: undefined
   });
 
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -67,7 +67,6 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({ oportunida
       if (oportunidade) {
         setFormData({
           ...oportunidade,
-          // Convert value to number if it exists
           valor: oportunidade.valor !== undefined && oportunidade.valor !== null
             ? Number(oportunidade.valor)
             : undefined
@@ -81,6 +80,7 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({ oportunida
         onClose();
       }
     }
+    // eslint-disable-next-line
   }, [oportunidadeId, isEditing]);
 
   // Filter contacts based on selected company
@@ -90,15 +90,16 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({ oportunida
         contato.empresa_id === formData.empresa_origem_id
       );
       setFilteredContatos(filtered);
-      
+
       // Reset contact if it doesn't belong to the selected company
       if (formData.contato_id && !filtered.some(c => c.id === formData.contato_id)) {
-        setFormData(prev => ({ ...prev, contato_id: "" }));
+        setFormData(prev => ({ ...prev, contato_id: undefined }));
       }
     } else {
       setFilteredContatos([]);
-      setFormData(prev => ({ ...prev, contato_id: "" }));
+      setFormData(prev => ({ ...prev, contato_id: undefined }));
     }
+    // eslint-disable-next-line
   }, [formData.empresa_origem_id, contatos]);
 
   // Load dependent data
@@ -146,6 +147,7 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({ oportunida
     };
 
     fetchFormData();
+    // eslint-disable-next-line
   }, []);
 
   const handleChange = (field: keyof Oportunidade, value: any) => {
@@ -283,20 +285,21 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({ oportunida
             <p className="text-sm text-red-500">{formErrors.data_indicacao}</p>
           )}
         </div>
-
+      
         {/* Empresa Origem */}
         <div className="space-y-2">
           <Label htmlFor="empresa_origem_id">
             Empresa de Origem <span className="text-red-500">*</span>
           </Label>
           <Select 
-            value={formData.empresa_origem_id} 
-            onValueChange={(value) => handleChange("empresa_origem_id", value)}
+            value={formData.empresa_origem_id || "none"}
+            onValueChange={value => handleChange("empresa_origem_id", value === "none" ? undefined : value)}
           >
             <SelectTrigger id="empresa_origem_id" className={cn(formErrors.empresa_origem_id && "border-red-500")}>
               <SelectValue placeholder="Selecione a empresa" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="none">Nenhuma</SelectItem>
               {empresas.map(empresa => (
                 <SelectItem key={empresa.id} value={empresa.id}>{empresa.nome}</SelectItem>
               ))}
@@ -306,26 +309,26 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({ oportunida
             <p className="text-sm text-red-500">{formErrors.empresa_origem_id}</p>
           )}
         </div>
-
+      
         {/* Contato */}
         <div className="space-y-2">
           <Label htmlFor="contato_id">Contato</Label>
-          <Select 
-            value={formData.contato_id || ""} 
-            onValueChange={(value) => handleChange("contato_id", value || undefined)}
+          <Select
+            value={formData.contato_id || "none"}
+            onValueChange={value => handleChange("contato_id", value === "none" ? undefined : value)}
             disabled={!formData.empresa_origem_id || filteredContatos.length === 0}
           >
             <SelectTrigger id="contato_id">
               <SelectValue placeholder={
                 !formData.empresa_origem_id 
-                  ? "Selecione uma empresa primeiro" 
-                  : filteredContatos.length === 0 
-                    ? "Nenhum contato disponível" 
+                  ? "Selecione uma empresa primeiro"
+                  : filteredContatos.length === 0
+                    ? "Nenhum contato disponível"
                     : "Selecione um contato"
               } />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Nenhum</SelectItem>
+              <SelectItem value="none">Nenhum</SelectItem>
               {filteredContatos.map(contato => (
                 <SelectItem key={contato.id} value={contato.id}>
                   {contato.nome}
@@ -334,20 +337,21 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({ oportunida
             </SelectContent>
           </Select>
         </div>
-
+      
         {/* Empresa Destino */}
         <div className="space-y-2">
           <Label htmlFor="empresa_destino_id">
             Empresa de Destino <span className="text-red-500">*</span>
           </Label>
           <Select 
-            value={formData.empresa_destino_id} 
-            onValueChange={(value) => handleChange("empresa_destino_id", value)}
+            value={formData.empresa_destino_id || "none"}
+            onValueChange={value => handleChange("empresa_destino_id", value === "none" ? undefined : value)}
           >
             <SelectTrigger id="empresa_destino_id" className={cn(formErrors.empresa_destino_id && "border-red-500")}>
               <SelectValue placeholder="Selecione a empresa" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="none">Nenhuma</SelectItem>
               {empresas.map(empresa => (
                 <SelectItem key={empresa.id} value={empresa.id}>{empresa.nome}</SelectItem>
               ))}
@@ -357,20 +361,20 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({ oportunida
             <p className="text-sm text-red-500">{formErrors.empresa_destino_id}</p>
           )}
         </div>
-
+      
         {/* Responsável de Destino */}
         <div className="space-y-2">
           <Label htmlFor="usuario_recebe_id">Responsável no Destino</Label>
-          <Select 
-            value={formData.usuario_recebe_id || ""} 
-            onValueChange={(value) => handleChange("usuario_recebe_id", value || undefined)}
+          <Select
+            value={formData.usuario_recebe_id || "none"}
+            onValueChange={value => handleChange("usuario_recebe_id", value === "none" ? undefined : value)}
             disabled={!formData.empresa_destino_id}
           >
             <SelectTrigger id="usuario_recebe_id">
               <SelectValue placeholder="Selecione um responsável" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Nenhum</SelectItem>
+              <SelectItem value="none">Nenhum</SelectItem>
               {usuarios
                 .filter(u => u.empresa_id === formData.empresa_destino_id)
                 .map(usuario => (
@@ -380,7 +384,7 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({ oportunida
             </SelectContent>
           </Select>
         </div>
-
+      
         {/* Valor */}
         <div className="space-y-2">
           <Label htmlFor="valor">Valor Estimado (R$)</Label>
@@ -393,7 +397,7 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({ oportunida
             placeholder="0,00"
           />
         </div>
-
+      
         {/* Status */}
         <div className="space-y-2">
           <Label htmlFor="status">Status</Label>
@@ -409,7 +413,7 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({ oportunida
             </SelectContent>
           </Select>
         </div>
-
+      
         {/* Data de Fechamento (só aparece se status for "ganho") */}
         {formData.status === "ganho" && (
           <div className="space-y-2">
@@ -449,7 +453,7 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({ oportunida
             )}
           </div>
         )}
-
+      
         {/* Motivo da Perda (só aparece se status for "perdido") */}
         {formData.status === "perdido" && (
           <div className="space-y-2 md:col-span-2">
@@ -468,7 +472,7 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({ oportunida
             )}
           </div>
         )}
-
+      
         {/* Observações */}
         <div className="space-y-2 md:col-span-2">
           <Label htmlFor="observacoes">Observações</Label>
@@ -481,7 +485,7 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({ oportunida
           />
         </div>
       </div>
-
+      
       <div className="flex justify-end space-x-2 pt-4">
         <Button type="button" variant="outline" onClick={onClose} disabled={isSaving}>
           Cancelar
