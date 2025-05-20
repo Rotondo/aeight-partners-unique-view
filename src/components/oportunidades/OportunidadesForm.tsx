@@ -44,6 +44,7 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({ oportunida
   const [isSaving, setIsSaving] = useState(false);
   
   const [formData, setFormData] = useState<Partial<Oportunidade>>({
+    nome: "", // Novo campo obrigatório
     empresa_origem_id: "",
     empresa_destino_id: "",
     contato_id: undefined,
@@ -187,34 +188,33 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({ oportunida
 
   const validateForm = () => {
     const errors: Record<string, string> = {};
-    
+
+    if (!formData.nome || !formData.nome.trim()) {
+      errors.nome = "Nome da oportunidade é obrigatório";
+    }
     if (!formData.empresa_origem_id) {
       errors.empresa_origem_id = 'Empresa de origem é obrigatória';
     }
-    
     if (!formData.empresa_destino_id) {
       errors.empresa_destino_id = 'Empresa de destino é obrigatória';
     }
-    
     if (!formData.data_indicacao) {
       errors.data_indicacao = 'Data de indicação é obrigatória';
     }
-    
     if (formData.status === 'perdido' && !formData.motivo_perda) {
       errors.motivo_perda = 'Motivo da perda é obrigatório para status "Perdido"';
     }
-    
     if (formData.status === 'ganho' && !formData.data_fechamento) {
       errors.data_fechamento = 'Data de fechamento é obrigatória para status "Ganho"';
     }
-    
+
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       toast({
         title: "Erro de validação",
@@ -223,7 +223,7 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({ oportunida
       });
       return;
     }
-    
+
     setIsSaving(true);
     try {
       if (isEditing && oportunidadeId) {
@@ -247,6 +247,23 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({ oportunida
     <form onSubmit={handleSubmit} className="space-y-6">
       <h2 className="text-xl font-bold">{isEditing ? "Editar Oportunidade" : "Nova Oportunidade"}</h2>
       
+      {/* Novo campo: Nome da Oportunidade */}
+      <div className="space-y-2">
+        <Label htmlFor="nome">
+          Nome da Oportunidade <span className="text-red-500">*</span>
+        </Label>
+        <Input
+          id="nome"
+          value={formData.nome || ""}
+          onChange={e => handleChange("nome", e.target.value)}
+          placeholder="Digite um nome para esta oportunidade"
+          className={cn(formErrors.nome && "border-red-500")}
+        />
+        {formErrors.nome && (
+          <p className="text-sm text-red-500">{formErrors.nome}</p>
+        )}
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Data de Indicação */}
         <div className="space-y-2">
