@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useOportunidades } from "./OportunidadesContext";
 import { Skeleton } from "@/components/ui/skeleton";
