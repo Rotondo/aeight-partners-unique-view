@@ -2,8 +2,13 @@ import React, { useRef, useEffect } from "react";
 import * as d3 from "d3";
 import { QuadrantPoint } from "@/types";
 
-// Tooltip overlay
-const Tooltip = ({ tooltipData, position }: { tooltipData: QuadrantPoint | null; position: { x: number; y: number } }) => {
+const Tooltip = ({
+  tooltipData,
+  position,
+}: {
+  tooltipData: QuadrantPoint | null;
+  position: { x: number; y: number };
+}) => {
   if (!tooltipData) return null;
   return (
     <div
@@ -24,9 +29,15 @@ const Tooltip = ({ tooltipData, position }: { tooltipData: QuadrantPoint | null;
     >
       <strong>{tooltipData.nome}</strong>
       <div style={{ marginTop: 4 }}>
-        <div><b>Engajamento:</b> {tooltipData.engajamento}</div>
-        <div><b>Tamanho:</b> {tooltipData.tamanho}</div>
-        <div><b>X:</b> {tooltipData.x.toFixed(2)} <b>Y:</b> {tooltipData.y.toFixed(2)}</div>
+        <div>
+          <b>Engajamento:</b> {tooltipData.engajamento}
+        </div>
+        <div>
+          <b>Tamanho:</b> {tooltipData.tamanho}
+        </div>
+        <div>
+          <b>X:</b> {tooltipData.x.toFixed(2)} <b>Y:</b> {tooltipData.y.toFixed(2)}
+        </div>
       </div>
     </div>
   );
@@ -36,9 +47,9 @@ interface QuadranteChartProps {
   data: QuadrantPoint[];
   isLoading: boolean;
   onPointClick?: (pointId: string) => void;
+  selectedId?: string | null;
 }
 
-// NOVOS TAMANHOS DE BOLINHA
 const getBubbleSize = (partner: QuadrantPoint) => {
   // Pequena: parceiro pequeno e baixo engajamento
   if ((partner.tamanho === "PP" || partner.tamanho === "P") && partner.engajamento <= 2) {
@@ -52,10 +63,18 @@ const getBubbleSize = (partner: QuadrantPoint) => {
   return 5;
 };
 
-const QuadranteChart: React.FC<QuadranteChartProps> = ({ data, isLoading, onPointClick }) => {
+const QuadranteChart: React.FC<QuadranteChartProps> = ({
+  data,
+  isLoading,
+  onPointClick,
+  selectedId,
+}) => {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const hoverLayerRef = useRef<SVGGElement | null>(null);
-  const [tooltip, setTooltip] = React.useState<{ point: QuadrantPoint | null; pos: { x: number; y: number } }>({ point: null, pos: { x: 0, y: 0 } });
+  const [tooltip, setTooltip] = React.useState<{
+    point: QuadrantPoint | null;
+    pos: { x: number; y: number };
+  }>({ point: null, pos: { x: 0, y: 0 } });
 
   useEffect(() => {
     if (isLoading || !data.length || !svgRef.current) return;
@@ -71,12 +90,17 @@ const QuadranteChart: React.FC<QuadranteChartProps> = ({ data, isLoading, onPoin
       .attr("width", width + margin.left + margin.right)
       .attr("height", height + margin.top + margin.bottom);
 
-    const chart = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+    const chart = svg
+      .append("g")
+      .attr("transform", `translate(${margin.left},${margin.top})`);
 
     const xScale = d3.scaleLinear().domain([0, 5]).range([0, width]);
     const yScale = d3.scaleLinear().domain([0, 5]).range([height, 0]);
 
-    chart.append("g").attr("transform", `translate(0,${height})`).call(d3.axisBottom(xScale));
+    chart
+      .append("g")
+      .attr("transform", `translate(0,${height})`)
+      .call(d3.axisBottom(xScale));
     chart.append("g").call(d3.axisLeft(yScale));
 
     chart
@@ -92,7 +116,10 @@ const QuadranteChart: React.FC<QuadranteChartProps> = ({ data, isLoading, onPoin
       .append("text")
       .attr("class", "y-axis-label")
       .attr("text-anchor", "middle")
-      .attr("transform", `translate(${-margin.left + 15},${height / 2}) rotate(-90)`)
+      .attr(
+        "transform",
+        `translate(${-margin.left + 15},${height / 2}) rotate(-90)`
+      )
       .style("fontSize", "12px")
       .text("Potencial de Investimento (0-5)");
 
@@ -159,7 +186,6 @@ const QuadranteChart: React.FC<QuadranteChartProps> = ({ data, isLoading, onPoin
       GG: "#f97316",
     };
 
-    // LABELS (todos, nunca invisíveis)
     const labelPadding = 10;
     const labelData = data.map((d, i) => ({
       ...d,
@@ -169,7 +195,7 @@ const QuadranteChart: React.FC<QuadranteChartProps> = ({ data, isLoading, onPoin
       height: 18,
     }));
 
-    // Detecta colisão entre labels
+    // Detect label collision
     const overlapping = new Set<number>();
     for (let i = 0; i < labelData.length; i++) {
       const a = labelData[i];
@@ -187,7 +213,6 @@ const QuadranteChart: React.FC<QuadranteChartProps> = ({ data, isLoading, onPoin
       }
     }
 
-    // Renderiza labels fixos para os que não colidem
     chart
       .selectAll(".point-label")
       .data(labelData)
@@ -203,10 +228,9 @@ const QuadranteChart: React.FC<QuadranteChartProps> = ({ data, isLoading, onPoin
       .text((d, i) => (!overlapping.has(i) ? d.nome : ""))
       .style("user-select", "none");
 
-    // Grupo para pontos
+    // Points group
     const pointsGroup = chart.append("g").attr("class", "points-group");
 
-    // Renderiza todos os pontos (nenhum parceiro invisível)
     pointsGroup
       .selectAll("circle")
       .data(data)
@@ -216,8 +240,12 @@ const QuadranteChart: React.FC<QuadranteChartProps> = ({ data, isLoading, onPoin
       .attr("cy", (d) => yScale(d.y))
       .attr("r", (d) => getBubbleSize(d))
       .attr("fill", (d) => tamanhoColorMap[d.tamanho] || "#64748b")
-      .attr("stroke", "#334155")
-      .attr("stroke-width", 1.3)
+      .attr("stroke", (d) =>
+        selectedId && d.id === selectedId ? "#0ea5e9" : "#334155"
+      )
+      .attr("stroke-width", (d) =>
+        selectedId && d.id === selectedId ? 2.2 : 1.3
+      )
       .attr("cursor", onPointClick ? "pointer" : "default")
       .on("mouseover", function (event, d) {
         const i = data.findIndex((p) => p.id === d.id);
@@ -226,7 +254,6 @@ const QuadranteChart: React.FC<QuadranteChartProps> = ({ data, isLoading, onPoin
           pos: { x: event.clientX, y: event.clientY },
         });
 
-        // Se label colide, desenha label e linha temporária
         if (overlapping.has(i)) {
           d3.select(hoverLayerRef.current).selectAll("*").remove();
           d3.select(hoverLayerRef.current)
@@ -249,15 +276,16 @@ const QuadranteChart: React.FC<QuadranteChartProps> = ({ data, isLoading, onPoin
             .style("user-select", "none")
             .attr("pointer-events", "none");
         }
-        // Destaca ponto no hover
         d3.select(this)
           .transition()
           .duration(90)
           .attr("r", getBubbleSize(d) + 1.5)
-          .attr("stroke-width", 2.2);
+          .attr("stroke-width", selectedId && d.id === selectedId ? 3 : 2.2);
       })
       .on("mousemove", function (event) {
-        setTooltip((t) => (t.point ? { ...t, pos: { x: event.clientX, y: event.clientY } } : t));
+        setTooltip((t) =>
+          t.point ? { ...t, pos: { x: event.clientX, y: event.clientY } } : t
+        );
       })
       .on("mouseout", function (event, d) {
         d3.select(hoverLayerRef.current).selectAll("*").remove();
@@ -266,23 +294,31 @@ const QuadranteChart: React.FC<QuadranteChartProps> = ({ data, isLoading, onPoin
           .transition()
           .duration(90)
           .attr("r", getBubbleSize(d))
-          .attr("stroke-width", 1.3);
+          .attr("stroke-width", selectedId && d.id === selectedId ? 2.2 : 1.3);
       })
       .on("click", (event, d) => {
         if (onPointClick) onPointClick(d.id);
       });
 
-    // Camada para labels de hover
     let hoverLayer = chart.select(".hover-layer");
     if (!hoverLayer.size()) {
       hoverLayer = chart.append("g").attr("class", "hover-layer");
     }
     hoverLayerRef.current = hoverLayer.node();
-  }, [data, isLoading, onPointClick]);
+  }, [data, isLoading, onPointClick, selectedId]);
 
   return (
     <div style={{ position: "relative", width: "100%", height: 420 }}>
-      <svg ref={svgRef} style={{ width: "100%", height: "100%", display: "block", background: "#f1f5f9", borderRadius: 8 }} />
+      <svg
+        ref={svgRef}
+        style={{
+          width: "100%",
+          height: "100%",
+          display: "block",
+          background: "#f1f5f9",
+          borderRadius: 8,
+        }}
+      />
       <Tooltip tooltipData={tooltip.point} position={tooltip.pos} />
     </div>
   );
