@@ -1,6 +1,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { toast } from '@/hooks/use-toast';
+import type { Database } from '@/integrations/supabase/types'; // Using the database types
 
 // Using the hardcoded values from src/integrations/supabase/client.ts
 const supabaseUrl = "https://amuadbftctnmckncgeua.supabase.co";
@@ -15,7 +16,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
   });
 }
 
-export const supabase = createClient(
+export const supabase = createClient<Database>(
   supabaseUrl,
   supabaseAnonKey
 );

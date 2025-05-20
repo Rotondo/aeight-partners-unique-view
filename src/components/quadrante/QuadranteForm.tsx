@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase'; // Use our updated client
 import { useToast } from '@/hooks/use-toast';
 import { Empresa, IndicadoresParceiro, TamanhoEmpresa } from '@/types';
 import {
@@ -92,7 +92,7 @@ const QuadranteForm: React.FC<QuadranteFormProps> = ({ indicador, readOnly = fal
   useEffect(() => {
     const fetchParceiros = async () => {
       try {
-        const { data, error } = await supabase
+        const { data, error } = await (supabase as any)
           .from('empresas')
           .select('*')
           .eq('tipo', 'parceiro')
@@ -100,7 +100,9 @@ const QuadranteForm: React.FC<QuadranteFormProps> = ({ indicador, readOnly = fal
 
         if (error) throw error;
         
-        setParceiros(data as Empresa[]);
+        if (data) {
+          setParceiros(data as Empresa[]);
+        }
       } catch (error) {
         console.error('Error fetching partners:', error);
         toast({

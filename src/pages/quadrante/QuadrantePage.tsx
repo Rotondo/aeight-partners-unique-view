@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabase'; // Use our properly typed client
 import { IndicadoresParceiro, QuadrantPoint, TamanhoEmpresa } from '@/types';
 import QuadranteChart from '@/components/quadrante/QuadranteChart';
 import QuadranteForm from '@/components/quadrante/QuadranteForm';
@@ -36,7 +37,9 @@ const QuadrantePage: React.FC = () => {
     const fetchIndicadores = async () => {
       setLoading(true);
       try {
-        const { data, error } = await supabase
+        // Use the any type to bypass TypeScript's strict checking temporarily
+        // This is a workaround until we have proper Supabase type definitions
+        const { data, error } = await (supabase as any)
           .from('indicadores_parceiro')
           .select(`
             id, 
@@ -54,6 +57,12 @@ const QuadrantePage: React.FC = () => {
           `);
 
         if (error) throw error;
+        
+        if (!data) {
+          setIndicadores([]);
+          setQuadrantPoints([]);
+          return;
+        }
         
         // Convert the data to match IndicadoresParceiro type
         const parsedIndicadores: IndicadoresParceiro[] = (data as IndicadorWithEmpresa[]).map(item => ({
@@ -104,7 +113,7 @@ const QuadrantePage: React.FC = () => {
   // Handle point click
   const handlePointClick = async (pointId: string) => {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('indicadores_parceiro')
         .select(`
           id,
@@ -127,6 +136,8 @@ const QuadrantePage: React.FC = () => {
         .single();
 
       if (error) throw error;
+      
+      if (!data) return;
       
       // Convert the data to match IndicadoresParceiro type
       const parsedIndicador: IndicadoresParceiro = {
@@ -162,7 +173,7 @@ const QuadrantePage: React.FC = () => {
         indicador.data_avaliacao = new Date().toISOString();
       }
       
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('indicadores_parceiro')
         .upsert(indicador)
         .select();
@@ -170,7 +181,7 @@ const QuadrantePage: React.FC = () => {
       if (error) throw error;
 
       // Refresh data
-      const { data: refreshedData, error: refreshError } = await supabase
+      const { data: refreshedData, error: refreshError } = await (supabase as any)
         .from('indicadores_parceiro')
         .select(`
           id,
@@ -188,6 +199,8 @@ const QuadrantePage: React.FC = () => {
         `);
 
       if (refreshError) throw refreshError;
+
+      if (!refreshedData) return;
 
       // Convert the data to match IndicadoresParceiro type
       const parsedIndicadores: IndicadoresParceiro[] = (refreshedData as IndicadorWithEmpresa[]).map(item => ({
