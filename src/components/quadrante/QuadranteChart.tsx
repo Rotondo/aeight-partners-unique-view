@@ -51,15 +51,12 @@ interface QuadranteChartProps {
 }
 
 const getBubbleSize = (partner: QuadrantPoint) => {
-  // Pequena: parceiro pequeno e baixo engajamento
   if ((partner.tamanho === "PP" || partner.tamanho === "P") && partner.engajamento <= 2) {
     return 2.5;
   }
-  // Grande: alto engajamento e alto potencial de leads
   if (partner.engajamento >= 4 && partner.x >= 4) {
     return 7;
   }
-  // Média para demais
   return 5;
 };
 
@@ -186,14 +183,31 @@ const QuadranteChart: React.FC<QuadranteChartProps> = ({
       GG: "#f97316",
     };
 
+    // Ajuste labels para ficarem sempre dentro do gráfico
     const labelPadding = 10;
-    const labelData = data.map((d, i) => ({
-      ...d,
-      labelX: xScale(d.x) + labelPadding,
-      labelY: yScale(d.y) - labelPadding,
-      width: d.nome.length * 7.2 + 14,
-      height: 18,
-    }));
+    const labelData = data.map((d) => {
+      let x = xScale(d.x) + labelPadding;
+      let y = yScale(d.y) - labelPadding;
+      const widthLabel = d.nome.length * 7.2 + 14;
+      const heightLabel = 18;
+
+      // Ajuste para não sair pela direita
+      if (x + widthLabel > width) x = xScale(d.x) - widthLabel - labelPadding;
+      // Ajuste para não sair pela esquerda
+      if (x < 0) x = 2;
+      // Ajuste para não sair por cima
+      if (y - heightLabel < 0) y = yScale(d.y) + heightLabel;
+      // Ajuste para não sair por baixo
+      if (y > height) y = height - 4;
+
+      return {
+        ...d,
+        labelX: x,
+        labelY: y,
+        width: widthLabel,
+        height: heightLabel,
+      };
+    });
 
     // Detecta colisão de labels
     const overlapping = new Set<number>();
