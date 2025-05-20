@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
@@ -22,6 +21,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -55,6 +55,7 @@ export const UsuariosList: React.FC = () => {
 
   useEffect(() => {
     fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -378,6 +379,11 @@ export const UsuariosList: React.FC = () => {
             <DialogTitle>
               {isEditing ? "Editar Usuário" : "Novo Usuário"}
             </DialogTitle>
+            <DialogDescription>
+              {isEditing
+                ? "Edite os dados do usuário."
+                : "Preencha os dados para cadastrar um novo usuário."}
+            </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
@@ -415,9 +421,7 @@ export const UsuariosList: React.FC = () => {
                   setCurrentUsuario({...currentUsuario, papel: value})
                 }
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o papel" />
-                </SelectTrigger>
+                <SelectTrigger placeholder="Selecione o papel" />
                 <SelectContent>
                   <SelectItem value="admin">Admin</SelectItem>
                   <SelectItem value="manager">Gerente</SelectItem>
@@ -428,30 +432,33 @@ export const UsuariosList: React.FC = () => {
             
             <div className="space-y-2">
               <Label htmlFor="empresa_id">Empresa</Label>
-              <Select
-                value={currentUsuario.empresa_id || ""}
-                onValueChange={(value) => 
-                  setCurrentUsuario({...currentUsuario, empresa_id: value || null})
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione a empresa" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">Nenhuma</SelectItem>
-                  {empresas.map((empresa) => (
-                    <SelectItem key={empresa.id} value={empresa.id}>
-                      {empresa.nome}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {empresas.length > 0 ? (
+                <Select
+                  value={currentUsuario.empresa_id || undefined}
+                  onValueChange={(value) => 
+                    setCurrentUsuario({...currentUsuario, empresa_id: value || null})
+                  }
+                >
+                  <SelectTrigger placeholder="Selecione a empresa" />
+                  <SelectContent>
+                    {empresas.map((empresa) => (
+                      <SelectItem key={empresa.id} value={empresa.id}>
+                        {empresa.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <div className="text-sm text-muted-foreground">
+                  Carregando empresas...
+                </div>
+              )}
             </div>
             
             <div className="flex items-center space-x-2">
               <Switch
                 id="ativo"
-                checked={currentUsuario.ativo}
+                checked={!!currentUsuario.ativo}
                 onCheckedChange={(checked) => 
                   setCurrentUsuario({...currentUsuario, ativo: checked})
                 }
