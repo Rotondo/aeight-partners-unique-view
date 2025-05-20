@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -12,9 +11,9 @@ interface AppSidebarProps {
 
 const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen, toggleSidebar }) => {
   const { logout } = useAuth();
-  
+
   return (
-    <aside 
+    <aside
       className={cn(
         "bg-sidebar text-sidebar-foreground border-r border-sidebar-border transition-all duration-300",
         isOpen ? "w-64" : "w-20"
@@ -30,14 +29,14 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen, toggleSidebar }) => {
               <span className="text-xl font-bold text-sidebar-primary">A&8</span>
             )}
           </div>
-          <button 
+          <button
             onClick={toggleSidebar}
             className="text-sidebar-foreground hover:text-sidebar-primary p-1 rounded-md"
           >
             {isOpen ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
           </button>
         </div>
-        
+
         {/* Navigation Links */}
         <nav className="flex-1 py-4 overflow-y-auto">
           <ul className="space-y-1 px-3">
@@ -48,10 +47,10 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen, toggleSidebar }) => {
             <NavItem to="/admin" icon={<Settings size={20} />} text="Administração" isOpen={isOpen} />
           </ul>
         </nav>
-        
+
         {/* Logout */}
         <div className="p-4 border-t border-sidebar-border">
-          <button 
+          <button
             onClick={logout}
             className={cn(
               "flex items-center w-full px-3 py-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition",
@@ -62,6 +61,10 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen, toggleSidebar }) => {
             {isOpen && <span className="ml-3">Sair</span>}
           </button>
         </div>
+        {/* Rodapé fixo */}
+        <footer className="p-4 text-xs text-center text-muted-foreground">
+          Desenvolvido por Thiago Rotondo
+        </footer>
       </div>
     </aside>
   );
@@ -79,13 +82,15 @@ const NavItem: React.FC<NavItemProps> = ({ to, icon, text, isOpen }) => {
     <li>
       <NavLink
         to={to}
-        className={({ isActive }) => cn(
-          "flex items-center px-3 py-2 rounded-md transition",
-          isOpen ? "" : "justify-center",
-          isActive 
-            ? "bg-sidebar-accent text-sidebar-primary font-medium" 
-            : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-        )}
+        className={({ isActive }) =>
+          cn(
+            "flex items-center px-3 py-2 rounded-md transition",
+            isOpen ? "" : "justify-center",
+            isActive
+              ? "bg-sidebar-accent text-sidebar-primary font-medium"
+              : "hover:bg-sidebar-hover"
+          )
+        }
       >
         {icon}
         {isOpen && <span className="ml-3">{text}</span>}
