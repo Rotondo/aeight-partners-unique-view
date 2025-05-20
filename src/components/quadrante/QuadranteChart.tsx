@@ -2,7 +2,7 @@ import React, { useRef, useEffect } from "react";
 import * as d3 from "d3";
 import { QuadrantPoint } from "@/types";
 
-// Tooltip component (usando HTML overlay para melhor experiência)
+// Tooltip overlay
 const Tooltip = ({ tooltipData, position }: { tooltipData: QuadrantPoint | null; position: { x: number; y: number } }) => {
   if (!tooltipData) return null;
   return (
@@ -38,6 +38,19 @@ interface QuadranteChartProps {
   onPointClick?: (pointId: string) => void;
 }
 
+const getBubbleSize = (partner: QuadrantPoint) => {
+  // Pequena: parceiro pequeno e baixo engajamento
+  if ((partner.tamanho === "PP" || partner.tamanho === "P") && partner.engajamento <= 2) {
+    return 7;
+  }
+  // Grande: alto engajamento e alto potencial de leads
+  if (partner.engajamento >= 4 && partner.x >= 4) {
+    return 18;
+  }
+  // Média para demais
+  return 11.5;
+};
+
 const QuadranteChart: React.FC<QuadranteChartProps> = ({ data, isLoading, onPointClick }) => {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const hoverLayerRef = useRef<SVGGElement | null>(null);
@@ -46,33 +59,25 @@ const QuadranteChart: React.FC<QuadranteChartProps> = ({ data, isLoading, onPoin
   useEffect(() => {
     if (isLoading || !data.length || !svgRef.current) return;
 
-    // Limpando SVG
     d3.select(svgRef.current).selectAll("*").remove();
 
-    // Dimensões
     const margin = { top: 20, right: 30, bottom: 40, left: 60 };
     const width = svgRef.current.clientWidth - margin.left - margin.right;
     const height = svgRef.current.clientHeight - margin.top - margin.bottom;
 
-    // SVG Base
     const svg = d3
       .select(svgRef.current)
       .attr("width", width + margin.left + margin.right)
       .attr("height", height + margin.top + margin.bottom);
 
-    // Camada interna
     const chart = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
 
-    // Escalas
     const xScale = d3.scaleLinear().domain([0, 5]).range([0, width]);
     const yScale = d3.scaleLinear().domain([0, 5]).range([height, 0]);
-    const sizeScale = d3.scaleLinear().domain([1, 5]).range([8, 22]);
 
-    // Eixos
     chart.append("g").attr("transform", `translate(0,${height})`).call(d3.axisBottom(xScale));
     chart.append("g").call(d3.axisLeft(yScale));
 
-    // Rótulos dos eixos
     chart
       .append("text")
       .attr("class", "x-axis-label")
@@ -90,7 +95,6 @@ const QuadranteChart: React.FC<QuadranteChartProps> = ({ data, isLoading, onPoin
       .style("fontSize", "12px")
       .text("Potencial de Investimento (0-5)");
 
-    // Linhas do quadrante
     const quadrantX = 2.5;
     const quadrantY = 2.5;
     chart
@@ -110,7 +114,6 @@ const QuadranteChart: React.FC<QuadranteChartProps> = ({ data, isLoading, onPoin
       .attr("stroke", "#94a3b8")
       .attr("stroke-dasharray", "4");
 
-    // Labels do quadrante (opcional)
     chart
       .append("text")
       .attr("x", width - 10)
@@ -147,7 +150,6 @@ const QuadranteChart: React.FC<QuadranteChartProps> = ({ data, isLoading, onPoin
       .attr("font-size", 11)
       .text("Baixa geração / Baixo investimento");
 
-    // Cores por tamanho
     const tamanhoColorMap: Record<string, string> = {
       PP: "#38bdf8",
       P: "#2dd4bf",
@@ -156,13 +158,13 @@ const QuadranteChart: React.FC<QuadranteChartProps> = ({ data, isLoading, onPoin
       GG: "#f97316",
     };
 
-    // --- CÁLCULO DE LABELS E COLISÃO ---
+    // LABELS (todos, nunca invisíveis)
     const labelPadding = 10;
     const labelData = data.map((d, i) => ({
       ...d,
       labelX: xScale(d.x) + labelPadding,
       labelY: yScale(d.y) - labelPadding,
-      width: d.nome.length * 7.2 + 14, // Ajuste para fonte e padding
+      width: d.nome.length * 7.2 + 14,
       height: 18,
     }));
 
@@ -184,7 +186,7 @@ const QuadranteChart: React.FC<QuadranteChartProps> = ({ data, isLoading, onPoin
       }
     }
 
-    // Renderiza os nomes que NÃO colidem
+    // Renderiza labels fixos para os que não colidem
     chart
       .selectAll(".point-label")
       .data(labelData)
@@ -203,7 +205,7 @@ const QuadranteChart: React.FC<QuadranteChartProps> = ({ data, isLoading, onPoin
     // Grupo para pontos
     const pointsGroup = chart.append("g").attr("class", "points-group");
 
-    // Renderiza os pontos
+    // Renderiza todos os pontos (nenhum parceiro invisível)
     pointsGroup
       .selectAll("circle")
       .data(data)
@@ -211,14 +213,13 @@ const QuadranteChart: React.FC<QuadranteChartProps> = ({ data, isLoading, onPoin
       .append("circle")
       .attr("cx", (d) => xScale(d.x))
       .attr("cy", (d) => yScale(d.y))
-      .attr("r", (d) => sizeScale(3)) // Usa valor fixo, pode customizar para d.tamanho
+      .attr("r", (d) => getBubbleSize(d))
       .attr("fill", (d) => tamanhoColorMap[d.tamanho] || "#64748b")
       .attr("stroke", "#334155")
       .attr("stroke-width", 1.3)
       .attr("cursor", onPointClick ? "pointer" : "default")
       .on("mouseover", function (event, d) {
         const i = data.findIndex((p) => p.id === d.id);
-        // Tooltip HTML
         setTooltip({
           point: d,
           pos: { x: event.clientX, y: event.clientY },
@@ -226,9 +227,7 @@ const QuadranteChart: React.FC<QuadranteChartProps> = ({ data, isLoading, onPoin
 
         // Se label colide, desenha label e linha temporária
         if (overlapping.has(i)) {
-          // Limpa camada de hover
           d3.select(hoverLayerRef.current).selectAll("*").remove();
-          // Linha
           d3.select(hoverLayerRef.current)
             .append("line")
             .attr("x1", xScale(d.x))
@@ -238,7 +237,6 @@ const QuadranteChart: React.FC<QuadranteChartProps> = ({ data, isLoading, onPoin
             .attr("stroke", "#334155")
             .attr("stroke-width", 1)
             .attr("stroke-dasharray", "2,2");
-          // Label
           d3.select(hoverLayerRef.current)
             .append("text")
             .attr("x", labelData[i].labelX)
@@ -250,23 +248,30 @@ const QuadranteChart: React.FC<QuadranteChartProps> = ({ data, isLoading, onPoin
             .style("user-select", "none")
             .attr("pointer-events", "none");
         }
-        // Destaca ponto
-        d3.select(this).transition().duration(90).attr("r", sizeScale(4.3)).attr("stroke-width", 2.2);
+        // Destaca ponto no hover
+        d3.select(this)
+          .transition()
+          .duration(90)
+          .attr("r", getBubbleSize(d) + 3)
+          .attr("stroke-width", 2.2);
       })
       .on("mousemove", function (event) {
         setTooltip((t) => (t.point ? { ...t, pos: { x: event.clientX, y: event.clientY } } : t));
       })
       .on("mouseout", function (event, d) {
-        // Remove hover layer
         d3.select(hoverLayerRef.current).selectAll("*").remove();
         setTooltip({ point: null, pos: { x: 0, y: 0 } });
-        d3.select(this).transition().duration(90).attr("r", sizeScale(3)).attr("stroke-width", 1.3);
+        d3.select(this)
+          .transition()
+          .duration(90)
+          .attr("r", getBubbleSize(d))
+          .attr("stroke-width", 1.3);
       })
       .on("click", (event, d) => {
         if (onPointClick) onPointClick(d.id);
       });
 
-    // Camada para labels de hover (acima de tudo)
+    // Camada para labels de hover
     let hoverLayer = chart.select(".hover-layer");
     if (!hoverLayer.size()) {
       hoverLayer = chart.append("g").attr("class", "hover-layer");
