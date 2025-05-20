@@ -195,7 +195,7 @@ const QuadranteChart: React.FC<QuadranteChartProps> = ({
       height: 18,
     }));
 
-    // Detect label collision
+    // Detecta colisão de labels
     const overlapping = new Set<number>();
     for (let i = 0; i < labelData.length; i++) {
       const a = labelData[i];
@@ -228,7 +228,7 @@ const QuadranteChart: React.FC<QuadranteChartProps> = ({
       .text((d, i) => (!overlapping.has(i) ? d.nome : ""))
       .style("user-select", "none");
 
-    // Points group
+    // Grupo dos pontos do quadrante
     const pointsGroup = chart.append("g").attr("class", "points-group");
 
     pointsGroup
