@@ -9,6 +9,8 @@ import LoginPage from "./pages/auth/LoginPage";
 import Dashboard from "./pages/Dashboard";
 import OnePagerPage from "./pages/onepager/OnePagerPage";
 import QuadrantePage from "./pages/quadrante/QuadrantePage";
+import OportunidadesPage from "./pages/oportunidades";
+import AdminPage from "./pages/admin";
 import NotFound from "./pages/NotFound";
 import MainLayout from "./components/layout/MainLayout";
 import PrivateRoute from "./components/auth/PrivateRoute";
@@ -52,6 +54,14 @@ const App = () => (
                     <QuadrantePage />
                   </MainLayout>
                 } 
+              />
+              <Route 
+                path="/oportunidades" 
+                element={<OportunidadesPage />} 
+              />
+              <Route 
+                path="/admin" 
+                element={<AdminPage />} 
               />
               {/* Add more protected routes here */}
             </Route>

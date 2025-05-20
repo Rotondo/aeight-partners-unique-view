@@ -1,10 +1,12 @@
-import React from "react";
 
-const OportunidadesPage = () => (
-  <main style={{ padding: 24 }}>
-    <h1>Oportunidades</h1>
-    <p>Página de oportunidades! Implemente aqui sua listagem ou funcionalidades.</p>
-  </main>
+import React from "react";
+import MainLayout from "@/components/layout/MainLayout";
+import { OportunidadesPage } from "@/components/oportunidades/OportunidadesPage";
+
+const Oportunidades = () => (
+  <MainLayout>
+    <OportunidadesPage />
+  </MainLayout>
 );
 
-export default OportunidadesPage;
+export default Oportunidades;

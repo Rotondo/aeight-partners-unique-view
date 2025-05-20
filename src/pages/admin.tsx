@@ -1,10 +1,12 @@
-import React from "react";
 
-const AdminPage = () => (
-  <main style={{ padding: 24 }}>
-    <h1>Administração</h1>
-    <p>Página de administração. Implemente aqui os recursos administrativos.</p>
-  </main>
+import React from "react";
+import MainLayout from "@/components/layout/MainLayout";
+import { AdminPage } from "@/components/admin/AdminPage";
+
+const Admin = () => (
+  <MainLayout>
+    <AdminPage />
+  </MainLayout>
 );
 
-export default AdminPage;
+export default Admin;

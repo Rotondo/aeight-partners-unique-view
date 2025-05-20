@@ -1,0 +1,343 @@
+
+import React, { createContext, useContext, useState, ReactNode, useEffect } from "react";
+import { Oportunidade, StatusOportunidade, OportunidadesFilterParams } from "@/types";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/lib/supabase";
+import { format } from "date-fns";
+import { useAuth } from "@/hooks/useAuth";
+
+interface OportunidadesContextType {
+  oportunidades: Oportunidade[];
+  filteredOportunidades: Oportunidade[];
+  isLoading: boolean;
+  error: string | null;
+  filterParams: OportunidadesFilterParams;
+  setFilterParams: (params: OportunidadesFilterParams) => void;
+  fetchOportunidades: () => Promise<void>;
+  createOportunidade: (oportunidade: Partial<Oportunidade>) => Promise<string | null>;
+  updateOportunidade: (id: string, oportunidade: Partial<Oportunidade>) => Promise<boolean>;
+  deleteOportunidade: (id: string) => Promise<boolean>;
+  getOportunidade: (id: string) => Oportunidade | undefined;
+}
+
+const OportunidadesContext = createContext<OportunidadesContextType | undefined>(undefined);
+
+export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const [oportunidades, setOportunidades] = useState<Oportunidade[]>([]);
+  const [filteredOportunidades, setFilteredOportunidades] = useState<Oportunidade[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [filterParams, setFilterParams] = useState<OportunidadesFilterParams>({});
+  const { toast } = useToast();
+  const { user } = useAuth();
+
+  const fetchOportunidades = async () => {
+    if (!user) {
+      setOportunidades([]);
+      setFilteredOportunidades([]);
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      let query = supabase
+        .from('oportunidades')
+        .select(`
+          *,
+          empresa_origem:empresas!empresa_origem_id(*),
+          empresa_destino:empresas!empresa_destino_id(*),
+          contato:contatos(*),
+          usuario_envio:usuarios!usuario_envio_id(*),
+          usuario_recebe:usuarios!usuario_recebe_id(*)
+        `)
+        .order('data_indicacao', { ascending: false });
+
+      const { data, error } = await query;
+
+      if (error) {
+        throw error;
+      }
+
+      const processedData = data.map(item => ({
+        id: item.id,
+        empresa_origem_id: item.empresa_origem_id,
+        empresa_destino_id: item.empresa_destino_id,
+        contato_id: item.contato_id,
+        valor: item.valor,
+        status: item.status as StatusOportunidade,
+        data_indicacao: item.data_indicacao,
+        data_fechamento: item.data_fechamento,
+        motivo_perda: item.motivo_perda,
+        usuario_envio_id: item.usuario_envio_id,
+        usuario_recebe_id: item.usuario_recebe_id,
+        observacoes: item.observacoes,
+        // Relações
+        empresa_origem: item.empresa_origem,
+        empresa_destino: item.empresa_destino,
+        contato: item.contato,
+        usuario_envio: item.usuario_envio,
+        usuario_recebe: item.usuario_recebe
+      }));
+
+      setOportunidades(processedData);
+      applyFilters(processedData, filterParams);
+    } catch (error) {
+      console.error("Erro ao buscar oportunidades:", error);
+      setError("Falha ao carregar oportunidades. Por favor, tente novamente.");
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar as oportunidades.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const applyFilters = (data: Oportunidade[], params: OportunidadesFilterParams) => {
+    let filtered = [...data];
+
+    if (params.dataInicio && params.dataFim) {
+      const dataInicio = new Date(params.dataInicio);
+      const dataFim = new Date(params.dataFim);
+      dataFim.setHours(23, 59, 59, 999); // Set end of day for date range
+
+      filtered = filtered.filter(op => {
+        const dataIndicacao = new Date(op.data_indicacao);
+        return dataIndicacao >= dataInicio && dataIndicacao <= dataFim;
+      });
+    } else if (params.dataInicio) {
+      const dataInicio = new Date(params.dataInicio);
+      filtered = filtered.filter(op => new Date(op.data_indicacao) >= dataInicio);
+    } else if (params.dataFim) {
+      const dataFim = new Date(params.dataFim);
+      dataFim.setHours(23, 59, 59, 999); // Set end of day
+      filtered = filtered.filter(op => new Date(op.data_indicacao) <= dataFim);
+    }
+
+    if (params.empresaOrigemId) {
+      filtered = filtered.filter(op => op.empresa_origem_id === params.empresaOrigemId);
+    }
+
+    if (params.empresaDestinoId) {
+      filtered = filtered.filter(op => op.empresa_destino_id === params.empresaDestinoId);
+    }
+
+    if (params.status) {
+      filtered = filtered.filter(op => op.status === params.status);
+    }
+
+    if (params.usuarioId) {
+      filtered = filtered.filter(op => 
+        op.usuario_envio_id === params.usuarioId || 
+        op.usuario_recebe_id === params.usuarioId
+      );
+    }
+
+    setFilteredOportunidades(filtered);
+  };
+
+  // Record opportunity history when updating
+  const recordHistory = async (
+    oportunidadeId: string, 
+    campo: string, 
+    valorAntigo: any, 
+    valorNovo: any
+  ) => {
+    if (!user) return;
+
+    // Don't record if values are the same
+    if (valorAntigo === valorNovo) return;
+
+    // Format values for storage
+    const oldValue = valorAntigo !== null ? String(valorAntigo) : null;
+    const newValue = valorNovo !== null ? String(valorNovo) : null;
+
+    try {
+      await supabase
+        .from('historico_oportunidade')
+        .insert({
+          oportunidade_id: oportunidadeId,
+          campo_alterado: campo,
+          valor_antigo: oldValue,
+          valor_novo: newValue,
+          usuario_id: user.id
+        });
+    } catch (error) {
+      console.error("Erro ao registrar histórico:", error);
+    }
+  };
+
+  const createOportunidade = async (oportunidade: Partial<Oportunidade>): Promise<string | null> => {
+    if (!user) {
+      toast({
+        title: "Erro",
+        description: "Você precisa estar autenticado para criar uma oportunidade.",
+        variant: "destructive",
+      });
+      return null;
+    }
+
+    try {
+      // Ensure user_id is set properly
+      const newOportunidade = {
+        ...oportunidade,
+        usuario_envio_id: user.id,
+        data_indicacao: oportunidade.data_indicacao || new Date().toISOString()
+      };
+
+      const { data, error } = await supabase
+        .from('oportunidades')
+        .insert(newOportunidade)
+        .select('id')
+        .single();
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: "Oportunidade criada com sucesso!"
+      });
+
+      await fetchOportunidades();
+      return data.id;
+    } catch (error) {
+      console.error("Erro ao criar oportunidade:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível criar a oportunidade.",
+        variant: "destructive",
+      });
+      return null;
+    }
+  };
+
+  const updateOportunidade = async (id: string, updates: Partial<Oportunidade>): Promise<boolean> => {
+    if (!user) {
+      toast({
+        title: "Erro",
+        description: "Você precisa estar autenticado para atualizar uma oportunidade.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    try {
+      // Get the current opportunity to compare changes for history
+      const currentOp = oportunidades.find(op => op.id === id);
+      if (!currentOp) throw new Error("Oportunidade não encontrada");
+
+      const { error } = await supabase
+        .from('oportunidades')
+        .update(updates)
+        .eq('id', id);
+
+      if (error) throw error;
+
+      // Record history for each changed field
+      for (const [key, newValue] of Object.entries(updates)) {
+        const oldValue = (currentOp as any)[key];
+        await recordHistory(id, key, oldValue, newValue);
+      }
+
+      toast({
+        title: "Sucesso",
+        description: "Oportunidade atualizada com sucesso!"
+      });
+
+      await fetchOportunidades();
+      return true;
+    } catch (error) {
+      console.error("Erro ao atualizar oportunidade:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível atualizar a oportunidade.",
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+
+  const deleteOportunidade = async (id: string): Promise<boolean> => {
+    if (!user) {
+      toast({
+        title: "Erro",
+        description: "Você precisa estar autenticado para excluir uma oportunidade.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('oportunidades')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: "Oportunidade excluída com sucesso!"
+      });
+
+      await fetchOportunidades();
+      return true;
+    } catch (error) {
+      console.error("Erro ao excluir oportunidade:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível excluir a oportunidade.",
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+
+  const getOportunidade = (id: string): Oportunidade | undefined => {
+    return oportunidades.find(op => op.id === id);
+  };
+
+  // Apply filters when filterParams or oportunidades change
+  useEffect(() => {
+    if (oportunidades.length > 0) {
+      applyFilters(oportunidades, filterParams);
+    }
+  }, [filterParams, oportunidades]);
+
+  // Fetch oportunidades on mount and when user changes
+  useEffect(() => {
+    fetchOportunidades();
+  }, [user]);
+
+  const value = {
+    oportunidades,
+    filteredOportunidades,
+    isLoading,
+    error,
+    filterParams,
+    setFilterParams,
+    fetchOportunidades,
+    createOportunidade,
+    updateOportunidade,
+    deleteOportunidade,
+    getOportunidade
+  };
+
+  return (
+    <OportunidadesContext.Provider value={value}>
+      {children}
+    </OportunidadesContext.Provider>
+  );
+};
+
+export const useOportunidades = () => {
+  const context = useContext(OportunidadesContext);
+  if (context === undefined) {
+    throw new Error("useOportunidades must be used within an OportunidadesProvider");
+  }
+  return context;
+};
