@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -17,16 +16,16 @@ const Dashboard: React.FC = () => {
       setLoading(true);
       try {
         // Fetch total opportunities
-        const { data: oportunidades, error: opError } = await supabase
+        const { data: oportunidades, error: opError } = await (supabase as any)
           .from('oportunidades')
           .select('id, status, data_indicacao');
 
         if (opError) throw opError;
 
         // Calculate stats
-        const totalOportunidades = oportunidades.length;
-        const oportunidadesGanhas = oportunidades.filter(op => op.status === 'ganho').length;
-        const oportunidadesPerdidas = oportunidades.filter(op => op.status === 'perdido').length;
+        const totalOportunidades = oportunidades ? oportunidades.length : 0;
+        const oportunidadesGanhas = oportunidades ? oportunidades.filter(op => op.status === 'ganho').length : 0;
+        const oportunidadesPerdidas = oportunidades ? oportunidades.filter(op => op.status === 'perdido').length : 0;
         const oportunidadesEmAndamento = totalOportunidades - oportunidadesGanhas - oportunidadesPerdidas;
         
         // Calculate opportunities per month
@@ -43,13 +42,17 @@ const Dashboard: React.FC = () => {
         }
         
         // Count opportunities per month
-        oportunidades.forEach(op => {
-          const date = new Date(op.data_indicacao);
-          if (date >= sixMonthsAgo) {
-            const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-            oportunidadesPorMes[monthKey] = (oportunidadesPorMes[monthKey] || 0) + 1;
-          }
-        });
+        if (oportunidades) {
+          oportunidades.forEach(op => {
+            if (op.data_indicacao) {
+              const date = new Date(op.data_indicacao);
+              if (date >= sixMonthsAgo) {
+                const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                oportunidadesPorMes[monthKey] = (oportunidadesPorMes[monthKey] || 0) + 1;
+              }
+            }
+          });
+        }
         
         // Format for chart
         const oportunidadesPorMesArray = Object.entries(oportunidadesPorMes)

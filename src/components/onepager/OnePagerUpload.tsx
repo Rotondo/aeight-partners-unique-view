@@ -1,51 +1,43 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { supabase } from '@/lib/supabase';
-import { useToast } from '@/hooks/use-toast';
 import { Categoria, Empresa } from '@/types';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
+import { useToast } from '@/hooks/use-toast';
+import { 
+  Form, 
+  FormControl, 
+  FormField, 
+  FormItem, 
+  FormLabel, 
+  FormMessage 
 } from '@/components/ui/form';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
 } from '@/components/ui/select';
-import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { Loader2, Upload } from 'lucide-react';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { useAuth } from '@/hooks/useAuth';
 
-// Schema for form validation
 const formSchema = z.object({
-  categoria_id: z.string().min(1, 'Selecione uma categoria'),
-  empresa_id: z.string().min(1, 'Selecione um parceiro'),
-  uploadType: z.enum(['file', 'url']),
-  fileUpload: z.any().optional(),
-  urlImagem: z.string().url('URL inválida').optional(),
-}).refine(data => {
-  if (data.uploadType === 'file') {
-    return !!data.fileUpload;
-  }
-  if (data.uploadType === 'url') {
-    return !!data.urlImagem;
-  }
-  return false;
-}, {
-  message: 'Você deve fornecer um arquivo ou uma URL',
-  path: ['fileUpload'],
+  empresaId: z.string({
+    required_error: "Selecione um parceiro",
+  }),
+  categoriaId: z.string({
+    required_error: "Selecione uma categoria",
+  }),
+  arquivo: z.instanceof(FileList, {
+    message: "Selecione um arquivo para upload",
+  }).refine((files) => files.length > 0, {
+    message: "Selecione um arquivo para upload",
+  }),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -55,192 +47,216 @@ interface OnePagerUploadProps {
   onSuccess?: () => void;
 }
 
-const OnePagerUpload: React.FC<OnePagerUploadProps> = ({ categorias, onSuccess }) => {
+const OnePagerUpload: React.FC<OnePagerUploadProps> = ({ 
+  categorias,
+  onSuccess
+}) => {
   const { toast } = useToast();
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [parceiros, setParceiros] = useState<Empresa[]>([]);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const { user } = useAuth();
+  const [selectedCategoria, setSelectedCategoria] = useState<string>('');
   
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      categoria_id: '',
-      empresa_id: '',
-      uploadType: 'file',
-      urlImagem: '',
+      empresaId: '',
+      categoriaId: '',
     },
   });
-
-  // Watch for category changes to load partners
-  const watchedCategoriaId = form.watch('categoria_id');
   
+  // Load all partners
   useEffect(() => {
-    if (!watchedCategoriaId) {
-      setParceiros([]);
-      return;
-    }
-
     const fetchParceiros = async () => {
+      setLoading(true);
       try {
-        // Get companies that belong to the selected category
-        const { data: empresaCategoria, error: ecError } = await supabase
-          .from('empresa_categoria')
-          .select('empresa_id')
-          .eq('categoria_id', watchedCategoriaId);
+        const { data, error } = await (supabase as any)
+          .from('empresas')
+          .select('*')
+          .eq('tipo', 'parceiro')
+          .order('nome');
 
-        if (ecError) throw ecError;
-
-        if (empresaCategoria && empresaCategoria.length > 0) {
-          const empresaIds = empresaCategoria.map(item => item.empresa_id);
-          
-          const { data: empresas, error: empresasError } = await supabase
-            .from('empresas')
-            .select('*')
-            .in('id', empresaIds)
-            .eq('tipo', 'parceiro')
-            .order('nome');
-
-          if (empresasError) throw empresasError;
-          
-          setParceiros(empresas as Empresa[]);
-        } else {
-          setParceiros([]);
+        if (error) throw error;
+        
+        if (data) {
+          setParceiros(data as Empresa[]);
         }
       } catch (error) {
-        console.error('Error fetching partners for category:', error);
+        console.error('Error fetching partners:', error);
         toast({
           title: 'Erro',
-          description: 'Não foi possível carregar os parceiros desta categoria.',
+          description: 'Não foi possível carregar a lista de parceiros.',
           variant: 'destructive',
         });
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchParceiros();
-  }, [watchedCategoriaId, toast]);
-
-  // Handle file selection
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0] || null;
-    setSelectedFile(file);
+  }, [toast]);
+  
+  // When categoria changes, load partners for that categoria
+  const handleCategoriaChange = async (value: string) => {
+    setSelectedCategoria(value);
+    form.setValue('categoriaId', value);
     
-    if (file) {
-      form.setValue('fileUpload', file);
-    } else {
-      form.setValue('fileUpload', undefined);
+    try {
+      // Get companies that belong to the selected category
+      const { data, error } = await (supabase as any)
+        .from('empresa_categoria')
+        .select('empresa_id')
+        .eq('categoria_id', value);
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        const empresaIds = data.map((item: any) => item.empresa_id);
+        
+        const { data: empresas, error: empresasError } = await (supabase as any)
+          .from('empresas')
+          .select('*')
+          .in('id', empresaIds)
+          .eq('tipo', 'parceiro')
+          .order('nome');
+
+        if (empresasError) throw empresasError;
+        
+        if (empresas) {
+          setParceiros(empresas as Empresa[]);
+        }
+      } else {
+        setParceiros([]);
+        form.setValue('empresaId', '');
+      }
+    } catch (error) {
+      console.error('Error fetching category partners:', error);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível carregar os parceiros desta categoria.',
+        variant: 'destructive',
+      });
     }
   };
   
-  // Handle form submission
-  const onSubmit = async (data: FormValues) => {
-    if (!user) {
-      toast({
-        title: 'Erro',
-        description: 'Você precisa estar autenticado para realizar esta operação.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setIsSubmitting(true);
-
+  const onSubmit = async (values: FormValues) => {
+    setUploading(true);
     try {
-      let fileName = null;
-      let urlImagem = null;
-
-      // Handle file upload
-      if (data.uploadType === 'file' && selectedFile) {
-        const timestamp = new Date().getTime();
-        fileName = `${data.empresa_id}/${timestamp}-${selectedFile.name}`;
-        
-        // Upload file to Supabase Storage
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('onepagers')
-          .upload(fileName, selectedFile);
-
-        if (uploadError) throw uploadError;
-      } else if (data.uploadType === 'url') {
-        urlImagem = data.urlImagem;
-      }
-      
-      // Check if an OnePager already exists for this company and category
-      const { data: existingOnePager, error: existingError } = await supabase
+      // Check if we already have an onepager for this empresa/categoria combo
+      const { data: existingOnePager, error: checkError } = await (supabase as any)
         .from('onepager')
         .select('id')
-        .eq('empresa_id', data.empresa_id)
-        .eq('categoria_id', data.categoria_id)
+        .eq('empresa_id', values.empresaId)
+        .eq('categoria_id', values.categoriaId)
         .maybeSingle();
-
-      if (existingError) throw existingError;
-
+      
+      if (checkError) throw checkError;
+      
+      // Upload file to storage
+      const file = values.arquivo[0];
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${values.empresaId}_${values.categoriaId}_${Date.now()}.${fileExt}`;
+      const filePath = `${fileName}`;
+      
+      // Upload file
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('onepagers')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+      
+      if (uploadError) throw uploadError;
+      
+      // Get public URL
+      const { data: urlData } = await supabase.storage
+        .from('onepagers')
+        .getPublicUrl(filePath);
+      
+      const publicUrl = urlData.publicUrl;
+      
+      // Create or update onepager record
       if (existingOnePager) {
-        // Update existing OnePager
-        const { error: updateError } = await supabase
+        // Update existing record
+        const { data: updateData, error: updateError } = await (supabase as any)
           .from('onepager')
           .update({
-            url_imagem: urlImagem,
-            arquivo_upload: fileName,
+            url_imagem: publicUrl,
+            arquivo_upload: filePath,
             data_upload: new Date().toISOString(),
           })
-          .eq('id', existingOnePager.id);
-
+          .eq('id', existingOnePager.id)
+          .select();
+        
         if (updateError) throw updateError;
+        
+        toast({
+          title: 'Sucesso',
+          description: 'OnePager atualizado com sucesso!',
+        });
       } else {
-        // Insert new OnePager
-        const { error: insertError } = await supabase
+        // Insert new record
+        const { data: insertData, error: insertError } = await (supabase as any)
           .from('onepager')
           .insert({
-            empresa_id: data.empresa_id,
-            categoria_id: data.categoria_id,
-            url_imagem: urlImagem,
-            arquivo_upload: fileName,
+            empresa_id: values.empresaId,
+            categoria_id: values.categoriaId,
+            url_imagem: publicUrl,
+            arquivo_upload: filePath,
             data_upload: new Date().toISOString(),
-          });
-
+          })
+          .select();
+        
         if (insertError) throw insertError;
+        
+        toast({
+          title: 'Sucesso',
+          description: 'OnePager enviado com sucesso!',
+        });
       }
-
-      toast({
-        title: 'Sucesso',
-        description: 'OnePager salvo com sucesso!',
-      });
-
+      
       // Reset form
-      form.reset();
-      setSelectedFile(null);
-
-      // Trigger callback if provided
+      form.reset({
+        empresaId: '',
+        categoriaId: '',
+      });
+      
+      // Call success callback
       if (onSuccess) {
         onSuccess();
       }
     } catch (error) {
-      console.error('Error uploading OnePager:', error);
+      console.error('Error uploading onepager:', error);
       toast({
         title: 'Erro',
-        description: 'Ocorreu um erro ao salvar o OnePager. Tente novamente.',
+        description: 'Não foi possível fazer o upload do OnePager.',
         variant: 'destructive',
       });
     } finally {
-      setIsSubmitting(false);
+      setUploading(false);
     }
   };
-
+  
   return (
-    <Card className="max-w-2xl mx-auto">
-      <CardContent className="pt-6">
+    <Card>
+      <CardHeader>
+        <CardTitle>Upload de OnePager</CardTitle>
+        <CardDescription>
+          Envie ou atualize o OnePager para um parceiro
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <FormField
               control={form.control}
-              name="categoria_id"
+              name="categoriaId"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Categoria</FormLabel>
                   <Select 
-                    onValueChange={field.onChange} 
+                    onValueChange={(value) => handleCategoriaChange(value)}
                     defaultValue={field.value}
-                    disabled={isSubmitting}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -259,21 +275,27 @@ const OnePagerUpload: React.FC<OnePagerUploadProps> = ({ categorias, onSuccess }
                 </FormItem>
               )}
             />
-
+            
             <FormField
               control={form.control}
-              name="empresa_id"
+              name="empresaId"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Parceiro</FormLabel>
                   <Select 
                     onValueChange={field.onChange} 
                     defaultValue={field.value}
-                    disabled={isSubmitting || !watchedCategoriaId}
+                    disabled={!selectedCategoria || parceiros.length === 0}
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Selecione um parceiro" />
+                        <SelectValue placeholder={
+                          !selectedCategoria 
+                            ? "Selecione uma categoria primeiro" 
+                            : parceiros.length === 0 
+                              ? "Nenhum parceiro disponível" 
+                              : "Selecione um parceiro"
+                        } />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -288,88 +310,37 @@ const OnePagerUpload: React.FC<OnePagerUploadProps> = ({ categorias, onSuccess }
                 </FormItem>
               )}
             />
-
+            
             <FormField
               control={form.control}
-              name="uploadType"
-              render={({ field }) => (
+              name="arquivo"
+              render={({ field: { onChange, value, ...field } }) => (
                 <FormItem>
-                  <FormLabel>Tipo de Upload</FormLabel>
-                  <Tabs 
-                    defaultValue="file" 
-                    value={field.value}
-                    onValueChange={field.onChange}
-                    className="w-full"
-                  >
-                    <TabsList className="grid w-full grid-cols-2">
-                      <TabsTrigger value="file" disabled={isSubmitting}>
-                        Arquivo
-                      </TabsTrigger>
-                      <TabsTrigger value="url" disabled={isSubmitting}>
-                        URL
-                      </TabsTrigger>
-                    </TabsList>
-
-                    <TabsContent value="file" className="mt-4">
-                      <FormItem>
-                        <FormLabel>Selecione um arquivo (PNG, JPEG, PDF)</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="file" 
-                            accept=".png,.jpg,.jpeg,.pdf"
-                            onChange={handleFileChange}
-                            disabled={isSubmitting}
-                          />
-                        </FormControl>
-                        {selectedFile && (
-                          <p className="text-sm text-muted-foreground">
-                            Arquivo selecionado: {selectedFile.name}
-                          </p>
-                        )}
-                        <FormMessage />
-                      </FormItem>
-                    </TabsContent>
-                    
-                    <TabsContent value="url" className="mt-4">
-                      <FormField
-                        control={form.control}
-                        name="urlImagem"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>URL da Imagem ou PDF</FormLabel>
-                            <FormControl>
-                              <Input 
-                                type="url"
-                                placeholder="https://exemplo.com/imagem.png" 
-                                {...field}
-                                disabled={isSubmitting}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </TabsContent>
-                  </Tabs>
+                  <FormLabel>Arquivo (PDF, PNG ou JPG)</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="file"
+                      accept=".pdf,.png,.jpg,.jpeg"
+                      onChange={(e) => onChange(e.target.files)}
+                      disabled={uploading}
+                      {...field}
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-
-            <Button 
-              type="submit" 
-              className="w-full"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
+            
+            <Button type="submit" disabled={uploading} className="w-full">
+              {uploading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Salvando...
+                  Enviando...
                 </>
               ) : (
                 <>
                   <Upload className="mr-2 h-4 w-4" />
-                  Salvar OnePager
+                  Enviar OnePager
                 </>
               )}
             </Button>

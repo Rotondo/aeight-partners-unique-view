@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/lib/supabase'; // Use our properly typed client
+import { supabase } from '@/lib/supabase'; 
 import { IndicadoresParceiro, QuadrantPoint, TamanhoEmpresa } from '@/types';
 import QuadranteChart from '@/components/quadrante/QuadranteChart';
 import QuadranteForm from '@/components/quadrante/QuadranteForm';

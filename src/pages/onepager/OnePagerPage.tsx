@@ -24,18 +24,20 @@ const OnePagerPage: React.FC = () => {
   useEffect(() => {
     const fetchCategorias = async () => {
       try {
-        const { data, error } = await supabase
+        const { data, error } = await (supabase as any)
           .from('categorias')
           .select('*')
           .order('nome');
 
         if (error) throw error;
         
-        setCategorias(data as Categoria[]);
-        
-        // Select first category by default if available
-        if (data && data.length > 0) {
-          setSelectedCategoria(data[0] as Categoria);
+        if (data) {
+          setCategorias(data as Categoria[]);
+          
+          // Select first category by default if available
+          if (data.length > 0) {
+            setSelectedCategoria(data[0] as Categoria);
+          }
         }
       } catch (error) {
         console.error('Error fetching categories:', error);
@@ -60,7 +62,7 @@ const OnePagerPage: React.FC = () => {
       setLoading(true);
       try {
         // Get companies that belong to the selected category
-        const { data, error } = await supabase
+        const { data, error } = await (supabase as any)
           .from('empresa_categoria')
           .select('empresa_id')
           .eq('categoria_id', selectedCategoria.id);
@@ -68,9 +70,9 @@ const OnePagerPage: React.FC = () => {
         if (error) throw error;
 
         if (data && data.length > 0) {
-          const empresaIds = data.map(item => item.empresa_id);
+          const empresaIds = data.map((item: any) => item.empresa_id);
           
-          const { data: empresas, error: empresasError } = await supabase
+          const { data: empresas, error: empresasError } = await (supabase as any)
             .from('empresas')
             .select('*')
             .in('id', empresaIds)
@@ -79,13 +81,15 @@ const OnePagerPage: React.FC = () => {
 
           if (empresasError) throw empresasError;
           
-          setParceiros(empresas as Empresa[]);
-          
-          // Select first partner by default if available
-          if (empresas && empresas.length > 0) {
-            setSelectedParceiro(empresas[0] as Empresa);
-          } else {
-            setSelectedParceiro(null);
+          if (empresas) {
+            setParceiros(empresas as Empresa[]);
+            
+            // Select first partner by default if available
+            if (empresas.length > 0) {
+              setSelectedParceiro(empresas[0] as Empresa);
+            } else {
+              setSelectedParceiro(null);
+            }
           }
         } else {
           setParceiros([]);
@@ -115,7 +119,7 @@ const OnePagerPage: React.FC = () => {
     
     const fetchOnePager = async () => {
       try {
-        const { data, error } = await supabase
+        const { data, error } = await (supabase as any)
           .from('onepager')
           .select('*')
           .eq('empresa_id', selectedParceiro.id)
@@ -192,7 +196,7 @@ const OnePagerPage: React.FC = () => {
                 // Refetch the current onepager if applicable
                 if (selectedParceiro && selectedCategoria) {
                   const fetchOnePager = async () => {
-                    const { data } = await supabase
+                    const { data } = await (supabase as any)
                       .from('onepager')
                       .select('*')
                       .eq('empresa_id', selectedParceiro.id)

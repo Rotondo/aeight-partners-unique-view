@@ -28,7 +28,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const { data: { session } } = await supabase.auth.getSession();
         
         if (session) {
-          const { data: userData, error: userError } = await supabase
+          const { data: userData, error: userError } = await (supabase as any)
             .from('usuarios')
             .select('*')
             .eq('id', session.user.id)
@@ -36,8 +36,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
           if (userError) throw userError;
           
-          setUser(userData as Usuario);
-          setIsAuthenticated(true);
+          if (userData) {
+            setUser(userData as Usuario);
+            setIsAuthenticated(true);
+          }
         }
       } catch (error) {
         console.error('Error checking authentication:', error);
@@ -56,7 +58,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       async (event, session) => {
         if (event === 'SIGNED_IN' && session) {
           // Get user profile after sign in
-          const { data: userData, error: userError } = await supabase
+          const { data: userData, error: userError } = await (supabase as any)
             .from('usuarios')
             .select('*')
             .eq('id', session.user.id)
@@ -93,7 +95,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (error) throw error;
 
       if (data.user) {
-        const { data: userData, error: userError } = await supabase
+        const { data: userData, error: userError } = await (supabase as any)
           .from('usuarios')
           .select('*')
           .eq('id', data.user.id)
@@ -101,12 +103,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (userError) throw userError;
         
-        if (!userData.ativo) {
+        if (userData && !userData.ativo) {
           throw new Error('Usuário inativo. Entre em contato com o administrador.');
         }
 
-        setUser(userData as Usuario);
-        setIsAuthenticated(true);
+        if (userData) {
+          setUser(userData as Usuario);
+          setIsAuthenticated(true);
+        }
       }
     } catch (error) {
       console.error('Error logging in:', error);
