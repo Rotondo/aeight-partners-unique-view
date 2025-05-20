@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 import { IndicadoresParceiro, QuadrantPoint, TamanhoEmpresa } from '@/types';
 import QuadranteChart from '@/components/quadrante/QuadranteChart';
 import QuadranteForm from '@/components/quadrante/QuadranteForm';
@@ -16,6 +15,13 @@ const tamanhoColorMap: Record<TamanhoEmpresa, string> = {
   'G': '#facc15',  // yellow-400
   'GG': '#f97316', // orange-500
 };
+
+interface IndicadorWithEmpresa extends Partial<IndicadoresParceiro> {
+  empresas?: {
+    nome: string;
+    id: string;
+  };
+}
 
 const QuadrantePage: React.FC = () => {
   const { user } = useAuth();
@@ -38,25 +44,44 @@ const QuadrantePage: React.FC = () => {
             potencial_leads, 
             potencial_investimento, 
             engajamento, 
+            alinhamento,
             tamanho,
+            data_avaliacao,
             empresas (
-              nome
+              nome,
+              id
             )
           `);
 
         if (error) throw error;
         
-        setIndicadores(data as IndicadoresParceiro[]);
+        // Convert the data to match IndicadoresParceiro type
+        const parsedIndicadores: IndicadoresParceiro[] = (data as IndicadorWithEmpresa[]).map(item => ({
+          id: item.id || '',
+          empresa_id: item.empresa_id || '',
+          potencial_leads: item.potencial_leads || 0,
+          potencial_investimento: item.potencial_investimento || 0,
+          engajamento: item.engajamento || 0,
+          alinhamento: item.alinhamento || 0,
+          tamanho: item.tamanho as TamanhoEmpresa || 'M',
+          data_avaliacao: item.data_avaliacao || new Date().toISOString(),
+          // Optional fields
+          base_clientes: item.base_clientes,
+          score_x: item.score_x,
+          score_y: item.score_y,
+        }));
+        
+        setIndicadores(parsedIndicadores);
         
         // Transform to quadrant points
-        const points = data.map((item: any) => ({
-          id: item.id,
-          empresaId: item.empresa_id,
-          nome: item.empresas.nome,
-          x: item.potencial_leads,
-          y: item.potencial_investimento,
-          tamanho: item.tamanho,
-          engajamento: item.engajamento,
+        const points: QuadrantPoint[] = (data as IndicadorWithEmpresa[]).map(item => ({
+          id: item.id || '',
+          empresaId: item.empresa_id || '',
+          nome: item.empresas?.nome || 'Desconhecido',
+          x: item.potencial_leads || 0,
+          y: item.potencial_investimento || 0,
+          tamanho: item.tamanho as TamanhoEmpresa || 'M',
+          engajamento: item.engajamento || 0,
           color: tamanhoColorMap[item.tamanho as TamanhoEmpresa] || '#94a3b8',
         }));
         
@@ -82,7 +107,17 @@ const QuadrantePage: React.FC = () => {
       const { data, error } = await supabase
         .from('indicadores_parceiro')
         .select(`
-          *,
+          id,
+          empresa_id,
+          potencial_leads,
+          potencial_investimento,
+          engajamento,
+          alinhamento,
+          tamanho,
+          data_avaliacao,
+          base_clientes,
+          score_x,
+          score_y,
           empresas (
             id,
             nome
@@ -92,8 +127,24 @@ const QuadrantePage: React.FC = () => {
         .single();
 
       if (error) throw error;
+      
+      // Convert the data to match IndicadoresParceiro type
+      const parsedIndicador: IndicadoresParceiro = {
+        id: data.id || '',
+        empresa_id: data.empresa_id || '',
+        potencial_leads: data.potencial_leads || 0,
+        potencial_investimento: data.potencial_investimento || 0,
+        engajamento: data.engajamento || 0,
+        alinhamento: data.alinhamento || 0,
+        tamanho: data.tamanho as TamanhoEmpresa || 'M',
+        data_avaliacao: data.data_avaliacao || new Date().toISOString(),
+        // Optional fields
+        base_clientes: data.base_clientes,
+        score_x: data.score_x,
+        score_y: data.score_y,
+      };
 
-      setSelectedParceiro(data as any);
+      setSelectedParceiro(parsedIndicador);
     } catch (error) {
       console.error('Error fetching partner details:', error);
       toast({
@@ -107,12 +158,13 @@ const QuadrantePage: React.FC = () => {
   // Handle form save
   const handleSaveIndicador = async (indicador: Partial<IndicadoresParceiro>) => {
     try {
+      if (!indicador.data_avaliacao) {
+        indicador.data_avaliacao = new Date().toISOString();
+      }
+      
       const { data, error } = await supabase
         .from('indicadores_parceiro')
-        .upsert({
-          ...indicador,
-          data_avaliacao: new Date().toISOString(),
-        })
+        .upsert(indicador)
         .select();
 
       if (error) throw error;
@@ -126,25 +178,44 @@ const QuadrantePage: React.FC = () => {
           potencial_leads,
           potencial_investimento,
           engajamento,
+          alinhamento,
           tamanho,
+          data_avaliacao,
           empresas (
-            nome
+            nome,
+            id
           )
         `);
 
       if (refreshError) throw refreshError;
 
-      setIndicadores(refreshedData as IndicadoresParceiro[]);
+      // Convert the data to match IndicadoresParceiro type
+      const parsedIndicadores: IndicadoresParceiro[] = (refreshedData as IndicadorWithEmpresa[]).map(item => ({
+        id: item.id || '',
+        empresa_id: item.empresa_id || '',
+        potencial_leads: item.potencial_leads || 0,
+        potencial_investimento: item.potencial_investimento || 0,
+        engajamento: item.engajamento || 0,
+        alinhamento: item.alinhamento || 0,
+        tamanho: item.tamanho as TamanhoEmpresa || 'M',
+        data_avaliacao: item.data_avaliacao || new Date().toISOString(),
+        // Optional fields
+        base_clientes: item.base_clientes,
+        score_x: item.score_x,
+        score_y: item.score_y,
+      }));
+      
+      setIndicadores(parsedIndicadores);
 
       // Transform to quadrant points
-      const points = refreshedData.map((item: any) => ({
-        id: item.id,
-        empresaId: item.empresa_id,
-        nome: item.empresas.nome,
-        x: item.potencial_leads,
-        y: item.potencial_investimento,
-        tamanho: item.tamanho,
-        engajamento: item.engajamento,
+      const points: QuadrantPoint[] = (refreshedData as IndicadorWithEmpresa[]).map(item => ({
+        id: item.id || '',
+        empresaId: item.empresa_id || '',
+        nome: item.empresas?.nome || 'Desconhecido',
+        x: item.potencial_leads || 0,
+        y: item.potencial_investimento || 0,
+        tamanho: item.tamanho as TamanhoEmpresa || 'M',
+        engajamento: item.engajamento || 0,
         color: tamanhoColorMap[item.tamanho as TamanhoEmpresa] || '#94a3b8',
       }));
       
