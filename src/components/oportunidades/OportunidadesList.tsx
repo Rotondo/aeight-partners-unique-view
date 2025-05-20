@@ -21,7 +21,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { OportunidadeDetails } from "./OportunidadeDetails";
+import { OportunidadeDetails } from "./OportunidadesDetails"; // <-- Corrigido aqui
 import { useAuth } from "@/hooks/useAuth";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { OportunidadesExport } from "./OportunidadesExport";
