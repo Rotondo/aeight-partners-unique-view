@@ -38,17 +38,18 @@ interface QuadranteChartProps {
   onPointClick?: (pointId: string) => void;
 }
 
+// NOVOS TAMANHOS DE BOLINHA
 const getBubbleSize = (partner: QuadrantPoint) => {
   // Pequena: parceiro pequeno e baixo engajamento
   if ((partner.tamanho === "PP" || partner.tamanho === "P") && partner.engajamento <= 2) {
-    return 7;
+    return 2.5;
   }
   // Grande: alto engajamento e alto potencial de leads
   if (partner.engajamento >= 4 && partner.x >= 4) {
-    return 18;
+    return 7;
   }
   // Média para demais
-  return 11.5;
+  return 5;
 };
 
 const QuadranteChart: React.FC<QuadranteChartProps> = ({ data, isLoading, onPointClick }) => {
@@ -252,7 +253,7 @@ const QuadranteChart: React.FC<QuadranteChartProps> = ({ data, isLoading, onPoin
         d3.select(this)
           .transition()
           .duration(90)
-          .attr("r", getBubbleSize(d) + 3)
+          .attr("r", getBubbleSize(d) + 1.5)
           .attr("stroke-width", 2.2);
       })
       .on("mousemove", function (event) {
