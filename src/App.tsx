@@ -1,15 +1,11 @@
 import React from "react";
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider } from "@/hooks/useAuth";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import MainLayout from "@/components/layout/MainLayout";
 import DashboardPage from "@/pages/dashboard/DashboardPage";
-import OportunidadesPage from "@/pages/oportunidades/OportunidadesPage";
-import EmpresasPage from "@/pages/empresas/EmpresasPage";
-import OnePagerPage from "@/pages/onepager/OnePagerPage";
-import IndicadoresPage from "@/pages/indicadores/IndicadoresPage";
-import LoadingScreen from "@/components/ui/LoadingScreen";
 import NotFoundPage from "@/pages/NotFoundPage";
 import LoginPage from "@/pages/LoginPage";
+import LoadingScreen from "@/components/ui/LoadingScreen";
+import { AuthProvider } from "@/hooks/useAuth";
 import PrivateRoute from "@/components/PrivateRoute";
 
 const App: React.FC = () => (
@@ -23,17 +19,12 @@ const App: React.FC = () => (
             element={
               <PrivateRoute>
                 <MainLayout>
-                  {/* O conteúdo das rotas será exibido aqui */}
+                  {/* Sub-páginas dentro do layout principal */}
                 </MainLayout>
               </PrivateRoute>
             }
           >
             <Route index element={<DashboardPage />} />
-            <Route path="dashboard" element={<DashboardPage />} />
-            <Route path="oportunidades" element={<OportunidadesPage />} />
-            <Route path="empresas" element={<EmpresasPage />} />
-            <Route path="onepager" element={<OnePagerPage />} />
-            <Route path="indicadores" element={<IndicadoresPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Route>
         </Routes>
