@@ -1,38 +1,33 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { supabase } from '@/lib/supabase';
 import { Categoria, Empresa } from '@/types';
 import { useToast } from '@/hooks/use-toast';
-import { 
-  Form, 
-  FormControl, 
-  FormField, 
-  FormItem, 
-  FormLabel, 
-  FormMessage 
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
 } from '@/components/ui/form';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Loader2, Upload } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
 
 const formSchema = z.object({
-  empresaId: z.string({
-    required_error: "Selecione um parceiro",
-  }),
-  categoriaId: z.string({
-    required_error: "Selecione uma categoria",
-  }),
+  empresaId: z.string().uuid({ message: "Selecione um parceiro válido" }),
+  categoriaId: z.string().uuid({ message: "Selecione uma categoria válida" }),
   arquivo: z.instanceof(FileList, {
     message: "Selecione um arquivo para upload",
   }).refine((files) => files.length > 0, {
@@ -47,16 +42,16 @@ interface OnePagerUploadProps {
   onSuccess?: () => void;
 }
 
-const OnePagerUpload: React.FC<OnePagerUploadProps> = ({ 
+const OnePagerUpload: React.FC<OnePagerUploadProps> = ({
   categorias,
-  onSuccess
+  onSuccess,
 }) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [parceiros, setParceiros] = useState<Empresa[]>([]);
   const [selectedCategoria, setSelectedCategoria] = useState<string>('');
-  
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -64,8 +59,8 @@ const OnePagerUpload: React.FC<OnePagerUploadProps> = ({
       categoriaId: '',
     },
   });
-  
-  // Load all partners
+
+  // Carrega todos os parceiros ao abrir o componente
   useEffect(() => {
     const fetchParceiros = async () => {
       setLoading(true);
@@ -75,12 +70,8 @@ const OnePagerUpload: React.FC<OnePagerUploadProps> = ({
           .select('*')
           .eq('tipo', 'parceiro')
           .order('nome');
-
         if (error) throw error;
-        
-        if (data) {
-          setParceiros(data as Empresa[]);
-        }
+        if (data) setParceiros(data as Empresa[]);
       } catch (error) {
         console.error('Error fetching partners:', error);
         toast({
@@ -95,14 +86,13 @@ const OnePagerUpload: React.FC<OnePagerUploadProps> = ({
 
     fetchParceiros();
   }, [toast]);
-  
-  // When categoria changes, load partners for that categoria
+
+  // Quando categoria é alterada, carrega parceiros vinculados
   const handleCategoriaChange = async (value: string) => {
     setSelectedCategoria(value);
     form.setValue('categoriaId', value);
-    
+
     try {
-      // Get companies that belong to the selected category
       const { data, error } = await (supabase as any)
         .from('empresa_categoria')
         .select('empresa_id')
@@ -112,18 +102,21 @@ const OnePagerUpload: React.FC<OnePagerUploadProps> = ({
 
       if (data && data.length > 0) {
         const empresaIds = data.map((item: any) => item.empresa_id);
-        
         const { data: empresas, error: empresasError } = await (supabase as any)
           .from('empresas')
           .select('*')
           .in('id', empresaIds)
           .eq('tipo', 'parceiro')
           .order('nome');
-
         if (empresasError) throw empresasError;
-        
         if (empresas) {
           setParceiros(empresas as Empresa[]);
+          // Seleciona o primeiro parceiro automaticamente, se houver
+          if (empresas.length > 0) {
+            form.setValue('empresaId', empresas[0].id);
+          } else {
+            form.setValue('empresaId', '');
+          }
         }
       } else {
         setParceiros([]);
@@ -136,67 +129,66 @@ const OnePagerUpload: React.FC<OnePagerUploadProps> = ({
         description: 'Não foi possível carregar os parceiros desta categoria.',
         variant: 'destructive',
       });
+      setParceiros([]);
+      form.setValue('empresaId', '');
     }
   };
-  
+
+  // Ao enviar o formulário
   const onSubmit = async (values: FormValues) => {
     setUploading(true);
     try {
-      // Check if we already have an onepager for this empresa/categoria combo
-      const { data: existingOnePager, error: checkError } = await (supabase as any)
+      // Validação extra de segurança
+      if (!values.empresaId || !values.categoriaId) {
+        toast({
+          title: 'Erro',
+          description: 'Selecione uma categoria e parceiro antes de enviar.',
+          variant: 'destructive',
+        });
+        setUploading(false);
+        return;
+      }
+
+      const file = values.arquivo[0];
+
+      // Upload do arquivo no Storage do Supabase
+      const filePath = `${values.empresaId}_${values.categoriaId}_${Date.now()}_${file.name}`;
+      const { error: uploadError } = await supabase.storage
+        .from('onepagers')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const publicUrl = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/onepagers/${filePath}`;
+
+      // Verifica se já existe um registro para o parceiro e categoria
+      const { data: existing, error: existingError } = await (supabase as any)
         .from('onepager')
         .select('id')
         .eq('empresa_id', values.empresaId)
         .eq('categoria_id', values.categoriaId)
         .maybeSingle();
-      
-      if (checkError) throw checkError;
-      
-      // Upload file to storage
-      const file = values.arquivo[0];
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${values.empresaId}_${values.categoriaId}_${Date.now()}.${fileExt}`;
-      const filePath = `${fileName}`;
-      
-      // Upload file
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('onepagers')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: false
-        });
-      
-      if (uploadError) throw uploadError;
-      
-      // Get public URL
-      const { data: urlData } = await supabase.storage
-        .from('onepagers')
-        .getPublicUrl(filePath);
-      
-      const publicUrl = urlData.publicUrl;
-      
-      // Create or update onepager record
-      if (existingOnePager) {
-        // Update existing record
-        const { data: updateData, error: updateError } = await (supabase as any)
+
+      if (existingError) throw existingError;
+
+      if (existing && existing.id) {
+        // Atualiza registro existente
+        const { error: updateError } = await (supabase as any)
           .from('onepager')
           .update({
             url_imagem: publicUrl,
             arquivo_upload: filePath,
             data_upload: new Date().toISOString(),
           })
-          .eq('id', existingOnePager.id)
-          .select();
-        
+          .eq('id', existing.id);
         if (updateError) throw updateError;
-        
         toast({
           title: 'Sucesso',
           description: 'OnePager atualizado com sucesso!',
         });
       } else {
-        // Insert new record
-        const { data: insertData, error: insertError } = await (supabase as any)
+        // Insere novo registro
+        const { error: insertError } = await (supabase as any)
           .from('onepager')
           .insert({
             empresa_id: values.empresaId,
@@ -204,27 +196,22 @@ const OnePagerUpload: React.FC<OnePagerUploadProps> = ({
             url_imagem: publicUrl,
             arquivo_upload: filePath,
             data_upload: new Date().toISOString(),
-          })
-          .select();
-        
+          });
         if (insertError) throw insertError;
-        
         toast({
           title: 'Sucesso',
           description: 'OnePager enviado com sucesso!',
         });
       }
-      
-      // Reset form
+
+      // Limpa o formulário
       form.reset({
         empresaId: '',
         categoriaId: '',
       });
-      
-      // Call success callback
-      if (onSuccess) {
-        onSuccess();
-      }
+
+      // Callback de sucesso
+      if (onSuccess) onSuccess();
     } catch (error) {
       console.error('Error uploading onepager:', error);
       toast({
@@ -236,7 +223,7 @@ const OnePagerUpload: React.FC<OnePagerUploadProps> = ({
       setUploading(false);
     }
   };
-  
+
   return (
     <Card>
       <CardHeader>
@@ -254,8 +241,8 @@ const OnePagerUpload: React.FC<OnePagerUploadProps> = ({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Categoria</FormLabel>
-                  <Select 
-                    onValueChange={(value) => handleCategoriaChange(value)}
+                  <Select
+                    onValueChange={handleCategoriaChange}
                     defaultValue={field.value}
                   >
                     <FormControl>
@@ -275,27 +262,20 @@ const OnePagerUpload: React.FC<OnePagerUploadProps> = ({
                 </FormItem>
               )}
             />
-            
+
             <FormField
               control={form.control}
               name="empresaId"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Parceiro</FormLabel>
-                  <Select 
-                    onValueChange={field.onChange} 
-                    defaultValue={field.value}
-                    disabled={!selectedCategoria || parceiros.length === 0}
+                  <Select
+                    onValueChange={(value) => form.setValue('empresaId', value)}
+                    value={field.value}
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder={
-                          !selectedCategoria 
-                            ? "Selecione uma categoria primeiro" 
-                            : parceiros.length === 0 
-                              ? "Nenhum parceiro disponível" 
-                              : "Selecione um parceiro"
-                        } />
+                        <SelectValue placeholder="Selecione um parceiro" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -310,7 +290,7 @@ const OnePagerUpload: React.FC<OnePagerUploadProps> = ({
                 </FormItem>
               )}
             />
-            
+
             <FormField
               control={form.control}
               name="arquivo"
@@ -330,7 +310,7 @@ const OnePagerUpload: React.FC<OnePagerUploadProps> = ({
                 </FormItem>
               )}
             />
-            
+
             <Button type="submit" disabled={uploading} className="w-full">
               {uploading ? (
                 <>
