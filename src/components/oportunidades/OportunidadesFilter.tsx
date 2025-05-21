@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useOportunidades } from "./OportunidadesContext";
 import { Button } from "@/components/ui/button";
@@ -55,7 +56,7 @@ export const OportunidadesFilter: React.FC = () => {
         // Fetch empresas
         const { data: empresasData, error: empresasError } = await supabase
           .from('empresas')
-          .select('id, nome, tipo, status')
+          .select('id, nome, tipo, status, descricao')
           .order('nome');
 
         if (empresasError) throw empresasError;

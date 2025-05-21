@@ -1,10 +1,9 @@
-
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Empresa, EmpresaTipoString } from "@/types";
+import { Empresa, EmpresaTipoString, TipoEmpresa } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import {
   Select,
@@ -196,7 +195,7 @@ export const EmpresasList: React.FC = () => {
   const resetForm = () => {
     setNome("");
     setDescricao("");
-    setTipo(TipoEmpresa.PARCEIRO);
+    setTipo("parceiro");
     setStatus(true);
   };
 
