@@ -1,9 +1,7 @@
-
 import React from 'react';
 import { Bell, User } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
-import { SidebarTrigger } from '@/components/ui/sidebar';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,19 +11,12 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-interface HeaderProps {
-  title: string;
-}
-
-const Header: React.FC<HeaderProps> = ({ title }) => {
+const Header: React.FC = () => {
   const { user, logout } = useAuth();
 
   return (
     <header className="bg-background border-b border-border py-3 px-6 flex items-center justify-between">
-      <div className="flex items-center gap-2">
-        <SidebarTrigger />
-        <h1 className="text-xl font-semibold">{title}</h1>
-      </div>
+      <h1 className="text-xl font-semibold">A&eight Partnership Hub</h1>
       
       <div className="flex items-center space-x-4">
         <Button variant="ghost" size="icon">
