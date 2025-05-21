@@ -1,4 +1,3 @@
-
 import { supabase } from './supabase';
 import { format } from 'date-fns';
 
@@ -9,7 +8,7 @@ export const getMatrizIntragrupo = async (
   empresaId: string | null,
   status: string | null
 ) => {
-  const { data: initialData, error } = await supabase
+  let query = supabase
     .from('oportunidades')
     .select(`
       empresa_origem:empresas!oportunidades_empresa_origem_id_fkey(id, nome, tipo),
@@ -18,21 +17,26 @@ export const getMatrizIntragrupo = async (
     `)
     .gte('data_indicacao', dataInicio ? format(dataInicio, 'yyyy-MM-dd') : null)
     .lte('data_indicacao', dataFim ? format(dataFim, 'yyyy-MM-dd') : null)
-    .eq(status ? 'status' : 'id', status || 'id')
     .eq('empresas!oportunidades_empresa_origem_id_fkey.tipo', 'intragrupo')
     .eq('empresas!oportunidades_empresa_destino_id_fkey.tipo', 'intragrupo');
 
+  if (status) {
+    query = query.eq('status', status);
+  }
+
+  const { data: initialData, error } = await query;
+
   if (error) throw error;
-  
+
   // Filter by empresaId if provided
   let filteredData = initialData;
   if (empresaId && filteredData) {
-    filteredData = filteredData.filter(item => 
-      item.empresa_origem.id === empresaId || 
+    filteredData = filteredData.filter(item =>
+      item.empresa_origem.id === empresaId ||
       item.empresa_destino.id === empresaId
     );
   }
-  
+
   // Group by origem and destino
   const grouped = filteredData?.reduce((acc: any, curr) => {
     const key = `${curr.empresa_origem.nome}-${curr.empresa_destino.nome}`;
@@ -46,7 +50,7 @@ export const getMatrizIntragrupo = async (
     acc[key].total++;
     return acc;
   }, {}) || {};
-  
+
   return Object.values(grouped);
 };
 
@@ -57,7 +61,7 @@ export const getMatrizParcerias = async (
   empresaId: string | null,
   status: string | null
 ) => {
-  const { data: initialData, error } = await supabase
+  let query = supabase
     .from('oportunidades')
     .select(`
       empresa_origem:empresas!oportunidades_empresa_origem_id_fkey(id, nome, tipo),
@@ -65,24 +69,29 @@ export const getMatrizParcerias = async (
       id
     `)
     .gte('data_indicacao', dataInicio ? format(dataInicio, 'yyyy-MM-dd') : null)
-    .lte('data_indicacao', dataFim ? format(dataFim, 'yyyy-MM-dd') : null)
-    .eq(status ? 'status' : 'id', status || 'id');
+    .lte('data_indicacao', dataFim ? format(dataFim, 'yyyy-MM-dd') : null);
+
+  if (status) {
+    query = query.eq('status', status);
+  }
+
+  const { data: initialData, error } = await query;
 
   if (error) throw error;
-  
+
   // Filter for at least one side being a partner
-  let filteredData = initialData?.filter(item => 
-    item.empresa_origem.tipo === 'parceiro' || 
+  let filteredData = initialData?.filter(item =>
+    item.empresa_origem.tipo === 'parceiro' ||
     item.empresa_destino.tipo === 'parceiro'
   ) || [];
-  
+
   if (empresaId) {
-    filteredData = filteredData.filter(item => 
-      item.empresa_origem.id === empresaId || 
+    filteredData = filteredData.filter(item =>
+      item.empresa_origem.id === empresaId ||
       item.empresa_destino.id === empresaId
     );
   }
-  
+
   // Group by origem and destino
   const grouped = filteredData.reduce((acc: any, curr) => {
     const key = `${curr.empresa_origem.nome}-${curr.empresa_destino.nome}`;
@@ -96,7 +105,7 @@ export const getMatrizParcerias = async (
     acc[key].total++;
     return acc;
   }, {});
-  
+
   return Object.values(grouped);
 };
 
@@ -117,16 +126,16 @@ export const getQualidadeIndicacoes = async (
     .lte('data_indicacao', dataFim ? format(dataFim, 'yyyy-MM-dd') : null);
 
   if (error) throw error;
-  
+
   // Filter by empresaId if provided
   let filteredData = initialData;
   if (empresaId && filteredData) {
-    filteredData = filteredData.filter(item => 
-      item.empresa_origem.id === empresaId || 
+    filteredData = filteredData.filter(item =>
+      item.empresa_origem.id === empresaId ||
       item.empresa_destino.id === empresaId
     );
   }
-  
+
   // Group by origem, destino and status
   const grouped = filteredData?.reduce((acc: any, curr) => {
     const key = `${curr.empresa_origem.nome}-${curr.empresa_destino.nome}-${curr.status}`;
@@ -141,7 +150,7 @@ export const getQualidadeIndicacoes = async (
     acc[key].total++;
     return acc;
   }, {}) || {};
-  
+
   return Object.values(grouped);
 };
 
@@ -152,7 +161,7 @@ export const getBalancoGrupoParcerias = async (
   empresaId: string | null,
   status: string | null
 ) => {
-  const { data: initialData, error } = await supabase
+  let query = supabase
     .from('oportunidades')
     .select(`
       empresa_origem:empresas!oportunidades_empresa_origem_id_fkey(id, nome, tipo),
@@ -160,32 +169,37 @@ export const getBalancoGrupoParcerias = async (
       id
     `)
     .gte('data_indicacao', dataInicio ? format(dataInicio, 'yyyy-MM-dd') : null)
-    .lte('data_indicacao', dataFim ? format(dataFim, 'yyyy-MM-dd') : null)
-    .eq(status ? 'status' : 'id', status || 'id');
+    .lte('data_indicacao', dataFim ? format(dataFim, 'yyyy-MM-dd') : null);
+
+  if (status) {
+    query = query.eq('status', status);
+  }
+
+  const { data: initialData, error } = await query;
 
   if (error) throw error;
-  
+
   // Filter by empresaId if provided
   let filteredData = initialData;
   if (empresaId && filteredData) {
-    filteredData = filteredData.filter(item => 
-      item.empresa_origem.id === empresaId || 
+    filteredData = filteredData.filter(item =>
+      item.empresa_origem.id === empresaId ||
       item.empresa_destino.id === empresaId
     );
   }
 
   // Count sent from group to partners
-  const enviadas = filteredData?.filter(item => 
-    item.empresa_origem.tipo === 'intragrupo' && 
+  const enviadas = filteredData?.filter(item =>
+    item.empresa_origem.tipo === 'intragrupo' &&
     item.empresa_destino.tipo === 'parceiro'
   ).length || 0;
 
   // Count received by group from partners
-  const recebidas = filteredData?.filter(item => 
-    item.empresa_origem.tipo === 'parceiro' && 
+  const recebidas = filteredData?.filter(item =>
+    item.empresa_origem.tipo === 'parceiro' &&
     item.empresa_destino.tipo === 'intragrupo'
   ).length || 0;
-  
+
   return [
     { tipo: 'Enviadas', valor: enviadas },
     { tipo: 'Recebidas', valor: recebidas }
@@ -198,7 +212,7 @@ export const getRankingParceirosEnviadas = async (
   dataFim: Date | null,
   status: string | null
 ) => {
-  const { data, error } = await supabase
+  let query = supabase
     .from('oportunidades')
     .select(`
       empresa_origem:empresas!oportunidades_empresa_origem_id_fkey(id, nome, tipo),
@@ -207,12 +221,17 @@ export const getRankingParceirosEnviadas = async (
     `)
     .gte('data_indicacao', dataInicio ? format(dataInicio, 'yyyy-MM-dd') : null)
     .lte('data_indicacao', dataFim ? format(dataFim, 'yyyy-MM-dd') : null)
-    .eq(status ? 'status' : 'id', status || 'id')
     .eq('empresas!oportunidades_empresa_origem_id_fkey.tipo', 'parceiro')
     .eq('empresas!oportunidades_empresa_destino_id_fkey.tipo', 'intragrupo');
 
+  if (status) {
+    query = query.eq('status', status);
+  }
+
+  const { data, error } = await query;
+
   if (error) throw error;
-  
+
   // Group by partner
   const grouped = (data || []).reduce((acc: any, curr) => {
     const key = curr.empresa_origem.nome;
@@ -225,7 +244,7 @@ export const getRankingParceirosEnviadas = async (
     acc[key].indicacoes++;
     return acc;
   }, {});
-  
+
   return Object.values(grouped).sort((a: any, b: any) => b.indicacoes - a.indicacoes);
 };
 
@@ -235,7 +254,7 @@ export const getRankingParceirosRecebidas = async (
   dataFim: Date | null,
   status: string | null
 ) => {
-  const { data, error } = await supabase
+  let query = supabase
     .from('oportunidades')
     .select(`
       empresa_origem:empresas!oportunidades_empresa_origem_id_fkey(id, nome, tipo),
@@ -244,12 +263,17 @@ export const getRankingParceirosRecebidas = async (
     `)
     .gte('data_indicacao', dataInicio ? format(dataInicio, 'yyyy-MM-dd') : null)
     .lte('data_indicacao', dataFim ? format(dataFim, 'yyyy-MM-dd') : null)
-    .eq(status ? 'status' : 'id', status || 'id')
     .eq('empresas!oportunidades_empresa_origem_id_fkey.tipo', 'intragrupo')
     .eq('empresas!oportunidades_empresa_destino_id_fkey.tipo', 'parceiro');
 
+  if (status) {
+    query = query.eq('status', status);
+  }
+
+  const { data, error } = await query;
+
   if (error) throw error;
-  
+
   // Group by partner
   const grouped = (data || []).reduce((acc: any, curr) => {
     const key = curr.empresa_destino.nome;
@@ -262,7 +286,7 @@ export const getRankingParceirosRecebidas = async (
     acc[key].indicacoes++;
     return acc;
   }, {});
-  
+
   return Object.values(grouped).sort((a: any, b: any) => b.indicacoes - a.indicacoes);
 };
 
@@ -282,18 +306,18 @@ export const getStatusDistribution = async (
     .lte('data_indicacao', dataFim ? format(dataFim, 'yyyy-MM-dd') : null);
 
   if (error) throw error;
-  
+
   let filteredData = initialData;
   if (empresaId) {
     const { data: empresaFilteredData, error: filteredError } = await supabase
       .from('oportunidades')
       .select('*')
       .or(`empresa_origem_id.eq.${empresaId},empresa_destino_id.eq.${empresaId}`);
-      
+
     if (filteredError) throw filteredError;
     filteredData = empresaFilteredData;
   }
-  
+
   // Group by status
   const grouped = (filteredData || []).reduce((acc: any, curr) => {
     if (!acc[curr.status]) {
@@ -305,6 +329,6 @@ export const getStatusDistribution = async (
     acc[curr.status].total++;
     return acc;
   }, {});
-  
+
   return Object.values(grouped);
 };
