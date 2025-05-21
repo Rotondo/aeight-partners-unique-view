@@ -18,9 +18,7 @@ const App: React.FC = () => (
             path="/"
             element={
               <PrivateRoute>
-                <MainLayout>
-                  {/* Sub-páginas dentro do layout principal */}
-                </MainLayout>
+                <MainLayout />
               </PrivateRoute>
             }
           >
