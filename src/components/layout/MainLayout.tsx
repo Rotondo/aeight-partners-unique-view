@@ -1,7 +1,7 @@
 import React from "react";
-import { Outlet, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 
-const MainLayout: React.FC = () => (
+const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children }) => (
   <div>
     <header style={{ padding: 16, background: "#f5f5f5" }}>
       <nav>
@@ -11,7 +11,7 @@ const MainLayout: React.FC = () => (
       </nav>
     </header>
     <main style={{ padding: 24 }}>
-      <Outlet />
+      {children}
     </main>
   </div>
 );
