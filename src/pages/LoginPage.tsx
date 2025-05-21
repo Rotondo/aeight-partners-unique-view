@@ -1,16 +1,22 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [mensagem, setMensagem] = useState("");
+  const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    // Simulação de login, troque para sua lógica real!
-    if (email === "admin@admin.com" && senha === "123456") {
+    const sucesso = login(email, senha);
+    if (sucesso) {
       setMensagem("Login bem-sucedido!");
-      // Redirecione ou faça autenticação real aqui
+      setTimeout(() => {
+        navigate("/");
+      }, 1000);
     } else {
       setMensagem("E-mail ou senha incorretos.");
     }
