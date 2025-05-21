@@ -1,19 +1,38 @@
-import React, { createContext, useContext, useState, ReactNode } from "react";
+import React, { createContext, useContext, useState, ReactNode, useEffect } from "react";
 
 // Definição do contexto de autenticação
 interface AuthContextType {
   isAuthenticated: boolean;
-  login: () => void;
+  login: (email: string, senha: string) => boolean;
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    // Tenta restaurar do localStorage
+    return localStorage.getItem("isAuthenticated") === "true";
+  });
 
-  const login = () => setIsAuthenticated(true);
-  const logout = () => setIsAuthenticated(false);
+  useEffect(() => {
+    localStorage.setItem("isAuthenticated", isAuthenticated ? "true" : "false");
+  }, [isAuthenticated]);
+
+  const login = (email: string, senha: string) => {
+    // Troque por sua lógica real depois!
+    if (email === "admin@admin.com" && senha === "123456") {
+      setIsAuthenticated(true);
+      return true;
+    }
+    setIsAuthenticated(false);
+    return false;
+  };
+
+  const logout = () => {
+    setIsAuthenticated(false);
+    localStorage.setItem("isAuthenticated", "false");
+  };
 
   return (
     <AuthContext.Provider value={{ isAuthenticated, login, logout }}>
