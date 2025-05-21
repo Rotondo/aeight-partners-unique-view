@@ -1,5 +1,5 @@
 import React from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import MainLayout from "@/components/layout/MainLayout";
 import DashboardPage from "@/pages/dashboard/DashboardPage";
 import NotFoundPage from "@/pages/NotFoundPage";
@@ -18,13 +18,13 @@ const App: React.FC = () => (
             path="/"
             element={
               <PrivateRoute>
-                <MainLayout />
+                <MainLayout>
+                  <DashboardPage />
+                </MainLayout>
               </PrivateRoute>
             }
-          >
-            <Route index element={<DashboardPage />} />
-            <Route path="*" element={<NotFoundPage />} />
-          </Route>
+          />
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </React.Suspense>
     </AuthProvider>
