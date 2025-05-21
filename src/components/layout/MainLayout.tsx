@@ -1,19 +1,23 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Outlet } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import Header from "./Header";
+import Sidebar from "./Sidebar";
 
-const MainLayout: React.FC<{ children?: React.ReactNode }> = ({ children }) => (
-  <div>
-    <header style={{ padding: 16, background: "#f5f5f5" }}>
-      <nav>
-        <Link to="/" style={{ marginRight: 16 }}>Dashboard</Link>
-        {/* Adicione mais links aqui se desejar */}
-        <Link to="/login">Sair</Link>
-      </nav>
-    </header>
-    <main style={{ padding: 24 }}>
-      {children}
-    </main>
-  </div>
-);
+const MainLayout: React.FC = () => {
+  const { user } = useAuth();
+  
+  return (
+    <div className="flex min-h-screen">
+      <Sidebar />
+      <div className="flex flex-1 flex-col">
+        <Header />
+        <main className="flex-1 p-6">
+          <Outlet />
+        </main>
+      </div>
+    </div>
+  );
+};
 
 export default MainLayout;
