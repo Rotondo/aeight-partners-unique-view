@@ -367,13 +367,13 @@ export const OportunidadesDashboards: React.FC = () => {
         <div className="w-full md:w-auto">
           <Label htmlFor="empresaId">Empresa</Label>
           <Select 
-            value={filters.empresaId} 
-            onValueChange={(value) => setFilters(prev => ({ ...prev, empresaId: value }))}>
+            value={filters.empresaId === "" ? "all" : filters.empresaId}
+            onValueChange={(value) => setFilters(prev => ({ ...prev, empresaId: value === "all" ? "" : value }))}>
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Todas as empresas" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todas as empresas</SelectItem>
+              <SelectItem value="all">Todas as empresas</SelectItem>
               {empresas.map(empresa => (
                 <SelectItem key={empresa.id} value={empresa.id}>{empresa.nome}</SelectItem>
               ))}
@@ -383,13 +383,13 @@ export const OportunidadesDashboards: React.FC = () => {
         <div className="w-full md:w-auto">
           <Label htmlFor="status">Status</Label>
           <Select 
-            value={filters.status} 
-            onValueChange={(value) => setFilters(prev => ({ ...prev, status: value }))}>
+            value={filters.status === "" ? "all" : filters.status}
+            onValueChange={(value) => setFilters(prev => ({ ...prev, status: value === "all" ? "" : value }))}>
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Todos os status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todos os status</SelectItem>
+              <SelectItem value="all">Todos os status</SelectItem>
               <SelectItem value="em_contato">Em Contato</SelectItem>
               <SelectItem value="negociando">Negociando</SelectItem>
               <SelectItem value="ganho">Ganho</SelectItem>
