@@ -6,6 +6,7 @@ import { AboutPlatform } from "@/components/dashboard/AboutPlatform";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import { Oportunidade } from "@/types";
+import MainLayout from "@/components/layout/MainLayout";
 
 const Dashboard: React.FC = () => {
   const { toast } = useToast();
@@ -68,13 +69,10 @@ const Dashboard: React.FC = () => {
             const date = new Date(parseInt(year), parseInt(month) - 1, 1);
             const monthName = date.toLocaleString("pt-BR", { month: "short" });
             return {
-              mes: `${monthName}/${year.substring(2)}`,
+              mes: `${monthName}/${year.slice(2)}`,
               quantidade: value,
-              date // campo auxiliar para sort
             };
-          })
-          .sort((a, b) => a.date.getTime() - b.date.getTime()) // ordena pela data
-          .map(({ date, ...rest }) => rest); // remove o campo date antes de passar ao gráfico
+          });
 
         setStats({
           totalOportunidades,
@@ -84,10 +82,10 @@ const Dashboard: React.FC = () => {
           oportunidadesPorMes: oportunidadesPorMesArray,
         });
       } catch (error) {
-        console.error("Error fetching dashboard data:", error);
+        console.error("Erro ao carregar dados do dashboard:", error);
         toast({
-          title: "Erro",
-          description: "Não foi possível carregar os dados do dashboard.",
+          title: "Erro ao carregar dashboard",
+          description: "Não foi possível buscar os dados.",
           variant: "destructive",
         });
       } finally {
@@ -96,23 +94,18 @@ const Dashboard: React.FC = () => {
     };
 
     fetchDashboardData();
-  }, [toast]);
+  }, []);
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <MainLayout>
+      <div className="space-y-8 p-4">
         <h1 className="text-2xl font-bold">Dashboard</h1>
-      </div>
-
-      <DashboardStatsSection stats={stats} loading={loading} />
-
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+        <DashboardStatsSection stats={stats} loading={loading} />
         <OpportunitiesChart stats={stats} loading={loading} />
         <QuickAccess />
+        <AboutPlatform />
       </div>
-
-      <AboutPlatform />
-    </div>
+    </MainLayout>
   );
 };
 
