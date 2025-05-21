@@ -19,7 +19,7 @@ const OnePagerPage: React.FC = () => {
   const [selectedParceiro, setSelectedParceiro] = useState<Empresa | null>(null);
   const [onePager, setOnePager] = useState<OnePager | null>(null);
 
-  // Load categories
+  // Carrega categorias ao abrir a página
   useEffect(() => {
     const fetchCategorias = async () => {
       try {
@@ -29,11 +29,10 @@ const OnePagerPage: React.FC = () => {
           .order('nome');
 
         if (error) throw error;
-        
+
         if (data) {
           setCategorias(data as Categoria[]);
-          
-          // Select first category by default if available
+          // Seleciona a primeira categoria por padrão
           if (data.length > 0) {
             setSelectedCategoria(data[0] as Categoria);
           }
@@ -51,16 +50,21 @@ const OnePagerPage: React.FC = () => {
     };
 
     fetchCategorias();
-  }, [toast]);
+    // eslint-disable-next-line
+  }, []);
 
-  // Load partners for selected category
+  // Carrega parceiros vinculados à categoria selecionada
   useEffect(() => {
-    if (!selectedCategoria) return;
-    
+    if (!selectedCategoria) {
+      setParceiros([]);
+      setSelectedParceiro(null);
+      return;
+    }
+
     const fetchParceiros = async () => {
       setLoading(true);
       try {
-        // Get companies that belong to the selected category
+        // Busca IDs das empresas vinculadas à categoria
         const { data, error } = await (supabase as any)
           .from('empresa_categoria')
           .select('empresa_id')
@@ -70,7 +74,8 @@ const OnePagerPage: React.FC = () => {
 
         if (data && data.length > 0) {
           const empresaIds = data.map((item: any) => item.empresa_id);
-          
+
+          // Busca dados das empresas parceiras
           const { data: empresas, error: empresasError } = await (supabase as any)
             .from('empresas')
             .select('*')
@@ -79,11 +84,10 @@ const OnePagerPage: React.FC = () => {
             .order('nome');
 
           if (empresasError) throw empresasError;
-          
+
           if (empresas) {
             setParceiros(empresas as Empresa[]);
-            
-            // Select first partner by default if available
+            // Seleciona o primeiro parceiro por padrão
             if (empresas.length > 0) {
               setSelectedParceiro(empresas[0] as Empresa);
             } else {
@@ -107,15 +111,16 @@ const OnePagerPage: React.FC = () => {
     };
 
     fetchParceiros();
-  }, [selectedCategoria, toast]);
+    // eslint-disable-next-line
+  }, [selectedCategoria]);
 
-  // Load OnePager for selected partner
+  // Carrega OnePager para o parceiro selecionado e categoria selecionada
   useEffect(() => {
     if (!selectedParceiro || !selectedCategoria) {
       setOnePager(null);
       return;
     }
-    
+
     const fetchOnePager = async () => {
       try {
         const { data, error } = await (supabase as any)
@@ -126,7 +131,7 @@ const OnePagerPage: React.FC = () => {
           .maybeSingle();
 
         if (error) throw error;
-        
+
         setOnePager(data as OnePager || null);
       } catch (error) {
         console.error('Error fetching onepager:', error);
@@ -139,7 +144,8 @@ const OnePagerPage: React.FC = () => {
     };
 
     fetchOnePager();
-  }, [selectedParceiro, selectedCategoria, toast]);
+    // eslint-disable-next-line
+  }, [selectedParceiro, selectedCategoria]);
 
   return (
     <div className="flex flex-col h-full">
@@ -154,31 +160,30 @@ const OnePagerPage: React.FC = () => {
           </TabsList>
         </div>
 
+        {/* Aba Visualizar */}
         <TabsContent value="view" className="mt-0">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 h-[calc(100vh-220px)]">
-            {/* Left sidebar - Categories */}
+            {/* Menu lateral esquerdo - Categorias */}
             <div className="md:col-span-1 bg-card rounded-lg border shadow-sm overflow-auto">
-              <CategoriasList 
+              <CategoriasList
                 categorias={categorias}
                 selectedCategoria={selectedCategoria}
                 onSelectCategoria={setSelectedCategoria}
                 isLoading={loading}
               />
             </div>
-            
-            {/* Center - Partners list */}
+            {/* Centro - Lista de Parceiros */}
             <div className="md:col-span-1 bg-card rounded-lg border shadow-sm overflow-auto">
-              <ParceirosList 
+              <ParceirosList
                 parceiros={parceiros}
                 selectedParceiro={selectedParceiro}
                 onSelectParceiro={setSelectedParceiro}
                 isLoading={loading}
               />
             </div>
-            
-            {/* Right - OnePager viewer */}
+            {/* Direita - Visualização do OnePager */}
             <div className="md:col-span-2 bg-card rounded-lg border shadow-sm overflow-auto">
-              <OnePagerViewer 
+              <OnePagerViewer
                 onePager={onePager}
                 parceiro={selectedParceiro}
                 isLoading={loading}
@@ -187,12 +192,13 @@ const OnePagerPage: React.FC = () => {
           </div>
         </TabsContent>
 
+        {/* Aba Upload (apenas admin) */}
         {user?.papel === 'admin' && (
           <TabsContent value="upload" className="mt-0">
             <OnePagerUpload
               categorias={categorias}
               onSuccess={() => {
-                // Refetch the current onepager if applicable
+                // Refaz o carregamento caso faça upload de novo arquivo
                 if (selectedParceiro && selectedCategoria) {
                   const fetchOnePager = async () => {
                     const { data } = await (supabase as any)
@@ -201,10 +207,9 @@ const OnePagerPage: React.FC = () => {
                       .eq('empresa_id', selectedParceiro.id)
                       .eq('categoria_id', selectedCategoria.id)
                       .maybeSingle();
-                    
+
                     setOnePager(data as OnePager || null);
                   };
-                  
                   fetchOnePager();
                 }
               }}
