@@ -1,88 +1,43 @@
+import React from "react";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider } from "@/hooks/useAuth";
+import MainLayout from "@/layouts/MainLayout";
+import DashboardPage from "@/pages/dashboard/DashboardPage";
+import OportunidadesPage from "@/pages/oportunidades/OportunidadesPage";
+import EmpresasPage from "@/pages/empresas/EmpresasPage";
+import OnePagerPage from "@/pages/onepager/OnePagerPage";
+import IndicadoresPage from "@/pages/indicadores/IndicadoresPage";
+import LoadingScreen from "@/components/ui/LoadingScreen";
+import NotFoundPage from "@/pages/NotFoundPage";
+import LoginPage from "@/pages/LoginPage";
+import PrivateRoute from "@/components/PrivateRoute";
 
-import React, { useEffect } from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
-
-// Page imports
-import Dashboard from "./pages/Dashboard";
-import Oportunidades from "./pages/oportunidades";
-import OportunidadesDashboardPage from "./pages/oportunidades-dashboard";
-import Admin from "./pages/admin"; 
-import OnePagerPage from "./pages/onepager/OnePagerPage";
-import QuadrantePage from "./pages/quadrante/QuadrantePage";
-import LoginPage from "./pages/auth/LoginPage";
-import NotFound from "./pages/NotFound";
-
-// Auth components
-import PrivateRoute from "./components/auth/PrivateRoute";
-import { useAuth } from "./hooks/useAuth"; 
-import { Toaster } from "./components/ui/toaster";
-
-function App() {
-  const { user, isAuthenticated } = useAuth();
-  
-  // Update page title
-  useEffect(() => {
-    document.title = "A&eight Partnership Hub";
-  }, []);
-  
-  return (
-    <>
-      <Routes>
-        <Route
-          path="/"
-          element={
-            <PrivateRoute>
-              <Dashboard />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/oportunidades"
-          element={
-            <PrivateRoute>
-              <Oportunidades />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/oportunidades-dashboard"
-          element={
-            <PrivateRoute>
-              <OportunidadesDashboardPage />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/admin"
-          element={
-            <PrivateRoute>
-              <Admin />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/onepager/*"
-          element={
-            <PrivateRoute>
-              <OnePagerPage />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/quadrante"
-          element={
-            <PrivateRoute>
-              <QuadrantePage />
-            </PrivateRoute>
-          }
-        />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/404" element={<NotFound />} />
-        <Route path="*" element={<Navigate replace to="/404" />} />
-      </Routes>
-      <Toaster />
-    </>
-  );
-}
+const App: React.FC = () => (
+  <Router>
+    <AuthProvider>
+      <React.Suspense fallback={<LoadingScreen />}>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route
+            path="/"
+            element={
+              <PrivateRoute>
+                <MainLayout />
+              </PrivateRoute>
+            }
+          >
+            <Route index element={<DashboardPage />} />
+            <Route path="dashboard" element={<DashboardPage />} />
+            <Route path="oportunidades" element={<OportunidadesPage />} />
+            <Route path="empresas" element={<EmpresasPage />} />
+            <Route path="onepager" element={<OnePagerPage />} />
+            <Route path="indicadores" element={<IndicadoresPage />} />
+            <Route path="*" element={<NotFoundPage />} />
+          </Route>
+        </Routes>
+      </React.Suspense>
+    </AuthProvider>
+  </Router>
+);
 
 export default App;
