@@ -35,7 +35,12 @@ const SidebarLink: React.FC<SidebarLinkProps> = ({ to, label, icon, active }) =>
   </Link>
 );
 
-export const AppSidebar: React.FC = () => {
+interface AppSidebarProps {
+  isOpen: boolean;
+  toggleSidebar: () => void;
+}
+
+export const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen, toggleSidebar }) => {
   const location = useLocation();
   const currentPath = location.pathname;
 

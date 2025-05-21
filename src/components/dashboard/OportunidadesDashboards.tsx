@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { supabase } from '@/lib/supabase';
 import { TipoEmpresa } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { format, subMonths } from 'date-fns';
@@ -16,6 +15,16 @@ import {
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { DatePicker } from '@/components/ui/date-picker';
+import { supabase } from '@/lib/supabase';
+import {
+  getMatrizIntragrupo,
+  getMatrizParcerias,
+  getQualidadeIndicacoes,
+  getBalancoGrupoParcerias,
+  getRankingParceirosEnviadas,
+  getRankingParceirosRecebidas,
+  getStatusDistribution
+} from '@/lib/dbFunctions';
 import {
   BarChart,
   Bar,
@@ -120,7 +129,8 @@ export const OportunidadesDashboards: React.FC = () => {
       
       // Convert the raw data to match the Empresa type
       const typedData: Empresa[] = data.map(item => ({
-        ...item,
+        id: item.id,
+        nome: item.nome,
         tipo: item.tipo as TipoEmpresa
       }));
       
@@ -159,36 +169,14 @@ export const OportunidadesDashboards: React.FC = () => {
     }
   };
 
-  // Create filter query (date range, empresa, status)
-  const buildFilteredQuery = (query: any) => {
-    if (filters.dataInicio) {
-      query = query.gte('data_indicacao', format(filters.dataInicio, 'yyyy-MM-dd'));
-    }
-    if (filters.dataFim) {
-      const endDate = new Date(filters.dataFim);
-      endDate.setHours(23, 59, 59, 999);
-      query = query.lte('data_indicacao', endDate.toISOString());
-    }
-    if (filters.empresaId) {
-      query = query.or(`empresa_origem_id.eq.${filters.empresaId},empresa_destino_id.eq.${filters.empresaId}`);
-    }
-    if (filters.status) {
-      query = query.eq('status', filters.status);
-    }
-    return query;
-  };
-
   const fetchMatrizIntragrupo = async () => {
     try {
-      // Modificando para usar rpc para aggregation
-      const { data, error } = await supabase.rpc('get_matriz_intragrupo', {
-        data_inicio: filters.dataInicio ? format(filters.dataInicio, 'yyyy-MM-dd') : null,
-        data_fim: filters.dataFim ? format(filters.dataFim, 'yyyy-MM-dd') : null,
-        empresa_filtro: filters.empresaId || null,
-        status_filtro: filters.status || null
-      });
-
-      if (error) throw error;
+      const data = await getMatrizIntragrupo(
+        filters.dataInicio, 
+        filters.dataFim, 
+        filters.empresaId || null, 
+        filters.status || null
+      );
       setMatrizIntragrupo(data);
     } catch (error) {
       console.error("Erro ao buscar matriz intragrupo:", error);
@@ -198,14 +186,12 @@ export const OportunidadesDashboards: React.FC = () => {
 
   const fetchMatrizParcerias = async () => {
     try {
-      const { data, error } = await supabase.rpc('get_matriz_parcerias', {
-        data_inicio: filters.dataInicio ? format(filters.dataInicio, 'yyyy-MM-dd') : null,
-        data_fim: filters.dataFim ? format(filters.dataFim, 'yyyy-MM-dd') : null,
-        empresa_filtro: filters.empresaId || null,
-        status_filtro: filters.status || null
-      });
-
-      if (error) throw error;
+      const data = await getMatrizParcerias(
+        filters.dataInicio, 
+        filters.dataFim, 
+        filters.empresaId || null, 
+        filters.status || null
+      );
       setMatrizParcerias(data);
     } catch (error) {
       console.error("Erro ao buscar matriz parcerias:", error);
@@ -215,13 +201,11 @@ export const OportunidadesDashboards: React.FC = () => {
 
   const fetchQualidade = async () => {
     try {
-      const { data, error } = await supabase.rpc('get_qualidade_indicacoes', {
-        data_inicio: filters.dataInicio ? format(filters.dataInicio, 'yyyy-MM-dd') : null,
-        data_fim: filters.dataFim ? format(filters.dataFim, 'yyyy-MM-dd') : null,
-        empresa_filtro: filters.empresaId || null
-      });
-
-      if (error) throw error;
+      const data = await getQualidadeIndicacoes(
+        filters.dataInicio, 
+        filters.dataFim, 
+        filters.empresaId || null
+      );
       setQualidadeData(data);
     } catch (error) {
       console.error("Erro ao buscar qualidade das indicações:", error);
@@ -231,23 +215,13 @@ export const OportunidadesDashboards: React.FC = () => {
 
   const fetchBalanco = async () => {
     try {
-      // Fetch enviadas pelo grupo para parceiros
-      const { data: enviadasData, error: enviadasError } = await supabase.rpc('get_balanco_grupo_parcerias', {
-        data_inicio: filters.dataInicio ? format(filters.dataInicio, 'yyyy-MM-dd') : null,
-        data_fim: filters.dataFim ? format(filters.dataFim, 'yyyy-MM-dd') : null,
-        empresa_filtro: filters.empresaId || null,
-        status_filtro: filters.status || null
-      });
-
-      if (enviadasError) throw enviadasError;
-
-      const enviadas = enviadasData.find((d: any) => d.tipo === 'Enviadas')?.valor || 0;
-      const recebidas = enviadasData.find((d: any) => d.tipo === 'Recebidas')?.valor || 0;
-
-      setBalancoData([
-        { tipo: 'Enviadas pelo Grupo', valor: enviadas },
-        { tipo: 'Recebidas pelo Grupo', valor: recebidas }
-      ]);
+      const data = await getBalancoGrupoParcerias(
+        filters.dataInicio, 
+        filters.dataFim, 
+        filters.empresaId || null, 
+        filters.status || null
+      );
+      setBalancoData(data);
     } catch (error) {
       console.error("Erro ao buscar balanço:", error);
       setBalancoData([]);
@@ -256,17 +230,12 @@ export const OportunidadesDashboards: React.FC = () => {
 
   const fetchRankingEnviadas = async () => {
     try {
-      const { data, error } = await supabase.rpc('get_ranking_parceiros_enviadas', {
-        data_inicio: filters.dataInicio ? format(filters.dataInicio, 'yyyy-MM-dd') : null,
-        data_fim: filters.dataFim ? format(filters.dataFim, 'yyyy-MM-dd') : null,
-        status_filtro: filters.status || null
-      });
-
-      if (error) throw error;
-      setRankingEnviadas(data.map((item: any) => ({
-        parceiro: item.parceiro,
-        indicacoes: item.indicacoes_enviadas
-      })));
+      const data = await getRankingParceirosEnviadas(
+        filters.dataInicio, 
+        filters.dataFim, 
+        filters.status || null
+      );
+      setRankingEnviadas(data);
     } catch (error) {
       console.error("Erro ao buscar ranking de parceiros:", error);
       setRankingEnviadas([]);
@@ -275,17 +244,12 @@ export const OportunidadesDashboards: React.FC = () => {
 
   const fetchRankingRecebidas = async () => {
     try {
-      const { data, error } = await supabase.rpc('get_ranking_parceiros_recebidas', {
-        data_inicio: filters.dataInicio ? format(filters.dataInicio, 'yyyy-MM-dd') : null,
-        data_fim: filters.dataFim ? format(filters.dataFim, 'yyyy-MM-dd') : null,
-        status_filtro: filters.status || null
-      });
-
-      if (error) throw error;
-      setRankingRecebidas(data.map((item: any) => ({
-        parceiro: item.parceiro,
-        indicacoes: item.indicacoes_recebidas
-      })));
+      const data = await getRankingParceirosRecebidas(
+        filters.dataInicio, 
+        filters.dataFim, 
+        filters.status || null
+      );
+      setRankingRecebidas(data);
     } catch (error) {
       console.error("Erro ao buscar ranking de parceiros:", error);
       setRankingRecebidas([]);
@@ -294,17 +258,12 @@ export const OportunidadesDashboards: React.FC = () => {
 
   const fetchStatusDistribution = async () => {
     try {
-      const { data, error } = await supabase.rpc('get_status_distribution', {
-        data_inicio: filters.dataInicio ? format(filters.dataInicio, 'yyyy-MM-dd') : null,
-        data_fim: filters.dataFim ? format(filters.dataFim, 'yyyy-MM-dd') : null,
-        empresa_filtro: filters.empresaId || null
-      });
-
-      if (error) throw error;
-      setStatusData(data.map((item: any) => ({
-        status: item.status,
-        total: item.total
-      })));
+      const data = await getStatusDistribution(
+        filters.dataInicio, 
+        filters.dataFim, 
+        filters.empresaId || null
+      );
+      setStatusData(data);
     } catch (error) {
       console.error("Erro ao buscar distribuição de status:", error);
       setStatusData([]);
@@ -372,6 +331,47 @@ export const OportunidadesDashboards: React.FC = () => {
       );
     }
     return null;
+  };
+
+  // Custom content for Treemap
+  const CustomTreemapContent = (props: any) => {
+    const { x, y, width, height, index, payload, name, size } = props;
+    if (width < 70 || height < 25) return null;
+    
+    return (
+      <g>
+        <rect
+          x={x}
+          y={y}
+          width={width}
+          height={height}
+          style={{
+            fill: COLORS[index % COLORS.length],
+            stroke: '#fff',
+            strokeWidth: 2,
+            strokeOpacity: 1,
+          }}
+        />
+        <text
+          x={x + width / 2}
+          y={y + height / 2 - 10}
+          textAnchor="middle"
+          fill="#fff"
+          fontSize={14}
+        >
+          {name}
+        </text>
+        <text
+          x={x + width / 2}
+          y={y + height / 2 + 10}
+          textAnchor="middle"
+          fill="#fff"
+          fontSize={16}
+        >
+          {size}
+        </text>
+      </g>
+    );
   };
 
   return (
@@ -452,47 +452,16 @@ export const OportunidadesDashboards: React.FC = () => {
                       dataKey="size"
                       stroke="#fff"
                       fill="#8884d8"
-                      content={({ root, depth, x, y, width, height, index, payload, colors, rank, name }) => {
-                        return (
-                          <g>
-                            <rect
-                              x={x}
-                              y={y}
-                              width={width}
-                              height={height}
-                              style={{
-                                fill: COLORS[index % COLORS.length],
-                                stroke: '#fff',
-                                strokeWidth: 2 / (depth + 1e-10),
-                                strokeOpacity: 1 / (depth + 1e-10),
-                              }}
-                            />
-                            {(width > 70) && height > 25 && (
-                              <>
-                                <text
-                                  x={x + width / 2}
-                                  y={y + height / 2 - 10}
-                                  textAnchor="middle"
-                                  fill="#fff"
-                                  fontSize={14}
-                                >
-                                  {name}
-                                </text>
-                                <text
-                                  x={x + width / 2}
-                                  y={y + height / 2 + 10}
-                                  textAnchor="middle"
-                                  fill="#fff"
-                                  fontSize={16}
-                                >
-                                  {payload.size}
-                                </text>
-                              </>
-                            )}
-                          </g>
-                        );
-                      }}
                     >
+                      {transformForTreemap(matrizIntragrupo).map((entry, index) => (
+                        <Treemap
+                          key={`cell-${index}`}
+                          dataKey="size"
+                          stroke="#fff"
+                          fill={COLORS[index % COLORS.length]}
+                          content={<CustomTreemapContent />}
+                        />
+                      ))}
                       <Tooltip content={<CustomTooltip />} />
                     </Treemap>
                   </ResponsiveContainer>
@@ -555,47 +524,16 @@ export const OportunidadesDashboards: React.FC = () => {
                       dataKey="size"
                       stroke="#fff"
                       fill="#8884d8"
-                      content={({ root, depth, x, y, width, height, index, payload, colors, rank, name }) => {
-                        return (
-                          <g>
-                            <rect
-                              x={x}
-                              y={y}
-                              width={width}
-                              height={height}
-                              style={{
-                                fill: COLORS[index % COLORS.length],
-                                stroke: '#fff',
-                                strokeWidth: 2 / (depth + 1e-10),
-                                strokeOpacity: 1 / (depth + 1e-10),
-                              }}
-                            />
-                            {(width > 70) && height > 25 && (
-                              <>
-                                <text
-                                  x={x + width / 2}
-                                  y={y + height / 2 - 10}
-                                  textAnchor="middle"
-                                  fill="#fff"
-                                  fontSize={14}
-                                >
-                                  {name}
-                                </text>
-                                <text
-                                  x={x + width / 2}
-                                  y={y + height / 2 + 10}
-                                  textAnchor="middle"
-                                  fill="#fff"
-                                  fontSize={16}
-                                >
-                                  {payload.size}
-                                </text>
-                              </>
-                            )}
-                          </g>
-                        );
-                      }}
                     >
+                      {transformForTreemap(matrizParcerias).map((entry, index) => (
+                        <Treemap
+                          key={`cell-${index}`}
+                          dataKey="size"
+                          stroke="#fff"
+                          fill={COLORS[index % COLORS.length]}
+                          content={<CustomTreemapContent />}
+                        />
+                      ))}
                       <Tooltip content={<CustomTooltip />} />
                     </Treemap>
                   </ResponsiveContainer>
