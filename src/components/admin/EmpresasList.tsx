@@ -1,9 +1,10 @@
+
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Empresa, TipoEmpresa } from "@/types";
+import { Empresa, EmpresaTipoString } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import {
   Select,
@@ -30,7 +31,7 @@ export const EmpresasList: React.FC = () => {
   
   const [nome, setNome] = useState("");
   const [descricao, setDescricao] = useState("");
-  const [tipo, setTipo] = useState<TipoEmpresa>(TipoEmpresa.PARCEIRO);
+  const [tipo, setTipo] = useState<EmpresaTipoString>("parceiro");
   const [status, setStatus] = useState(true);
   
   const { toast } = useToast();
@@ -278,15 +279,15 @@ export const EmpresasList: React.FC = () => {
               <Label htmlFor="tipo">Tipo</Label>
               <Select 
                 value={tipo} 
-                onValueChange={(value) => setTipo(value as TipoEmpresa)}
+                onValueChange={(value) => setTipo(value as EmpresaTipoString)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o tipo" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={TipoEmpresa.INTRAGRUPO}>Intragrupo</SelectItem>
-                  <SelectItem value={TipoEmpresa.PARCEIRO}>Parceiro</SelectItem>
-                  <SelectItem value={TipoEmpresa.CLIENTE}>Cliente</SelectItem>
+                  <SelectItem value="intragrupo">Intragrupo</SelectItem>
+                  <SelectItem value="parceiro">Parceiro</SelectItem>
+                  <SelectItem value="cliente">Cliente</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -348,15 +349,15 @@ export const EmpresasList: React.FC = () => {
               <Label htmlFor="edit-tipo">Tipo</Label>
               <Select 
                 value={tipo} 
-                onValueChange={(value) => setTipo(value as TipoEmpresa)}
+                onValueChange={(value) => setTipo(value as EmpresaTipoString)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o tipo" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={TipoEmpresa.INTRAGRUPO}>Intragrupo</SelectItem>
-                  <SelectItem value={TipoEmpresa.PARCEIRO}>Parceiro</SelectItem>
-                  <SelectItem value={TipoEmpresa.CLIENTE}>Cliente</SelectItem>
+                  <SelectItem value="intragrupo">Intragrupo</SelectItem>
+                  <SelectItem value="parceiro">Parceiro</SelectItem>
+                  <SelectItem value="cliente">Cliente</SelectItem>
                 </SelectContent>
               </Select>
             </div>

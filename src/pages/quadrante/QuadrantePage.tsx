@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -20,6 +21,7 @@ function mapIndicadorToPoint(item: IndicadoresParceiro, empresas: Empresa[]): Qu
   const empresa = empresas.find((e) => e.id === item.empresa_id);
   return {
     id: item.id || item.empresa_id,
+    empresaId: item.empresa_id,
     nome: empresa?.nome || "Desconhecido",
     x: item.potencial_leads || 0,
     y: item.potencial_investimento || 0,
@@ -84,9 +86,21 @@ const QuadrantePage: React.FC = () => {
         setIndicadores(updatedIndicadores);
       } else {
         // Cria novo indicador
+        // Make sure the required fields are present for a new record
+        const newIndicador = {
+          empresa_id: indicador.empresa_id!,
+          potencial_leads: indicador.potencial_leads || 0,
+          engajamento: indicador.engajamento || 0,
+          alinhamento: indicador.alinhamento || 0,
+          potencial_investimento: indicador.potencial_investimento || 0,
+          tamanho: indicador.tamanho || "M",
+          data_avaliacao: indicador.data_avaliacao || new Date().toISOString(),
+          ...indicador
+        };
+
         const { data, error } = await supabase
           .from("indicadores_parceiro")
-          .insert([indicador])
+          .insert([newIndicador])
           .select();
         if (error) throw error;
         updatedIndicadores = [...indicadores, ...(data || [])];
