@@ -1,7 +1,7 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
-import MainLayout from "@/layouts/MainLayout";
+import MainLayout from "@/components/layout/MainLayout";
 import DashboardPage from "@/pages/dashboard/DashboardPage";
 import OportunidadesPage from "@/pages/oportunidades/OportunidadesPage";
 import EmpresasPage from "@/pages/empresas/EmpresasPage";
@@ -22,7 +22,9 @@ const App: React.FC = () => (
             path="/"
             element={
               <PrivateRoute>
-                <MainLayout />
+                <MainLayout>
+                  {/* O conteúdo das rotas será exibido aqui */}
+                </MainLayout>
               </PrivateRoute>
             }
           >
