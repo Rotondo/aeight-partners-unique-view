@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Categoria } from '@/types';
 import { cn } from '@/lib/utils';
@@ -12,11 +11,11 @@ interface CategoriasListProps {
   isLoading: boolean;
 }
 
-const CategoriasList: React.FC<CategoriasListProps> = ({ 
-  categorias, 
-  selectedCategoria, 
+const CategoriasList: React.FC<CategoriasListProps> = ({
+  categorias,
+  selectedCategoria,
   onSelectCategoria,
-  isLoading 
+  isLoading,
 }) => {
   if (isLoading) {
     return (
@@ -32,7 +31,7 @@ const CategoriasList: React.FC<CategoriasListProps> = ({
   }
 
   return (
-    <div className="p-4">
+    <div className="p-4 h-full flex flex-col">
       <h3 className="font-medium text-lg mb-4">Categorias</h3>
       <nav>
         <ul className="space-y-1">
