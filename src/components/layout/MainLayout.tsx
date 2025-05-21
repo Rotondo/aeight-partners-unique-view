@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { useLocation } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import Header from './Header';
 import { 
   SidebarProvider, 
@@ -60,56 +61,56 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton isActive={isActive("/")} asChild tooltip="Dashboard">
-                  <a href="/">
+                  <Link to="/">
                     <LayoutDashboard size={20} />
                     <span>Dashboard</span>
-                  </a>
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               
               <SidebarMenuItem>
                 <SidebarMenuButton isActive={isActive("/oportunidades")} asChild tooltip="Oportunidades">
-                  <a href="/oportunidades">
+                  <Link to="/oportunidades">
                     <FileText size={20} />
                     <span>Oportunidades</span>
-                  </a>
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               
               <SidebarMenuItem>
                 <SidebarMenuButton isActive={isActive("/oportunidades-dashboard")} asChild tooltip="Dashboards">
-                  <a href="/oportunidades-dashboard">
+                  <Link to="/oportunidades-dashboard">
                     <ChartBar size={20} />
                     <span>Dashboards</span>
-                  </a>
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               
               <SidebarMenuItem>
                 <SidebarMenuButton isActive={isActive("/onepager")} asChild tooltip="OnePager">
-                  <a href="/onepager">
+                  <Link to="/onepager">
                     <Grid size={20} />
                     <span>OnePager</span>
-                  </a>
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               
               <SidebarMenuItem>
                 <SidebarMenuButton isActive={isActive("/quadrante")} asChild tooltip="Quadrante">
-                  <a href="/quadrante">
+                  <Link to="/quadrante">
                     <BarChart size={20} />
                     <span>Quadrante</span>
-                  </a>
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               
               {user?.papel === 'admin' && (
                 <SidebarMenuItem>
                   <SidebarMenuButton isActive={isActive("/admin")} asChild tooltip="Administração">
-                    <a href="/admin">
+                    <Link to="/admin">
                       <Database size={20} />
                       <span>Administração</span>
-                    </a>
+                    </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               )}

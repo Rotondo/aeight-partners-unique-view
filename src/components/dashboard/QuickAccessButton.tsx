@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { Link } from 'react-router-dom';
 
 interface QuickAccessButtonProps {
   href: string;
@@ -14,8 +15,8 @@ export const QuickAccessButton: React.FC<QuickAccessButtonProps> = ({
   label, 
   description 
 }) => (
-  <a 
-    href={href} 
+  <Link 
+    to={href} 
     className="flex flex-col items-center p-3 rounded-lg border border-border hover:bg-accent transition-colors text-center"
   >
     <div className="bg-primary/10 p-2 rounded-full mb-2">
@@ -23,5 +24,5 @@ export const QuickAccessButton: React.FC<QuickAccessButtonProps> = ({
     </div>
     <h3 className="font-medium">{label}</h3>
     <p className="text-xs text-muted-foreground">{description}</p>
-  </a>
+  </Link>
 );
