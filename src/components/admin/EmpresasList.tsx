@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
@@ -51,12 +50,16 @@ export const EmpresasList: React.FC = () => {
       if (error) throw error;
       
       // Convert the raw data to match the Empresa type
-      const typedData: Empresa[] = data.map(item => ({
-        ...item,
-        tipo: item.tipo as TipoEmpresa
+      const newEmpresas = data.map(item => ({
+        id: item.id,
+        nome: item.nome,
+        descricao: item.descricao,
+        tipo: item.tipo as TipoEmpresa,
+        status: item.status,
+        created_at: item.created_at
       }));
       
-      setEmpresas(typedData);
+      setEmpresas(newEmpresas);
     } catch (error) {
       console.error("Erro ao buscar empresas:", error);
       toast({

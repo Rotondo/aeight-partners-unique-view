@@ -18,7 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 
 interface ExportField {
-  key: keyof any;
+  key: string; // Changed from keyof any to string
   label: string;
   format?: (value: any) => string;
 }
@@ -136,9 +136,24 @@ export const OportunidadesExport: React.FC<{ onClose: () => void }> = ({ onClose
     // Create data rows
     const rows = filteredOportunidades.map(op => {
       return fields.map(field => {
-        const value = field.key.includes('.') 
-          ? field.key.split('.').reduce((obj, key) => obj?.[key], op)
-          : (op as any)[field.key];
+        // Use safe type checking for accessing nested properties
+        let value;
+        
+        if (field.key.includes('.')) {
+          const keyParts = field.key.split('.');
+          let tempValue: any = op;
+          for (const part of keyParts) {
+            if (tempValue && typeof tempValue === 'object') {
+              tempValue = tempValue[part as keyof typeof tempValue];
+            } else {
+              tempValue = undefined;
+              break;
+            }
+          }
+          value = tempValue;
+        } else {
+          value = (op as any)[field.key];
+        }
         
         let formattedValue = field.format ? field.format(value) : (value || "-");
         
@@ -190,9 +205,24 @@ export const OportunidadesExport: React.FC<{ onClose: () => void }> = ({ onClose
     filteredOportunidades.forEach(op => {
       excelData += '<tr>';
       fields.forEach(field => {
-        const value = field.key.includes('.') 
-          ? field.key.split('.').reduce((obj, key) => obj?.[key], op)
-          : (op as any)[field.key];
+        // Use safe type checking for accessing nested properties
+        let value;
+        
+        if (field.key.includes('.')) {
+          const keyParts = field.key.split('.');
+          let tempValue: any = op;
+          for (const part of keyParts) {
+            if (tempValue && typeof tempValue === 'object') {
+              tempValue = tempValue[part as keyof typeof tempValue];
+            } else {
+              tempValue = undefined;
+              break;
+            }
+          }
+          value = tempValue;
+        } else {
+          value = (op as any)[field.key];
+        }
         
         const formattedValue = field.format ? field.format(value) : (value || "-");
         excelData += `<td>${formattedValue}</td>`;

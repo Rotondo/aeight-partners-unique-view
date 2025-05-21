@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { TipoEmpresa } from '@/types';
+import { TipoEmpresa, MatrizData, QualidadeData, BalancoData, RankingData, StatusData } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { format, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -48,34 +47,6 @@ interface Empresa {
   id: string;
   nome: string;
   tipo: TipoEmpresa;
-}
-
-interface MatrizData {
-  origem: string;
-  destino: string;
-  total: number;
-}
-
-interface QualidadeData {
-  origem: string;
-  destino: string;
-  status: string;
-  total: number;
-}
-
-interface BalancoData {
-  tipo: string;
-  valor: number;
-}
-
-interface RankingData {
-  parceiro: string;
-  indicacoes: number;
-}
-
-interface StatusData {
-  status: string;
-  total: number;
 }
 
 interface FilterState {
@@ -177,7 +148,7 @@ export const OportunidadesDashboards: React.FC = () => {
         filters.empresaId || null, 
         filters.status || null
       );
-      setMatrizIntragrupo(data);
+      setMatrizIntragrupo(data as MatrizData[]);
     } catch (error) {
       console.error("Erro ao buscar matriz intragrupo:", error);
       setMatrizIntragrupo([]);
@@ -192,7 +163,7 @@ export const OportunidadesDashboards: React.FC = () => {
         filters.empresaId || null, 
         filters.status || null
       );
-      setMatrizParcerias(data);
+      setMatrizParcerias(data as MatrizData[]);
     } catch (error) {
       console.error("Erro ao buscar matriz parcerias:", error);
       setMatrizParcerias([]);
@@ -206,7 +177,7 @@ export const OportunidadesDashboards: React.FC = () => {
         filters.dataFim, 
         filters.empresaId || null
       );
-      setQualidadeData(data);
+      setQualidadeData(data as QualidadeData[]);
     } catch (error) {
       console.error("Erro ao buscar qualidade das indicações:", error);
       setQualidadeData([]);
@@ -221,7 +192,7 @@ export const OportunidadesDashboards: React.FC = () => {
         filters.empresaId || null, 
         filters.status || null
       );
-      setBalancoData(data);
+      setBalancoData(data as BalancoData[]);
     } catch (error) {
       console.error("Erro ao buscar balanço:", error);
       setBalancoData([]);
@@ -235,7 +206,7 @@ export const OportunidadesDashboards: React.FC = () => {
         filters.dataFim, 
         filters.status || null
       );
-      setRankingEnviadas(data);
+      setRankingEnviadas(data as RankingData[]);
     } catch (error) {
       console.error("Erro ao buscar ranking de parceiros:", error);
       setRankingEnviadas([]);
@@ -249,7 +220,7 @@ export const OportunidadesDashboards: React.FC = () => {
         filters.dataFim, 
         filters.status || null
       );
-      setRankingRecebidas(data);
+      setRankingRecebidas(data as RankingData[]);
     } catch (error) {
       console.error("Erro ao buscar ranking de parceiros:", error);
       setRankingRecebidas([]);
@@ -263,7 +234,7 @@ export const OportunidadesDashboards: React.FC = () => {
         filters.dataFim, 
         filters.empresaId || null
       );
-      setStatusData(data);
+      setStatusData(data as StatusData[]);
     } catch (error) {
       console.error("Erro ao buscar distribuição de status:", error);
       setStatusData([]);

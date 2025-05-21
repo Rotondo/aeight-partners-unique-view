@@ -40,7 +40,7 @@ interface AppSidebarProps {
   toggleSidebar: () => void;
 }
 
-export const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen, toggleSidebar }) => {
+const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen, toggleSidebar }) => {
   const location = useLocation();
   const currentPath = location.pathname;
 
@@ -96,3 +96,5 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen, toggleSidebar })
     </aside>
   );
 };
+
+export default AppSidebar;

@@ -182,12 +182,30 @@ export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ child
     }
 
     try {
+      // Make sure the required fields are present
+      if (!oportunidade.empresa_origem_id || !oportunidade.empresa_destino_id) {
+        toast({
+          title: "Erro",
+          description: "Empresa de origem e destino são obrigatórias.",
+          variant: "destructive",
+        });
+        return null;
+      }
+
       // Ensure required fields are present
       const newOportunidade = {
-        ...oportunidade,
-        usuario_envio_id: user.id,
+        empresa_origem_id: oportunidade.empresa_origem_id,
+        empresa_destino_id: oportunidade.empresa_destino_id,
+        contato_id: oportunidade.contato_id,
+        valor: oportunidade.valor,
+        status: oportunidade.status || "em_contato" as StatusOportunidade,
         data_indicacao: oportunidade.data_indicacao || new Date().toISOString(),
-        nome_lead: oportunidade.nome_lead || ""  // Ensure the nome_lead field is included
+        data_fechamento: oportunidade.data_fechamento,
+        motivo_perda: oportunidade.motivo_perda,
+        usuario_envio_id: user.id,
+        usuario_recebe_id: oportunidade.usuario_recebe_id,
+        observacoes: oportunidade.observacoes,
+        nome_lead: oportunidade.nome_lead || ""
       };
 
       const { data, error } = await supabase

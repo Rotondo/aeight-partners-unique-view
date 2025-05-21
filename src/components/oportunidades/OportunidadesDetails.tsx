@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useOportunidades } from "./OportunidadesContext";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -13,7 +14,7 @@ import {
   TableRow
 } from "@/components/ui/table";
 import { supabase } from "@/lib/supabase";
-import { StatusOportunidade } from "@/types";
+import { StatusOportunidade, Oportunidade as OportunidadeType } from "@/types";
 
 interface OportunidadeDetailsProps {
   id: string;

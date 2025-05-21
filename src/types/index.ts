@@ -1,3 +1,4 @@
+
 // Common types
 
 // Categoria (Category)
@@ -20,6 +21,7 @@ export interface Empresa {
   tipo: TipoEmpresa;
   descricao?: string;
   status: boolean;
+  created_at?: string;
 }
 
 // EmpresaCategoria (CompanyCategory)
@@ -63,6 +65,13 @@ export interface Oportunidade {
   usuario_envio_id: string;
   usuario_recebe_id?: string;
   observacoes?: string;
+  nome_lead: string;
+  // Relações - these are not in the actual DB model but used for UI
+  empresa_origem?: Empresa;
+  empresa_destino?: Empresa;
+  contato?: Contato;
+  usuario_envio?: Usuario;
+  usuario_recebe?: Usuario;
 }
 
 // IndicadoresParceiro (PartnerIndicators)
@@ -154,4 +163,33 @@ export interface OportunidadesFilterParams {
   empresaDestinoId?: string;
   status?: StatusOportunidade;
   usuarioId?: string;
+}
+
+// Dashboard Types
+export interface MatrizData {
+  origem: string;
+  destino: string;
+  total: number;
+}
+
+export interface QualidadeData {
+  origem: string;
+  destino: string;
+  status: string;
+  total: number;
+}
+
+export interface BalancoData {
+  tipo: string;
+  valor: number;
+}
+
+export interface RankingData {
+  parceiro: string;
+  indicacoes: number;
+}
+
+export interface StatusData {
+  status: string;
+  total: number;
 }

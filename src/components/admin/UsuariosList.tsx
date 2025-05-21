@@ -1,10 +1,27 @@
-import React, { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
-import { Button } from "@/components/ui/button";
+import React, { useState, useEffect } from "react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Empresa, TipoEmpresa, Usuario } from "@/types";
+import { Button } from "@/components/ui/button";
+import { Edit, Trash2, UserX, UserCheck, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -12,55 +29,48 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
+import { supabase } from "@/lib/supabase";
+import { Database } from "@/integrations/supabase/types";
 
-interface UsuarioComEmpresa extends Usuario {
-  empresa?: {
-    nome: string;
-  };
+type User = Database["public"]["Tables"]["usuarios"]["Row"];
+
+interface UsuariosListProps {
+  empresaId: string | null;
 }
 
-export const UsuariosList: React.FC = () => {
-  const [usuarios, setUsuarios] = useState<UsuarioComEmpresa[]>([]);
-  const [empresas, setEmpresas] = useState<Empresa[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [isAddingUsuario, setIsAddingUsuario] = useState(false);
-  const [isEditingUsuario, setIsEditingUsuario] = useState<string | null>(null);
-  
+export const UsuariosList: React.FC<UsuariosListProps> = ({ empresaId }) => {
+  const [usuarios, setUsuarios] = useState<User[]>([]);
+  const [search, setSearch] = useState("");
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
-  const [senha, setSenha] = useState("");
   const [papel, setPapel] = useState<"admin" | "user" | "manager">("user");
-  const [empresaId, setEmpresaId] = useState<string | undefined>(undefined);
   const [ativo, setAtivo] = useState(true);
-  
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
     fetchUsuarios();
-    fetchEmpresas();
-  }, []);
+  }, [empresaId]);
 
   const fetchUsuarios = async () => {
-    setLoading(true);
+    setIsLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("usuarios")
-        .select(`
-          *,
-          empresa:empresas(nome)
-        `)
-        .order("nome");
+      let query = supabase.from("usuarios").select("*").order("nome");
 
-      if (error) throw error;
-      setUsuarios(data as UsuarioComEmpresa[]);
+      if (empresaId) {
+        query = query.eq("empresa_id", empresaId);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        throw error;
+      }
+
+      setUsuarios(data || []);
     } catch (error) {
       console.error("Erro ao buscar usuários:", error);
       toast({
@@ -69,156 +79,51 @@ export const UsuariosList: React.FC = () => {
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  const fetchEmpresas = async () => {
+  const filteredUsuarios = usuarios.filter((usuario) =>
+    usuario.nome.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const handleEdit = (usuario: User) => {
+    setSelectedUser(usuario);
+    setNome(usuario.nome);
+    setEmail(usuario.email);
+    setPapel(usuario.papel);
+    setAtivo(usuario.ativo);
+    setIsDialogOpen(true);
+  };
+
+  const handleCloseDialog = () => {
+    setIsDialogOpen(false);
+    setSelectedUser(null);
+  };
+
+  const handleSave = async () => {
+    if (!selectedUser) return;
+
     try {
-      const { data, error } = await supabase
-        .from("empresas")
-        .select("*")
-        .order("nome");
+      const { error } = await supabase
+        .from("usuarios")
+        .update({
+          nome,
+          email,
+          papel,
+          ativo,
+        })
+        .eq("id", selectedUser.id);
 
       if (error) throw error;
-      
-      // Convert the raw data to match the Empresa type
-      const typedData: Empresa[] = data.map(item => ({
-        ...item,
-        tipo: item.tipo as TipoEmpresa
-      }));
-      
-      setEmpresas(typedData);
-    } catch (error) {
-      console.error("Erro ao buscar empresas:", error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível carregar as empresas.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleAddUsuario = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      // First create the auth user
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
-        password: senha,
-        options: {
-          data: {
-            nome,
-            papel,
-            empresa_id: empresaId
-          }
-        }
-      });
-
-      if (authError) throw authError;
-
-      if (!authData.user) {
-        throw new Error("Erro ao criar usuário na autenticação");
-      }
-
-      // Then create the user in the public schema
-      const { data, error } = await supabase
-        .from("usuarios")
-        .insert([
-          { 
-            id: authData.user.id,
-            nome, 
-            email, 
-            papel, 
-            empresa_id: empresaId, 
-            ativo 
-          }
-        ])
-        .select(`
-          *,
-          empresa:empresas(nome)
-        `);
-
-      if (error) {
-        // If the user insert fails, we should try to delete the auth user
-        await supabase.auth.admin.deleteUser(authData.user.id);
-        throw error;
-      }
-
-      toast({
-        title: "Sucesso",
-        description: "Usuário adicionado com sucesso!",
-      });
-      
-      setUsuarios([...usuarios, data[0] as UsuarioComEmpresa]);
-      resetForm();
-      setIsAddingUsuario(false);
-    } catch (error) {
-      console.error("Erro ao adicionar usuário:", error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível adicionar o usuário.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleEditUsuario = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!isEditingUsuario) return;
-
-    try {
-      let updates: any = { 
-        nome, 
-        papel, 
-        empresa_id: empresaId, 
-        ativo 
-      };
-
-      const { data, error } = await supabase
-        .from("usuarios")
-        .update(updates)
-        .eq("id", isEditingUsuario)
-        .select(`
-          *,
-          empresa:empresas(nome)
-        `);
-
-      if (error) throw error;
-
-      // If password was provided, update it as well
-      if (senha) {
-        try {
-          const { error: authError } = await supabase.auth.admin.updateUserById(
-            isEditingUsuario,
-            { password: senha }
-          );
-          if (authError) throw authError;
-        } catch (authError) {
-          console.error("Erro ao atualizar senha:", authError);
-          toast({
-            title: "Aviso",
-            description: "Usuário atualizado, mas não foi possível alterar a senha.",
-            variant: "warning"
-          });
-        }
-      }
 
       toast({
         title: "Sucesso",
         description: "Usuário atualizado com sucesso!",
       });
-      
-      setUsuarios(
-        usuarios.map((user) =>
-          user.id === isEditingUsuario
-            ? data[0] as UsuarioComEmpresa
-            : user
-        )
-      );
-      
-      resetForm();
-      setIsEditingUsuario(null);
+
+      fetchUsuarios();
+      handleCloseDialog();
     } catch (error) {
       console.error("Erro ao atualizar usuário:", error);
       toast({
@@ -229,39 +134,70 @@ export const UsuariosList: React.FC = () => {
     }
   };
 
-  const handleDeleteUsuario = async (id: string) => {
-    if (!confirm("Tem certeza que deseja excluir este usuário?")) return;
+  const handleToggleAtivo = (usuario: User) => {
+    toast({
+      title: "Confirmação",
+      description: `Tem certeza que deseja ${
+        usuario.ativo ? "desativar" : "ativar"
+      } o usuário "${usuario.nome}"?`,
+      variant: "destructive", // Changed from "warning" to "destructive"
+    });
 
+    // Implement logic to toggle 'ativo' status
+    confirmToggleAtivo(usuario);
+  };
+
+  const confirmToggleAtivo = async (usuario: User) => {
     try {
-      // First delete from public schema
-      const { error: publicError } = await supabase
+      const { error } = await supabase
+        .from("usuarios")
+        .update({ ativo: !usuario.ativo })
+        .eq("id", usuario.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: "Status do usuário atualizado com sucesso!",
+      });
+
+      fetchUsuarios();
+    } catch (error) {
+      console.error("Erro ao atualizar status do usuário:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível atualizar o status do usuário.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDelete = (usuario: User) => {
+    toast({
+      title: "Confirmação",
+      description: `Tem certeza que deseja excluir o usuário "${usuario.nome}"?`,
+      variant: "destructive", // Changed from "warning" to "destructive"
+    });
+
+    // Implement delete logic
+    confirmDelete(usuario);
+  };
+
+  const confirmDelete = async (usuario: User) => {
+    try {
+      const { error } = await supabase
         .from("usuarios")
         .delete()
-        .eq("id", id);
+        .eq("id", usuario.id);
 
-      if (publicError) throw publicError;
-
-      // Then delete from auth
-      try {
-        const { error: authError } = await supabase.auth.admin.deleteUser(id);
-        if (authError) {
-          console.error("Erro ao excluir usuário da autenticação:", authError);
-          toast({
-            title: "Aviso",
-            description: "Usuário excluído do sistema, mas pode haver resíduos na autenticação.",
-            variant: "warning"
-          });
-        }
-      } catch (authError) {
-        console.error("Erro ao excluir usuário da autenticação:", authError);
-      }
+      if (error) throw error;
 
       toast({
         title: "Sucesso",
         description: "Usuário excluído com sucesso!",
       });
-      
-      setUsuarios(usuarios.filter((usuario) => usuario.id !== id));
+
+      fetchUsuarios();
     } catch (error) {
       console.error("Erro ao excluir usuário:", error);
       toast({
@@ -272,269 +208,163 @@ export const UsuariosList: React.FC = () => {
     }
   };
 
-  const startEditing = (usuario: UsuarioComEmpresa) => {
-    setNome(usuario.nome);
-    setEmail(usuario.email);
-    setSenha("");
-    setPapel(usuario.papel);
-    setEmpresaId(usuario.empresa_id);
-    setAtivo(usuario.ativo);
-    setIsEditingUsuario(usuario.id);
-  };
-
-  const resetForm = () => {
-    setNome("");
-    setEmail("");
-    setSenha("");
-    setPapel("user");
-    setEmpresaId(undefined);
-    setAtivo(true);
-  };
-
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold">Usuários</h2>
-        <Button onClick={() => setIsAddingUsuario(true)}>Novo Usuário</Button>
+    <div>
+      <div className="mb-4">
+        <Input
+          type="text"
+          placeholder="Buscar usuário..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
       </div>
-
-      {loading ? (
-        <div className="text-center p-4">Carregando...</div>
-      ) : (
-        <Table>
-          <TableHeader>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Nome</TableHead>
+            <TableHead>Email</TableHead>
+            <TableHead>Papel</TableHead>
+            <TableHead>Ativo</TableHead>
+            <TableHead className="text-right">Ações</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {isLoading ? (
             <TableRow>
-              <TableHead>Nome</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Papel</TableHead>
-              <TableHead>Empresa</TableHead>
-              <TableHead>Ativo</TableHead>
-              <TableHead>Ações</TableHead>
+              <TableCell colSpan={5} className="text-center">
+                Carregando...
+              </TableCell>
             </TableRow>
-          </TableHeader>
-          <TableBody>
-            {usuarios.map((usuario) => (
+          ) : filteredUsuarios.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={5} className="text-center">
+                Nenhum usuário encontrado.
+              </TableCell>
+            </TableRow>
+          ) : (
+            filteredUsuarios.map((usuario) => (
               <TableRow key={usuario.id}>
                 <TableCell>{usuario.nome}</TableCell>
                 <TableCell>{usuario.email}</TableCell>
                 <TableCell>{usuario.papel}</TableCell>
-                <TableCell>{usuario.empresa?.nome}</TableCell>
-                <TableCell>{usuario.ativo ? "Sim" : "Não"}</TableCell>
                 <TableCell>
-                  <div className="flex space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => startEditing(usuario)}
-                    >
-                      Editar
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => handleDeleteUsuario(usuario.id)}
-                    >
-                      Excluir
-                    </Button>
-                  </div>
+                  {usuario.ativo ? (
+                    <UserCheck className="text-green-500 inline-block align-middle" />
+                  ) : (
+                    <UserX className="text-red-500 inline-block align-middle" />
+                  )}
+                </TableCell>
+                <TableCell className="text-right">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleEdit(usuario)}
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    Editar
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleToggleAtivo(usuario)}
+                  >
+                    {usuario.ativo ? (
+                      <>
+                        <AlertTriangle className="h-4 w-4 mr-2 text-red-500" />
+                        Desativar
+                      </>
+                    ) : (
+                      <>
+                        <UserCheck className="h-4 w-4 mr-2 text-green-500" />
+                        Ativar
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDelete(usuario)}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Excluir
+                  </Button>
                 </TableCell>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      )}
+            ))
+          )}
+        </TableBody>
+      </Table>
 
-      {/* Dialog para adicionar usuário */}
-      <Dialog open={isAddingUsuario} onOpenChange={setIsAddingUsuario}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Novo Usuário</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleAddUsuario} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="nome">Nome</Label>
-              <Input
-                id="nome"
-                value={nome}
-                onChange={(e) => setNome(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="senha">Senha</Label>
-              <Input
-                id="senha"
-                type="password"
-                value={senha}
-                onChange={(e) => setSenha(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="papel">Papel</Label>
-              <Select 
-                value={papel} 
-                onValueChange={(value) => setPapel(value as "admin" | "user" | "manager")}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o papel" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="manager">Manager</SelectItem>
-                  <SelectItem value="user">User</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="empresaId">Empresa</Label>
-              <Select 
-                value={empresaId || ""} 
-                onValueChange={(value) => setEmpresaId(value === "" ? undefined : value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione a empresa" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">Nenhuma</SelectItem>
-                  {empresas.map(empresa => (
-                    <SelectItem key={empresa.id} value={empresa.id}>{empresa.nome}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="ativo"
-                checked={ativo}
-                onCheckedChange={(checked) => setAtivo(checked as boolean)}
-              />
-              <Label htmlFor="ativo">Ativo</Label>
-            </div>
-            <div className="flex justify-end space-x-2 pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  resetForm();
-                  setIsAddingUsuario(false);
-                }}
-              >
-                Cancelar
-              </Button>
-              <Button type="submit">Salvar</Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Dialog para editar usuário */}
-      <Dialog open={!!isEditingUsuario} onOpenChange={(open) => {
-        if (!open) {
-          resetForm();
-          setIsEditingUsuario(null);
-        }
-      }}>
-        <DialogContent>
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Editar Usuário</DialogTitle>
+            <DialogDescription>
+              Faça as alterações necessárias e clique em salvar.
+            </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleEditUsuario} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="edit-nome">Nome</Label>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="name" className="text-right">
+                Nome
+              </Label>
               <Input
-                id="edit-nome"
+                type="text"
+                id="name"
                 value={nome}
                 onChange={(e) => setNome(e.target.value)}
-                required
+                className="col-span-3"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-email">Email</Label>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="email" className="text-right">
+                Email
+              </Label>
               <Input
-                id="edit-email"
                 type="email"
+                id="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                required
-                disabled
+                className="col-span-3"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-senha">Senha</Label>
-              <Input
-                id="edit-senha"
-                type="password"
-                value={senha}
-                onChange={(e) => setSenha(e.target.value)}
-                placeholder="Nova senha (deixe em branco para manter a atual)"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-papel">Papel</Label>
-              <Select 
-                value={papel} 
-                onValueChange={(value) => setPapel(value as "admin" | "user" | "manager")}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o papel" />
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="role" className="text-right">
+                Papel
+              </Label>
+              <Select value={papel} onValueChange={setPapel}>
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Selecione um papel" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="manager">Manager</SelectItem>
                   <SelectItem value="user">User</SelectItem>
+                  <SelectItem value="manager">Manager</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-empresaId">Empresa</Label>
-              <Select 
-                value={empresaId || ""} 
-                onValueChange={(value) => setEmpresaId(value === "" ? undefined : value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione a empresa" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">Nenhuma</SelectItem>
-                  {empresas.map(empresa => (
-                    <SelectItem key={empresa.id} value={empresa.id}>{empresa.nome}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="edit-ativo"
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="ativo" className="text-right">
+                Ativo
+              </Label>
+              <Switch
+                id="ativo"
                 checked={ativo}
-                onCheckedChange={(checked) => setAtivo(checked as boolean)}
+                onCheckedChange={setAtivo}
+                className="col-span-3"
               />
-              <Label htmlFor="edit-ativo">Ativo</Label>
             </div>
-            <div className="flex justify-end space-x-2 pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  resetForm();
-                  setIsEditingUsuario(null);
-                }}
-              >
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="secondary" onClick={handleCloseDialog}>
                 Cancelar
               </Button>
-              <Button type="submit">Salvar</Button>
-            </div>
-          </form>
+            </DialogClose>
+            <Button type="submit" onClick={handleSave}>
+              Salvar
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
