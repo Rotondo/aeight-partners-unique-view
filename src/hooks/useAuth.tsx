@@ -11,7 +11,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    // Tenta restaurar do localStorage
+    // Recupera do localStorage
     return localStorage.getItem("isAuthenticated") === "true";
   });
 
@@ -20,7 +20,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [isAuthenticated]);
 
   const login = (email: string, senha: string) => {
-    // Troque por sua lógica real depois!
+    // Lógica simples: só permite usuário fixo para teste
     if (email === "admin@admin.com" && senha === "123456") {
       setIsAuthenticated(true);
       return true;
@@ -41,11 +41,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
-// Hook para usar autenticação
+// Hook de autenticação
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth deve ser usado dentro de AuthProvider");
+  if (context === undefined) {
+    throw new Error("useAuth deve ser usado dentro de um AuthProvider");
   }
   return context;
 };
