@@ -441,6 +441,7 @@ export type Database = {
         | "ganho"
         | "perdido"
         | "Contato"
+      tipo_empresa: "grupo" | "parceiro" | "cliente" | "intragrupo"
       user_role: "admin" | "user" | "manager"
     }
     CompositeTypes: {
@@ -566,6 +567,7 @@ export const Constants = {
         "perdido",
         "Contato",
       ],
+      tipo_empresa: ["grupo", "parceiro", "cliente", "intragrupo"],
       user_role: ["admin", "user", "manager"],
     },
   },

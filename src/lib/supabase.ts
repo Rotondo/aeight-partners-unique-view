@@ -16,7 +16,17 @@ if (!supabaseUrl || !supabaseAnonKey) {
   });
 }
 
+// Configure o cliente Supabase com opções explícitas para autenticação
 export const supabase = createClient<Database>(
   supabaseUrl,
-  supabaseAnonKey
+  supabaseAnonKey,
+  {
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true,
+      storage: localStorage
+    }
+  }
 );
+
+console.log("Cliente Supabase inicializado");
