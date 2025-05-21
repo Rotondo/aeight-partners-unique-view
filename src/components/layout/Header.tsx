@@ -3,6 +3,7 @@ import React from 'react';
 import { Bell, User } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
+import { SidebarTrigger } from '@/components/ui/sidebar';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,7 +15,6 @@ import {
 
 interface HeaderProps {
   title: string;
-  toggleSidebar: () => void;
 }
 
 const Header: React.FC<HeaderProps> = ({ title }) => {
@@ -22,7 +22,10 @@ const Header: React.FC<HeaderProps> = ({ title }) => {
 
   return (
     <header className="bg-background border-b border-border py-3 px-6 flex items-center justify-between">
-      <h1 className="text-xl font-semibold">{title}</h1>
+      <div className="flex items-center gap-2">
+        <SidebarTrigger />
+        <h1 className="text-xl font-semibold">{title}</h1>
+      </div>
       
       <div className="flex items-center space-x-4">
         <Button variant="ghost" size="icon">

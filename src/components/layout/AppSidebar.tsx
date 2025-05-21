@@ -9,8 +9,7 @@ import {
   BarChart,
   ChartBar,
   Grid,
-  Database,
-  Settings
+  Database
 } from "lucide-react";
 
 interface SidebarLinkProps {
@@ -49,7 +48,11 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen, toggleSidebar }) => {
   };
 
   return (
-    <aside className="w-64 h-screen bg-background border-r p-4 hidden md:block">
+    <aside className={cn(
+      "w-64 h-screen bg-background border-r p-4 transition-all", 
+      isOpen ? "translate-x-0" : "-translate-x-full",
+      "md:translate-x-0"
+    )}>
       <div className="flex flex-col h-full space-y-2">
         <div className="text-xl font-bold p-2 mb-6">
           A&eight Partnership Hub
