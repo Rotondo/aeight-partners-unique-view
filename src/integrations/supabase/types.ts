@@ -33,27 +33,27 @@ export type Database = {
       contatos: {
         Row: {
           created_at: string
-          email: string
+          email: string | null
           empresa_id: string
           id: string
           nome: string
-          telefone: string
+          telefone: string | null
         }
         Insert: {
           created_at?: string
-          email: string
+          email?: string | null
           empresa_id: string
           id?: string
           nome: string
-          telefone: string
+          telefone?: string | null
         }
         Update: {
           created_at?: string
-          email?: string
+          email?: string | null
           empresa_id?: string
           id?: string
           nome?: string
-          telefone?: string
+          telefone?: string | null
         }
         Relationships: [
           {
@@ -272,9 +272,10 @@ export type Database = {
           empresa_origem_id: string
           id: string
           motivo_perda: string | null
+          nome_lead: string
           observacoes: string | null
-          status: Database["public"]["Enums"]["opportunity_status"]
-          usuario_envio_id: string
+          status: Database["public"]["Enums"]["opportunity_status"] | null
+          usuario_envio_id: string | null
           usuario_recebe_id: string | null
           valor: number | null
         }
@@ -287,9 +288,10 @@ export type Database = {
           empresa_origem_id: string
           id?: string
           motivo_perda?: string | null
+          nome_lead: string
           observacoes?: string | null
-          status?: Database["public"]["Enums"]["opportunity_status"]
-          usuario_envio_id: string
+          status?: Database["public"]["Enums"]["opportunity_status"] | null
+          usuario_envio_id?: string | null
           usuario_recebe_id?: string | null
           valor?: number | null
         }
@@ -302,9 +304,10 @@ export type Database = {
           empresa_origem_id?: string
           id?: string
           motivo_perda?: string | null
+          nome_lead?: string
           observacoes?: string | null
-          status?: Database["public"]["Enums"]["opportunity_status"]
-          usuario_envio_id?: string
+          status?: Database["public"]["Enums"]["opportunity_status"] | null
+          usuario_envio_id?: string | null
           usuario_recebe_id?: string | null
           valor?: number | null
         }
@@ -424,12 +427,20 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
     }
     Enums: {
       company_size: "PP" | "P" | "M" | "G" | "GG"
       company_type: "intragrupo" | "parceiro" | "cliente"
-      opportunity_status: "em_contato" | "negociando" | "ganho" | "perdido"
+      opportunity_status:
+        | "em_contato"
+        | "negociando"
+        | "ganho"
+        | "perdido"
+        | "Contato"
       user_role: "admin" | "user" | "manager"
     }
     CompositeTypes: {
@@ -548,7 +559,13 @@ export const Constants = {
     Enums: {
       company_size: ["PP", "P", "M", "G", "GG"],
       company_type: ["intragrupo", "parceiro", "cliente"],
-      opportunity_status: ["em_contato", "negociando", "ganho", "perdido"],
+      opportunity_status: [
+        "em_contato",
+        "negociando",
+        "ganho",
+        "perdido",
+        "Contato",
+      ],
       user_role: ["admin", "user", "manager"],
     },
   },

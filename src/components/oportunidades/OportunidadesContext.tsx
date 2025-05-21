@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import { Oportunidade, StatusOportunidade, OportunidadesFilterParams } from "@/types";
 import { useToast } from "@/hooks/use-toast";
@@ -74,6 +73,7 @@ export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ child
         usuario_envio_id: item.usuario_envio_id,
         usuario_recebe_id: item.usuario_recebe_id,
         observacoes: item.observacoes,
+        nome_lead: item.nome_lead,
         // Relações
         empresa_origem: item.empresa_origem,
         empresa_destino: item.empresa_destino,
@@ -182,11 +182,12 @@ export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ child
     }
 
     try {
-      // Ensure user_id is set properly
+      // Ensure required fields are present
       const newOportunidade = {
         ...oportunidade,
         usuario_envio_id: user.id,
-        data_indicacao: oportunidade.data_indicacao || new Date().toISOString()
+        data_indicacao: oportunidade.data_indicacao || new Date().toISOString(),
+        nome_lead: oportunidade.nome_lead || ""  // Ensure the nome_lead field is included
       };
 
       const { data, error } = await supabase

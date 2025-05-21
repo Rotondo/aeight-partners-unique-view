@@ -1,31 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Empresa, TipoEmpresa, Usuario } from "@/types";
 import { useToast } from "@/hooks/use-toast";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Usuario, Empresa } from "@/types";
-import { Plus, Edit, Trash2, Search } from "lucide-react";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -33,441 +12,424 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+
+interface UsuarioComEmpresa extends Usuario {
+  empresa?: {
+    nome: string;
+  };
+}
 
 export const UsuariosList: React.FC = () => {
-  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
+  const [usuarios, setUsuarios] = useState<UsuarioComEmpresa[]>([]);
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filteredUsuarios, setFilteredUsuarios] = useState<Usuario[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isAddingUsuario, setIsAddingUsuario] = useState(false);
+  const [isEditingUsuario, setIsEditingUsuario] = useState<string | null>(null);
   
-  const [currentUsuario, setCurrentUsuario] = useState<Partial<Usuario>>({
-    nome: "",
-    email: "",
-    papel: "user",
-    empresa_id: "",
-    ativo: true
-  });
+  const [nome, setNome] = useState("");
+  const [email, setEmail] = useState("");
+  const [senha, setSenha] = useState("");
+  const [papel, setPapel] = useState<"admin" | "user" | "manager">("user");
+  const [empresaId, setEmpresaId] = useState<string | undefined>(undefined);
+  const [ativo, setAtivo] = useState(true);
   
   const { toast } = useToast();
 
   useEffect(() => {
-    fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    fetchUsuarios();
+    fetchEmpresas();
   }, []);
 
-  useEffect(() => {
-    if (searchTerm.trim() === "") {
-      setFilteredUsuarios(usuarios);
-    } else {
-      const lowercasedTerm = searchTerm.toLowerCase();
-      setFilteredUsuarios(
-        usuarios.filter(
-          usuario =>
-            usuario.nome.toLowerCase().includes(lowercasedTerm) ||
-            usuario.email.toLowerCase().includes(lowercasedTerm) ||
-            usuario.papel.toLowerCase().includes(lowercasedTerm) ||
-            (usuario.empresa_id && empresas.find(e => e.id === usuario.empresa_id)?.nome.toLowerCase().includes(lowercasedTerm))
-        )
-      );
-    }
-  }, [searchTerm, usuarios, empresas]);
-
-  const fetchData = async () => {
+  const fetchUsuarios = async () => {
+    setLoading(true);
     try {
-      setIsLoading(true);
-      
-      // Buscar empresas
-      const { data: empresasData, error: empresasError } = await supabase
-        .from('empresas')
-        .select('*')
-        .order('nome');
-      
-      if (empresasError) throw empresasError;
-      setEmpresas(empresasData || []);
-      
-      // Buscar usuários
-      const { data: usuariosData, error: usuariosError } = await supabase
-        .from('usuarios')
-        .select('*')
-        .order('nome');
-      
-      if (usuariosError) throw usuariosError;
-      setUsuarios(usuariosData || []);
-      setFilteredUsuarios(usuariosData || []);
-      
+      const { data, error } = await supabase
+        .from("usuarios")
+        .select(`
+          *,
+          empresa:empresas(nome)
+        `)
+        .order("nome");
+
+      if (error) throw error;
+      setUsuarios(data as UsuarioComEmpresa[]);
     } catch (error) {
-      console.error('Erro ao carregar dados:', error);
+      console.error("Erro ao buscar usuários:", error);
       toast({
         title: "Erro",
-        description: "Não foi possível carregar os dados.",
+        description: "Não foi possível carregar os usuários.",
         variant: "destructive",
       });
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  const handleOpenForm = (usuario?: Usuario) => {
-    if (usuario) {
-      setCurrentUsuario(usuario);
-      setIsEditing(true);
-    } else {
-      setCurrentUsuario({
-        nome: "",
-        email: "",
-        papel: "user",
-        empresa_id: "",
-        ativo: true
-      });
-      setIsEditing(false);
-    }
-    setIsFormOpen(true);
-  };
-
-  const handleCloseForm = () => {
-    setIsFormOpen(false);
-    setCurrentUsuario({
-      nome: "",
-      email: "",
-      papel: "user",
-      empresa_id: "",
-      ativo: true
-    });
-    setIsEditing(false);
-  };
-
-  const validateEmail = (email: string) => {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!currentUsuario.nome || !currentUsuario.email) {
-      toast({
-        title: "Erro",
-        description: "Nome e email são campos obrigatórios.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!validateEmail(currentUsuario.email)) {
-      toast({
-        title: "Erro",
-        description: "Email inválido.",
-        variant: "destructive",
-      });
-      return;
-    }
-
+  const fetchEmpresas = async () => {
     try {
-      if (isEditing && currentUsuario.id) {
-        // Atualizar usuário
-        const { error } = await supabase
-          .from('usuarios')
-          .update({ 
-            nome: currentUsuario.nome,
-            email: currentUsuario.email,
-            papel: currentUsuario.papel,
-            empresa_id: currentUsuario.empresa_id || null,
-            ativo: currentUsuario.ativo
-          })
-          .eq('id', currentUsuario.id);
-          
-        if (error) throw error;
-        
-        toast({
-          title: "Sucesso",
-          description: "Usuário atualizado com sucesso!",
-        });
-      } else {
-        // Criar usuário
-        // Nota: Na prática, precisaríamos chamar uma API para criar o usuário no sistema de autenticação
-        // e então criar o registro na tabela usuarios
-        toast({
-          title: "Informação",
-          description: "A criação de novos usuários deve ser feita através do cadastro de autenticação.",
-        });
-        
-        // Na implementação real, isso seria substituído por uma chamada à API de criação de usuário
-        // seguida pela criação do registro na tabela usuarios
-      }
-      
-      handleCloseForm();
-      fetchData();
-    } catch (error) {
-      console.error('Erro ao salvar usuário:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível salvar o usuário.",
-        variant: "destructive",
-      });
-    }
-  };
+      const { data, error } = await supabase
+        .from("empresas")
+        .select("*")
+        .order("nome");
 
-  const handleDelete = async (id: string) => {
-    try {
-      // Na prática, precisaríamos também excluir o usuário no sistema de autenticação
-      const { error } = await supabase
-        .from('usuarios')
-        .update({ ativo: false })
-        .eq('id', id);
-        
       if (error) throw error;
       
-      toast({
-        title: "Sucesso",
-        description: "Usuário desativado com sucesso!",
-      });
+      // Convert the raw data to match the Empresa type
+      const typedData: Empresa[] = data.map(item => ({
+        ...item,
+        tipo: item.tipo as TipoEmpresa
+      }));
       
-      fetchData();
+      setEmpresas(typedData);
     } catch (error) {
-      console.error('Erro ao desativar usuário:', error);
+      console.error("Erro ao buscar empresas:", error);
       toast({
         title: "Erro",
-        description: "Não foi possível desativar o usuário.",
+        description: "Não foi possível carregar as empresas.",
         variant: "destructive",
       });
     }
   };
 
-  const getEmpresaNome = (empresaId?: string | null) => {
-    if (!empresaId) return "-";
-    const empresa = empresas.find(e => e.id === empresaId);
-    return empresa ? empresa.nome : "-";
+  const handleAddUsuario = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      // First create the auth user
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password: senha,
+        options: {
+          data: {
+            nome,
+            papel,
+            empresa_id: empresaId
+          }
+        }
+      });
+
+      if (authError) throw authError;
+
+      if (!authData.user) {
+        throw new Error("Erro ao criar usuário na autenticação");
+      }
+
+      // Then create the user in the public schema
+      const { data, error } = await supabase
+        .from("usuarios")
+        .insert([
+          { 
+            id: authData.user.id,
+            nome, 
+            email, 
+            papel, 
+            empresa_id: empresaId, 
+            ativo 
+          }
+        ])
+        .select(`
+          *,
+          empresa:empresas(nome)
+        `);
+
+      if (error) {
+        // If the user insert fails, we should try to delete the auth user
+        await supabase.auth.admin.deleteUser(authData.user.id);
+        throw error;
+      }
+
+      toast({
+        title: "Sucesso",
+        description: "Usuário adicionado com sucesso!",
+      });
+      
+      setUsuarios([...usuarios, data[0] as UsuarioComEmpresa]);
+      resetForm();
+      setIsAddingUsuario(false);
+    } catch (error) {
+      console.error("Erro ao adicionar usuário:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível adicionar o usuário.",
+        variant: "destructive",
+      });
+    }
   };
 
-  const getPapelBadge = (papel: string) => {
-    switch (papel) {
-      case 'admin':
-        return <Badge className="bg-purple-500">Admin</Badge>;
-      case 'manager':
-        return <Badge className="bg-blue-500">Gerente</Badge>;
-      case 'user':
-        return <Badge>Usuário</Badge>;
-      default:
-        return <Badge variant="outline">Desconhecido</Badge>;
+  const handleEditUsuario = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isEditingUsuario) return;
+
+    try {
+      let updates: any = { 
+        nome, 
+        papel, 
+        empresa_id: empresaId, 
+        ativo 
+      };
+
+      const { data, error } = await supabase
+        .from("usuarios")
+        .update(updates)
+        .eq("id", isEditingUsuario)
+        .select(`
+          *,
+          empresa:empresas(nome)
+        `);
+
+      if (error) throw error;
+
+      // If password was provided, update it as well
+      if (senha) {
+        try {
+          const { error: authError } = await supabase.auth.admin.updateUserById(
+            isEditingUsuario,
+            { password: senha }
+          );
+          if (authError) throw authError;
+        } catch (authError) {
+          console.error("Erro ao atualizar senha:", authError);
+          toast({
+            title: "Aviso",
+            description: "Usuário atualizado, mas não foi possível alterar a senha.",
+            variant: "warning"
+          });
+        }
+      }
+
+      toast({
+        title: "Sucesso",
+        description: "Usuário atualizado com sucesso!",
+      });
+      
+      setUsuarios(
+        usuarios.map((user) =>
+          user.id === isEditingUsuario
+            ? data[0] as UsuarioComEmpresa
+            : user
+        )
+      );
+      
+      resetForm();
+      setIsEditingUsuario(null);
+    } catch (error) {
+      console.error("Erro ao atualizar usuário:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível atualizar o usuário.",
+        variant: "destructive",
+      });
     }
+  };
+
+  const handleDeleteUsuario = async (id: string) => {
+    if (!confirm("Tem certeza que deseja excluir este usuário?")) return;
+
+    try {
+      // First delete from public schema
+      const { error: publicError } = await supabase
+        .from("usuarios")
+        .delete()
+        .eq("id", id);
+
+      if (publicError) throw publicError;
+
+      // Then delete from auth
+      try {
+        const { error: authError } = await supabase.auth.admin.deleteUser(id);
+        if (authError) {
+          console.error("Erro ao excluir usuário da autenticação:", authError);
+          toast({
+            title: "Aviso",
+            description: "Usuário excluído do sistema, mas pode haver resíduos na autenticação.",
+            variant: "warning"
+          });
+        }
+      } catch (authError) {
+        console.error("Erro ao excluir usuário da autenticação:", authError);
+      }
+
+      toast({
+        title: "Sucesso",
+        description: "Usuário excluído com sucesso!",
+      });
+      
+      setUsuarios(usuarios.filter((usuario) => usuario.id !== id));
+    } catch (error) {
+      console.error("Erro ao excluir usuário:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível excluir o usuário.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const startEditing = (usuario: UsuarioComEmpresa) => {
+    setNome(usuario.nome);
+    setEmail(usuario.email);
+    setSenha("");
+    setPapel(usuario.papel);
+    setEmpresaId(usuario.empresa_id);
+    setAtivo(usuario.ativo);
+    setIsEditingUsuario(usuario.id);
+  };
+
+  const resetForm = () => {
+    setNome("");
+    setEmail("");
+    setSenha("");
+    setPapel("user");
+    setEmpresaId(undefined);
+    setAtivo(true);
   };
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Usuários</CardTitle>
-        <Button variant="default" size="sm" onClick={() => handleOpenForm()}>
-          <Plus className="mr-2 h-4 w-4" />
-          Novo Usuário
-        </Button>
-      </CardHeader>
-      <CardContent>
-        <div className="relative mb-4">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar usuário..."
-            className="pl-10"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-        
-        {isLoading ? (
-          <div className="space-y-2">
-            {Array(3).fill(0).map((_, i) => (
-              <Skeleton key={i} className="h-12 w-full" />
-            ))}
-          </div>
-        ) : !filteredUsuarios.length ? (
-          <div className="text-center py-6">
-            <p className="text-muted-foreground">
-              {searchTerm ? "Nenhum usuário encontrado." : "Nenhum usuário cadastrado."}
-            </p>
-          </div>
-        ) : (
-          <div className="rounded-md border overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Papel</TableHead>
-                  <TableHead>Empresa</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="w-[100px]">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredUsuarios.map((usuario) => (
-                  <TableRow key={usuario.id}>
-                    <TableCell className="font-medium">{usuario.nome}</TableCell>
-                    <TableCell>{usuario.email}</TableCell>
-                    <TableCell>{getPapelBadge(usuario.papel)}</TableCell>
-                    <TableCell>{getEmpresaNome(usuario.empresa_id)}</TableCell>
-                    <TableCell>
-                      <Badge variant={usuario.ativo ? "default" : "outline"} className={!usuario.ativo ? "text-muted-foreground" : ""}>
-                        {usuario.ativo ? "Ativo" : "Inativo"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex space-x-1">
-                        <Button 
-                          variant="outline" 
-                          size="icon" 
-                          onClick={() => handleOpenForm(usuario)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <ConfirmDialog
-                          title={usuario.ativo ? "Confirmar desativação" : "Confirmar ativação"}
-                          description={
-                            usuario.ativo 
-                              ? "Tem certeza que deseja desativar este usuário?" 
-                              : "Tem certeza que deseja ativar este usuário?"
-                          }
-                          onConfirm={() => {
-                            if (usuario.ativo) {
-                              handleDelete(usuario.id);
-                            } else {
-                              // Reativar usuário
-                              supabase
-                                .from('usuarios')
-                                .update({ ativo: true })
-                                .eq('id', usuario.id)
-                                .then(() => {
-                                  toast({
-                                    title: "Sucesso",
-                                    description: "Usuário ativado com sucesso!",
-                                  });
-                                  fetchData();
-                                })
-                                .catch((error) => {
-                                  console.error('Erro ao ativar usuário:', error);
-                                  toast({
-                                    title: "Erro",
-                                    description: "Não foi possível ativar o usuário.",
-                                    variant: "destructive",
-                                  });
-                                });
-                            }
-                          }}
-                          confirmText={usuario.ativo ? "Desativar" : "Ativar"}
-                        >
-                          <Button 
-                            variant={usuario.ativo ? "destructive" : "default"} 
-                            size="icon"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </ConfirmDialog>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-      </CardContent>
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <h2 className="text-xl font-semibold">Usuários</h2>
+        <Button onClick={() => setIsAddingUsuario(true)}>Novo Usuário</Button>
+      </div>
 
-      {/* Form Dialog */}
-      <Dialog open={isFormOpen} onOpenChange={(open) => !open && handleCloseForm()}>
-        <DialogContent className="sm:max-w-md">
+      {loading ? (
+        <div className="text-center p-4">Carregando...</div>
+      ) : (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Nome</TableHead>
+              <TableHead>Email</TableHead>
+              <TableHead>Papel</TableHead>
+              <TableHead>Empresa</TableHead>
+              <TableHead>Ativo</TableHead>
+              <TableHead>Ações</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {usuarios.map((usuario) => (
+              <TableRow key={usuario.id}>
+                <TableCell>{usuario.nome}</TableCell>
+                <TableCell>{usuario.email}</TableCell>
+                <TableCell>{usuario.papel}</TableCell>
+                <TableCell>{usuario.empresa?.nome}</TableCell>
+                <TableCell>{usuario.ativo ? "Sim" : "Não"}</TableCell>
+                <TableCell>
+                  <div className="flex space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => startEditing(usuario)}
+                    >
+                      Editar
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleDeleteUsuario(usuario.id)}
+                    >
+                      Excluir
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )}
+
+      {/* Dialog para adicionar usuário */}
+      <Dialog open={isAddingUsuario} onOpenChange={setIsAddingUsuario}>
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle>
-              {isEditing ? "Editar Usuário" : "Novo Usuário"}
-            </DialogTitle>
-            <DialogDescription>
-              {isEditing
-                ? "Edite os dados do usuário."
-                : "Preencha os dados para cadastrar um novo usuário."}
-            </DialogDescription>
+            <DialogTitle>Novo Usuário</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleAddUsuario} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="nome">Nome</Label>
               <Input
                 id="nome"
-                value={currentUsuario.nome || ""}
-                onChange={(e) => setCurrentUsuario({...currentUsuario, nome: e.target.value})}
-                placeholder="Nome do usuário"
+                value={nome}
+                onChange={(e) => setNome(e.target.value)}
+                required
               />
             </div>
-            
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 type="email"
-                value={currentUsuario.email || ""}
-                onChange={(e) => setCurrentUsuario({...currentUsuario, email: e.target.value})}
-                placeholder="Email do usuário"
-                disabled={isEditing} // Não permitir edição de email para usuários existentes
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
               />
-              {isEditing && (
-                <p className="text-xs text-muted-foreground">
-                  O email não pode ser alterado para usuários existentes.
-                </p>
-              )}
             </div>
-            
+            <div className="space-y-2">
+              <Label htmlFor="senha">Senha</Label>
+              <Input
+                id="senha"
+                type="password"
+                value={senha}
+                onChange={(e) => setSenha(e.target.value)}
+                required
+              />
+            </div>
             <div className="space-y-2">
               <Label htmlFor="papel">Papel</Label>
-              <Select
-                value={currentUsuario.papel || "user"}
-                onValueChange={(value: "admin" | "user" | "manager") => 
-                  setCurrentUsuario({...currentUsuario, papel: value})
-                }
+              <Select 
+                value={papel} 
+                onValueChange={(value) => setPapel(value as "admin" | "user" | "manager")}
               >
-                <SelectTrigger placeholder="Selecione o papel" />
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o papel" />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="manager">Gerente</SelectItem>
-                  <SelectItem value="user">Usuário</SelectItem>
+                  <SelectItem value="manager">Manager</SelectItem>
+                  <SelectItem value="user">User</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            
             <div className="space-y-2">
-              <Label htmlFor="empresa_id">Empresa</Label>
-              {empresas.length > 0 ? (
-                <Select
-                  value={currentUsuario.empresa_id || undefined}
-                  onValueChange={(value) => 
-                    setCurrentUsuario({...currentUsuario, empresa_id: value || null})
-                  }
-                >
-                  <SelectTrigger placeholder="Selecione a empresa" />
-                  <SelectContent>
-                    {empresas.map((empresa) => (
-                      <SelectItem key={empresa.id} value={empresa.id}>
-                        {empresa.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <div className="text-sm text-muted-foreground">
-                  Carregando empresas...
-                </div>
-              )}
+              <Label htmlFor="empresaId">Empresa</Label>
+              <Select 
+                value={empresaId || ""} 
+                onValueChange={(value) => setEmpresaId(value === "" ? undefined : value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a empresa" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Nenhuma</SelectItem>
+                  {empresas.map(empresa => (
+                    <SelectItem key={empresa.id} value={empresa.id}>{empresa.nome}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            
             <div className="flex items-center space-x-2">
-              <Switch
+              <Checkbox
                 id="ativo"
-                checked={!!currentUsuario.ativo}
-                onCheckedChange={(checked) => 
-                  setCurrentUsuario({...currentUsuario, ativo: checked})
-                }
+                checked={ativo}
+                onCheckedChange={(checked) => setAtivo(checked as boolean)}
               />
               <Label htmlFor="ativo">Ativo</Label>
             </div>
-            
             <div className="flex justify-end space-x-2 pt-4">
-              <Button type="button" variant="outline" onClick={handleCloseForm}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  resetForm();
+                  setIsAddingUsuario(false);
+                }}
+              >
                 Cancelar
               </Button>
               <Button type="submit">Salvar</Button>
@@ -475,6 +437,106 @@ export const UsuariosList: React.FC = () => {
           </form>
         </DialogContent>
       </Dialog>
-    </Card>
+
+      {/* Dialog para editar usuário */}
+      <Dialog open={!!isEditingUsuario} onOpenChange={(open) => {
+        if (!open) {
+          resetForm();
+          setIsEditingUsuario(null);
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Usuário</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleEditUsuario} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-nome">Nome</Label>
+              <Input
+                id="edit-nome"
+                value={nome}
+                onChange={(e) => setNome(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-email">Email</Label>
+              <Input
+                id="edit-email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                disabled
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-senha">Senha</Label>
+              <Input
+                id="edit-senha"
+                type="password"
+                value={senha}
+                onChange={(e) => setSenha(e.target.value)}
+                placeholder="Nova senha (deixe em branco para manter a atual)"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-papel">Papel</Label>
+              <Select 
+                value={papel} 
+                onValueChange={(value) => setPapel(value as "admin" | "user" | "manager")}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o papel" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="manager">Manager</SelectItem>
+                  <SelectItem value="user">User</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-empresaId">Empresa</Label>
+              <Select 
+                value={empresaId || ""} 
+                onValueChange={(value) => setEmpresaId(value === "" ? undefined : value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a empresa" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Nenhuma</SelectItem>
+                  {empresas.map(empresa => (
+                    <SelectItem key={empresa.id} value={empresa.id}>{empresa.nome}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="edit-ativo"
+                checked={ativo}
+                onCheckedChange={(checked) => setAtivo(checked as boolean)}
+              />
+              <Label htmlFor="edit-ativo">Ativo</Label>
+            </div>
+            <div className="flex justify-end space-x-2 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  resetForm();
+                  setIsEditingUsuario(null);
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit">Salvar</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 };
