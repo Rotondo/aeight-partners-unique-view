@@ -3,7 +3,6 @@ import React, { createContext, useContext, useState, ReactNode, useEffect } from
 import { Oportunidade, StatusOportunidade, OportunidadesFilterParams } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
-import { format } from "date-fns";
 import { useAuth } from "@/hooks/useAuth";
 
 interface OportunidadesContextType {
@@ -61,42 +60,46 @@ export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ child
         throw error;
       }
 
-      const processedData = data.map(item => ({
-        id: item.id,
-        empresa_origem_id: item.empresa_origem_id,
-        empresa_destino_id: item.empresa_destino_id,
-        contato_id: item.contato_id,
-        valor: item.valor,
-        status: item.status as StatusOportunidade,
-        data_indicacao: item.data_indicacao,
-        data_fechamento: item.data_fechamento,
-        motivo_perda: item.motivo_perda,
-        usuario_envio_id: item.usuario_envio_id,
-        usuario_recebe_id: item.usuario_recebe_id,
-        observacoes: item.observacoes,
-        nome_lead: item.nome_lead,
-        // Relações
-        empresa_origem: item.empresa_origem ? {
-          id: item.empresa_origem.id,
-          nome: item.empresa_origem.nome,
-          tipo: item.empresa_origem.tipo,
-          status: item.empresa_origem.status,
-          descricao: item.empresa_origem.descricao
-        } : undefined,
-        empresa_destino: item.empresa_destino ? {
-          id: item.empresa_destino.id,
-          nome: item.empresa_destino.nome,
-          tipo: item.empresa_destino.tipo,
-          status: item.empresa_destino.status,
-          descricao: item.empresa_destino.descricao
-        } : undefined,
-        contato: item.contato?.[0],
-        usuario_envio: item.usuario_envio,
-        usuario_recebe: item.usuario_recebe
-      })) as Oportunidade[];
+      // Ensure data exists and is an array
+      if (data && Array.isArray(data)) {
+        const processedData: Oportunidade[] = data.map(item => ({
+          id: item.id,
+          empresa_origem_id: item.empresa_origem_id,
+          empresa_destino_id: item.empresa_destino_id,
+          contato_id: item.contato_id,
+          valor: item.valor,
+          status: item.status as StatusOportunidade,
+          data_indicacao: item.data_indicacao,
+          data_fechamento: item.data_fechamento,
+          motivo_perda: item.motivo_perda,
+          usuario_envio_id: item.usuario_envio_id,
+          usuario_recebe_id: item.usuario_recebe_id,
+          observacoes: item.observacoes,
+          nome_lead: item.nome_lead,
+          created_at: item.created_at,
+          // Relações
+          empresa_origem: item.empresa_origem ? {
+            id: item.empresa_origem.id,
+            nome: item.empresa_origem.nome,
+            tipo: item.empresa_origem.tipo as "intragrupo" | "parceiro" | "cliente",
+            status: item.empresa_origem.status,
+            descricao: item.empresa_origem.descricao || ""
+          } : undefined,
+          empresa_destino: item.empresa_destino ? {
+            id: item.empresa_destino.id,
+            nome: item.empresa_destino.nome,
+            tipo: item.empresa_destino.tipo as "intragrupo" | "parceiro" | "cliente",
+            status: item.empresa_destino.status,
+            descricao: item.empresa_destino.descricao || ""
+          } : undefined,
+          contato: item.contato?.[0],
+          usuario_envio: item.usuario_envio,
+          usuario_recebe: item.usuario_recebe
+        }));
 
-      setOportunidades(processedData);
-      applyFilters(processedData, filterParams);
+        setOportunidades(processedData);
+        applyFilters(processedData, filterParams);
+      }
     } catch (error) {
       console.error("Erro ao buscar oportunidades:", error);
       setError("Falha ao carregar oportunidades. Por favor, tente novamente.");

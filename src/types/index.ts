@@ -18,7 +18,7 @@ export enum TipoEmpresa {
 export interface Empresa {
   id: string;
   nome: string;
-  tipo: TipoEmpresa;
+  tipo: "intragrupo" | "parceiro" | "cliente"; // Updated to match actual values
   descricao?: string;
   status: boolean;
   created_at?: string;
@@ -50,19 +50,19 @@ export interface Usuario {
 }
 
 // Oportunidade (Opportunity)
-export type StatusOportunidade = "em_contato" | "negociando" | "ganho" | "perdido";
+export type StatusOportunidade = "em_contato" | "negociando" | "ganho" | "perdido" | "Contato";
 
 export interface Oportunidade {
   id: string;
   empresa_origem_id: string;
   empresa_destino_id: string;
-  contato_id: string;
+  contato_id?: string; // Made optional
   valor?: number;
   status: StatusOportunidade;
   data_indicacao: string;
   data_fechamento?: string;
   motivo_perda?: string;
-  usuario_envio_id: string;
+  usuario_envio_id?: string; // Made optional
   usuario_recebe_id?: string;
   observacoes?: string;
   nome_lead: string;
@@ -72,6 +72,7 @@ export interface Oportunidade {
   contato?: Contato;
   usuario_envio?: Usuario;
   usuario_recebe?: Usuario;
+  created_at?: string; // Added to match database
 }
 
 // IndicadoresParceiro (PartnerIndicators)

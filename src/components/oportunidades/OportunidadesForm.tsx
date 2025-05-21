@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { useOportunidades } from "./OportunidadesContext";
 import { Button } from "@/components/ui/button";
@@ -41,7 +42,7 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({ oportunida
   
   // Aplica apenas campos obrigatórios
   const [formData, setFormData] = useState<Partial<Oportunidade>>({
-    nome: "",
+    nome_lead: "",
     empresa_origem_id: "",
     empresa_destino_id: "",
     data_indicacao: new Date().toISOString(),
@@ -55,10 +56,17 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({ oportunida
       const oportunidade = getOportunidade(oportunidadeId);
       if (oportunidade) {
         setFormData({
-          nome: oportunidade.nome,
+          nome_lead: oportunidade.nome_lead,
           empresa_origem_id: oportunidade.empresa_origem_id,
           empresa_destino_id: oportunidade.empresa_destino_id,
           data_indicacao: oportunidade.data_indicacao,
+          status: oportunidade.status,
+          valor: oportunidade.valor,
+          contato_id: oportunidade.contato_id,
+          data_fechamento: oportunidade.data_fechamento,
+          motivo_perda: oportunidade.motivo_perda,
+          observacoes: oportunidade.observacoes,
+          usuario_recebe_id: oportunidade.usuario_recebe_id
         });
       } else {
         toast({
@@ -82,7 +90,18 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({ oportunida
           .select('*')
           .order('nome');
         if (empresasError) throw empresasError;
-        setEmpresas(empresasData || []);
+        
+        if (empresasData) {
+          const typedEmpresas = empresasData.map(empresa => ({
+            id: empresa.id,
+            nome: empresa.nome,
+            tipo: empresa.tipo as "intragrupo" | "parceiro" | "cliente",
+            status: empresa.status,
+            descricao: empresa.descricao,
+            created_at: empresa.created_at
+          }));
+          setEmpresas(typedEmpresas);
+        }
       } catch (error) {
         toast({
           title: "Erro",
@@ -111,8 +130,8 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({ oportunida
   const validateForm = () => {
     const errors: Record<string, string> = {};
 
-    if (!formData.nome || !formData.nome.trim()) {
-      errors.nome = "Nome da oportunidade é obrigatório";
+    if (!formData.nome_lead || !formData.nome_lead.trim()) {
+      errors.nome_lead = "Nome da oportunidade é obrigatório";
     }
     if (!formData.empresa_origem_id) {
       errors.empresa_origem_id = "Origem é obrigatória";
@@ -169,18 +188,18 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({ oportunida
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Nome */}
         <div className="space-y-2 md:col-span-2">
-          <Label htmlFor="nome">
+          <Label htmlFor="nome_lead">
             Nome da Oportunidade <span className="text-red-500">*</span>
           </Label>
           <Input
-            id="nome"
-            value={formData.nome || ""}
-            onChange={e => handleChange("nome", e.target.value)}
+            id="nome_lead"
+            value={formData.nome_lead || ""}
+            onChange={e => handleChange("nome_lead", e.target.value)}
             required
-            className={cn(formErrors.nome && "border-red-500")}
+            className={cn(formErrors.nome_lead && "border-red-500")}
           />
-          {formErrors.nome && (
-            <p className="text-sm text-red-500">{formErrors.nome}</p>
+          {formErrors.nome_lead && (
+            <p className="text-sm text-red-500">{formErrors.nome_lead}</p>
           )}
         </div>
         {/* Origem */}

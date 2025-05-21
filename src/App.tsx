@@ -32,7 +32,6 @@ function App() {
           path="/"
           element={
             <PrivateRoute>
-              {/* Use element prop instead of children */}
               <Dashboard />
             </PrivateRoute>
           }

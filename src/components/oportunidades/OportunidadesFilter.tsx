@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useOportunidades } from "./OportunidadesContext";
 import { Button } from "@/components/ui/button";
@@ -12,7 +11,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Filter, Search, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import { OportunidadesFilterParams, Usuario, StatusOportunidade, Empresa, TipoEmpresa } from "@/types";
+import { OportunidadesFilterParams, Usuario, StatusOportunidade, Empresa } from "@/types";
 import { useEffect } from "react";
 import { 
   DropdownMenu,
@@ -61,15 +60,17 @@ export const OportunidadesFilter: React.FC = () => {
 
         if (empresasError) throw empresasError;
         
-        const typedEmpresas = empresasData.map(empresa => ({
-          id: empresa.id,
-          nome: empresa.nome,
-          tipo: empresa.tipo as TipoEmpresa,
-          status: empresa.status,
-          descricao: empresa.descricao
-        }));
-        
-        setEmpresas(typedEmpresas);
+        if (empresasData) {
+          const typedEmpresas = empresasData.map(empresa => ({
+            id: empresa.id,
+            nome: empresa.nome,
+            tipo: empresa.tipo as "intragrupo" | "parceiro" | "cliente",
+            status: empresa.status,
+            descricao: empresa.descricao || ""
+          }));
+          
+          setEmpresas(typedEmpresas);
+        }
 
         // Fetch usuarios
         const { data: usuariosData, error: usuariosError } = await supabase
@@ -79,7 +80,9 @@ export const OportunidadesFilter: React.FC = () => {
 
         if (usuariosError) throw usuariosError;
         
-        setUsuarios(usuariosData as Usuario[]);
+        if (usuariosData) {
+          setUsuarios(usuariosData as Usuario[]);
+        }
 
       } catch (error) {
         console.error("Erro ao carregar dados para filtros:", error);
@@ -276,6 +279,7 @@ export const OportunidadesFilter: React.FC = () => {
                     <SelectItem value="negociando">Negociando</SelectItem>
                     <SelectItem value="ganho">Ganho</SelectItem>
                     <SelectItem value="perdido">Perdido</SelectItem>
+                    <SelectItem value="Contato">Contato</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -379,7 +383,8 @@ export const OportunidadesFilter: React.FC = () => {
                 filterParams.status === "em_contato" ? "Em Contato" :
                 filterParams.status === "negociando" ? "Negociando" :
                 filterParams.status === "ganho" ? "Ganho" :
-                filterParams.status === "perdido" ? "Perdido" : "Desconhecido"
+                filterParams.status === "perdido" ? "Perdido" :
+                filterParams.status === "Contato" ? "Contato" : "Desconhecido"
               }
               <Button 
                 variant="ghost" 
