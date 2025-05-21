@@ -1,27 +1,20 @@
 
-import React from 'react';
-import { Navigate, Outlet } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
+import React from "react";
+import { Navigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 
-const PrivateRoute: React.FC = () => {
+interface PrivateRouteProps {
+  children: React.ReactNode;
+}
+
+const PrivateRoute: React.FC<PrivateRouteProps> = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
-
-  // Show loading state
+  
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
-      </div>
-    );
+    return <div>Loading...</div>;
   }
   
-  // Redirect if not authenticated
-  if (!isAuthenticated) {
-    return <Navigate to="/login" />;
-  }
-
-  // Render child routes
-  return <Outlet />;
+  return isAuthenticated ? <>{children}</> : <Navigate to="/login" />;
 };
 
 export default PrivateRoute;

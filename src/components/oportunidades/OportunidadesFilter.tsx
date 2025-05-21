@@ -12,7 +12,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Filter, Search, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import { OportunidadesFilterParams, Usuario, StatusOportunidade, Empresa } from "@/types";
+import { OportunidadesFilterParams, Usuario, StatusOportunidade, Empresa, TipoEmpresa } from "@/types";
 import { useEffect } from "react";
 import { 
   DropdownMenu,
@@ -31,6 +31,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 
 export const OportunidadesFilter: React.FC = () => {
   const { filterParams, setFilterParams } = useOportunidades();
@@ -55,20 +56,30 @@ export const OportunidadesFilter: React.FC = () => {
         // Fetch empresas
         const { data: empresasData, error: empresasError } = await supabase
           .from('empresas')
-          .select('id, nome, tipo')
+          .select('id, nome, tipo, status')
           .order('nome');
 
         if (empresasError) throw empresasError;
-        setEmpresas(empresasData || []);
+        
+        const typedEmpresas = empresasData.map(empresa => ({
+          id: empresa.id,
+          nome: empresa.nome,
+          tipo: empresa.tipo as TipoEmpresa,
+          status: empresa.status,
+          descricao: empresa.descricao
+        }));
+        
+        setEmpresas(typedEmpresas);
 
         // Fetch usuarios
         const { data: usuariosData, error: usuariosError } = await supabase
           .from('usuarios')
-          .select('id, nome, email')
+          .select('id, nome, email, empresa_id, papel, ativo')
           .order('nome');
 
         if (usuariosError) throw usuariosError;
-        setUsuarios(usuariosData || []);
+        
+        setUsuarios(usuariosData as Usuario[]);
 
       } catch (error) {
         console.error("Erro ao carregar dados para filtros:", error);

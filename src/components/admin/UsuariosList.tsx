@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import {
   Table,
@@ -34,6 +35,7 @@ import { supabase } from "@/lib/supabase";
 import { Database } from "@/integrations/supabase/types";
 
 type User = Database["public"]["Tables"]["usuarios"]["Row"];
+type UserRole = "admin" | "user" | "manager";
 
 interface UsuariosListProps {
   empresaId: string | null;
@@ -46,7 +48,7 @@ export const UsuariosList: React.FC<UsuariosListProps> = ({ empresaId }) => {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
-  const [papel, setPapel] = useState<"admin" | "user" | "manager">("user");
+  const [papel, setPapel] = useState<UserRole>("user");
   const [ativo, setAtivo] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -332,7 +334,10 @@ export const UsuariosList: React.FC<UsuariosListProps> = ({ empresaId }) => {
               <Label htmlFor="role" className="text-right">
                 Papel
               </Label>
-              <Select value={papel} onValueChange={setPapel}>
+              <Select 
+                value={papel} 
+                onValueChange={(value: UserRole) => setPapel(value)}
+              >
                 <SelectTrigger className="col-span-3">
                   <SelectValue placeholder="Selecione um papel" />
                 </SelectTrigger>

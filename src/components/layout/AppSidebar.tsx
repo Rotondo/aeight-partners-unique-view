@@ -8,8 +8,8 @@ import {
   FileText,
   BarChart,
   ChartBar,
-  GridIcon,
-  DatabaseIcon,
+  Grid,
+  Database,
   Settings
 } from "lucide-react";
 
@@ -76,7 +76,7 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen, toggleSidebar }) => {
           <SidebarLink
             to="/onepager"
             label="OnePager"
-            icon={<GridIcon size={20} />}
+            icon={<Grid size={20} />}
             active={isActive("/onepager")}
           />
           <SidebarLink
@@ -88,7 +88,7 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ isOpen, toggleSidebar }) => {
           <SidebarLink
             to="/admin"
             label="Administração"
-            icon={<DatabaseIcon size={20} />}
+            icon={<Database size={20} />}
             active={isActive("/admin")}
           />
         </nav>

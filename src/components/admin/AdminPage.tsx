@@ -56,7 +56,7 @@ export const AdminPage: React.FC = () => {
         </TabsContent>
         
         <TabsContent value="usuarios">
-          <UsuariosList />
+          <UsuariosList empresaId={null} />
         </TabsContent>
         
         <TabsContent value="indicadores">

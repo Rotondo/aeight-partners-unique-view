@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import { Oportunidade, StatusOportunidade, OportunidadesFilterParams } from "@/types";
 import { useToast } from "@/hooks/use-toast";
@@ -75,12 +76,24 @@ export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ child
         observacoes: item.observacoes,
         nome_lead: item.nome_lead,
         // Relações
-        empresa_origem: item.empresa_origem,
-        empresa_destino: item.empresa_destino,
-        contato: item.contato,
+        empresa_origem: item.empresa_origem ? {
+          id: item.empresa_origem.id,
+          nome: item.empresa_origem.nome,
+          tipo: item.empresa_origem.tipo,
+          status: item.empresa_origem.status,
+          descricao: item.empresa_origem.descricao
+        } : undefined,
+        empresa_destino: item.empresa_destino ? {
+          id: item.empresa_destino.id,
+          nome: item.empresa_destino.nome,
+          tipo: item.empresa_destino.tipo,
+          status: item.empresa_destino.status,
+          descricao: item.empresa_destino.descricao
+        } : undefined,
+        contato: item.contato?.[0],
         usuario_envio: item.usuario_envio,
         usuario_recebe: item.usuario_recebe
-      }));
+      })) as Oportunidade[];
 
       setOportunidades(processedData);
       applyFilters(processedData, filterParams);
