@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Empresa } from '@/types';
 import { cn } from '@/lib/utils';
@@ -12,11 +11,11 @@ interface ParceirosListProps {
   isLoading: boolean;
 }
 
-const ParceirosList: React.FC<ParceirosListProps> = ({ 
-  parceiros, 
-  selectedParceiro, 
+const ParceirosList: React.FC<ParceirosListProps> = ({
+  parceiros,
+  selectedParceiro,
   onSelectParceiro,
-  isLoading 
+  isLoading,
 }) => {
   if (isLoading) {
     return (
@@ -32,7 +31,7 @@ const ParceirosList: React.FC<ParceirosListProps> = ({
   }
 
   return (
-    <div className="p-4">
+    <div className="p-4 h-full flex flex-col">
       <h3 className="font-medium text-lg mb-4">Parceiros</h3>
       <nav>
         <ul className="space-y-1">
