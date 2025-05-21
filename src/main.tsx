@@ -1,9 +1,6 @@
-
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter } from 'react-router-dom';
 import App from './App.tsx';
 import './index.css';
-import { AuthProvider } from './hooks/useAuth';
 
 // Garantir que o elemento root existe
 const rootElement = document.getElementById("root");
@@ -20,11 +17,7 @@ try {
   console.log("Iniciando renderização da aplicação");
   
   createRoot(document.getElementById("root")!).render(
-    <BrowserRouter>
-      <AuthProvider>
-        <App />
-      </AuthProvider>
-    </BrowserRouter>
+    <App />
   );
   
   console.log("Aplicação renderizada com sucesso");
