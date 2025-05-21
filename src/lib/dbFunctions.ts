@@ -16,21 +16,21 @@ export const getMatrizIntragrupo = async (
       id
     `)
     .gte('data_indicacao', dataInicio ? format(dataInicio, 'yyyy-MM-dd') : null)
-    .lte('data_indicacao', dataFim ? format(dataFim, 'yyyy-MM-dd') : null)
-    .eq('empresas!oportunidades_empresa_origem_id_fkey.tipo', 'intragrupo')
-    .eq('empresas!oportunidades_empresa_destino_id_fkey.tipo', 'intragrupo');
+    .lte('data_indicacao', dataFim ? format(dataFim, 'yyyy-MM-dd') : null);
 
   if (status) {
     query = query.eq('status', status);
   }
 
   const { data: initialData, error } = await query;
-
   if (error) throw error;
 
-  // Filter by empresaId if provided
-  let filteredData = initialData;
-  if (empresaId && filteredData) {
+  // Filtro apenas intragrupo
+  let filteredData = initialData?.filter(item =>
+    item.empresa_origem.tipo === 'intragrupo' && item.empresa_destino.tipo === 'intragrupo'
+  ) || [];
+
+  if (empresaId) {
     filteredData = filteredData.filter(item =>
       item.empresa_origem.id === empresaId ||
       item.empresa_destino.id === empresaId
@@ -38,7 +38,7 @@ export const getMatrizIntragrupo = async (
   }
 
   // Group by origem and destino
-  const grouped = filteredData?.reduce((acc: any, curr) => {
+  const grouped = filteredData.reduce((acc: any, curr) => {
     const key = `${curr.empresa_origem.nome}-${curr.empresa_destino.nome}`;
     if (!acc[key]) {
       acc[key] = {
@@ -49,7 +49,7 @@ export const getMatrizIntragrupo = async (
     }
     acc[key].total++;
     return acc;
-  }, {}) || {};
+  }, {});
 
   return Object.values(grouped);
 };
@@ -76,13 +76,11 @@ export const getMatrizParcerias = async (
   }
 
   const { data: initialData, error } = await query;
-
   if (error) throw error;
 
-  // Filter for at least one side being a partner
+  // Filtro: pelo menos um lado parceiro
   let filteredData = initialData?.filter(item =>
-    item.empresa_origem.tipo === 'parceiro' ||
-    item.empresa_destino.tipo === 'parceiro'
+    item.empresa_origem.tipo === 'parceiro' || item.empresa_destino.tipo === 'parceiro'
   ) || [];
 
   if (empresaId) {
@@ -127,7 +125,6 @@ export const getQualidadeIndicacoes = async (
 
   if (error) throw error;
 
-  // Filter by empresaId if provided
   let filteredData = initialData;
   if (empresaId && filteredData) {
     filteredData = filteredData.filter(item =>
@@ -176,10 +173,8 @@ export const getBalancoGrupoParcerias = async (
   }
 
   const { data: initialData, error } = await query;
-
   if (error) throw error;
 
-  // Filter by empresaId if provided
   let filteredData = initialData;
   if (empresaId && filteredData) {
     filteredData = filteredData.filter(item =>
@@ -220,20 +215,23 @@ export const getRankingParceirosEnviadas = async (
       id
     `)
     .gte('data_indicacao', dataInicio ? format(dataInicio, 'yyyy-MM-dd') : null)
-    .lte('data_indicacao', dataFim ? format(dataFim, 'yyyy-MM-dd') : null)
-    .eq('empresas!oportunidades_empresa_origem_id_fkey.tipo', 'parceiro')
-    .eq('empresas!oportunidades_empresa_destino_id_fkey.tipo', 'intragrupo');
+    .lte('data_indicacao', dataFim ? format(dataFim, 'yyyy-MM-dd') : null);
 
   if (status) {
     query = query.eq('status', status);
   }
 
   const { data, error } = await query;
-
   if (error) throw error;
 
+  // Filtro: origem = parceiro, destino = intragrupo
+  const filteredData = (data || []).filter(item =>
+    item.empresa_origem.tipo === 'parceiro' &&
+    item.empresa_destino.tipo === 'intragrupo'
+  );
+
   // Group by partner
-  const grouped = (data || []).reduce((acc: any, curr) => {
+  const grouped = filteredData.reduce((acc: any, curr) => {
     const key = curr.empresa_origem.nome;
     if (!acc[key]) {
       acc[key] = {
@@ -262,20 +260,23 @@ export const getRankingParceirosRecebidas = async (
       id
     `)
     .gte('data_indicacao', dataInicio ? format(dataInicio, 'yyyy-MM-dd') : null)
-    .lte('data_indicacao', dataFim ? format(dataFim, 'yyyy-MM-dd') : null)
-    .eq('empresas!oportunidades_empresa_origem_id_fkey.tipo', 'intragrupo')
-    .eq('empresas!oportunidades_empresa_destino_id_fkey.tipo', 'parceiro');
+    .lte('data_indicacao', dataFim ? format(dataFim, 'yyyy-MM-dd') : null);
 
   if (status) {
     query = query.eq('status', status);
   }
 
   const { data, error } = await query;
-
   if (error) throw error;
 
+  // Filtro: origem = intragrupo, destino = parceiro
+  const filteredData = (data || []).filter(item =>
+    item.empresa_origem.tipo === 'intragrupo' &&
+    item.empresa_destino.tipo === 'parceiro'
+  );
+
   // Group by partner
-  const grouped = (data || []).reduce((acc: any, curr) => {
+  const grouped = filteredData.reduce((acc: any, curr) => {
     const key = curr.empresa_destino.nome;
     if (!acc[key]) {
       acc[key] = {
