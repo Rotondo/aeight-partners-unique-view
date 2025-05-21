@@ -1,5 +1,5 @@
 import React from "react";
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import MainLayout from "@/components/layout/MainLayout";
 import DashboardPage from "@/pages/dashboard/DashboardPage";
 import NotFoundPage from "@/pages/NotFoundPage";
@@ -18,13 +18,16 @@ const App: React.FC = () => (
             path="/"
             element={
               <PrivateRoute>
-                <MainLayout>
-                  <DashboardPage />
-                </MainLayout>
+                <MainLayout />
               </PrivateRoute>
             }
-          />
-          <Route path="*" element={<NotFoundPage />} />
+          >
+            {/* Rotas internas protegidas */}
+            <Route index element={<DashboardPage />} />
+            {/* Adicione aqui outras rotas internas, exemplo: */}
+            {/* <Route path="outra-pagina" element={<OutraPagina />} /> */}
+            <Route path="*" element={<NotFoundPage />} />
+          </Route>
         </Routes>
       </React.Suspense>
     </AuthProvider>
