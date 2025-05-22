@@ -31,7 +31,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useOportunidades } from "./OportunidadesContext";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
@@ -44,14 +43,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-const COLORS = [
-  "#0088FE",
-  "#00C49F",
-  "#FFBB28",
-  "#FF8042",
-  "#8884d8",
-  "#82ca9d",
-];
 const STATUS_COLORS = {
   em_contato: "#3b82f6", // blue
   negociando: "#eab308", // yellow
@@ -530,8 +521,8 @@ export const OportunidadesStats: React.FC = () => {
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="pt-2">
-              <div className="h-[300px]">
+            <CardContent style={{ padding: 0, margin: 0 }}>
+              <div style={{ width: "100%", minHeight: 320, height: 350, padding: 0 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={oportunidadesPorMes}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -559,7 +550,7 @@ export const OportunidadesStats: React.FC = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="h-[300px]">
+              <div style={{ width: "100%", minHeight: 320, height: 350, padding: 0 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
