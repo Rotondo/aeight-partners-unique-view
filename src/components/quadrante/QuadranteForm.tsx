@@ -65,6 +65,11 @@ const QuadranteForm: React.FC<QuadranteFormProps> = ({
     fetchEmpresas();
   }, []);
 
+  // Ordena parceiros alfabeticamente
+  const parceirosOrdenados = [...parceiros].sort((a, b) =>
+    a.nome.localeCompare(b.nome, "pt-BR")
+  );
+
   // Configure form
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -105,11 +110,6 @@ const QuadranteForm: React.FC<QuadranteFormProps> = ({
     // eslint-disable-next-line
   }, [indicador]);
 
-  // Ordena parceiros alfabeticamente
-  const parceirosOrdenados = [...parceiros].sort((a, b) =>
-    a.nome.localeCompare(b.nome, "pt-BR")
-  );
-
   const handleSubmit = async (values: FormValues) => {
     setLoading(true);
     try {
@@ -147,7 +147,8 @@ const QuadranteForm: React.FC<QuadranteFormProps> = ({
             <FormItem>
               <FormLabel>Parceiro</FormLabel>
               <Select
-                disabled={!!indicador || readOnly}
+                // Só desabilita se for readOnly, nunca por haver indicador selecionado
+                disabled={readOnly}
                 onValueChange={(val) => {
                   field.onChange(val);
                   if (onParceiroSelect) onParceiroSelect(val);
