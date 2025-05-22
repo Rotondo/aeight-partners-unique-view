@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import QuadranteChart from "@/components/quadrante/QuadranteChart";
@@ -16,40 +16,16 @@ const tamanhoColorMap: Record<TamanhoEmpresa, string> = {
   GG: "#f97316",
 };
 
-// NOVA FUNÇÃO DE CÁLCULO DOS PONTOS DO QUADRANTE
 function mapIndicadorToPoint(item: IndicadoresParceiro, empresas: Empresa[]): QuadrantPoint {
   const empresa = empresas.find((e) => e.id === item.empresa_id);
-
-  // Normaliza para sempre ser número (evita NaN)
-  const potencial_leads = Number(item.potencial_leads) || 0;
-  const potencial_investimento = Number(item.potencial_investimento) || 0;
-  const engajamento = Number(item.engajamento) || 0;
-  const alinhamento = Number(item.alinhamento) || 0;
-
-  // Pesos podem ser ajustados conforme o desejado
-  const pesoLeads = 2, pesoInvest = 2, pesoEngaj = 1, pesoAlinh = 1;
-
-  // Eixo X: potencial geral de geração
-  let x = (pesoLeads * potencial_leads + pesoEngaj * engajamento + pesoAlinh * alinhamento) / (pesoLeads + pesoEngaj + pesoAlinh);
-  // Eixo Y: potencial geral de investimento
-  let y = (pesoInvest * potencial_investimento + pesoEngaj * engajamento + pesoAlinh * alinhamento) / (pesoInvest + pesoEngaj + pesoAlinh);
-
-  // Adiciona pequeno ruído para evitar sobreposição exata
-  x += (Math.random() - 0.5) * 0.1;
-  y += (Math.random() - 0.5) * 0.1;
-
-  // Limita entre 0 e 10
-  x = Math.max(0, Math.min(10, x));
-  y = Math.max(0, Math.min(10, y));
-
   return {
     id: item.id || item.empresa_id,
     empresaId: item.empresa_id,
     nome: empresa?.nome || "Desconhecido",
-    x,
-    y,
+    x: item.potencial_leads || 0,
+    y: item.potencial_investimento || 0,
     tamanho: item.tamanho as TamanhoEmpresa || "M",
-    engajamento,
+    engajamento: item.engajamento || 0,
     color: tamanhoColorMap[item.tamanho as TamanhoEmpresa] || "#94a3b8",
   };
 }
@@ -57,6 +33,7 @@ function mapIndicadorToPoint(item: IndicadoresParceiro, empresas: Empresa[]): Qu
 const QuadrantePage: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [indicadores, setIndicadores] = useState<IndicadoresParceiro[]>([]);
   const [quadrantPoints, setQuadrantPoints] = useState<QuadrantPoint[]>([]);
@@ -69,26 +46,14 @@ const QuadrantePage: React.FC = () => {
       setLoading(true);
       const { data: empresasData } = await supabase.from("empresas").select("*");
       setEmpresas(empresasData || []);
-      const { data: indicadoresData } = await supabase
-        .from("indicadores_parceiro")
-        .select("*")
-        .order("data_avaliacao", { ascending: false }); // Ordena do mais recente para o mais antigo
-
-      // Mantém apenas o registro mais recente de cada empresa/parceiro
-      const unicosPorEmpresa: Record<string, IndicadoresParceiro> = {};
-      (indicadoresData || []).forEach((item) => {
-        // Só inclui o primeiro registro encontrado para a empresa (pois está ordenado do mais novo pro mais antigo)
-        if (item.empresa_id && !unicosPorEmpresa[item.empresa_id]) {
-          unicosPorEmpresa[item.empresa_id] = item;
-        }
-      });
-      setIndicadores(Object.values(unicosPorEmpresa));
+      const { data: indicadoresData } = await supabase.from("indicadores_parceiro").select("*");
+      setIndicadores(indicadoresData || []);
       setLoading(false);
     };
     fetchData();
   }, []);
 
-  // Cria pontos do quadrante a partir dos indicadores e empresas (já filtrados)
+  // Cria pontos do quadrante a partir dos indicadores e empresas
   useEffect(() => {
     if (indicadores.length && empresas.length) {
       setQuadrantPoints(
@@ -97,11 +62,17 @@ const QuadrantePage: React.FC = () => {
     }
   }, [indicadores, empresas]);
 
-  // Sincroniza seleção de parceiro entre gráfico e formulário
-  const handlePointClick = (pointId: string) => {
+  // Seleciona parceiro ao clicar no gráfico
+  const handlePointClick = useCallback((pointId: string) => {
     const parceiro = indicadores.find((p) => (p.id || p.empresa_id) === pointId);
     setSelectedParceiro(parceiro || null);
-  };
+  }, [indicadores]);
+
+  // Seleciona parceiro ao escolher no formulário
+  const handleParceiroSelect = useCallback((empresa_id: string) => {
+    const parceiro = indicadores.find((p) => p.empresa_id === empresa_id);
+    setSelectedParceiro(parceiro || null);
+  }, [indicadores]);
 
   // Salva indicador (edição/criação) e atualiza quadrante em tempo real
   const handleSaveIndicador = async (indicador: Partial<IndicadoresParceiro>) => {
@@ -137,27 +108,14 @@ const QuadrantePage: React.FC = () => {
           .insert([newIndicador])
           .select();
         if (error) throw error;
-
-        // Após inserir, atualiza para manter apenas o mais novo por empresa
-        const novaLista = [newIndicador, ...indicadores].sort(
-          (a, b) =>
-            new Date(b.data_avaliacao || "").getTime() -
-            new Date(a.data_avaliacao || "").getTime()
-        );
-        const unicosPorEmpresa: Record<string, IndicadoresParceiro> = {};
-        novaLista.forEach((item) => {
-          if (item.empresa_id && !unicosPorEmpresa[item.empresa_id]) {
-            unicosPorEmpresa[item.empresa_id] = item;
-          }
-        });
-        updatedIndicadores = Object.values(unicosPorEmpresa);
+        updatedIndicadores = [...indicadores, ...(data || [])];
         setIndicadores(updatedIndicadores);
       }
       toast({
         title: "Sucesso",
         description: "Indicadores do parceiro salvos com sucesso!",
       });
-      setSelectedParceiro(null); // Limpa seleção após salvar
+      setSelectedParceiro(null);
     } catch (error) {
       console.error("Error saving indicators:", error);
       toast({
@@ -179,7 +137,7 @@ const QuadrantePage: React.FC = () => {
           <CardHeader>
             <CardTitle>Matriz de Avaliação de Parceiros</CardTitle>
             <CardDescription>
-              Visualização da relação entre potencial de geração de leads, investimento, engajamento e alinhamento
+              Visualização da relação entre potencial de geração de leads e potencial de investimento
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -216,6 +174,7 @@ const QuadrantePage: React.FC = () => {
                   indicador={selectedParceiro}
                   onSave={handleSaveIndicador}
                   readOnly={!user || user.papel === "user"}
+                  onParceiroSelect={handleParceiroSelect}
                 />
               </TabsContent>
               {user?.papel === "admin" && (
@@ -243,25 +202,25 @@ const QuadrantePage: React.FC = () => {
               <div className="border p-4 rounded-md">
                 <h4 className="font-medium mb-2">Quadrante Superior Direito</h4>
                 <p className="text-sm text-muted-foreground">
-                  <strong>Alto potencial em todos os indicadores</strong> - Parceiros estratégicos prioritários
+                  <strong>Alto potencial de leads e investimento</strong> - Parceiros estratégicos prioritários
                 </p>
               </div>
               <div className="border p-4 rounded-md">
                 <h4 className="font-medium mb-2">Quadrante Superior Esquerdo</h4>
                 <p className="text-sm text-muted-foreground">
-                  <strong>Baixo potencial de leads, alto investimento ou outros indicadores elevados</strong> - Parceiros com potencial de desenvolvimento
+                  <strong>Baixo potencial de leads, alto investimento</strong> - Parceiros com potencial de desenvolvimento
                 </p>
               </div>
               <div className="border p-4 rounded-md">
                 <h4 className="font-medium mb-2">Quadrante Inferior Direito</h4>
                 <p className="text-sm text-muted-foreground">
-                  <strong>Alto potencial de leads, baixo investimento, mas engajamento/alinhamento podem ser altos</strong> - Parceiros com boa rentabilidade
+                  <strong>Alto potencial de leads, baixo investimento</strong> - Parceiros com boa rentabilidade
                 </p>
               </div>
               <div className="border p-4 rounded-md">
                 <h4 className="font-medium mb-2">Quadrante Inferior Esquerdo</h4>
                 <p className="text-sm text-muted-foreground">
-                  <strong>Baixo potencial em todos os indicadores</strong> - Parceiros de menor prioridade
+                  <strong>Baixo potencial de leads e investimento</strong> - Parceiros de menor prioridade
                 </p>
               </div>
             </div>
