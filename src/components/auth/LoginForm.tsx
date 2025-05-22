@@ -1,33 +1,25 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { supabase } from "@/services/supabaseClient"; // ajuste o caminho se seu client estiver em lugar diferente
+import React, { useState } from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { Loader2 } from 'lucide-react';
 
 const LoginForm: React.FC = () => {
-  const [email, setEmail] = useState("");
-  const [senha, setSenha] = useState("");
-  const [mensagem, setMensagem] = useState("");
-  const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
+  const { login, loading, error } = useAuth();
+  const [email, setEmail] = useState('');
+  const [senha, setSenha] = useState('');
+  const [mensagem, setMensagem] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setMensagem("");
-    setLoading(true);
-
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password: senha,
-    });
-
-    if (error) {
-      setMensagem("E-mail ou senha incorretos.");
-      setLoading(false);
+    setIsSubmitting(true);
+    setMensagem('');
+    const sucesso = await login(email, senha);
+    if (sucesso) {
+      setMensagem('Login bem-sucedido!');
     } else {
-      setMensagem("Login bem-sucedido! Redirecionando...");
-      setTimeout(() => {
-        navigate("/");
-      }, 1500);
+      setMensagem('E-mail ou senha incorretos.');
     }
+    setIsSubmitting(false);
   };
 
   return (
@@ -82,7 +74,7 @@ const LoginForm: React.FC = () => {
           }}
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          disabled={loading}
+          disabled={isSubmitting}
         />
         <label htmlFor="senha" style={{
           display: 'block',
@@ -110,7 +102,7 @@ const LoginForm: React.FC = () => {
           }}
           value={senha}
           onChange={(e) => setSenha(e.target.value)}
-          disabled={loading}
+          disabled={isSubmitting}
         />
         <button
           type="submit"
@@ -124,22 +116,23 @@ const LoginForm: React.FC = () => {
             fontWeight: 700,
             fontSize: '1.15rem',
             marginTop: 10,
-            cursor: loading ? 'not-allowed' : 'pointer',
+            cursor: isSubmitting ? 'not-allowed' : 'pointer',
             letterSpacing: '0.02em'
           }}
-          disabled={loading}
+          disabled={isSubmitting}
         >
-          {loading ? 'Entrando...' : 'Entrar'}
+          {isSubmitting ? <Loader2 style={{ display: 'inline', verticalAlign: 'middle', marginRight: 8 }} className="animate-spin" size={18} /> : null}
+          {isSubmitting ? 'Entrando...' : 'Entrar'}
         </button>
       </form>
-      {mensagem && (
+      {(mensagem || error) && (
         <div style={{
           marginTop: 18,
           color: mensagem?.includes('sucesso') ? 'green' : '#b91c1c',
           fontWeight: 500,
           textAlign: 'center'
         }}>
-          {mensagem}
+          {mensagem || error}
         </div>
       )}
       <div className="login-footer" style={{
