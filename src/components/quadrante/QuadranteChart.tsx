@@ -228,6 +228,9 @@ const QuadranteChart: React.FC<QuadranteChartProps> = ({
       }
     }
 
+    // ----- DETERMINA SE TEM ALGUM SELECIONADO -----
+    const hasSelection = !!selectedId;
+
     chart
       .selectAll(".point-label")
       .data(labelData)
@@ -238,14 +241,18 @@ const QuadranteChart: React.FC<QuadranteChartProps> = ({
       .attr("y", (d) => d.labelY)
       .attr("fontSize", 13)
       .attr("fill", (d, i) =>
-        selectedId && d.id === selectedId ? "#0ea5e9" : "#cbd5e1"
+        hasSelection && d.id === selectedId
+          ? "#0ea5e9"
+          : hasSelection
+          ? "#cbd5e1"
+          : "#334155"
       )
       .attr("fontWeight", (d) =>
-        selectedId && d.id === selectedId ? 700 : 400
+        hasSelection && d.id === selectedId ? 700 : 400
       )
       .attr("pointer-events", "none")
       .attr("opacity", (d) =>
-        selectedId && d.id !== selectedId ? 0.6 : 1
+        hasSelection && d.id !== selectedId ? 0.6 : 1
       )
       .text((d, i) => (!overlapping.has(i) ? d.nome : ""))
       .style("user-select", "none");
@@ -260,20 +267,26 @@ const QuadranteChart: React.FC<QuadranteChartProps> = ({
       .append("circle")
       .attr("cx", (d) => xScale(d.x))
       .attr("cy", (d) => yScale(d.y))
-      .attr("r", (d) => getBubbleSize(d, selectedId && d.id === selectedId))
+      .attr("r", (d) => getBubbleSize(d, hasSelection && d.id === selectedId))
       .attr("fill", (d) =>
-        selectedId && d.id === selectedId
+        hasSelection && d.id === selectedId
           ? tamanhoColorMap[d.tamanho] || "#38bdf8"
-          : "#cbd5e1"
+          : hasSelection
+          ? "#cbd5e1"
+          : tamanhoColorMap[d.tamanho] || "#38bdf8"
       )
       .attr("opacity", (d) =>
-        selectedId && d.id !== selectedId ? 0.5 : 1
+        hasSelection && d.id !== selectedId ? 0.4 : 1
       )
       .attr("stroke", (d) =>
-        selectedId && d.id === selectedId ? "#0ea5e9" : "#94a3b8"
+        hasSelection && d.id === selectedId
+          ? "#0ea5e9"
+          : hasSelection
+          ? "#94a3b8"
+          : "#334155"
       )
       .attr("stroke-width", (d) =>
-        selectedId && d.id === selectedId ? 4 : 1.2
+        hasSelection && d.id === selectedId ? 4 : 1.2
       )
       .attr("cursor", onPointClick ? "pointer" : "default")
       .on("mouseover", function (event, d) {
@@ -308,8 +321,8 @@ const QuadranteChart: React.FC<QuadranteChartProps> = ({
         d3.select(this)
           .transition()
           .duration(90)
-          .attr("r", getBubbleSize(d, selectedId && d.id === selectedId) + 2)
-          .attr("stroke-width", selectedId && d.id === selectedId ? 5 : 2.2);
+          .attr("r", getBubbleSize(d, hasSelection && d.id === selectedId) + 2)
+          .attr("stroke-width", hasSelection && d.id === selectedId ? 5 : 2.2);
       })
       .on("mousemove", function (event) {
         setTooltip((t) =>
@@ -322,8 +335,8 @@ const QuadranteChart: React.FC<QuadranteChartProps> = ({
         d3.select(this)
           .transition()
           .duration(90)
-          .attr("r", getBubbleSize(d, selectedId && d.id === selectedId))
-          .attr("stroke-width", selectedId && d.id === selectedId ? 4 : 1.2);
+          .attr("r", getBubbleSize(d, hasSelection && d.id === selectedId))
+          .attr("stroke-width", hasSelection && d.id === selectedId ? 4 : 1.2);
       })
       .on("click", (event, d) => {
         if (onPointClick) onPointClick(d.id);
