@@ -5,16 +5,21 @@ import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGri
 import { useOportunidades } from "./OportunidadesContext";
 import { format, differenceInDays, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 function getGrupoStatus(empresa_origem_tipo: string, empresa_destino_tipo: string) {
   if (empresa_origem_tipo === "intragrupo" && empresa_destino_tipo === "intragrupo") return "intragrupo";
   return "extragrupo";
 }
 
-// Helpers para períodos
 function getQuarter(date: Date) {
   const month = date.getMonth();
   if (month < 3) return 'Q1';
@@ -33,16 +38,15 @@ export const OportunidadesStats: React.FC = () => {
   const { oportunidades } = useOportunidades();
   const [selectedTab, setSelectedTab] = useState("mensal");
 
-  // State para filtro do gráfico
   const [periodo, setPeriodo] = useState("mes");
   const [quarters, setQuarters] = useState(['Q1', 'Q2', 'Q3', 'Q4']);
   const [quarterYear, setQuarterYear] = useState<number>(new Date().getFullYear());
   const [grupoStatus, setGrupoStatus] = useState("all"); // all, intra, extra
 
-  // Modal em aberto detalhado
+  // Para Dialog de em aberto detalhado
   const [modalAberto, setModalAberto] = useState<{ faixa: string, oportunidades: any[] } | null>(null);
+  const [openDialog, setOpenDialog] = useState(false);
 
-  // Coleta anos disponíveis
   const anosDisponiveis = useMemo(() => {
     return Array.from(new Set(oportunidades.map(op => {
       if (!op.data_indicacao) return null;
@@ -51,7 +55,6 @@ export const OportunidadesStats: React.FC = () => {
     }).filter(Boolean))).sort((a, b) => b - a);
   }, [oportunidades]);
 
-  // Filtros mensais
   const oportunidadesFiltradas = useMemo(() => {
     return oportunidades.filter(op => {
       if (!op.data_indicacao) return false;
@@ -95,11 +98,8 @@ export const OportunidadesStats: React.FC = () => {
     }),
   };
 
-  // Gráfico Volume Mensal com filtros
   const oportunidadesPorMes = useMemo(() => {
-    // Filtra pelo período selecionado
     const lista = oportunidadesFiltradas;
-    // Agrupa por mês
     const mapa: Record<string, { total: number, ganho: number, perdido: number }> = {};
     lista.forEach(op => {
       const data = parseISO(op.data_indicacao);
@@ -109,11 +109,9 @@ export const OportunidadesStats: React.FC = () => {
       if (op.status === "ganho") mapa[chave].ganho++;
       if (op.status === "perdido") mapa[chave].perdido++;
     });
-    // Ordena por data
     const resultado = Object.entries(mapa)
       .map(([k, v]) => ({ name: k, ...v }))
       .sort((a, b) => {
-        // ano-mês para ordenar corretamente
         const [ma, ya] = a.name.split("/");
         const [mb, yb] = b.name.split("/");
         return new Date(`01 ${ma} ${ya}`) > new Date(`01 ${mb} ${yb}`) ? 1 : -1;
@@ -121,28 +119,38 @@ export const OportunidadesStats: React.FC = () => {
     return resultado;
   }, [oportunidadesFiltradas]);
 
-  // Modal de oportunidades em aberto por faixa
-  const renderModalAberto = () => {
+  // Dialog content for em aberto
+  const renderDialogAberto = () => {
     if (!modalAberto) return null;
     return (
-      <Modal open={!!modalAberto} onOpenChange={() => setModalAberto(null)} title={`Oportunidades em Aberto (${modalAberto.faixa})`}>
-        <div className="space-y-3">
-          {modalAberto.oportunidades.map((op, idx) => (
-            <div key={op.id || idx} className="p-2 border rounded">
-              <div>
-                <b>Lead:</b> {op.nome_lead} <br />
-                <b>Origem:</b> {op.empresa_origem?.nome || "-"} <br />
-                <b>Destino:</b> {op.empresa_destino?.nome || "-"} <br />
-                <b>Data Indicação:</b> {format(parseISO(op.data_indicacao), "dd/MM/yyyy", { locale: ptBR })} <br />
-                <b>Status:</b> {op.status}
+      <Dialog open={openDialog} onOpenChange={setOpenDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Oportunidades em Aberto ({modalAberto.faixa})</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 max-h-[60vh] overflow-y-auto">
+            {modalAberto.oportunidades.map((op, idx) => (
+              <div key={op.id || idx} className="p-2 border rounded">
+                <div>
+                  <b>Lead:</b> {op.nome_lead} <br />
+                  <b>Origem:</b> {op.empresa_origem?.nome || "-"} <br />
+                  <b>Destino:</b> {op.empresa_destino?.nome || "-"} <br />
+                  <b>Data Indicação:</b> {format(parseISO(op.data_indicacao), "dd/MM/yyyy", { locale: ptBR })} <br />
+                  <b>Status:</b> {op.status}
+                </div>
               </div>
-            </div>
-          ))}
-          {modalAberto.oportunidades.length === 0 && <div>Nenhuma oportunidade encontrada.</div>}
-        </div>
-      </Modal>
+            ))}
+            {modalAberto.oportunidades.length === 0 && <div>Nenhuma oportunidade encontrada.</div>}
+          </div>
+        </DialogContent>
+      </Dialog>
     );
   };
+
+  function handleOpenAberto(faixa: string, oportunidades: any[]) {
+    setModalAberto({ faixa, oportunidades });
+    setOpenDialog(true);
+  }
 
   return (
     <div className="space-y-6">
@@ -171,26 +179,26 @@ export const OportunidadesStats: React.FC = () => {
               <Button
                 size="sm"
                 variant="ghost"
-                onClick={() => setModalAberto({ faixa: "há 30 dias", oportunidades: emAbertoFaixa["há 30 dias"] })}
+                onClick={() => handleOpenAberto("há 30 dias", emAbertoFaixa["há 30 dias"])}
               >
                 há 30 dias: <b className="ml-1">{emAbertoFaixa["há 30 dias"].length}</b>
               </Button>
               <Button
                 size="sm"
                 variant="ghost"
-                onClick={() => setModalAberto({ faixa: "30 a 60 dias", oportunidades: emAbertoFaixa["30 a 60 dias"] })}
+                onClick={() => handleOpenAberto("30 a 60 dias", emAbertoFaixa["30 a 60 dias"])}
               >
                 30-60 dias: <b className="ml-1">{emAbertoFaixa["30 a 60 dias"].length}</b>
               </Button>
               <Button
                 size="sm"
                 variant="ghost"
-                onClick={() => setModalAberto({ faixa: "mais de 60 dias", oportunidades: emAbertoFaixa["mais de 60 dias"] })}
+                onClick={() => handleOpenAberto("mais de 60 dias", emAbertoFaixa["mais de 60 dias"])}
               >
                 +60 dias: <b className="ml-1">{emAbertoFaixa["mais de 60 dias"].length}</b>
               </Button>
             </div>
-            {renderModalAberto()}
+            {renderDialogAberto()}
           </CardContent>
         </Card>
         <Card>
@@ -319,14 +327,10 @@ export const OportunidadesStats: React.FC = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-2">
-              {/* Implemente aqui seu gráfico de status, se desejar */}
               <div className="text-center text-muted-foreground">Gráfico de status pode ser adicionado aqui.</div>
             </CardContent>
           </Card>
         </TabsContent>
-
-        {/* Excluída a Matriz de Trocas */}
-        {/* <TabsContent value="trocas"> ... </TabsContent> */}
 
         <TabsContent value="taxas">
           <Card>
