@@ -16,29 +16,22 @@ const tamanhoColorMap: Record<TamanhoEmpresa, string> = {
   GG: "#f97316",
 };
 
-// NOVA FUNÇÃO DE CÁLCULO DOS PONTOS DO QUADRANTE
 function mapIndicadorToPoint(item: IndicadoresParceiro, empresas: Empresa[]): QuadrantPoint {
   const empresa = empresas.find((e) => e.id === item.empresa_id);
 
-  // Normaliza para sempre ser número (evita NaN)
+  // Cálculo composto (ponderado) para X e Y
   const potencial_leads = Number(item.potencial_leads) || 0;
   const potencial_investimento = Number(item.potencial_investimento) || 0;
   const engajamento = Number(item.engajamento) || 0;
   const alinhamento = Number(item.alinhamento) || 0;
-
-  // Pesos (você pode ajustar)
   const pesoLeads = 2, pesoInvest = 2, pesoEngaj = 1, pesoAlinh = 1;
 
-  // Eixo X: potencial geral de geração (leads + engajamento + alinhamento)
   let x = (pesoLeads * potencial_leads + pesoEngaj * engajamento + pesoAlinh * alinhamento) / (pesoLeads + pesoEngaj + pesoAlinh);
-  // Eixo Y: potencial geral de investimento (investimento + engajamento + alinhamento)
   let y = (pesoInvest * potencial_investimento + pesoEngaj * engajamento + pesoAlinh * alinhamento) / (pesoInvest + pesoEngaj + pesoAlinh);
 
-  // Adiciona pequeno ruído para evitar sobreposição exata
   x += (Math.random() - 0.5) * 0.08;
   y += (Math.random() - 0.5) * 0.08;
 
-  // Limita entre 0 e 5
   x = Math.max(0, Math.min(5, x));
   y = Math.max(0, Math.min(5, y));
 
@@ -73,7 +66,7 @@ const QuadrantePage: React.FC = () => {
         .from("indicadores_parceiro")
         .select("*")
         .order("data_avaliacao", { ascending: false });
-      // Mantém apenas o registro mais recente de cada empresa/parceiro
+      // Apenas o registro mais recente de cada parceiro
       const unicosPorEmpresa: Record<string, IndicadoresParceiro> = {};
       (indicadoresData || []).forEach((item) => {
         if (item.empresa_id && !unicosPorEmpresa[item.empresa_id]) {
@@ -112,7 +105,6 @@ const QuadrantePage: React.FC = () => {
     try {
       let updatedIndicadores;
       if (indicador.id) {
-        // Edita indicador existente
         const { data, error } = await supabase
           .from("indicadores_parceiro")
           .update(indicador)
@@ -124,7 +116,6 @@ const QuadrantePage: React.FC = () => {
         );
         setIndicadores(updatedIndicadores);
       } else {
-        // Cria novo indicador
         const newIndicador = {
           empresa_id: indicador.empresa_id!,
           potencial_leads: indicador.potencial_leads || 0,
