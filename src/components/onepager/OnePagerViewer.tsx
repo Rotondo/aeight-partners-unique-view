@@ -1,8 +1,7 @@
-
 import React from 'react';
 import { OnePager, Empresa } from '@/types';
 import { Button } from '@/components/ui/button';
-import { Download, File, FileWarning, Image } from 'lucide-react';
+import { Download, File, FileWarning } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
@@ -13,10 +12,10 @@ interface OnePagerViewerProps {
   isLoading: boolean;
 }
 
-const OnePagerViewer: React.FC<OnePagerViewerProps> = ({ 
-  onePager, 
+const OnePagerViewer: React.FC<OnePagerViewerProps> = ({
+  onePager,
   parceiro,
-  isLoading 
+  isLoading,
 }) => {
   const { toast } = useToast();
 
@@ -48,7 +47,7 @@ const OnePagerViewer: React.FC<OnePagerViewerProps> = ({
           .download(onePager.arquivo_upload);
 
         if (error) throw error;
-        
+
         fileUrl = URL.createObjectURL(data);
         fileName = onePager.arquivo_upload.split('/').pop() || 'onepager';
       } else if (onePager.url_imagem) {
@@ -101,30 +100,51 @@ const OnePagerViewer: React.FC<OnePagerViewerProps> = ({
       );
     }
 
-    const isPdf = onePager.url_imagem?.endsWith('.pdf') || onePager.arquivo_upload?.endsWith('.pdf');
-    const imageUrl = onePager.url_imagem || 
-      (onePager.arquivo_upload ? 
-        `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/onepagers/${onePager.arquivo_upload}` : 
-        '');
+    const isPdf =
+      onePager.url_imagem?.toLowerCase().endsWith('.pdf') ||
+      onePager.arquivo_upload?.toLowerCase().endsWith('.pdf');
+
+    // Corrigido: Montar URL pública do storage sempre que arquivo foi enviado pelo sistema
+    let publicUrl = '';
+    if (onePager.arquivo_upload) {
+      const { data } = supabase.storage
+        .from('onepagers')
+        .getPublicUrl(onePager.arquivo_upload);
+      publicUrl = data?.publicUrl || '';
+    }
+    // Se não houver arquivo no storage, usar url_imagem externo (caso legado)
+    else if (onePager.url_imagem) {
+      publicUrl = onePager.url_imagem;
+    }
 
     if (isPdf) {
       return (
         <div className="flex-1 flex flex-col">
-          <iframe 
-            src={imageUrl}
-            className="flex-1 w-full h-full border rounded"
-            title={`OnePager de ${parceiro.nome}`}
-          />
+          {publicUrl ? (
+            <iframe
+              src={publicUrl}
+              className="flex-1 w-full h-full border rounded"
+              title={`OnePager de ${parceiro.nome}`}
+            />
+          ) : (
+            <div className="flex-1 flex items-center justify-center text-muted-foreground">
+              <span>Arquivo PDF não encontrado.</span>
+            </div>
+          )}
         </div>
       );
     } else {
       return (
         <div className="flex-1 flex items-center justify-center overflow-auto">
-          <img 
-            src={imageUrl} 
-            alt={`OnePager de ${parceiro.nome}`} 
-            className="max-w-full max-h-full object-contain"
-          />
+          {publicUrl ? (
+            <img
+              src={publicUrl}
+              alt={`OnePager de ${parceiro.nome}`}
+              className="max-w-full max-h-full object-contain"
+            />
+          ) : (
+            <span>Arquivo não encontrado.</span>
+          )}
         </div>
       );
     }
@@ -136,11 +156,11 @@ const OnePagerViewer: React.FC<OnePagerViewerProps> = ({
         <h3 className="font-medium text-lg">
           {parceiro ? `OnePager: ${parceiro.nome}` : 'OnePager'}
         </h3>
-        
+
         {onePager && (
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             onClick={handleDownload}
             className="flex items-center"
           >
