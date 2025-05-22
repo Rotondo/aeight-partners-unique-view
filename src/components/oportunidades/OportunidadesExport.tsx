@@ -1,4 +1,4 @@
-
+// (igual ao original, funcional, sem alteração necessária para este contexto)
 import React, { useState } from "react";
 import { useOportunidades } from "./OportunidadesContext";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 
 interface ExportField {
-  key: string; // Changed from keyof any to string
+  key: string;
   label: string;
   format?: (value: any) => string;
 }
@@ -36,59 +36,17 @@ export const OportunidadesExport: React.FC<{ onClose: () => void }> = ({ onClose
   ]);
 
   const availableFields: ExportField[] = [
-    { 
-      key: "data_indicacao", 
-      label: "Data Indicação",
-      format: (value) => formatDate(value)
-    },
-    { 
-      key: "empresa_origem", 
-      label: "Empresa Origem",
-      format: (empresa) => empresa?.nome || "-"
-    },
-    { 
-      key: "empresa_destino", 
-      label: "Empresa Destino",
-      format: (empresa) => empresa?.nome || "-"
-    },
-    { 
-      key: "contato", 
-      label: "Contato",
-      format: (contato) => contato?.nome || "-"
-    },
-    { 
-      key: "valor", 
-      label: "Valor",
-      format: (value) => formatCurrency(value)
-    },
-    { 
-      key: "status", 
-      label: "Status",
-      format: (value) => formatStatus(value)
-    },
-    { 
-      key: "data_fechamento", 
-      label: "Data Fechamento",
-      format: (value) => formatDate(value)
-    },
-    { 
-      key: "usuario_envio", 
-      label: "Responsável Origem",
-      format: (usuario) => usuario?.nome || "-"
-    },
-    { 
-      key: "usuario_recebe", 
-      label: "Responsável Destino",
-      format: (usuario) => usuario?.nome || "-"
-    },
-    { 
-      key: "observacoes", 
-      label: "Observações"
-    },
-    { 
-      key: "motivo_perda", 
-      label: "Motivo Perda"
-    }
+    { key: "data_indicacao", label: "Data Indicação", format: (value) => formatDate(value) },
+    { key: "empresa_origem", label: "Empresa Origem", format: (empresa) => empresa?.nome || "-" },
+    { key: "empresa_destino", label: "Empresa Destino", format: (empresa) => empresa?.nome || "-" },
+    { key: "contato", label: "Contato", format: (contato) => contato?.nome || "-" },
+    { key: "valor", label: "Valor", format: (value) => formatCurrency(value) },
+    { key: "status", label: "Status", format: (value) => formatStatus(value) },
+    { key: "data_fechamento", label: "Data Fechamento", format: (value) => formatDate(value) },
+    { key: "usuario_envio", label: "Responsável Origem", format: (usuario) => usuario?.nome || "-" },
+    { key: "usuario_recebe", label: "Responsável Destino", format: (usuario) => usuario?.nome || "-" },
+    { key: "observacoes", label: "Observações" },
+    { key: "motivo_perda", label: "Motivo Perda" }
   ];
 
   const toggleField = (field: string) => {
@@ -110,10 +68,7 @@ export const OportunidadesExport: React.FC<{ onClose: () => void }> = ({ onClose
 
   const formatCurrency = (value: number | undefined | null) => {
     if (value === undefined || value === null) return "-";
-    return new Intl.NumberFormat('pt-BR', { 
-      style: 'currency', 
-      currency: 'BRL' 
-    }).format(value);
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
   };
 
   const formatStatus = (status: string) => {
@@ -127,18 +82,11 @@ export const OportunidadesExport: React.FC<{ onClose: () => void }> = ({ onClose
   };
 
   const exportToCSV = () => {
-    // Get selected fields
     const fields = availableFields.filter(f => selectedFields.includes(f.key));
-    
-    // Create header row
     const headers = fields.map(f => f.label).join(',');
-    
-    // Create data rows
     const rows = filteredOportunidades.map(op => {
       return fields.map(field => {
-        // Use safe type checking for accessing nested properties
         let value;
-        
         if (field.key.includes('.')) {
           const keyParts = field.key.split('.');
           let tempValue: any = op;
@@ -154,10 +102,7 @@ export const OportunidadesExport: React.FC<{ onClose: () => void }> = ({ onClose
         } else {
           value = (op as any)[field.key];
         }
-        
         let formattedValue = field.format ? field.format(value) : (value || "-");
-        
-        // Handle special characters for CSV
         if (typeof formattedValue === 'string' && (
           formattedValue.includes(',') || 
           formattedValue.includes('"') ||
@@ -165,19 +110,15 @@ export const OportunidadesExport: React.FC<{ onClose: () => void }> = ({ onClose
         )) {
           formattedValue = `"${formattedValue.replace(/"/g, '""')}"`;
         }
-        
         return formattedValue;
       }).join(',');
     }).join('\n');
-    
     const csv = `${headers}\n${rows}`;
     downloadFile(csv, 'oportunidades.csv', 'text/csv');
   };
-  
+
   const exportToExcel = () => {
-    // Basic Excel XML format
     const fields = availableFields.filter(f => selectedFields.includes(f.key));
-    
     let excelData = `
       <html xmlns:o="urn:schemas-microsoft-com:office:office" 
             xmlns:x="urn:schemas-microsoft-com:office:excel" 
@@ -201,13 +142,10 @@ export const OportunidadesExport: React.FC<{ onClose: () => void }> = ({ onClose
               ${fields.map(f => `<th>${f.label}</th>`).join('')}
             </tr>
     `;
-    
     filteredOportunidades.forEach(op => {
       excelData += '<tr>';
       fields.forEach(field => {
-        // Use safe type checking for accessing nested properties
         let value;
-        
         if (field.key.includes('.')) {
           const keyParts = field.key.split('.');
           let tempValue: any = op;
@@ -223,24 +161,19 @@ export const OportunidadesExport: React.FC<{ onClose: () => void }> = ({ onClose
         } else {
           value = (op as any)[field.key];
         }
-        
         const formattedValue = field.format ? field.format(value) : (value || "-");
         excelData += `<td>${formattedValue}</td>`;
       });
       excelData += '</tr>';
     });
-    
     excelData += '</table></body></html>';
-    
     downloadFile(excelData, 'oportunidades.xls', 'application/vnd.ms-excel');
   };
-  
+
   const exportToPDF = () => {
-    // This would typically use a PDF library like jsPDF
-    // For now, let's just alert the user that this feature would be implemented
     alert('Exportação para PDF seria implementada aqui, possivelmente utilizando jsPDF ou outra biblioteca.');
   };
-  
+
   const downloadFile = (data: string, filename: string, type: string) => {
     const blob = new Blob([data], { type });
     const url = window.URL.createObjectURL(blob);
@@ -252,13 +185,12 @@ export const OportunidadesExport: React.FC<{ onClose: () => void }> = ({ onClose
     a.click();
     document.body.removeChild(a);
   };
-  
+
   const handleExport = () => {
     if (filteredOportunidades.length === 0) {
       alert('Não há oportunidades para exportar.');
       return;
     }
-    
     switch (exportFormat) {
       case 'csv':
         exportToCSV();
@@ -270,10 +202,9 @@ export const OportunidadesExport: React.FC<{ onClose: () => void }> = ({ onClose
         exportToPDF();
         break;
     }
-    
     onClose();
   };
-  
+
   return (
     <div className="space-y-4">
       <div>
@@ -297,7 +228,6 @@ export const OportunidadesExport: React.FC<{ onClose: () => void }> = ({ onClose
           </div>
         </RadioGroup>
       </div>
-      
       <div>
         <h3 className="mb-2 font-medium">Campos para Exportar</h3>
         <div className="grid grid-cols-2 gap-2 max-h-[200px] overflow-y-auto">
@@ -313,7 +243,6 @@ export const OportunidadesExport: React.FC<{ onClose: () => void }> = ({ onClose
           ))}
         </div>
       </div>
-      
       <div className="flex justify-end gap-2 pt-4">
         <Button variant="outline" onClick={onClose}>
           Cancelar
