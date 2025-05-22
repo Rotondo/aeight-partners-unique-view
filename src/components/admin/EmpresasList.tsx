@@ -48,7 +48,7 @@ export const EmpresasList: React.FC = () => {
 
   // NOVO: categoria selecionada
   const [categorias, setCategorias] = useState<Categoria[]>([]);
-  const [categoriaId, setCategoriaId] = useState<string | null>(null);
+  const [categoriaId, setCategoriaId] = useState<string | undefined>(undefined);
 
   const { toast } = useToast();
 
@@ -95,10 +95,10 @@ export const EmpresasList: React.FC = () => {
       .select("categoria_id")
       .eq("empresa_id", empresaId)
       .single();
-    if (!error && data) {
+    if (!error && data && data.categoria_id) {
       setCategoriaId(data.categoria_id);
     } else {
-      setCategoriaId(null);
+      setCategoriaId(undefined);
     }
   };
 
@@ -162,22 +162,17 @@ export const EmpresasList: React.FC = () => {
       if (error) throw error;
 
       // NOVO: atualizar categoria
+      // Remove vínculos antigos
+      await supabase
+        .from("empresa_categoria")
+        .delete()
+        .eq("empresa_id", isEditingEmpresa);
+
+      // Insere novo se houver categoria selecionada
       if (categoriaId) {
-        // remove vínculos antigos
-        await supabase
-          .from("empresa_categoria")
-          .delete()
-          .eq("empresa_id", isEditingEmpresa);
-        // insere novo
         await supabase
           .from("empresa_categoria")
           .insert({ empresa_id: isEditingEmpresa, categoria_id: categoriaId });
-      } else {
-        // remove vínculos se nenhum selecionado
-        await supabase
-          .from("empresa_categoria")
-          .delete()
-          .eq("empresa_id", isEditingEmpresa);
       }
 
       toast({
@@ -232,7 +227,7 @@ export const EmpresasList: React.FC = () => {
     setDescricao("");
     setTipo("parceiro");
     setStatus(true);
-    setCategoriaId(null);
+    setCategoriaId(undefined);
   };
 
   return (
@@ -329,14 +324,13 @@ export const EmpresasList: React.FC = () => {
             <div>
               <Label htmlFor="categoria">Categoria</Label>
               <Select
-                value={categoriaId || ""}
+                value={categoriaId || undefined}
                 onValueChange={(value) => setCategoriaId(value)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione a categoria" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Sem categoria</SelectItem>
                   {categorias.map((cat) => (
                     <SelectItem key={cat.id} value={cat.id}>
                       {cat.nome}
@@ -413,14 +407,13 @@ export const EmpresasList: React.FC = () => {
             <div>
               <Label htmlFor="edit-categoria">Categoria</Label>
               <Select
-                value={categoriaId || ""}
+                value={categoriaId || undefined}
                 onValueChange={(value) => setCategoriaId(value)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione a categoria" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Sem categoria</SelectItem>
                   {categorias.map((cat) => (
                     <SelectItem key={cat.id} value={cat.id}>
                       {cat.nome}
