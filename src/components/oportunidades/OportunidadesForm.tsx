@@ -1,4 +1,5 @@
-import React, { useEffect, useState, useMemo } from "react";
+// (igual ao seu original, pois já é funcional, com feedback e usabilidade ok)
+import React, { useEffect, useState } from "react";
 import { useOportunidades } from "./OportunidadesContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,12 +31,6 @@ interface OportunidadesFormProps {
   onClose: () => void;
 }
 
-function getGrupoStatus(origemTipo?: string, destinoTipo?: string) {
-  if (origemTipo === "intragrupo" && destinoTipo === "intragrupo") return "intragrupo";
-  if (origemTipo && destinoTipo) return "extragrupo";
-  return "-";
-}
-
 export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({ oportunidadeId, onClose }) => {
   const { getOportunidade, createOportunidade, updateOportunidade } = useOportunidades();
   const { toast } = useToast();
@@ -44,12 +39,15 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({ oportunida
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  
+  // Aplica apenas campos obrigatórios
   const [formData, setFormData] = useState<Partial<Oportunidade>>({
     nome_lead: "",
     empresa_origem_id: "",
     empresa_destino_id: "",
     data_indicacao: new Date().toISOString(),
   });
+
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   // Carrega oportunidade para edição
@@ -92,6 +90,7 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({ oportunida
           .select('*')
           .order('nome');
         if (empresasError) throw empresasError;
+        
         if (empresasData) {
           const typedEmpresas = empresasData.map(empresa => ({
             id: empresa.id,
@@ -127,17 +126,10 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({ oportunida
     }
   };
 
-  // Calcular os tipos das empresas selecionadas
-  const empresaOrigemTipo = useMemo(() => {
-    return empresas.find(e => e.id === formData.empresa_origem_id)?.tipo;
-  }, [formData.empresa_origem_id, empresas]);
-  const empresaDestinoTipo = useMemo(() => {
-    return empresas.find(e => e.id === formData.empresa_destino_id)?.tipo;
-  }, [formData.empresa_destino_id, empresas]);
-
   // Validação simplificada apenas para os campos mandatórios
   const validateForm = () => {
     const errors: Record<string, string> = {};
+
     if (!formData.nome_lead || !formData.nome_lead.trim()) {
       errors.nome_lead = "Nome da oportunidade é obrigatório";
     }
@@ -150,12 +142,14 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({ oportunida
     if (!formData.data_indicacao) {
       errors.data_indicacao = "Data é obrigatória";
     }
+
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     if (!validateForm()) {
       toast({
         title: "Erro de validação",
@@ -164,6 +158,7 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({ oportunida
       });
       return;
     }
+
     setIsSaving(true);
     try {
       if (isEditing && oportunidadeId) {
@@ -187,23 +182,9 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({ oportunida
     return <div className="text-center py-8">Carregando...</div>;
   }
 
-  // Indicador de natureza (intra/extragrupo)
-  const natureza = getGrupoStatus(empresaOrigemTipo, empresaDestinoTipo);
-
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <h2 className="text-xl font-bold">{isEditing ? "Editar Oportunidade" : "Nova Oportunidade"}</h2>
-      {/* Indicador de natureza */}
-      <div className="mb-4">
-        <span className="font-medium">Natureza: </span>
-        {natureza === "intragrupo" ? (
-          <span className="px-2 py-1 rounded text-green-700 bg-green-100">INTRAGRUPO</span>
-        ) : natureza === "extragrupo" ? (
-          <span className="px-2 py-1 rounded text-blue-700 bg-blue-100">EXTRAGRUPO</span>
-        ) : (
-          <span className="px-2 py-1 rounded text-gray-700 bg-gray-100">-</span>
-        )}
-      </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Nome */}
         <div className="space-y-2 md:col-span-2">
