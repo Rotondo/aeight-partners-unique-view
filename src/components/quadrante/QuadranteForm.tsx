@@ -43,12 +43,14 @@ interface QuadranteFormProps {
   indicador: IndicadoresParceiro | null;
   onSave: (indicador: Partial<IndicadoresParceiro>) => void;
   readOnly?: boolean;
+  onParceiroSelect?: (empresa_id: string) => void;
 }
 
 const QuadranteForm: React.FC<QuadranteFormProps> = ({
   indicador,
   onSave,
   readOnly = false,
+  onParceiroSelect,
 }) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -62,11 +64,6 @@ const QuadranteForm: React.FC<QuadranteFormProps> = ({
     };
     fetchEmpresas();
   }, []);
-
-  // Ordena parceiros alfabeticamente
-  const parceirosOrdenados = [...parceiros].sort((a, b) =>
-    a.nome.localeCompare(b.nome, "pt-BR")
-  );
 
   // Configure form
   const form = useForm<FormValues>({
@@ -108,6 +105,11 @@ const QuadranteForm: React.FC<QuadranteFormProps> = ({
     // eslint-disable-next-line
   }, [indicador]);
 
+  // Ordena parceiros alfabeticamente
+  const parceirosOrdenados = [...parceiros].sort((a, b) =>
+    a.nome.localeCompare(b.nome, "pt-BR")
+  );
+
   const handleSubmit = async (values: FormValues) => {
     setLoading(true);
     try {
@@ -146,7 +148,10 @@ const QuadranteForm: React.FC<QuadranteFormProps> = ({
               <FormLabel>Parceiro</FormLabel>
               <Select
                 disabled={!!indicador || readOnly}
-                onValueChange={field.onChange}
+                onValueChange={(val) => {
+                  field.onChange(val);
+                  if (onParceiroSelect) onParceiroSelect(val);
+                }}
                 value={field.value}
               >
                 <FormControl>
