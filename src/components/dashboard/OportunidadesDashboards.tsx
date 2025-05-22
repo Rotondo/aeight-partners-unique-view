@@ -7,6 +7,21 @@ import { DatePicker } from '@/components/ui/date-picker';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+  PieChart,
+  Pie,
+  Cell,
+  LabelList
+} from 'recharts';
+
 const STATUS_COLORS = {
   'em_contato': '#FFBB28',
   'negociando': '#0088FE',
@@ -16,7 +31,6 @@ const STATUS_COLORS = {
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
 
-// Opções de quarters
 const quartersOptions = [
   { value: 'Q1', label: 'Q1 (jan-mar)' },
   { value: 'Q2', label: 'Q2 (abr-jun)' },
@@ -30,6 +44,16 @@ function getQuarter(date) {
   if (month < 6) return 'Q2';
   if (month < 9) return 'Q3';
   return 'Q4';
+}
+
+function getStatusLabel(status) {
+  switch (status) {
+    case 'em_contato': return 'Em Contato';
+    case 'negociando': return 'Negociando';
+    case 'ganho': return 'Ganho';
+    case 'perdido': return 'Perdido';
+    default: return status;
+  }
 }
 
 export const OportunidadesDashboards: React.FC = () => {
@@ -63,16 +87,12 @@ export const OportunidadesDashboards: React.FC = () => {
       setEmpresas(empresasDb || []);
       const { data: oportunidadesDb } = await supabase.from("oportunidades").select("*, empresa_origem:empresas!empresa_origem_id(id, nome, tipo), empresa_destino:empresas!empresa_destino_id(id, nome, tipo)");
       const oportunidades = (oportunidadesDb || []).filter(op => {
-        // Filtros de data
         const dataInd = op.data_indicacao ? new Date(op.data_indicacao) : null;
         let match = true;
         if (dataInicio && dataInd) match = match && dataInd >= dataInicio;
         if (dataFim && dataInd) match = match && dataInd <= dataFim;
-        // Filtro de empresaId
         if (empresaId) match = match && (op.empresa_origem_id === empresaId || op.empresa_destino_id === empresaId);
-        // Filtro de status
         if (status) match = match && op.status === status;
-        // Filtro de quarter se for o caso
         if (periodo === "quarter" && dataInd) match = match && quarters.includes(getQuarter(dataInd));
         return match;
       });
@@ -130,12 +150,10 @@ export const OportunidadesDashboards: React.FC = () => {
       const rankingEnv = {};
       const rankingRec = {};
       oportunidades.forEach(op => {
-        // Enviadas
         if (op.empresa_origem?.nome) {
           if (!rankingEnv[op.empresa_origem.nome]) rankingEnv[op.empresa_origem.nome] = 0;
           rankingEnv[op.empresa_origem.nome]++;
         }
-        // Recebidas
         if (op.empresa_destino?.nome) {
           if (!rankingRec[op.empresa_destino.nome]) rankingRec[op.empresa_destino.nome] = 0;
           rankingRec[op.empresa_destino.nome]++;
@@ -163,7 +181,6 @@ export const OportunidadesDashboards: React.FC = () => {
   function renderMatrizTable(rows, colKey, label) {
     if (!rows.length) return <div className="text-center">Nenhum dado</div>;
     const cols = Object.keys(rows[0]).filter(c => c !== colKey);
-    // Calcula totais por coluna
     const colTotals = {};
     cols.forEach(c => {
       colTotals[c] = rows.reduce((acc, row) => acc + (row[c] !== '-' ? row[c] : 0), 0);
@@ -207,6 +224,107 @@ export const OportunidadesDashboards: React.FC = () => {
           </tfoot>
         </table>
       </div>
+    );
+  }
+
+  // Gráfico de barras para matriz (quem indica para quem)
+  function renderMatrizBarChart(rows, rowKey, label) {
+    if (!rows.length) return <div className="text-center">Nenhum dado</div>;
+    const cols = Object.keys(rows[0]).filter(c => c !== rowKey);
+    // Monta array de dados para o gráfico
+    const data = [];
+    rows.forEach(row => {
+      cols.forEach(col => {
+        if (row[col] !== '-' && row[col] > 0) {
+          data.push({
+            origem: row[rowKey],
+            destino: col,
+            total: row[col]
+          });
+        }
+      });
+    });
+    if (!data.length) return <div className="text-center text-xs">Nenhum dado para gráfico</div>;
+    return (
+      <ResponsiveContainer width="100%" height={300}>
+        <BarChart data={data}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="origem" />
+          <YAxis />
+          <Tooltip />
+          <Legend />
+          <Bar dataKey="total" name="Indicações" fill={COLORS[0]}>
+            <LabelList dataKey="destino" position="top" />
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    );
+  }
+
+  // Gráfico de barras para ranking
+  function renderRankingBarChart(ranking, label) {
+    if (!ranking.length) return <div className="text-center">Nenhum dado</div>;
+    return (
+      <ResponsiveContainer width="100%" height={260}>
+        <BarChart data={ranking}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="empresa" />
+          <YAxis />
+          <Tooltip />
+          <Bar dataKey="indicacoes" name={label} fill={COLORS[1]}>
+            <LabelList dataKey="indicacoes" position="top" />
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    );
+  }
+
+  // Gráfico de barras para balanço
+  function renderBalancoBarChart(balanco) {
+    if (!balanco.length) return <div className="text-center">Nenhum dado</div>;
+    return (
+      <ResponsiveContainer width="100%" height={160}>
+        <BarChart data={balanco}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="tipo" />
+          <YAxis />
+          <Tooltip />
+          <Bar dataKey="valor" name="Quantidade" fill={COLORS[2]}>
+            <LabelList dataKey="valor" position="top" />
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    );
+  }
+
+  // Gráfico de pizza para status
+  function renderStatusPieChart(statusDistribuicao) {
+    if (!statusDistribuicao.length) return <div className="text-center">Nenhum dado</div>;
+    return (
+      <ResponsiveContainer width="100%" height={280}>
+        <PieChart>
+          <Pie
+            data={statusDistribuicao}
+            cx="50%"
+            cy="50%"
+            labelLine={false}
+            outerRadius={80}
+            fill={COLORS[3]}
+            dataKey="total"
+            nameKey="status"
+            label={({ name, percent }) => `${getStatusLabel(name)} ${(percent * 100).toFixed(0)}%`}
+          >
+            {statusDistribuicao.map((entry, index) => (
+              <Cell
+                key={`cell-${index}`}
+                fill={STATUS_COLORS[entry.status] || COLORS[index % COLORS.length]}
+              />
+            ))}
+          </Pie>
+          <Tooltip formatter={(value, name, props) => [`${value}`, getStatusLabel(props.payload.status)]} />
+          <Legend formatter={getStatusLabel} />
+        </PieChart>
+      </ResponsiveContainer>
     );
   }
 
@@ -317,7 +435,10 @@ export const OportunidadesDashboards: React.FC = () => {
               {loading ? (
                 <div className="h-64 flex items-center justify-center">Carregando...</div>
               ) : (
-                renderMatrizTable(matrizIntra, "origem", "Origem \\ Destino")
+                <>
+                  {renderMatrizTable(matrizIntra, "origem", "Origem \\ Destino")}
+                  <div className="mt-6">{renderMatrizBarChart(matrizIntra, "origem", "Indicações Intragrupo")}</div>
+                </>
               )}
             </CardContent>
           </Card>
@@ -333,7 +454,10 @@ export const OportunidadesDashboards: React.FC = () => {
               {loading ? (
                 <div className="h-64 flex items-center justify-center">Carregando...</div>
               ) : (
-                renderMatrizTable(matrizParceiros, "parceiro", "Parceiro \\ Intra")
+                <>
+                  {renderMatrizTable(matrizParceiros, "parceiro", "Parceiro \\ Intra")}
+                  <div className="mt-6">{renderMatrizBarChart(matrizParceiros, "parceiro", "Indicações com Parceiros")}</div>
+                </>
               )}
             </CardContent>
           </Card>
@@ -344,22 +468,7 @@ export const OportunidadesDashboards: React.FC = () => {
               <CardDescription>Parceiros que mais enviam indicações</CardDescription>
             </CardHeader>
             <CardContent>
-              <table className="min-w-full text-xs border">
-                <thead>
-                  <tr>
-                    <th className="border p-1">Empresa</th>
-                    <th className="border p-1">Indicações Enviadas</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rankingEnviadas.map((r, i) => (
-                    <tr key={i}>
-                      <td className="border p-1">{r.empresa}</td>
-                      <td className="border p-1">{r.indicacoes}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              {renderRankingBarChart(rankingEnviadas, "Enviadas")}
             </CardContent>
           </Card>
           <Card>
@@ -368,22 +477,7 @@ export const OportunidadesDashboards: React.FC = () => {
               <CardDescription>Parceiros que mais recebem indicações</CardDescription>
             </CardHeader>
             <CardContent>
-              <table className="min-w-full text-xs border">
-                <thead>
-                  <tr>
-                    <th className="border p-1">Empresa</th>
-                    <th className="border p-1">Indicações Recebidas</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rankingRecebidas.map((r, i) => (
-                    <tr key={i}>
-                      <td className="border p-1">{r.empresa}</td>
-                      <td className="border p-1">{r.indicacoes}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              {renderRankingBarChart(rankingRecebidas, "Recebidas")}
             </CardContent>
           </Card>
           <Card>
@@ -392,22 +486,7 @@ export const OportunidadesDashboards: React.FC = () => {
               <CardDescription>Comparação entre indicações enviadas e recebidas</CardDescription>
             </CardHeader>
             <CardContent>
-              <table className="min-w-full text-xs border">
-                <thead>
-                  <tr>
-                    <th className="border p-1">Tipo</th>
-                    <th className="border p-1">Quantidade</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {balanco.map((b, i) => (
-                    <tr key={i}>
-                      <td className="border p-1">{b.tipo}</td>
-                      <td className="border p-1">{b.valor}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              {renderBalancoBarChart(balanco)}
             </CardContent>
           </Card>
         </TabsContent>
@@ -419,24 +498,7 @@ export const OportunidadesDashboards: React.FC = () => {
               <CardDescription>Status de todas as oportunidades</CardDescription>
             </CardHeader>
             <CardContent>
-              <table className="min-w-full text-xs border">
-                <thead>
-                  <tr>
-                    <th className="border p-1">Status</th>
-                    <th className="border p-1">Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {statusDistribuicao.map((s, i) => (
-                    <tr key={i}>
-                      <td className="border p-1" style={{ color: STATUS_COLORS[s.status] || undefined }}>
-                        {s.status}
-                      </td>
-                      <td className="border p-1">{s.total}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              {renderStatusPieChart(statusDistribuicao)}
             </CardContent>
           </Card>
         </TabsContent>
