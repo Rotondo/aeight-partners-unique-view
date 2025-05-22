@@ -1,168 +1,286 @@
-
-import React, { useState, useEffect } from "react";
-import { useOportunidades } from "./OportunidadesContext";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  Legend, 
+import React, { useState, useMemo } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
   ResponsiveContainer,
   PieChart,
   Pie,
   Cell,
-  Sector
-} from 'recharts';
-import { format, subMonths, parse } from "date-fns";
+  Sector,
+} from "recharts";
+import { format, subMonths, parseISO, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
   TableHeader,
-  TableRow
+  TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import { supabase } from "@/lib/supabase";
-import { 
-  ChartContainer, 
-  ChartTooltip, 
-  ChartTooltipContent 
-} from "@/components/ui/chart";
+import { useOportunidades } from "./OportunidadesContext";
+import { Modal } from "@/components/ui/modal";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
+const COLORS = [
+  "#0088FE",
+  "#00C49F",
+  "#FFBB28",
+  "#FF8042",
+  "#8884d8",
+  "#82ca9d",
+];
 const STATUS_COLORS = {
-  em_contato: '#3b82f6', // blue
-  negociando: '#eab308', // yellow
-  ganho: '#22c55e', // green
-  perdido: '#ef4444', // red
+  em_contato: "#3b82f6", // blue
+  negociando: "#eab308", // yellow
+  ganho: "#22c55e", // green
+  perdido: "#ef4444", // red
 };
+
+function getGrupoStatus(empresa_origem_tipo, empresa_destino_tipo) {
+  if (
+    empresa_origem_tipo === "intragrupo" &&
+    empresa_destino_tipo === "intragrupo"
+  )
+    return "intragrupo";
+  return "extragrupo";
+}
+function getQuarter(date) {
+  const month = date.getMonth();
+  if (month < 3) return "Q1";
+  if (month < 6) return "Q2";
+  if (month < 9) return "Q3";
+  return "Q4";
+}
+function getYear(date) {
+  return date.getFullYear();
+}
+function getMonthYear(date) {
+  return format(date, "MMM/yyyy", { locale: ptBR });
+}
 
 export const OportunidadesStats: React.FC = () => {
   const { oportunidades } = useOportunidades();
-  const [isLoading, setIsLoading] = useState(false);
-  const [selectedPieIndex, setSelectedPieIndex] = useState<number | undefined>(undefined);
+  const [selectedPieIndex, setSelectedPieIndex] = useState<number | undefined>(
+    undefined
+  );
   const [selectedTab, setSelectedTab] = useState("mensal");
 
-  // Extract oportunidades por mês
-  const oportunidadesPorMes = React.useMemo(() => {
-    // Get current date and 11 months ago
-    const today = new Date();
-    const elevenMonthsAgo = subMonths(today, 11);
-    
-    // Initialize months
-    const months: Record<string, { name: string, total: number, ganho: number, perdido: number }> = {};
-    
-    // Generate last 12 months
-    for (let i = 0; i < 12; i++) {
-      const date = subMonths(today, 11 - i);
-      const monthKey = format(date, 'yyyy-MM');
-      const monthName = format(date, 'MMM', { locale: ptBR });
-      months[monthKey] = { name: monthName, total: 0, ganho: 0, perdido: 0 };
-    }
-    
-    // Count opportunities by month
-    oportunidades.forEach(op => {
-      const date = new Date(op.data_indicacao);
-      const monthKey = format(date, 'yyyy-MM');
-      
-      // Only count if it's within the last 12 months
-      if (months[monthKey]) {
-        months[monthKey].total += 1;
-        if (op.status === 'ganho') months[monthKey].ganho += 1;
-        if (op.status === 'perdido') months[monthKey].perdido += 1;
-      }
-    });
-    
-    return Object.values(months);
+  // Filtros do gráfico volume mensal
+  const [periodo, setPeriodo] = useState("mes");
+  const [quarters, setQuarters] = useState(["Q1", "Q2", "Q3", "Q4"]);
+  const [quarterYear, setQuarterYear] = useState<number>(
+    new Date().getFullYear()
+  );
+  const [grupoStatus, setGrupoStatus] = useState("all"); // all, intra, extra
+
+  // Modal em aberto detalhado
+  const [modalAberto, setModalAberto] = useState<{
+    faixa: string;
+    oportunidades: any[];
+  } | null>(null);
+
+  // Coleta anos disponíveis
+  const anosDisponiveis = useMemo(() => {
+    return Array.from(
+      new Set(
+        oportunidades
+          .map((op) => {
+            if (!op.data_indicacao) return null;
+            try {
+              return new Date(op.data_indicacao).getFullYear();
+            } catch {
+              return null;
+            }
+          })
+          .filter(Boolean)
+      )
+    ).sort((a, b) => b - a);
   }, [oportunidades]);
 
-  // Extract status distribution
-  const statusDistribution = React.useMemo(() => {
+  // Filtro de oportunidades para o gráfico
+  const oportunidadesFiltradas = useMemo(() => {
+    return oportunidades.filter((op) => {
+      if (!op.data_indicacao) return false;
+      const dataInd = parseISO(op.data_indicacao);
+      let match = true;
+      if (periodo === "quarter") {
+        match =
+          match &&
+          quarters.includes(getQuarter(dataInd)) &&
+          getYear(dataInd) === quarterYear;
+      }
+      if (grupoStatus === "intragrupo") {
+        match =
+          match &&
+          getGrupoStatus(op.empresa_origem?.tipo, op.empresa_destino?.tipo) ===
+            "intragrupo";
+      }
+      if (grupoStatus === "extragrupo") {
+        match =
+          match &&
+          getGrupoStatus(op.empresa_origem?.tipo, op.empresa_destino?.tipo) ===
+            "extragrupo";
+      }
+      return match;
+    });
+  }, [oportunidades, periodo, quarters, quarterYear, grupoStatus]);
+
+  // KPIs
+  const total = oportunidades.length;
+  const emAberto = oportunidades.filter((op) =>
+    ["em_contato", "negociando"].includes(op.status)
+  );
+  const ganhas = oportunidades.filter((op) => op.status === "ganho");
+  const perdidas = oportunidades.filter((op) => op.status === "perdido");
+
+  // Em aberto por faixa de tempo
+  const hoje = new Date();
+  const emAbertoFaixa = {
+    "há 30 dias": emAberto.filter((op) => {
+      const dias = differenceInDays(hoje, parseISO(op.data_indicacao));
+      return dias <= 30;
+    }),
+    "30 a 60 dias": emAberto.filter((op) => {
+      const dias = differenceInDays(hoje, parseISO(op.data_indicacao));
+      return dias > 30 && dias <= 60;
+    }),
+    "mais de 60 dias": emAberto.filter((op) => {
+      const dias = differenceInDays(hoje, parseISO(op.data_indicacao));
+      return dias > 60;
+    }),
+  };
+
+  // Gráfico Volume Mensal com filtros
+  const oportunidadesPorMes = useMemo(() => {
+    // Filtra pelo período selecionado
+    const lista = oportunidadesFiltradas;
+    // Agrupa por mês
+    const mapa: Record<
+      string,
+      { name: string; total: number; ganho: number; perdido: number }
+    > = {};
+    lista.forEach((op) => {
+      const data = parseISO(op.data_indicacao);
+      const chave = getMonthYear(data);
+      if (!mapa[chave]) mapa[chave] = { name: chave, total: 0, ganho: 0, perdido: 0 };
+      mapa[chave].total++;
+      if (op.status === "ganho") mapa[chave].ganho++;
+      if (op.status === "perdido") mapa[chave].perdido++;
+    });
+    // Ordena por data
+    const resultado = Object.entries(mapa)
+      .map(([k, v]) => ({ name: k, ...v }))
+      .sort((a, b) => {
+        // ano-mês para ordenar corretamente
+        const [ma, ya] = a.name.split("/");
+        const [mb, yb] = b.name.split("/");
+        return new Date(`01 ${ma} ${ya}`) > new Date(`01 ${mb} ${yb}`) ? 1 : -1;
+      });
+    return resultado;
+  }, [oportunidadesFiltradas]);
+
+  // Status Distribution para gráfico de pizza
+  const statusDistribution = useMemo(() => {
     const counts: Record<string, number> = {
       em_contato: 0,
       negociando: 0,
       ganho: 0,
-      perdido: 0
+      perdido: 0,
     };
-    
-    oportunidades.forEach(op => {
+    oportunidades.forEach((op) => {
       counts[op.status] += 1;
     });
-    
     return [
-      { name: 'Em Contato', value: counts.em_contato, color: STATUS_COLORS.em_contato },
-      { name: 'Negociando', value: counts.negociando, color: STATUS_COLORS.negociando },
-      { name: 'Ganho', value: counts.ganho, color: STATUS_COLORS.ganho },
-      { name: 'Perdido', value: counts.perdido, color: STATUS_COLORS.perdido }
+      {
+        name: "Em Contato",
+        value: counts.em_contato,
+        color: STATUS_COLORS.em_contato,
+      },
+      {
+        name: "Negociando",
+        value: counts.negociando,
+        color: STATUS_COLORS.negociando,
+      },
+      {
+        name: "Ganho",
+        value: counts.ganho,
+        color: STATUS_COLORS.ganho,
+      },
+      {
+        name: "Perdido",
+        value: counts.perdido,
+        color: STATUS_COLORS.perdido,
+      },
     ];
   }, [oportunidades]);
 
-  // Extract company exchanges
-  const empresasExchanges = React.useMemo(() => {
-    const exchanges: Record<string, Record<string, number>> = {};
-    
-    oportunidades.forEach(op => {
-      if (!op.empresa_origem?.nome || !op.empresa_destino?.nome) return;
-      
-      const origem = op.empresa_origem.nome;
-      const destino = op.empresa_destino.nome;
-      
-      if (!exchanges[origem]) {
-        exchanges[origem] = {};
-      }
-      
-      exchanges[origem][destino] = (exchanges[origem][destino] || 0) + 1;
-    });
-    
-    return exchanges;
-  }, [oportunidades]);
-  
-  // Extract company conversion rates
-  const empresasConversion = React.useMemo(() => {
-    const conversions: Record<string, { total: number, ganho: number, perdido: number, taxa: number }> = {};
-    
-    oportunidades.forEach(op => {
+  // Company conversion rates (mantido do original)
+  const empresasConversion = useMemo(() => {
+    const conversions: Record<
+      string,
+      { total: number; ganho: number; perdido: number; taxa: number }
+    > = {};
+    oportunidades.forEach((op) => {
       if (!op.empresa_origem?.nome) return;
-      
       const origem = op.empresa_origem.nome;
-      
       if (!conversions[origem]) {
         conversions[origem] = { total: 0, ganho: 0, perdido: 0, taxa: 0 };
       }
-      
       conversions[origem].total += 1;
-      if (op.status === 'ganho') conversions[origem].ganho += 1;
-      if (op.status === 'perdido') conversions[origem].perdido += 1;
+      if (op.status === "ganho") conversions[origem].ganho += 1;
+      if (op.status === "perdido") conversions[origem].perdido += 1;
     });
-    
     // Calculate conversion rates
-    Object.keys(conversions).forEach(empresa => {
+    Object.keys(conversions).forEach((empresa) => {
       const { total, ganho } = conversions[empresa];
-      // Avoid division by zero
       conversions[empresa].taxa = total > 0 ? (ganho / total) * 100 : 0;
     });
-    
     return Object.entries(conversions)
       .map(([empresa, stats]) => ({
         empresa,
         ...stats,
-        taxa: parseFloat(stats.taxa.toFixed(2))
+        taxa: parseFloat(stats.taxa.toFixed(2)),
       }))
       .sort((a, b) => b.taxa - a.taxa);
   }, [oportunidades]);
 
   // Render active shape for pie chart
   const renderActiveShape = (props: any) => {
-    const { 
-      cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill, payload, percent, value 
+    const {
+      cx,
+      cy,
+      innerRadius,
+      outerRadius,
+      startAngle,
+      endAngle,
+      fill,
+      payload,
+      percent,
+      value,
     } = props;
-  
     return (
       <g>
         <Sector
@@ -193,17 +311,50 @@ export const OportunidadesStats: React.FC = () => {
     );
   };
 
-  // Handle pie chart sector click
+  // Modal de oportunidades em aberto por faixa
+  const renderModalAberto = () => {
+    if (!modalAberto) return null;
+    return (
+      <Modal
+        open={!!modalAberto}
+        onOpenChange={() => setModalAberto(null)}
+        title={`Oportunidades em Aberto (${modalAberto.faixa})`}
+      >
+        <div className="space-y-3">
+          {modalAberto.oportunidades.map((op, idx) => (
+            <div key={op.id || idx} className="p-2 border rounded">
+              <div>
+                <b>Lead:</b> {op.nome_lead} <br />
+                <b>Origem:</b> {op.empresa_origem?.nome || "-"} <br />
+                <b>Destino:</b> {op.empresa_destino?.nome || "-"} <br />
+                <b>Data Indicação:</b>{" "}
+                {format(parseISO(op.data_indicacao), "dd/MM/yyyy", {
+                  locale: ptBR,
+                })}{" "}
+                <br />
+                <b>Status:</b> {op.status}
+              </div>
+            </div>
+          ))}
+          {modalAberto.oportunidades.length === 0 && (
+            <div>Nenhuma oportunidade encontrada.</div>
+          )}
+        </div>
+      </Modal>
+    );
+  };
+
+  // Handlers para Pie Chart
   const onPieEnter = (_: any, index: number) => {
     setSelectedPieIndex(index);
   };
-  
   const onPieLeave = () => {
     setSelectedPieIndex(undefined);
   };
 
   return (
     <div className="space-y-6">
+      {/* KPIs */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="pb-2">
@@ -211,22 +362,63 @@ export const OportunidadesStats: React.FC = () => {
             <CardDescription>Todas as oportunidades registradas</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{oportunidades.length}</div>
+            <div className="text-3xl font-bold">{total}</div>
           </CardContent>
         </Card>
-        
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-lg">Em Aberto</CardTitle>
             <CardDescription>Em contato ou negociando</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">
-              {oportunidades.filter(op => ['em_contato', 'negociando'].includes(op.status)).length}
+            <div className="flex items-baseline space-x-2">
+              <span className="text-3xl font-bold">{emAberto.length}</span>
+              <span className="text-sm text-muted-foreground">(detalhe:)</span>
             </div>
+            <div className="mt-2 space-x-2 flex flex-wrap">
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() =>
+                  setModalAberto({
+                    faixa: "há 30 dias",
+                    oportunidades: emAbertoFaixa["há 30 dias"],
+                  })
+                }
+              >
+                há 30 dias:{" "}
+                <b className="ml-1">{emAbertoFaixa["há 30 dias"].length}</b>
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() =>
+                  setModalAberto({
+                    faixa: "30 a 60 dias",
+                    oportunidades: emAbertoFaixa["30 a 60 dias"],
+                  })
+                }
+              >
+                30-60 dias:{" "}
+                <b className="ml-1">{emAbertoFaixa["30 a 60 dias"].length}</b>
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() =>
+                  setModalAberto({
+                    faixa: "mais de 60 dias",
+                    oportunidades: emAbertoFaixa["mais de 60 dias"],
+                  })
+                }
+              >
+                +60 dias:{" "}
+                <b className="ml-1">{emAbertoFaixa["mais de 60 dias"].length}</b>
+              </Button>
+            </div>
+            {renderModalAberto()}
           </CardContent>
         </Card>
-        
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-lg">Ganhas</CardTitle>
@@ -234,11 +426,10 @@ export const OportunidadesStats: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-green-600">
-              {oportunidades.filter(op => op.status === 'ganho').length}
+              {ganhas.length}
             </div>
           </CardContent>
         </Card>
-        
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-lg">Perdidas</CardTitle>
@@ -246,7 +437,7 @@ export const OportunidadesStats: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-red-600">
-              {oportunidades.filter(op => op.status === 'perdido').length}
+              {perdidas.length}
             </div>
           </CardContent>
         </Card>
@@ -256,52 +447,108 @@ export const OportunidadesStats: React.FC = () => {
         <TabsList>
           <TabsTrigger value="mensal">Volume Mensal</TabsTrigger>
           <TabsTrigger value="status">Status</TabsTrigger>
-          <TabsTrigger value="trocas">Matriz de Trocas</TabsTrigger>
           <TabsTrigger value="taxas">Taxas de Conversão</TabsTrigger>
         </TabsList>
-        
-        {/* Volume Mensal Tab */}
+
+        {/* Gráfico Volume Mensal com filtros avançados */}
         <TabsContent value="mensal">
           <Card>
             <CardHeader>
               <CardTitle>Volume de Oportunidades por Mês</CardTitle>
               <CardDescription>
-                Número de oportunidades registradas nos últimos 12 meses
+                Número de oportunidades registradas. Use os filtros para
+                customizar o período e o tipo.
               </CardDescription>
+              <div className="flex flex-wrap gap-3 mt-4">
+                <div>
+                  <Label>Período</Label>
+                  <Select value={periodo} onValueChange={setPeriodo}>
+                    <SelectTrigger className="w-32">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="mes">Mensal</SelectItem>
+                      <SelectItem value="quarter">Quarter</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {periodo === "quarter" && (
+                  <>
+                    <div>
+                      <Label>Quarter</Label>
+                      <Select
+                        value={quarters.join(",")}
+                        onValueChange={(v) =>
+                          setQuarters(v ? v.split(",") : [])
+                        }
+                        multiple
+                      >
+                        <SelectTrigger className="w-36">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {["Q1", "Q2", "Q3", "Q4"].map((q) => (
+                            <SelectItem key={q} value={q}>
+                              {q}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>Ano</Label>
+                      <Select
+                        value={String(quarterYear)}
+                        onValueChange={(v) => setQuarterYear(Number(v))}
+                      >
+                        <SelectTrigger className="w-24">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {anosDisponiveis.map((ano) => (
+                            <SelectItem key={ano} value={String(ano)}>
+                              {ano}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </>
+                )}
+                <div>
+                  <Label>Natureza</Label>
+                  <Select value={grupoStatus} onValueChange={setGrupoStatus}>
+                    <SelectTrigger className="w-32">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas</SelectItem>
+                      <SelectItem value="intragrupo">Intragrupo</SelectItem>
+                      <SelectItem value="extragrupo">Extragrupo</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
             </CardHeader>
             <CardContent className="pt-2">
               <div className="h-[300px]">
-                <ChartContainer 
-                  config={{
-                    total: { color: '#94a3b8' },
-                    ganho: { color: '#22c55e' },
-                    perdido: { color: '#ef4444' }
-                  }}
-                >
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={oportunidadesPorMes}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                      <XAxis dataKey="name" />
-                      <YAxis />
-                      <ChartTooltip 
-                        content={
-                          <ChartTooltipContent 
-                            labelFormatter={(label) => `${label}`}
-                          />
-                        } 
-                      />
-                      <Legend />
-                      <Bar dataKey="total" name="Total" fill="#94a3b8" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="ganho" name="Ganhas" fill="#22c55e" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="perdido" name="Perdidas" fill="#ef4444" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </ChartContainer>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={oportunidadesPorMes}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Bar dataKey="total" name="Total" fill="#94a3b8" />
+                    <Bar dataKey="ganho" name="Ganhas" fill="#22c55e" />
+                    <Bar dataKey="perdido" name="Perdidas" fill="#ef4444" />
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             </CardContent>
           </Card>
         </TabsContent>
-        
+
         {/* Status Tab */}
         <TabsContent value="status">
           <Card>
@@ -332,59 +579,16 @@ export const OportunidadesStats: React.FC = () => {
                       ))}
                     </Pie>
                     <Legend />
-                    <Tooltip formatter={(value) => [`${value} oportunidades`, undefined]} />
+                    <Tooltip
+                      formatter={(value) => [`${value} oportunidades`, undefined]}
+                    />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
             </CardContent>
           </Card>
         </TabsContent>
-        
-        {/* Matriz de Trocas Tab */}
-        <TabsContent value="trocas">
-          <Card>
-            <CardHeader>
-              <CardTitle>Matriz de Trocas Entre Empresas</CardTitle>
-              <CardDescription>
-                Oportunidades enviadas entre empresas do grupo
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-auto max-h-[400px]">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Empresa Origem</TableHead>
-                      <TableHead>Empresa Destino</TableHead>
-                      <TableHead className="text-right">Quantidade</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {Object.entries(empresasExchanges).map(([origem, destinos]) => 
-                      Object.entries(destinos).map(([destino, quantidade], index) => (
-                        <TableRow key={`${origem}-${destino}`}>
-                          <TableCell>
-                            {index === 0 ? origem : ''}
-                          </TableCell>
-                          <TableCell>{destino}</TableCell>
-                          <TableCell className="text-right">{quantidade}</TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                    {Object.keys(empresasExchanges).length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={3} className="text-center py-6">
-                          Nenhum dado disponível
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
+
         {/* Taxas de Conversão Tab */}
         <TabsContent value="taxas">
           <Card>
@@ -403,22 +607,32 @@ export const OportunidadesStats: React.FC = () => {
                       <TableHead className="text-right">Total</TableHead>
                       <TableHead className="text-right">Ganhas</TableHead>
                       <TableHead className="text-right">Perdidas</TableHead>
-                      <TableHead className="text-right">Taxa de Conversão</TableHead>
+                      <TableHead className="text-right">
+                        Taxa de Conversão
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {empresasConversion.map((item) => (
                       <TableRow key={item.empresa}>
                         <TableCell>{item.empresa}</TableCell>
-                        <TableCell className="text-right">{item.total}</TableCell>
-                        <TableCell className="text-right">{item.ganho}</TableCell>
-                        <TableCell className="text-right">{item.perdido}</TableCell>
+                        <TableCell className="text-right">
+                          {item.total}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {item.ganho}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {item.perdido}
+                        </TableCell>
                         <TableCell className="text-right font-medium">
-                          <span 
+                          <span
                             className={
-                              item.taxa >= 70 ? "text-green-600" : 
-                              item.taxa >= 40 ? "text-amber-600" : 
-                              "text-red-600"
+                              item.taxa >= 70
+                                ? "text-green-600"
+                                : item.taxa >= 40
+                                ? "text-amber-600"
+                                : "text-red-600"
                             }
                           >
                             {item.taxa}%
