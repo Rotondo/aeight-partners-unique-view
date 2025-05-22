@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { 
@@ -28,7 +27,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Building2, Users, BarChart3, RefreshCw } from "lucide-react";
-import { Empresa, TipoEmpresa, Contato, Oportunidade } from "@/types";
+import { Empresa, EmpresaTipoString, Contato, Oportunidade } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
 
@@ -130,7 +129,7 @@ const EmpresasPage: React.FC = () => {
   };
 
   // Helper functions
-  const getTipoLabel = (tipo: TipoEmpresa): string => {
+  const getTipoLabel = (tipo: EmpresaTipoString): string => {
     switch (tipo) {
       case "intragrupo": return "Intragrupo";
       case "parceiro": return "Parceiro";
@@ -139,7 +138,7 @@ const EmpresasPage: React.FC = () => {
     }
   };
 
-  const getTipoBadgeColor = (tipo: TipoEmpresa): string => {
+  const getTipoBadgeColor = (tipo: EmpresaTipoString): string => {
     switch (tipo) {
       case "intragrupo": return "bg-blue-500";
       case "parceiro": return "bg-green-500";
@@ -374,8 +373,8 @@ const EmpresasPage: React.FC = () => {
 interface EmpresasTableProps {
   empresas: Empresa[];
   loading: boolean;
-  getTipoLabel: (tipo: TipoEmpresa) => string;
-  getTipoBadgeColor: (tipo: TipoEmpresa) => string;
+  getTipoLabel: (tipo: EmpresaTipoString) => string;
+  getTipoBadgeColor: (tipo: EmpresaTipoString) => string;
   getContatosCount: (empresaId: string) => number;
   getOportunidadesCount: (empresaId: string) => number;
 }

@@ -28,10 +28,18 @@ import { IndicadoresParceiro, Empresa } from "@/types";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { useToast } from "@/hooks/use-toast";
 
+// Define the extended type that includes the empresa join result
+interface IndicadoresParceiroWithEmpresa extends IndicadoresParceiro {
+  empresa?: {
+    id: string;
+    nome: string;
+  }
+}
+
 const IndicadoresPage: React.FC = () => {
-  const [indicadores, setIndicadores] = useState<IndicadoresParceiro[]>([]);
+  const [indicadores, setIndicadores] = useState<IndicadoresParceiroWithEmpresa[]>([]);
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
-  const [filteredIndicadores, setFilteredIndicadores] = useState<IndicadoresParceiro[]>([]);
+  const [filteredIndicadores, setFilteredIndicadores] = useState<IndicadoresParceiroWithEmpresa[]>([]);
   const [selectedEmpresa, setSelectedEmpresa] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(true);
   const [chartData, setChartData] = useState<any[]>([]);
@@ -68,8 +76,8 @@ const IndicadoresPage: React.FC = () => {
         .order("data_avaliacao", { ascending: false });
 
       if (error) throw error;
-      setIndicadores(data as IndicadoresParceiro[]);
-      setFilteredIndicadores(data as IndicadoresParceiro[]);
+      setIndicadores(data as IndicadoresParceiroWithEmpresa[]);
+      setFilteredIndicadores(data as IndicadoresParceiroWithEmpresa[]);
       console.log("Indicadores carregados:", data);
     } catch (error) {
       console.error("Erro ao buscar indicadores:", error);
