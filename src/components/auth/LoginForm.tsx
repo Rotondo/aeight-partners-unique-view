@@ -25,72 +25,99 @@ const LoginForm: React.FC = () => {
   return (
     <div style={{
       background: '#fff',
-      borderRadius: '12px',
-      boxShadow: '0 6px 32px rgba(0,0,0,0.09)',
-      padding: '38px 32px 32px 32px',
-      maxWidth: 400,
-      margin: '0 auto'
+      borderRadius: '18px',
+      boxShadow: '0 8px 32px rgba(0,0,0,0.10)',
+      padding: '40px 36px 32px 36px',
+      maxWidth: 380,
+      width: '100%',
+      textAlign: 'center',
+      border: '1.5px solid #ececec'
     }}>
       <div style={{ textAlign: 'center', marginBottom: 24 }}>
-        <h2 style={{ margin: 0, fontWeight: 700, fontSize: 26 }}>A&eight Partnership Hub</h2>
-        <div style={{ fontSize: 14, color: '#444', marginTop: 4 }}>
-          Plataforma Unificada de Parcerias <br /><b>Destinada aos parceiros e empresas do Grupo A&eight</b>
+        <div style={{ fontSize: '1.8rem', fontWeight: 700, marginBottom: 4, color: '#22223b' }}>
+          A&eight Partnership Hub
+        </div>
+        <div style={{
+          color: '#475569',
+          fontSize: '1.06rem',
+          marginBottom: 20,
+          lineHeight: 1.3
+        }}>
+          Plataforma Unificada de Parcerias<br />
+          <strong>Exclusivo para integrantes e parceiros do Grupo A&eight</strong>
         </div>
       </div>
-      <form onSubmit={handleLogin}>
-        <div style={{ marginBottom: 16 }}>
-          <label style={{ fontWeight: 600, display: 'block', marginBottom: 6 }}>Email</label>
-          <input
-            type="email"
-            placeholder="seu.email@exemplo.com"
-            style={{
-              width: '100%',
-              padding: '12px 10px',
-              borderRadius: 7,
-              border: '1.5px solid #d4d4d4',
-              fontSize: 15,
-              outline: 'none',
-              transition: 'border 0.2s'
-            }}
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            disabled={isSubmitting}
-          />
-        </div>
-        <div style={{ marginBottom: 16 }}>
-          <label style={{ fontWeight: 600, display: 'block', marginBottom: 6 }}>Senha</label>
-          <input
-            type="password"
-            placeholder="Digite sua senha"
-            style={{
-              width: '100%',
-              padding: '12px 10px',
-              borderRadius: 7,
-              border: '1.5px solid #d4d4d4',
-              fontSize: 15,
-              outline: 'none',
-              transition: 'border 0.2s'
-            }}
-            value={senha}
-            onChange={(e) => setSenha(e.target.value)}
-            required
-            disabled={isSubmitting}
-          />
-        </div>
+      <form className="login-form" autoComplete="on" onSubmit={handleLogin}>
+        <label htmlFor="email" style={{
+          display: 'block',
+          textAlign: 'left',
+          fontWeight: 600,
+          marginBottom: 8,
+          color: '#22223b',
+          fontSize: '1.03rem'
+        }}>Email</label>
+        <input
+          id="email"
+          type="email"
+          placeholder="seu@email.com"
+          required
+          style={{
+            width: '100%',
+            padding: '13px 11px',
+            borderRadius: 8,
+            border: '1.5px solid #d1d5db',
+            fontSize: '1rem',
+            marginBottom: 18,
+            transition: 'border 0.2s',
+            outline: 'none',
+            background: '#f8fafc'
+          }}
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          disabled={isSubmitting}
+        />
+        <label htmlFor="senha" style={{
+          display: 'block',
+          textAlign: 'left',
+          fontWeight: 600,
+          marginBottom: 8,
+          color: '#22223b',
+          fontSize: '1.03rem'
+        }}>Senha</label>
+        <input
+          id="senha"
+          type="password"
+          placeholder="Digite sua senha"
+          required
+          style={{
+            width: '100%',
+            padding: '13px 11px',
+            borderRadius: 8,
+            border: '1.5px solid #d1d5db',
+            fontSize: '1rem',
+            marginBottom: 18,
+            transition: 'border 0.2s',
+            outline: 'none',
+            background: '#f8fafc'
+          }}
+          value={senha}
+          onChange={(e) => setSenha(e.target.value)}
+          disabled={isSubmitting}
+        />
         <button
           type="submit"
           style={{
             width: '100%',
             background: '#22223b',
             color: '#fff',
-            padding: '12px',
+            padding: '14px 0',
             border: 'none',
-            borderRadius: 7,
+            borderRadius: 8,
             fontWeight: 700,
-            fontSize: 16,
+            fontSize: '1.15rem',
             marginTop: 10,
-            cursor: isSubmitting ? 'not-allowed' : 'pointer'
+            cursor: isSubmitting ? 'not-allowed' : 'pointer',
+            letterSpacing: '0.02em'
           }}
           disabled={isSubmitting}
         >
@@ -108,7 +135,12 @@ const LoginForm: React.FC = () => {
           {mensagem || error}
         </div>
       )}
-      <div style={{ marginTop: 22, color: '#7c7c7c', fontSize: 13, textAlign: 'center' }}>
+      <div className="login-footer" style={{
+        marginTop: 25,
+        color: '#8d99ae',
+        fontSize: '0.96rem',
+        lineHeight: 1.3
+      }}>
         Acesso restrito aos integrantes do Grupo A&eight e parceiros autorizados.
       </div>
     </div>
