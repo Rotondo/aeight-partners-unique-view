@@ -20,7 +20,7 @@ import {
   Cell,
   Sector,
 } from "recharts";
-import { format, subMonths, parseISO, differenceInDays } from "date-fns";
+import { format, subMonths, parseISO, differenceInDays, isValid } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   Table,
@@ -59,6 +59,7 @@ function getGrupoStatus(empresa_origem_tipo, empresa_destino_tipo) {
   return "extragrupo";
 }
 function getQuarter(date) {
+  if (!isValid(date)) return "";
   const month = date.getMonth();
   if (month < 3) return "Q1";
   if (month < 6) return "Q2";
@@ -66,9 +67,11 @@ function getQuarter(date) {
   return "Q4";
 }
 function getYear(date) {
+  if (!isValid(date)) return null;
   return date.getFullYear();
 }
 function getMonthYear(date) {
+  if (!isValid(date)) return "";
   return format(date, "MMM/yyyy", { locale: ptBR });
 }
 
@@ -101,7 +104,8 @@ export const OportunidadesStats: React.FC = () => {
           .map((op) => {
             if (!op.data_indicacao) return null;
             try {
-              return new Date(op.data_indicacao).getFullYear();
+              const d = parseISO(op.data_indicacao);
+              return isValid(d) ? d.getFullYear() : null;
             } catch {
               return null;
             }
@@ -115,9 +119,15 @@ export const OportunidadesStats: React.FC = () => {
   const oportunidadesFiltradas = useMemo(() => {
     return oportunidades.filter((op) => {
       if (!op.data_indicacao) return false;
-      const dataInd = parseISO(op.data_indicacao);
+      let dataInd;
+      try {
+        dataInd = parseISO(op.data_indicacao);
+      } catch {
+        return false;
+      }
+      if (!isValid(dataInd)) return false;
       let match = true;
-      if (periodo === "quarter") {
+      if (periodo === "quarter" && quarters.length && quarterYear) {
         match =
           match &&
           quarters.includes(getQuarter(dataInd)) &&
@@ -141,8 +151,8 @@ export const OportunidadesStats: React.FC = () => {
 
   // KPIs
   const total = oportunidades.length;
-  const emAberto = oportunidades.filter((op) =>
-    ["em_contato", "negociando"].includes(op.status)
+  const emAberto = oportunidades.filter(
+    (op) => ["em_contato", "negociando"].includes(op.status)
   );
   const ganhas = oportunidades.filter((op) => op.status === "ganho");
   const perdidas = oportunidades.filter((op) => op.status === "perdido");
@@ -151,16 +161,28 @@ export const OportunidadesStats: React.FC = () => {
   const hoje = new Date();
   const emAbertoFaixa = {
     "há 30 dias": emAberto.filter((op) => {
-      const dias = differenceInDays(hoje, parseISO(op.data_indicacao));
-      return dias <= 30;
+      try {
+        const dias = differenceInDays(hoje, parseISO(op.data_indicacao));
+        return dias <= 30;
+      } catch {
+        return false;
+      }
     }),
     "30 a 60 dias": emAberto.filter((op) => {
-      const dias = differenceInDays(hoje, parseISO(op.data_indicacao));
-      return dias > 30 && dias <= 60;
+      try {
+        const dias = differenceInDays(hoje, parseISO(op.data_indicacao));
+        return dias > 30 && dias <= 60;
+      } catch {
+        return false;
+      }
     }),
     "mais de 60 dias": emAberto.filter((op) => {
-      const dias = differenceInDays(hoje, parseISO(op.data_indicacao));
-      return dias > 60;
+      try {
+        const dias = differenceInDays(hoje, parseISO(op.data_indicacao));
+        return dias > 60;
+      } catch {
+        return false;
+      }
     }),
   };
 
@@ -174,9 +196,17 @@ export const OportunidadesStats: React.FC = () => {
       { name: string; total: number; ganho: number; perdido: number }
     > = {};
     lista.forEach((op) => {
-      const data = parseISO(op.data_indicacao);
+      let data;
+      try {
+        data = parseISO(op.data_indicacao);
+      } catch {
+        return;
+      }
+      if (!isValid(data)) return;
       const chave = getMonthYear(data);
-      if (!mapa[chave]) mapa[chave] = { name: chave, total: 0, ganho: 0, perdido: 0 };
+      if (!chave) return;
+      if (!mapa[chave])
+        mapa[chave] = { name: chave, total: 0, ganho: 0, perdido: 0 };
       mapa[chave].total++;
       if (op.status === "ganho") mapa[chave].ganho++;
       if (op.status === "perdido") mapa[chave].perdido++;
@@ -202,6 +232,8 @@ export const OportunidadesStats: React.FC = () => {
       perdido: 0,
     };
     oportunidades.forEach((op) => {
+      if (!op.status) return;
+      if (counts[op.status] === undefined) return;
       counts[op.status] += 1;
     });
     return [
@@ -319,9 +351,17 @@ export const OportunidadesStats: React.FC = () => {
                 <b>Origem:</b> {op.empresa_origem?.nome || "-"} <br />
                 <b>Destino:</b> {op.empresa_destino?.nome || "-"} <br />
                 <b>Data Indicação:</b>{" "}
-                {format(parseISO(op.data_indicacao), "dd/MM/yyyy", {
-                  locale: ptBR,
-                })}{" "}
+                {op.data_indicacao
+                  ? (() => {
+                      try {
+                        const d = parseISO(op.data_indicacao);
+                        if (!isValid(d)) return "-";
+                        return format(d, "dd/MM/yyyy", { locale: ptBR });
+                      } catch {
+                        return "-";
+                      }
+                    })()
+                  : "-"}
                 <br />
                 <b>Status:</b> {op.status}
               </div>
@@ -524,7 +564,7 @@ export const OportunidadesStats: React.FC = () => {
             <CardContent style={{ padding: 0, margin: 0 }}>
               <div style={{ width: "100%", minHeight: 320, height: 350, padding: 0 }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={oportunidadesPorMes}>
+                  <BarChart data={oportunidadesPorMes || []}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
                     <XAxis dataKey="name" />
                     <YAxis />
@@ -556,7 +596,7 @@ export const OportunidadesStats: React.FC = () => {
                     <Pie
                       activeIndex={selectedPieIndex}
                       activeShape={renderActiveShape}
-                      data={statusDistribution}
+                      data={statusDistribution || []}
                       cx="50%"
                       cy="50%"
                       innerRadius={70}
