@@ -26,7 +26,7 @@ import {
 import { Slider } from "@/components/ui/slider";
 import { Save } from "lucide-react";
 
-// Validation schema
+// Validation schema ajustado para 0-5
 const formSchema = z.object({
   empresa_id: z.string().min(1, "Selecione um parceiro"),
   potencial_leads: z.coerce.number().min(0).max(5),
