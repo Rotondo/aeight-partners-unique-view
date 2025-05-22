@@ -74,7 +74,6 @@ const IndicadoresPage: React.FC = () => {
   // MODAL DE EDIÇÃO
   const [editModal, setEditModal] = useState<{ open: boolean; indicador?: IndicadoresParceiroWithEmpresa }>({ open: false });
 
-  // --------- CARREGAMENTO DE DADOS ---------
   useEffect(() => {
     fetchAll();
   }, []);
@@ -101,7 +100,6 @@ const IndicadoresPage: React.FC = () => {
         .select("id, empresa_origem_id");
       if (oportunidadesError) throw oportunidadesError;
 
-      // JOIN empresa no indicador (para nome)
       let allIndicadores: IndicadoresParceiroWithEmpresa[] = indicadoresData.map(
         (indicador: any) => {
           const empresa = empresasData.find((e: any) => e.id === indicador.empresa_id);
@@ -112,7 +110,6 @@ const IndicadoresPage: React.FC = () => {
         }
       );
 
-      // MANTER APENAS O MAIS RECENTE DE CADA PARCEIRO
       const uniqueIndicadores: Record<string, IndicadoresParceiroWithEmpresa> = {};
       for (const indicador of allIndicadores) {
         if (!uniqueIndicadores[indicador.empresa_id]) {
@@ -121,7 +118,6 @@ const IndicadoresPage: React.FC = () => {
       }
       let indicadoresUnicos = Object.values(uniqueIndicadores);
 
-      // Calcular oportunidades indicadas e share of wallet
       const indicadoresComOportunidades = indicadoresUnicos.map((indicador) => {
         const oportunidadesDoParceiro = oportunidadesData.filter(
           (o: any) => o.empresa_origem_id === indicador.empresa_id
@@ -153,7 +149,6 @@ const IndicadoresPage: React.FC = () => {
     }
   };
 
-  // --------- FILTRO E ORDENAÇÃO ---------
   useEffect(() => {
     let filt = indicadores;
     if (searchTerm) {
@@ -188,7 +183,6 @@ const IndicadoresPage: React.FC = () => {
     setFilteredIndicadores(filt);
   }, [indicadores, searchTerm, selectedEmpresa, sortColumn, sortAsc]);
 
-  // --------- EXPORTAÇÃO CSV ---------
   function exportToCSV() {
     const headers = [
       "Empresa",
@@ -225,7 +219,6 @@ const IndicadoresPage: React.FC = () => {
     document.body.removeChild(link);
   }
 
-  // --------- EDIÇÃO (EXEMPLO SIMPLES) ---------
   function handleEdit(indicador: IndicadoresParceiroWithEmpresa) {
     setEditModal({ open: true, indicador });
   }
@@ -234,10 +227,9 @@ const IndicadoresPage: React.FC = () => {
     setEditModal({ open: false });
   }
 
-  // --------- GRÁFICOS ---------
   const chartQuali = filteredIndicadores
     .sort((a, b) => b.potencial_leads - a.potencial_leads)
-    .slice(0, 10) // Top 10 por potencial
+    .slice(0, 10)
     .map((ind) => ({
       nome: ind.empresa?.nome || "Parceiro",
       Potencial: ind.potencial_leads,
@@ -251,7 +243,20 @@ const IndicadoresPage: React.FC = () => {
     "Base de Clientes": ind.base_clientes || 0,
   }));
 
-  const maxShare = Math.max(...filteredIndicadores.map((i) => i.share_of_wallet || 0), 100);
+  // AJUSTE DO SHARE DINÂMICO
+  const maxShareValue = Math.max(...filteredIndicadores.map((i) =>
+    i.share_of_wallet !== undefined && !isNaN(i.share_of_wallet) ? i.share_of_wallet : 0
+  ), 0);
+  // Exemplo: se maxShareValue = 4.2, arredonda para cima para múltiplo de 5 ou 10
+  function arredondaParaCima(valor: number) {
+    if (valor <= 10) return 10;
+    if (valor <= 20) return 20;
+    if (valor <= 50) return 50;
+    if (valor <= 100) return 100;
+    return Math.ceil(valor / 10) * 10;
+  }
+  const maxShare = arredondaParaCima(maxShareValue);
+
   const chartShare = filteredIndicadores.map((ind) => ({
     nome: ind.empresa?.nome || "Parceiro",
     "Share of Wallet (%)": ind.share_of_wallet ? Number(ind.share_of_wallet.toFixed(2)) : 0,
@@ -324,7 +329,6 @@ const IndicadoresPage: React.FC = () => {
       ) : (
         <>
           {/* GRÁFICOS */}
-          {/* Apenas se NÃO houver parceiro selecionado */}
           {!selectedEmpresa || selectedEmpresa === "all" ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Card>
@@ -372,7 +376,6 @@ const IndicadoresPage: React.FC = () => {
               </Card>
             </div>
           ) : (
-            // Se UM parceiro, mostra RADAR
             filteredIndicadores.length === 1 && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <Card>
@@ -426,7 +429,6 @@ const IndicadoresPage: React.FC = () => {
               </CardContent>
             </Card>
           </div>
-
           {/* TABELA */}
           <Card>
             <CardHeader>
