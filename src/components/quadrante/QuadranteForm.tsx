@@ -29,10 +29,10 @@ import { Save } from "lucide-react";
 // Validation schema
 const formSchema = z.object({
   empresa_id: z.string().min(1, "Selecione um parceiro"),
-  potencial_leads: z.coerce.number().min(0).max(10),
-  potencial_investimento: z.coerce.number().min(0).max(10),
-  engajamento: z.coerce.number().min(0).max(10),
-  alinhamento: z.coerce.number().min(0).max(10),
+  potencial_leads: z.coerce.number().min(0).max(5),
+  potencial_investimento: z.coerce.number().min(0).max(5),
+  engajamento: z.coerce.number().min(0).max(5),
+  alinhamento: z.coerce.number().min(0).max(5),
   tamanho: z.enum(["PP", "P", "M", "G", "GG"]),
   base_clientes: z.coerce.number().min(0).optional(),
 });
@@ -75,10 +75,10 @@ const QuadranteForm: React.FC<QuadranteFormProps> = ({
     resolver: zodResolver(formSchema),
     defaultValues: {
       empresa_id: indicador?.empresa_id || "",
-      potencial_leads: indicador?.potencial_leads ?? 5,
-      potencial_investimento: indicador?.potencial_investimento ?? 5,
-      engajamento: indicador?.engajamento ?? 5,
-      alinhamento: indicador?.alinhamento ?? 5,
+      potencial_leads: indicador?.potencial_leads ?? 2.5,
+      potencial_investimento: indicador?.potencial_investimento ?? 2.5,
+      engajamento: indicador?.engajamento ?? 2.5,
+      alinhamento: indicador?.alinhamento ?? 2.5,
       tamanho: indicador?.tamanho || "M",
       base_clientes: indicador?.base_clientes ?? 0,
     },
@@ -99,10 +99,10 @@ const QuadranteForm: React.FC<QuadranteFormProps> = ({
     } else {
       form.reset({
         empresa_id: "",
-        potencial_leads: 5,
-        potencial_investimento: 5,
-        engajamento: 5,
-        alinhamento: 5,
+        potencial_leads: 2.5,
+        potencial_investimento: 2.5,
+        engajamento: 2.5,
+        alinhamento: 2.5,
         tamanho: "M",
         base_clientes: 0,
       });
@@ -147,7 +147,6 @@ const QuadranteForm: React.FC<QuadranteFormProps> = ({
             <FormItem>
               <FormLabel>Parceiro</FormLabel>
               <Select
-                // Só desabilita se for readOnly, nunca por haver indicador selecionado
                 disabled={readOnly}
                 onValueChange={(val) => {
                   field.onChange(val);
@@ -209,8 +208,8 @@ const QuadranteForm: React.FC<QuadranteFormProps> = ({
               <FormControl>
                 <Slider
                   min={0}
-                  max={10}
-                  step={1}
+                  max={5}
+                  step={0.1}
                   value={[field.value]}
                   onValueChange={([val]) => field.onChange(val)}
                   disabled={readOnly}
@@ -232,8 +231,8 @@ const QuadranteForm: React.FC<QuadranteFormProps> = ({
               <FormControl>
                 <Slider
                   min={0}
-                  max={10}
-                  step={1}
+                  max={5}
+                  step={0.1}
                   value={[field.value]}
                   onValueChange={([val]) => field.onChange(val)}
                   disabled={readOnly}
@@ -255,8 +254,8 @@ const QuadranteForm: React.FC<QuadranteFormProps> = ({
               <FormControl>
                 <Slider
                   min={0}
-                  max={10}
-                  step={1}
+                  max={5}
+                  step={0.1}
                   value={[field.value]}
                   onValueChange={([val]) => field.onChange(val)}
                   disabled={readOnly}
@@ -278,8 +277,8 @@ const QuadranteForm: React.FC<QuadranteFormProps> = ({
               <FormControl>
                 <Slider
                   min={0}
-                  max={10}
-                  step={1}
+                  max={5}
+                  step={0.1}
                   value={[field.value]}
                   onValueChange={([val]) => field.onChange(val)}
                   disabled={readOnly}
