@@ -1,12 +1,13 @@
 import { supabase } from './supabase';
 import { format } from 'date-fns';
+import { StatusOportunidade } from '@/types';
 
 // Function to get matriz intragrupo data
 export const getMatrizIntragrupo = async (
   dataInicio: Date | null,
   dataFim: Date | null,
   empresaId: string | null,
-  status: string | null
+  status: StatusOportunidade | null
 ) => {
   let query = supabase
     .from('oportunidades')
@@ -59,7 +60,7 @@ export const getMatrizParcerias = async (
   dataInicio: Date | null,
   dataFim: Date | null,
   empresaId: string | null,
-  status: string | null
+  status: StatusOportunidade | null
 ) => {
   let query = supabase
     .from('oportunidades')
@@ -156,7 +157,7 @@ export const getBalancoGrupoParcerias = async (
   dataInicio: Date | null,
   dataFim: Date | null,
   empresaId: string | null,
-  status: string | null
+  status: StatusOportunidade | null
 ) => {
   let query = supabase
     .from('oportunidades')
@@ -205,7 +206,7 @@ export const getBalancoGrupoParcerias = async (
 export const getRankingParceirosEnviadas = async (
   dataInicio: Date | null,
   dataFim: Date | null,
-  status: string | null
+  status: StatusOportunidade | null
 ) => {
   let query = supabase
     .from('oportunidades')
@@ -250,7 +251,7 @@ export const getRankingParceirosEnviadas = async (
 export const getRankingParceirosRecebidas = async (
   dataInicio: Date | null,
   dataFim: Date | null,
-  status: string | null
+  status: StatusOportunidade | null
 ) => {
   let query = supabase
     .from('oportunidades')

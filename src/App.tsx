@@ -15,6 +15,7 @@ import OnePagerPage from "@/pages/onepager/OnePagerPage";
 import QuadrantePage from "@/pages/quadrante/QuadrantePage";
 import Admin from "@/pages/admin";
 import { Toaster } from "@/components/ui/toaster";
+import OportunidadesDashboardPage from "@/pages/oportunidades-dashboard";
 
 const App: React.FC = () => (
   <Router>
@@ -33,6 +34,7 @@ const App: React.FC = () => (
             {/* Rotas internas protegidas */}
             <Route index element={<DashboardPage />} />
             <Route path="oportunidades" element={<OportunidadesPage />} />
+            <Route path="oportunidades-dashboard" element={<OportunidadesDashboardPage />} />
             <Route path="indicadores" element={<IndicadoresPage />} />
             <Route path="empresas" element={<EmpresasPage />} />
             <Route path="onepager/*" element={<OnePagerPage />} />

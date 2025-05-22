@@ -1,12 +1,9 @@
 
-import React from "react";
-import MainLayout from "@/components/layout/MainLayout";
-import { OportunidadesPage } from "@/components/oportunidades/OportunidadesPage";
+import React from 'react';
+import { OportunidadesPage as OportunidadesPagina } from '@/components/oportunidades/OportunidadesPage';
 
-const Oportunidades = () => (
-  <MainLayout>
-    <OportunidadesPage />
-  </MainLayout>
-);
+const OportunidadesPage: React.FC = () => {
+  return <OportunidadesPagina />;
+};
 
-export default Oportunidades;
+export default OportunidadesPage;

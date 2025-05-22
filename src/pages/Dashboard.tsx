@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { OpportunitiesChart } from "@/components/dashboard/OpportunitiesChart";
 import { DashboardStatsSection } from "@/components/dashboard/DashboardStats";
@@ -6,7 +7,6 @@ import { AboutPlatform } from "@/components/dashboard/AboutPlatform";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import { Oportunidade } from "@/types";
-import MainLayout from "@/components/layout/MainLayout";
 
 const Dashboard: React.FC = () => {
   const { toast } = useToast();
@@ -97,15 +97,13 @@ const Dashboard: React.FC = () => {
   }, []);
 
   return (
-    <MainLayout>
-      <div className="space-y-8 p-4">
-        <h1 className="text-2xl font-bold">Dashboard</h1>
-        <DashboardStatsSection stats={stats} loading={loading} />
-        <OpportunitiesChart stats={stats} loading={loading} />
-        <QuickAccess />
-        <AboutPlatform />
-      </div>
-    </MainLayout>
+    <div className="space-y-8 p-4">
+      <h1 className="text-2xl font-bold">Dashboard</h1>
+      <DashboardStatsSection stats={stats} loading={loading} />
+      <OpportunitiesChart stats={stats} loading={loading} />
+      <QuickAccess />
+      <AboutPlatform />
+    </div>
   );
 };
 

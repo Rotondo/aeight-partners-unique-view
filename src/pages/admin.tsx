@@ -1,12 +1,9 @@
 
-import React from "react";
-import MainLayout from "@/components/layout/MainLayout";
-import { AdminPage } from "@/components/admin/AdminPage";
+import React from 'react';
+import { AdminPage } from '@/components/admin/AdminPage';
 
-const Admin = () => (
-  <MainLayout>
-    <AdminPage />
-  </MainLayout>
-);
+const Admin: React.FC = () => {
+  return <AdminPage />;
+};
 
 export default Admin;
