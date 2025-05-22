@@ -26,10 +26,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Users, BarChart3, RefreshCw, Edit, Trash, Eye, Download } from "lucide-react";
+import { Building2, Users, Download, Edit, Trash, Eye, RefreshCw } from "lucide-react";
 import { Empresa, EmpresaTipoString } from "@/types";
 import { useToast } from "@/hooks/use-toast";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis } from "recharts";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const EmpresasPage: React.FC = () => {
@@ -45,6 +45,13 @@ const EmpresasPage: React.FC = () => {
   const [selectedEmpresa, setSelectedEmpresa] = useState<Empresa | null>(null);
   const [modalAberto, setModalAberto] = useState(false);
   const { toast } = useToast();
+
+  // Helper para contar oportunidades por empresa
+  function getOportunidadesCount(empresaId: string): number {
+    return oportunidades.filter(
+      (o) => o.empresa_origem_id === empresaId || o.empresa_destino_id === empresaId
+    ).length;
+  }
 
   // Derived state
   const filteredEmpresas = empresas
@@ -70,8 +77,17 @@ const EmpresasPage: React.FC = () => {
     })
     .sort((a, b) => {
       // Ordenação dinâmica
-      let vA: any = a[sortColumn as keyof Empresa];
-      let vB: any = b[sortColumn as keyof Empresa];
+      let vA: any;
+      let vB: any;
+
+      if (sortColumn === "oportunidades") {
+        vA = getOportunidadesCount(a.id);
+        vB = getOportunidadesCount(b.id);
+      } else {
+        vA = a[sortColumn as keyof Empresa];
+        vB = b[sortColumn as keyof Empresa];
+      }
+
       if (typeof vA === "string" && typeof vB === "string") {
         vA = vA.toLowerCase();
         vB = vB.toLowerCase();
@@ -99,6 +115,15 @@ const EmpresasPage: React.FC = () => {
     { name: "Parceiros", value: totalParceiros, color: "#82ca9d" },
     { name: "Clientes", value: totalClientes, color: "#ffc658" },
   ];
+
+  // Gráfico de barras: empresas por oportunidades
+  const barData = empresas
+    .map((e) => ({
+      nome: e.nome,
+      oportunidades: getOportunidadesCount(e.id),
+    }))
+    .sort((a, b) => b.oportunidades - a.oportunidades)
+    .slice(0, 10); // top 10 empresas
 
   const COLORS = ["#8884d8", "#82ca9d", "#ffc658", "#ff8042"];
 
@@ -131,13 +156,13 @@ const EmpresasPage: React.FC = () => {
   };
 
   const fetchContatos = async () => {
+    // Mantido apenas para compatibilidade, mas não será usado
     try {
       const { data, error } = await supabase.from("contatos").select("*");
-
       if (error) throw error;
       setContatos(data);
     } catch (error) {
-      console.error("Erro ao buscar contatos:", error);
+      // silencioso
     }
   };
 
@@ -158,7 +183,6 @@ const EmpresasPage: React.FC = () => {
       "Nome",
       "Tipo",
       "Status",
-      "Contatos",
       "Oportunidades",
       "Descrição",
     ];
@@ -166,7 +190,6 @@ const EmpresasPage: React.FC = () => {
       empresa.nome,
       getTipoLabel(empresa.tipo),
       empresa.status ? "Ativo" : "Inativo",
-      getContatosCount(empresa.id),
       getOportunidadesCount(empresa.id),
       empresa.descricao?.replace(/(\r\n|\n|\r)/gm, " ") || "",
     ]);
@@ -252,16 +275,6 @@ const EmpresasPage: React.FC = () => {
       default:
         return "bg-gray-500";
     }
-  }
-
-  function getContatosCount(empresaId: string): number {
-    return contatos.filter((c) => c.empresa_id === empresaId).length;
-  }
-
-  function getOportunidadesCount(empresaId: string): number {
-    return oportunidades.filter(
-      (o) => o.empresa_origem_id === empresaId || o.empresa_destino_id === empresaId
-    ).length;
   }
 
   // Ordenação ao clicar cabeçalho
@@ -366,6 +379,24 @@ const EmpresasPage: React.FC = () => {
             </ResponsiveContainer>
           </CardContent>
         </Card>
+        <Card className="lg:col-span-1">
+          <CardHeader>
+            <CardTitle>Top Empresas por Oportunidades</CardTitle>
+            <CardDescription>
+              Empresas com maior número de oportunidades (Top 10)
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={barData} layout="vertical" margin={{ left: 30, right: 20, top: 20, bottom: 20 }}>
+                <XAxis type="number" allowDecimals={false} />
+                <YAxis dataKey="nome" type="category" width={120} />
+                <Bar dataKey="oportunidades" fill="#8884d8" />
+                <Tooltip />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
       </div>
 
       <Card>
@@ -413,7 +444,6 @@ const EmpresasPage: React.FC = () => {
                   loading={loading}
                   getTipoLabel={getTipoLabel}
                   getTipoBadgeColor={getTipoBadgeColor}
-                  getContatosCount={getContatosCount}
                   getOportunidadesCount={getOportunidadesCount}
                   onSort={handleSort}
                   sortColumn={sortColumn}
@@ -429,7 +459,6 @@ const EmpresasPage: React.FC = () => {
                   loading={loading}
                   getTipoLabel={getTipoLabel}
                   getTipoBadgeColor={getTipoBadgeColor}
-                  getContatosCount={getContatosCount}
                   getOportunidadesCount={getOportunidadesCount}
                   onSort={handleSort}
                   sortColumn={sortColumn}
@@ -445,7 +474,6 @@ const EmpresasPage: React.FC = () => {
                   loading={loading}
                   getTipoLabel={getTipoLabel}
                   getTipoBadgeColor={getTipoBadgeColor}
-                  getContatosCount={getContatosCount}
                   getOportunidadesCount={getOportunidadesCount}
                   onSort={handleSort}
                   sortColumn={sortColumn}
@@ -461,7 +489,6 @@ const EmpresasPage: React.FC = () => {
                   loading={loading}
                   getTipoLabel={getTipoLabel}
                   getTipoBadgeColor={getTipoBadgeColor}
-                  getContatosCount={getContatosCount}
                   getOportunidadesCount={getOportunidadesCount}
                   onSort={handleSort}
                   sortColumn={sortColumn}
@@ -499,9 +526,6 @@ const EmpresasPage: React.FC = () => {
                 </Badge>
               </div>
               <div>
-                <strong>Contatos:</strong> {getContatosCount(selectedEmpresa.id)}
-              </div>
-              <div>
                 <strong>Oportunidades:</strong> {getOportunidadesCount(selectedEmpresa.id)}
               </div>
               <div>
@@ -520,7 +544,6 @@ interface EmpresasTableProps {
   loading: boolean;
   getTipoLabel: (tipo: EmpresaTipoString) => string;
   getTipoBadgeColor: (tipo: EmpresaTipoString) => string;
-  getContatosCount: (empresaId: string) => number;
   getOportunidadesCount: (empresaId: string) => number;
   onSort: (column: string) => void;
   sortColumn: string;
@@ -535,7 +558,6 @@ const EmpresasTable = ({
   loading,
   getTipoLabel,
   getTipoBadgeColor,
-  getContatosCount,
   getOportunidadesCount,
   onSort,
   sortColumn,
@@ -566,11 +588,8 @@ const EmpresasTable = ({
           <TableHead className="cursor-pointer" onClick={() => onSort("status")}>
             Status {renderSortIcon("status")}
           </TableHead>
-          <TableHead className="cursor-pointer" onClick={() => onSort("contatos")}>
-            Contatos
-          </TableHead>
           <TableHead className="cursor-pointer" onClick={() => onSort("oportunidades")}>
-            Oportunidades
+            Oportunidades {renderSortIcon("oportunidades")}
           </TableHead>
           <TableHead>Descrição</TableHead>
           <TableHead>Ações</TableHead>
@@ -579,13 +598,13 @@ const EmpresasTable = ({
       <TableBody>
         {loading ? (
           <TableRow>
-            <TableCell colSpan={7} className="text-center">
+            <TableCell colSpan={6} className="text-center">
               Carregando...
             </TableCell>
           </TableRow>
         ) : empresas.length === 0 ? (
           <TableRow>
-            <TableCell colSpan={7} className="text-center">
+            <TableCell colSpan={6} className="text-center">
               Nenhuma empresa encontrada
             </TableCell>
           </TableRow>
@@ -603,7 +622,6 @@ const EmpresasTable = ({
                   {empresa.status ? "Ativo" : "Inativo"}
                 </Badge>
               </TableCell>
-              <TableCell>{getContatosCount(empresa.id)}</TableCell>
               <TableCell>{getOportunidadesCount(empresa.id)}</TableCell>
               <TableCell className="max-w-xs truncate">
                 {empresa.descricao || "-"}
