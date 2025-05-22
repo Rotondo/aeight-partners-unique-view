@@ -1,4 +1,3 @@
-
 // Common types
 
 // Categoria (Category)
@@ -15,7 +14,6 @@ export enum TipoEmpresa {
   CLIENTE = "cliente"
 }
 
-// Updated to match actual string values used in the application
 export type EmpresaTipoString = "intragrupo" | "parceiro" | "cliente";
 
 export interface Empresa {
@@ -35,11 +33,11 @@ export interface EmpresaCategoria {
 
 // Contato (Contact)
 export interface Contato {
-  id: string;
-  empresa_id: string;
-  nome: string;
-  telefone: string;
-  email: string;
+  id?: string;
+  empresa_id?: string;
+  nome?: string;
+  telefone?: string;
+  email?: string;
 }
 
 // Usuario (User)
@@ -55,6 +53,9 @@ export interface Usuario {
 // Oportunidade (Opportunity)
 export type StatusOportunidade = "em_contato" | "negociando" | "ganho" | "perdido" | "Contato";
 
+// Natureza da oportunidade (intra/extragrupo)
+export type TipoNatureza = "intragrupo" | "extragrupo";
+
 export interface Oportunidade {
   id: string;
   empresa_origem_id: string;
@@ -67,9 +68,11 @@ export interface Oportunidade {
   motivo_perda?: string;
   usuario_envio_id?: string;
   usuario_recebe_id?: string;
+  usuario_recebe_nome?: string; // Executivo responsável
   observacoes?: string;
   nome_lead: string;
-  // Relações - these are not in the actual DB model but used for UI
+  tipo_natureza?: TipoNatureza; // "intragrupo" ou "extragrupo"
+  // Relações para UI
   empresa_origem?: Empresa;
   empresa_destino?: Empresa;
   contato?: Contato;
