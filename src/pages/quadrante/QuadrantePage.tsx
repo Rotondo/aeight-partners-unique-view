@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import QuadranteChart from "@/components/quadrante/QuadranteChart";
@@ -33,7 +33,6 @@ function mapIndicadorToPoint(item: IndicadoresParceiro, empresas: Empresa[]): Qu
 const QuadrantePage: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [indicadores, setIndicadores] = useState<IndicadoresParceiro[]>([]);
   const [quadrantPoints, setQuadrantPoints] = useState<QuadrantPoint[]>([]);
@@ -46,8 +45,18 @@ const QuadrantePage: React.FC = () => {
       setLoading(true);
       const { data: empresasData } = await supabase.from("empresas").select("*");
       setEmpresas(empresasData || []);
-      const { data: indicadoresData } = await supabase.from("indicadores_parceiro").select("*");
-      setIndicadores(indicadoresData || []);
+      const { data: indicadoresData } = await supabase
+        .from("indicadores_parceiro")
+        .select("*")
+        .order("data_avaliacao", { ascending: false });
+      // Mantém apenas o registro mais recente de cada empresa/parceiro
+      const unicosPorEmpresa: Record<string, IndicadoresParceiro> = {};
+      (indicadoresData || []).forEach((item) => {
+        if (item.empresa_id && !unicosPorEmpresa[item.empresa_id]) {
+          unicosPorEmpresa[item.empresa_id] = item;
+        }
+      });
+      setIndicadores(Object.values(unicosPorEmpresa));
       setLoading(false);
     };
     fetchData();
@@ -62,17 +71,17 @@ const QuadrantePage: React.FC = () => {
     }
   }, [indicadores, empresas]);
 
-  // Seleciona parceiro ao clicar no gráfico
-  const handlePointClick = useCallback((pointId: string) => {
+  // Sincroniza seleção de parceiro entre gráfico e formulário
+  const handlePointClick = (pointId: string) => {
     const parceiro = indicadores.find((p) => (p.id || p.empresa_id) === pointId);
     setSelectedParceiro(parceiro || null);
-  }, [indicadores]);
+  };
 
-  // Seleciona parceiro ao escolher no formulário
-  const handleParceiroSelect = useCallback((empresa_id: string) => {
+  // Sincroniza seleção de parceiro via formulário
+  const handleParceiroSelect = (empresa_id: string) => {
     const parceiro = indicadores.find((p) => p.empresa_id === empresa_id);
     setSelectedParceiro(parceiro || null);
-  }, [indicadores]);
+  };
 
   // Salva indicador (edição/criação) e atualiza quadrante em tempo real
   const handleSaveIndicador = async (indicador: Partial<IndicadoresParceiro>) => {
@@ -108,8 +117,19 @@ const QuadrantePage: React.FC = () => {
           .insert([newIndicador])
           .select();
         if (error) throw error;
-        updatedIndicadores = [...indicadores, ...(data || [])];
-        setIndicadores(updatedIndicadores);
+        // Após inserir, re-filtra para manter só o mais recente de cada empresa
+        const novaLista = [newIndicador, ...indicadores].sort(
+          (a, b) =>
+            new Date(b.data_avaliacao || "").getTime() -
+            new Date(a.data_avaliacao || "").getTime()
+        );
+        const unicosPorEmpresa: Record<string, IndicadoresParceiro> = {};
+        novaLista.forEach((item) => {
+          if (item.empresa_id && !unicosPorEmpresa[item.empresa_id]) {
+            unicosPorEmpresa[item.empresa_id] = item;
+          }
+        });
+        setIndicadores(Object.values(unicosPorEmpresa));
       }
       toast({
         title: "Sucesso",
