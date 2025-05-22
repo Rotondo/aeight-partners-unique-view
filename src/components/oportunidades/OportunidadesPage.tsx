@@ -26,8 +26,9 @@ export const OportunidadesPage: React.FC = () => {
 
   return (
     <OportunidadesProvider>
-      <div className="container mx-auto p-4 space-y-6">
-        <div className="flex justify-between items-center mb-6">
+      <div className="container mx-auto p-4 space-y-6 relative">
+        {/* Botão Nova Oportunidade sempre fixo no topo direito */}
+        <div className="flex justify-between items-center mb-6 sticky top-0 bg-white z-10 py-2">
           <h1 className="text-2xl font-bold">Gestão de Oportunidades</h1>
           {!isFormOpen && user && (
             <Button onClick={() => setIsFormOpen(true)} className="flex items-center gap-2">
@@ -36,7 +37,6 @@ export const OportunidadesPage: React.FC = () => {
             </Button>
           )}
         </div>
-
         {isFormOpen ? (
           <OportunidadesForm 
             oportunidadeId={selectedOportunidadeId} 
