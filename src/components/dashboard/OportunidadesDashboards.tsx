@@ -14,14 +14,14 @@ import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, Legend, ReferenceLine, PieChart, Pie, Cell, LabelList, Treemap
+  ResponsiveContainer, Legend, ReferenceLine, PieChart, Pie, Cell, LabelList
 } from 'recharts';
 import { format, subMonths } from 'date-fns';
 
-// CORES VISUAIS MELHORADAS
-const BAR_COLOR_RECEBIDAS = '#2563eb'; // azul forte (Recebidas)
-const BAR_COLOR_ENVIADAS = '#ef4444';  // vermelho forte (Enviadas)
-const BAR_COLOR_SALDO = '#10b981';     // verde (Saldo)
+// CORES VISUAIS
+const BAR_COLOR_RECEBIDAS = '#2563eb';
+const BAR_COLOR_ENVIADAS = '#ef4444';
+const BAR_COLOR_SALDO = '#10b981';
 const STATUS_COLORS = {
   'em_contato': '#FFBB28',
   'negociando': '#0088FE',
@@ -37,14 +37,15 @@ const quartersOptions = [
   { value: 'Q4', label: 'Q4 (out-dez)' },
 ];
 
-function getQuarter(date) {
+function getQuarter(date: Date) {
   const month = date.getMonth();
   if (month < 3) return 'Q1';
   if (month < 6) return 'Q2';
   if (month < 9) return 'Q3';
   return 'Q4';
 }
-function getStatusLabel(status) {
+
+function getStatusLabel(status: string) {
   switch (status) {
     case 'em_contato': return 'Em Contato';
     case 'negociando': return 'Negociando';
@@ -54,30 +55,36 @@ function getStatusLabel(status) {
   }
 }
 
+function getYear(date: Date) {
+  return date.getFullYear();
+}
+
 export const OportunidadesDashboards: React.FC = () => {
   // Estados de dados
-  const [empresas, setEmpresas] = useState([]);
-  const [matrizIntra, setMatrizIntra] = useState([]);
-  const [matrizParceiros, setMatrizParceiros] = useState([]);
-  const [qualidadeData, setQualidadeData] = useState([]);
-  const [statusDistribuicao, setStatusDistribuicao] = useState([]);
-  const [rankingEnviadas, setRankingEnviadas] = useState([]);
-  const [rankingRecebidas, setRankingRecebidas] = useState([]);
-  const [balanco, setBalanco] = useState([]);
+  const [empresas, setEmpresas] = useState<any[]>([]);
+  const [matrizIntra, setMatrizIntra] = useState<any[]>([]);
+  const [matrizParceiros, setMatrizParceiros] = useState<any[]>([]);
+  const [qualidadeData, setQualidadeData] = useState<any[]>([]);
+  const [statusDistribuicao, setStatusDistribuicao] = useState<any[]>([]);
+  const [rankingEnviadas, setRankingEnviadas] = useState<any[]>([]);
+  const [rankingRecebidas, setRankingRecebidas] = useState<any[]>([]);
+  const [balanco, setBalanco] = useState<any[]>([]);
   // Filtros
-  const [dataInicio, setDataInicio] = useState(subMonths(new Date(), 6));
-  const [dataFim, setDataFim] = useState(new Date());
+  const [dataInicio, setDataInicio] = useState<Date | null>(subMonths(new Date(), 6));
+  const [dataFim, setDataFim] = useState<Date | null>(new Date());
   const [empresaId, setEmpresaId] = useState('');
   const [status, setStatus] = useState('');
   const [periodo, setPeriodo] = useState('mes');
   const [quarters, setQuarters] = useState(['Q1', 'Q2', 'Q3', 'Q4']);
+  const [quarterYear, setQuarterYear] = useState(new Date().getFullYear());
+  const [availableYears, setAvailableYears] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
     fetchAll();
     // eslint-disable-next-line
-  }, [dataInicio, dataFim, empresaId, status, periodo, quarters]);
+  }, [dataInicio, dataFim, empresaId, status, periodo, quarters, quarterYear]);
 
   async function fetchAll() {
     setLoading(true);
@@ -85,27 +92,37 @@ export const OportunidadesDashboards: React.FC = () => {
       const { data: empresasDb } = await supabase.from("empresas").select("*").order("nome");
       setEmpresas(empresasDb || []);
       const { data: oportunidadesDb } = await supabase.from("oportunidades").select("*, empresa_origem:empresas!empresa_origem_id(id, nome, tipo), empresa_destino:empresas!empresa_destino_id(id, nome, tipo)");
-      const oportunidades = (oportunidadesDb || []).filter(op => {
+      // Coletar todos os anos disponíveis para filtro
+      const anos = Array.from(new Set((oportunidadesDb || []).map((op: any) => {
+        if (!op.data_indicacao) return null;
+        return (new Date(op.data_indicacao)).getFullYear();
+      }).filter(Boolean))).sort((a, b) => b - a);
+      setAvailableYears(anos);
+
+      const oportunidades = (oportunidadesDb || []).filter((op: any) => {
         const dataInd = op.data_indicacao ? new Date(op.data_indicacao) : null;
         let match = true;
         if (dataInicio && dataInd) match = match && dataInd >= dataInicio;
         if (dataFim && dataInd) match = match && dataInd <= dataFim;
         if (empresaId) match = match && (op.empresa_origem_id === empresaId || op.empresa_destino_id === empresaId);
         if (status) match = match && op.status === status;
-        if (periodo === "quarter" && dataInd) match = match && quarters.includes(getQuarter(dataInd));
+        // Novo filtro: quarter + year
+        if (periodo === "quarter" && dataInd) {
+          match = match && quarters.includes(getQuarter(dataInd)) && getYear(dataInd) === quarterYear;
+        }
         return match;
       });
 
       // Matriz INTRAGRUPO
-      const intra = empresasDb.filter(e => e.tipo === "intragrupo");
-      const matrizIntraRows = intra.map(orig => {
-        const row = { origem: orig.nome };
-        intra.forEach(dest => {
+      const intra = empresasDb.filter((e: any) => e.tipo === "intragrupo");
+      const matrizIntraRows = intra.map((orig: any) => {
+        const row: any = { origem: orig.nome };
+        intra.forEach((dest: any) => {
           if (orig.id === dest.id) {
             row[dest.nome] = '-';
           } else {
             row[dest.nome] = oportunidades.filter(
-              op =>
+              (op: any) =>
                 op.empresa_origem_id === orig.id &&
                 op.empresa_destino_id === dest.id &&
                 op.empresa_origem.tipo === "intragrupo" &&
@@ -118,12 +135,12 @@ export const OportunidadesDashboards: React.FC = () => {
       setMatrizIntra(matrizIntraRows);
 
       // Matriz PARCEIROS
-      const parceiros = empresasDb.filter(e => e.tipo === "parceiro");
-      const matrizParceirosRows = parceiros.map(parc => {
-        const row = { parceiro: parc.nome };
-        intra.forEach(intraE => {
+      const parceiros = empresasDb.filter((e: any) => e.tipo === "parceiro");
+      const matrizParceirosRows = parceiros.map((parc: any) => {
+        const row: any = { parceiro: parc.nome };
+        intra.forEach((intraE: any) => {
           row[intraE.nome] =
-            oportunidades.filter(op =>
+            oportunidades.filter((op: any) =>
               (
                 (op.empresa_origem_id === parc.id && op.empresa_destino_id === intraE.id) ||
                 (op.empresa_origem_id === intraE.id && op.empresa_destino_id === parc.id)
@@ -137,12 +154,12 @@ export const OportunidadesDashboards: React.FC = () => {
       });
       setMatrizParceiros(matrizParceirosRows);
 
-      // Qualidade das indicações (exemplo: status por empresa)
-      const qualidade = intra.map(orig => {
+      // Qualidade das indicações (status por empresa)
+      const qualidade = intra.map((orig: any) => {
         let total = 0;
         let ganho = 0;
         let perdido = 0;
-        oportunidades.forEach(op => {
+        oportunidades.forEach((op: any) => {
           if (op.empresa_origem?.nome === orig.nome) {
             total++;
             if (op.status === 'ganho') ganho++;
@@ -159,17 +176,17 @@ export const OportunidadesDashboards: React.FC = () => {
       setQualidadeData(qualidade);
 
       // Status - Geral
-      const statusCount = {};
-      oportunidades.forEach(op => {
+      const statusCount: any = {};
+      oportunidades.forEach((op: any) => {
         if (!statusCount[op.status]) statusCount[op.status] = 0;
         statusCount[op.status]++;
       });
       setStatusDistribuicao(Object.entries(statusCount).map(([status, total]) => ({ status, total })));
 
       // Ranking Enviadas/Recebidas
-      const rankingEnv = {};
-      const rankingRec = {};
-      oportunidades.forEach(op => {
+      const rankingEnv: any = {};
+      const rankingRec: any = {};
+      oportunidades.forEach((op: any) => {
         if (op.empresa_origem?.nome) {
           if (!rankingEnv[op.empresa_origem.nome]) rankingEnv[op.empresa_origem.nome] = 0;
           rankingEnv[op.empresa_origem.nome]++;
@@ -183,8 +200,8 @@ export const OportunidadesDashboards: React.FC = () => {
       setRankingRecebidas(Object.entries(rankingRec).map(([empresa, indicacoes]) => ({ empresa, indicacoes })).sort((a, b) => b.indicacoes - a.indicacoes));
 
       // Balanço Grupo x Parceiros
-      const balGrupo = oportunidades.filter(op => op.empresa_origem.tipo === "intragrupo" && op.empresa_destino.tipo === "parceiro").length;
-      const balParc = oportunidades.filter(op => op.empresa_origem.tipo === "parceiro" && op.empresa_destino.tipo === "intragrupo").length;
+      const balGrupo = oportunidades.filter((op: any) => op.empresa_origem.tipo === "intragrupo" && op.empresa_destino.tipo === "parceiro").length;
+      const balParc = oportunidades.filter((op: any) => op.empresa_origem.tipo === "parceiro" && op.empresa_destino.tipo === "intragrupo").length;
       setBalanco([
         { tipo: "Grupo → Parceiros", valor: balGrupo },
         { tipo: "Parceiros → Grupo", valor: balParc }
@@ -197,14 +214,14 @@ export const OportunidadesDashboards: React.FC = () => {
   }
 
   // TABELA MATRIZ com totalizadores e opacidade nos zeros
-  function renderMatrizTable(rows, colKey, label) {
+  function renderMatrizTable(rows: any[], colKey: string, label: string) {
     if (!rows.length) return <div className="text-center">Nenhum dado</div>;
     const cols = Object.keys(rows[0]).filter(c => c !== colKey);
-    const colTotals = {};
+    const colTotals: any = {};
     cols.forEach(c => {
       colTotals[c] = rows.reduce((acc, row) => acc + (row[c] !== '-' ? row[c] : 0), 0);
     });
-    const grandTotal = Object.values(colTotals).reduce((a, b) => a + b, 0);
+    const grandTotal = Object.values(colTotals).reduce((a: any, b: any) => a + b, 0);
     return (
       <div className="overflow-x-auto">
         <table className="min-w-full text-xs border">
@@ -246,14 +263,12 @@ export const OportunidadesDashboards: React.FC = () => {
     );
   }
 
-  // NOVO GRÁFICO DIVERGENTE, barras lado a lado, cores claras, tooltips e legendas
-  function renderMatrizDivergenteBarChart(matrizIntraRows) {
+  // GRÁFICO DIVERGENTE INTRAGRUPO
+  function renderMatrizDivergenteBarChart(matrizIntraRows: any[]) {
     if (!matrizIntraRows.length) return <div className="text-center text-xs">Nenhum dado para gráfico</div>;
     const empresasNomes = matrizIntraRows.map(row => row.origem);
 
-    // Para cada empresa, calcula:
-    // recebidas: soma das colunas daquele nome (exceto '-')
-    // enviadas: soma da linha dela (exceto '-')
+    // Para cada empresa, calcula: recebidas, enviadas, saldo
     const dados = empresasNomes.map(nome => {
       let recebidas = 0;
       let enviadas = 0;
@@ -277,7 +292,6 @@ export const OportunidadesDashboards: React.FC = () => {
       };
     });
 
-    // Encontra maior valor absoluto para o range simétrico
     const maxAbs = Math.max(
       5,
       ...dados.map(d => Math.abs(d.recebidas)),
@@ -285,14 +299,13 @@ export const OportunidadesDashboards: React.FC = () => {
       ...dados.map(d => Math.abs(d.saldo))
     );
 
-    // Tooltip customizada
-    const CustomTooltip = ({ active, payload, label }) => {
+    const CustomTooltip = ({ active, payload, label }: any) => {
       if (active && payload && payload.length) {
         return (
           <div style={{ background: "#fff", border: "1px solid #ddd", borderRadius: 6, padding: 8 }}>
             <strong>{label}</strong>
             <ul style={{ margin: 0, padding: 0, listStyle: "none" }}>
-              {payload.map((entry, idx) => (
+              {payload.map((entry: any, idx: number) => (
                 <li key={idx} style={{ color: entry.color }}>
                   {entry.name}: {Math.abs(entry.value)}
                 </li>
@@ -314,7 +327,7 @@ export const OportunidadesDashboards: React.FC = () => {
           <Legend
             verticalAlign="top"
             wrapperStyle={{ paddingBottom: 12, fontWeight: 700 }}
-            formatter={(value, entry) => {
+            formatter={(value: string) => {
               if (value === "recebidas") return <span style={{ color: BAR_COLOR_RECEBIDAS }}>Recebidas</span>;
               if (value === "enviadas") return <span style={{ color: BAR_COLOR_ENVIADAS }}>Enviadas</span>;
               if (value === "saldo") return <span style={{ color: BAR_COLOR_SALDO }}>Saldo</span>;
@@ -330,8 +343,7 @@ export const OportunidadesDashboards: React.FC = () => {
     );
   }
 
-  // Gráfico de barras para ranking
-  function renderRankingBarChart(ranking, label) {
+  function renderRankingBarChart(ranking: any[], label: string) {
     if (!ranking.length) return <div className="text-center">Nenhum dado</div>;
     return (
       <ResponsiveContainer width="100%" height={260}>
@@ -347,8 +359,8 @@ export const OportunidadesDashboards: React.FC = () => {
       </ResponsiveContainer>
     );
   }
-  // Gráfico de barras para balanço
-  function renderBalancoBarChart(balanco) {
+
+  function renderBalancoBarChart(balanco: any[]) {
     if (!balanco.length) return <div className="text-center">Nenhum dado</div>;
     return (
       <ResponsiveContainer width="100%" height={160}>
@@ -364,8 +376,8 @@ export const OportunidadesDashboards: React.FC = () => {
       </ResponsiveContainer>
     );
   }
-  // Gráfico de pizza para status
-  function renderStatusPieChart(statusDistribuicao) {
+
+  function renderStatusPieChart(statusDistribuicao: any[]) {
     if (!statusDistribuicao.length) return <div className="text-center">Nenhum dado</div>;
     return (
       <ResponsiveContainer width="100%" height={280}>
@@ -379,24 +391,23 @@ export const OportunidadesDashboards: React.FC = () => {
             fill={BAR_COLOR_RECEBIDAS}
             dataKey="total"
             nameKey="status"
-            label={({ name, percent }) => `${getStatusLabel(name)} ${(percent * 100).toFixed(0)}%`}
+            label={({ name, percent }: any) => `${getStatusLabel(name)} ${(percent * 100).toFixed(0)}%`}
           >
             {statusDistribuicao.map((entry, index) => (
               <Cell
                 key={`cell-${index}`}
-                fill={STATUS_COLORS[entry.status] || COLORS[index % COLORS.length]}
+                fill={STATUS_COLORS[entry.status as keyof typeof STATUS_COLORS] || COLORS[index % COLORS.length]}
               />
             ))}
           </Pie>
-          <Tooltip formatter={(value, name, props) => [`${value}`, getStatusLabel(props.payload.status)]} />
+          <Tooltip formatter={(value, name, props: any) => [`${value}`, getStatusLabel(props.payload.status)]} />
           <Legend formatter={getStatusLabel} />
         </PieChart>
       </ResponsiveContainer>
     );
   }
 
-  // Gráfico de qualidade por empresa
-  function renderQualidadeBarChart(qualidadeData) {
+  function renderQualidadeBarChart(qualidadeData: any[]) {
     if (!qualidadeData.length) return <div className="text-center">Nenhum dado</div>;
     return (
       <ResponsiveContainer width="100%" height={220}>
@@ -487,7 +498,9 @@ export const OportunidadesDashboards: React.FC = () => {
             </SelectContent>
           </Select>
         </div>
+        {/* Novo filtro de Ano do Quarter */}
         {periodo === "quarter" && (
+          <>
           <div className="w-full md:w-auto">
             <Label htmlFor="quarter">Quarter</Label>
             <Select
@@ -508,6 +521,23 @@ export const OportunidadesDashboards: React.FC = () => {
             </Select>
             <div className="text-xs text-muted-foreground mt-1">Você pode selecionar um ou mais quarters</div>
           </div>
+          <div className="w-full md:w-auto">
+            <Label htmlFor="quarterYear">Ano</Label>
+            <Select
+              value={String(quarterYear)}
+              onValueChange={v => setQuarterYear(Number(v))}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Selecione o ano" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableYears.map(ano => (
+                  <SelectItem key={ano} value={String(ano)}>{ano}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          </>
         )}
       </div>
 
