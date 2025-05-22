@@ -26,10 +26,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Users, Download, Edit, Trash, Eye, RefreshCw } from "lucide-react";
+import { Building2, Users, RefreshCw, Edit, Trash, Eye, Download } from "lucide-react";
 import { Empresa, EmpresaTipoString } from "@/types";
 import { useToast } from "@/hooks/use-toast";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const EmpresasPage: React.FC = () => {
@@ -46,58 +46,38 @@ const EmpresasPage: React.FC = () => {
   const [modalAberto, setModalAberto] = useState(false);
   const { toast } = useToast();
 
-  // Helper para contar oportunidades por empresa
+  // Funções de apoio
+  function getTipoLabel(tipo: EmpresaTipoString): string {
+    switch (tipo) {
+      case "intragrupo":
+        return "Intragrupo";
+      case "parceiro":
+        return "Parceiro";
+      case "cliente":
+        return "Cliente";
+      default:
+        return tipo;
+    }
+  }
+  function getTipoBadgeColor(tipo: EmpresaTipoString): string {
+    switch (tipo) {
+      case "intragrupo":
+        return "bg-blue-500";
+      case "parceiro":
+        return "bg-green-500";
+      case "cliente":
+        return "bg-amber-500";
+      default:
+        return "bg-gray-500";
+    }
+  }
   function getOportunidadesCount(empresaId: string): number {
     return oportunidades.filter(
-      (o) => o.empresa_origem_id === empresaId || o.empresa_destino_id === empresaId
+      (o) =>
+        o.empresa_origem_id === empresaId ||
+        o.empresa_destino_id === empresaId
     ).length;
   }
-
-  // Derived state
-  const filteredEmpresas = empresas
-    .filter((empresa) => {
-      const matchesSearch =
-        empresa.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (empresa.descricao &&
-          empresa.descricao.toLowerCase().includes(searchTerm.toLowerCase()));
-
-      const matchesType =
-        tipoFilter && tipoFilter !== "all" ? empresa.tipo === tipoFilter : true;
-
-      const matchesTab =
-        currentTab === "todas"
-          ? true
-          : currentTab === "intragrupo"
-          ? empresa.tipo === "intragrupo"
-          : currentTab === "parceiros"
-          ? empresa.tipo === "parceiro"
-          : empresa.tipo === "cliente";
-
-      return matchesSearch && matchesType && matchesTab;
-    })
-    .sort((a, b) => {
-      // Ordenação dinâmica
-      let vA: any;
-      let vB: any;
-
-      if (sortColumn === "oportunidades") {
-        vA = getOportunidadesCount(a.id);
-        vB = getOportunidadesCount(b.id);
-      } else {
-        vA = a[sortColumn as keyof Empresa];
-        vB = b[sortColumn as keyof Empresa];
-      }
-
-      if (typeof vA === "string" && typeof vB === "string") {
-        vA = vA.toLowerCase();
-        vB = vB.toLowerCase();
-      }
-      if (vA === undefined) vA = "";
-      if (vB === undefined) vB = "";
-      if (vA < vB) return sortAsc ? -1 : 1;
-      if (vA > vB) return sortAsc ? 1 : -1;
-      return 0;
-    });
 
   // Garantia de contadores únicos nas estatísticas
   const uniqueEmpresas = Array.from(
@@ -115,17 +95,16 @@ const EmpresasPage: React.FC = () => {
     { name: "Parceiros", value: totalParceiros, color: "#82ca9d" },
     { name: "Clientes", value: totalClientes, color: "#ffc658" },
   ];
+  const COLORS = ["#8884d8", "#82ca9d", "#ffc658", "#ff8042"];
 
-  // Gráfico de barras: empresas por oportunidades
-  const barData = empresas
-    .map((e) => ({
-      nome: e.nome,
-      oportunidades: getOportunidadesCount(e.id),
+  // Gráfico de barras: empresas por oportunidades (top 10)
+  const empresasOportunidades = uniqueEmpresas
+    .map((empresa) => ({
+      nome: empresa.nome,
+      oportunidades: getOportunidadesCount(empresa.id),
     }))
     .sort((a, b) => b.oportunidades - a.oportunidades)
-    .slice(0, 10); // top 10 empresas
-
-  const COLORS = ["#8884d8", "#82ca9d", "#ffc658", "#ff8042"];
+    .slice(0, 10);
 
   useEffect(() => {
     fetchEmpresas();
@@ -156,20 +135,18 @@ const EmpresasPage: React.FC = () => {
   };
 
   const fetchContatos = async () => {
-    // Mantido apenas para compatibilidade, mas não será usado
     try {
       const { data, error } = await supabase.from("contatos").select("*");
       if (error) throw error;
       setContatos(data);
     } catch (error) {
-      // silencioso
+      console.error("Erro ao buscar contatos:", error);
     }
   };
 
   const fetchOportunidades = async () => {
     try {
       const { data, error } = await supabase.from("oportunidades").select("*");
-
       if (error) throw error;
       setOportunidades(data);
     } catch (error) {
@@ -200,7 +177,7 @@ const EmpresasPage: React.FC = () => {
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
     link.setAttribute("download", "empresas.csv");
-    document.body.appendChild(link); // Required for FF
+    document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
@@ -212,7 +189,6 @@ const EmpresasPage: React.FC = () => {
       description: `Aqui abriria o modal de edição para ${empresa.nome}.`,
       variant: "default",
     });
-    // Aqui você poderia mostrar um modal de edição real
   };
 
   // Excluir empresa
@@ -250,32 +226,48 @@ const EmpresasPage: React.FC = () => {
     setModalAberto(true);
   };
 
-  // Helper functions
-  function getTipoLabel(tipo: EmpresaTipoString): string {
-    switch (tipo) {
-      case "intragrupo":
-        return "Intragrupo";
-      case "parceiro":
-        return "Parceiro";
-      case "cliente":
-        return "Cliente";
-      default:
-        return tipo;
-    }
-  }
+  // --- Filtragem e ordenação ---
+  const filteredEmpresas = empresas
+    .filter((empresa) => {
+      const matchesSearch =
+        empresa.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (empresa.descricao &&
+          empresa.descricao.toLowerCase().includes(searchTerm.toLowerCase()));
 
-  function getTipoBadgeColor(tipo: EmpresaTipoString): string {
-    switch (tipo) {
-      case "intragrupo":
-        return "bg-blue-500";
-      case "parceiro":
-        return "bg-green-500";
-      case "cliente":
-        return "bg-amber-500";
-      default:
-        return "bg-gray-500";
-    }
-  }
+      const matchesType =
+        tipoFilter && tipoFilter !== "all" ? empresa.tipo === tipoFilter : true;
+
+      const matchesTab =
+        currentTab === "todas"
+          ? true
+          : currentTab === "intragrupo"
+          ? empresa.tipo === "intragrupo"
+          : currentTab === "parceiros"
+          ? empresa.tipo === "parceiro"
+          : empresa.tipo === "cliente";
+
+      return matchesSearch && matchesType && matchesTab;
+    })
+    .sort((a, b) => {
+      let vA: any;
+      let vB: any;
+      if (sortColumn === "oportunidades") {
+        vA = getOportunidadesCount(a.id);
+        vB = getOportunidadesCount(b.id);
+      } else {
+        vA = a[sortColumn as keyof Empresa];
+        vB = b[sortColumn as keyof Empresa];
+        if (typeof vA === "string" && typeof vB === "string") {
+          vA = vA.toLowerCase();
+          vB = vB.toLowerCase();
+        }
+      }
+      if (vA === undefined) vA = "";
+      if (vB === undefined) vB = "";
+      if (vA < vB) return sortAsc ? -1 : 1;
+      if (vA > vB) return sortAsc ? 1 : -1;
+      return 0;
+    });
 
   // Ordenação ao clicar cabeçalho
   const handleSort = (column: string) => {
@@ -381,18 +373,22 @@ const EmpresasPage: React.FC = () => {
         </Card>
         <Card className="lg:col-span-1">
           <CardHeader>
-            <CardTitle>Top Empresas por Oportunidades</CardTitle>
-            <CardDescription>
-              Empresas com maior número de oportunidades (Top 10)
-            </CardDescription>
+            <CardTitle>Empresas por Oportunidades</CardTitle>
+            <CardDescription>Top 10 empresas com mais oportunidades</CardDescription>
           </CardHeader>
           <CardContent className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={barData} layout="vertical" margin={{ left: 30, right: 20, top: 20, bottom: 20 }}>
+              <BarChart data={empresasOportunidades} layout="vertical" margin={{ left: 40, right: 10, top: 20, bottom: 20 }}>
+                <CartesianGrid strokeDasharray="3 3" />
                 <XAxis type="number" allowDecimals={false} />
                 <YAxis dataKey="nome" type="category" width={120} />
-                <Bar dataKey="oportunidades" fill="#8884d8" />
                 <Tooltip />
+                <Legend />
+                <Bar dataKey="oportunidades" fill="#8884d8" name="Oportunidades">
+                  {empresasOportunidades.map((entry, index) => (
+                    <Cell key={`cell-bar-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -588,7 +584,10 @@ const EmpresasTable = ({
           <TableHead className="cursor-pointer" onClick={() => onSort("status")}>
             Status {renderSortIcon("status")}
           </TableHead>
-          <TableHead className="cursor-pointer" onClick={() => onSort("oportunidades")}>
+          <TableHead
+            className="cursor-pointer"
+            onClick={() => onSort("oportunidades")}
+          >
             Oportunidades {renderSortIcon("oportunidades")}
           </TableHead>
           <TableHead>Descrição</TableHead>
