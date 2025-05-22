@@ -63,17 +63,22 @@ const QuadranteForm: React.FC<QuadranteFormProps> = ({
     fetchEmpresas();
   }, []);
 
+  // Ordena parceiros alfabeticamente
+  const parceirosOrdenados = [...parceiros].sort((a, b) =>
+    a.nome.localeCompare(b.nome, "pt-BR")
+  );
+
   // Configure form
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       empresa_id: indicador?.empresa_id || "",
-      potencial_leads: indicador?.potencial_leads || 5,
-      potencial_investimento: indicador?.potencial_investimento || 5,
-      engajamento: indicador?.engajamento || 5,
-      alinhamento: indicador?.alinhamento || 5,
+      potencial_leads: indicador?.potencial_leads ?? 5,
+      potencial_investimento: indicador?.potencial_investimento ?? 5,
+      engajamento: indicador?.engajamento ?? 5,
+      alinhamento: indicador?.alinhamento ?? 5,
       tamanho: indicador?.tamanho || "M",
-      base_clientes: indicador?.base_clientes || 0,
+      base_clientes: indicador?.base_clientes ?? 0,
     },
   });
 
@@ -150,7 +155,7 @@ const QuadranteForm: React.FC<QuadranteFormProps> = ({
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {parceiros.map((empresa) => (
+                  {parceirosOrdenados.map((empresa) => (
                     <SelectItem key={empresa.id} value={empresa.id}>
                       {empresa.nome}
                     </SelectItem>
@@ -198,7 +203,7 @@ const QuadranteForm: React.FC<QuadranteFormProps> = ({
               <FormControl>
                 <Slider
                   min={0}
-                  max={5}
+                  max={10}
                   step={1}
                   value={[field.value]}
                   onValueChange={([val]) => field.onChange(val)}
@@ -221,7 +226,7 @@ const QuadranteForm: React.FC<QuadranteFormProps> = ({
               <FormControl>
                 <Slider
                   min={0}
-                  max={5}
+                  max={10}
                   step={1}
                   value={[field.value]}
                   onValueChange={([val]) => field.onChange(val)}
@@ -244,7 +249,7 @@ const QuadranteForm: React.FC<QuadranteFormProps> = ({
               <FormControl>
                 <Slider
                   min={0}
-                  max={5}
+                  max={10}
                   step={1}
                   value={[field.value]}
                   onValueChange={([val]) => field.onChange(val)}
@@ -267,7 +272,7 @@ const QuadranteForm: React.FC<QuadranteFormProps> = ({
               <FormControl>
                 <Slider
                   min={0}
-                  max={5}
+                  max={10}
                   step={1}
                   value={[field.value]}
                   onValueChange={([val]) => field.onChange(val)}
