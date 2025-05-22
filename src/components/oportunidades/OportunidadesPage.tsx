@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { OportunidadesProvider } from "@/components/oportunidades/OportunidadesContext";
 import { OportunidadesList } from "@/components/oportunidades/OportunidadesList";
