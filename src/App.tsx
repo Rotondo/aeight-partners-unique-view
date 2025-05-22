@@ -3,7 +3,7 @@ import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import MainLayout from "@/components/layout/MainLayout";
 import DashboardPage from "@/pages/dashboard/DashboardPage";
-import OportunidadesPage from "@/pages/oportunidades/OportunidadesPage";
+import { OportunidadesPage } from "@/components/oportunidades/OportunidadesPage";
 import IndicadoresPage from "@/pages/indicadores/IndicadoresPage";
 import EmpresasPage from "@/pages/empresas/EmpresasPage";
 import NotFoundPage from "@/pages/NotFoundPage";
