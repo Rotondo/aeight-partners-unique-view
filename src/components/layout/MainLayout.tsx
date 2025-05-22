@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Outlet } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -12,7 +13,7 @@ const MainLayout: React.FC = () => {
       <Sidebar />
       <div className="flex flex-1 flex-col">
         <Header />
-        <main className="flex-1 p-6">
+        <main className="flex-1 p-6 overflow-auto">
           <Outlet />
         </main>
       </div>
