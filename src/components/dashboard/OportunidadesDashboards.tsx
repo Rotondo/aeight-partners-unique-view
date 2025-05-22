@@ -87,6 +87,9 @@ export const OportunidadesDashboards: React.FC = () => {
   const [availableYears, setAvailableYears] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
   const [oportunidades, setOportunidades] = useState<any[]>([]);
+  // NOVO: destaque de empresa no gráfico de linhas
+  const [empresaSelecionadaLinha, setEmpresaSelecionadaLinha] = useState<string>('all');
+
   const { toast } = useToast();
 
   useEffect(() => {
@@ -350,9 +353,9 @@ export const OportunidadesDashboards: React.FC = () => {
     );
   }
 
-  // NOVO: GRÁFICO DE LINHAS MENSAL INTRAGRUPO
-  function renderMatrizLineChart(oportunidades: any[], empresas: any[]) {
-    if (!empresas.length || !oportunidades.length) return <div className="text-center text-xs">Nenhum dado para gráfico</div>;
+  // GRÁFICO DE LINHAS MENSAL INTRAGRUPO COM DESTAQUE
+  function renderMatrizLineChart(oportunidades: any[], empresasIntra: any[]) {
+    if (!empresasIntra.length || !oportunidades.length) return <div className="text-center text-xs">Nenhum dado para gráfico</div>;
 
     // Gera lista de meses entre dataInicio e dataFim
     const start = dataInicio ?? new Date();
@@ -368,7 +371,7 @@ export const OportunidadesDashboards: React.FC = () => {
     const data: any[] = months.map((monthDate) => {
       const monthYear = getMonthYear(monthDate);
       let entry: any = { month: monthYear };
-      empresas.forEach((empresa, idx) => {
+      empresasIntra.forEach((empresa, idx) => {
         // Recebidas: oportunidades onde destino é a empresa (tipo intragrupo) nesse mês
         entry[`rec_${empresa.nome}`] = oportunidades.filter((op: any) => {
           if (!op.empresa_destino || !op.data_indicacao) return false;
@@ -391,48 +394,77 @@ export const OportunidadesDashboards: React.FC = () => {
       return entry;
     });
 
-    // Monta linhas: uma para recebidas de cada empresa (azul, positiva), uma para enviadas (vermelha, negativa)
+    // Seleção para destaque
     return (
-      <ResponsiveContainer width="99%" height={380}>
-        <LineChart data={data}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="month" />
-          <YAxis />
-          <Tooltip
-            formatter={v => Math.abs(v)}
-            labelFormatter={v => `Mês: ${v}`}
-          />
-          <Legend />
-          {empresas.map((empresa, idx) => (
-            <Line
-              key={`rec_${empresa.nome}`}
-              type="monotone"
-              dataKey={`rec_${empresa.nome}`}
-              stroke={LINE_COLORS[idx % LINE_COLORS.length]}
-              name={`${empresa.nome} Recebidas`}
-              dot={{ r: 4 }}
-              strokeWidth={2}
-              isAnimationActive={false}
-              legendType="line"
+      <div>
+        <div className="flex mb-2 items-center">
+          <Label className="mr-2">Empresa em destaque</Label>
+          <Select
+            value={empresaSelecionadaLinha}
+            onValueChange={v => setEmpresaSelecionadaLinha(v)}
+          >
+            <SelectTrigger className="w-64">
+              <SelectValue>
+                {empresaSelecionadaLinha === "all" ? "Todas as empresas" : empresaSelecionadaLinha}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas as empresas</SelectItem>
+              {empresasIntra.map((empresa, idx) => (
+                <SelectItem key={empresa.nome} value={empresa.nome}>{empresa.nome}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <ResponsiveContainer width="99%" height={380}>
+          <LineChart data={data}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="month" />
+            <YAxis />
+            <Tooltip
+              formatter={v => Math.abs(v)}
+              labelFormatter={v => `Mês: ${v}`}
             />
-          ))}
-          {empresas.map((empresa, idx) => (
-            <Line
-              key={`env_${empresa.nome}`}
-              type="monotone"
-              dataKey={`env_${empresa.nome}`}
-              stroke={LINE_COLORS[idx % LINE_COLORS.length]}
-              strokeDasharray="5 5"
-              name={`${empresa.nome} Enviadas`}
-              dot={{ r: 4 }}
-              strokeWidth={2}
-              isAnimationActive={false}
-              legendType="line"
-            />
-          ))}
-          <ReferenceLine y={0} stroke="#222" strokeWidth={1.5} />
-        </LineChart>
-      </ResponsiveContainer>
+            <Legend />
+            {empresasIntra.map((empresa, idx) => (
+              <Line
+                key={`rec_${empresa.nome}`}
+                type="monotone"
+                dataKey={`rec_${empresa.nome}`}
+                stroke={LINE_COLORS[idx % LINE_COLORS.length]}
+                name={`${empresa.nome} Recebidas`}
+                dot={{ r: 3 }}
+                strokeWidth={2}
+                isAnimationActive={false}
+                legendType="line"
+                opacity={empresaSelecionadaLinha === 'all' || empresaSelecionadaLinha === empresa.nome ? 1 : 0.1}
+                style={{
+                  filter: empresaSelecionadaLinha === 'all' || empresaSelecionadaLinha === empresa.nome ? 'none' : 'grayscale(90%) blur(1px)'
+                }}
+              />
+            ))}
+            {empresasIntra.map((empresa, idx) => (
+              <Line
+                key={`env_${empresa.nome}`}
+                type="monotone"
+                dataKey={`env_${empresa.nome}`}
+                stroke={LINE_COLORS[idx % LINE_COLORS.length]}
+                strokeDasharray="5 5"
+                name={`${empresa.nome} Enviadas`}
+                dot={{ r: 3 }}
+                strokeWidth={2}
+                isAnimationActive={false}
+                legendType="line"
+                opacity={empresaSelecionadaLinha === 'all' || empresaSelecionadaLinha === empresa.nome ? 1 : 0.1}
+                style={{
+                  filter: empresaSelecionadaLinha === 'all' || empresaSelecionadaLinha === empresa.nome ? 'none' : 'grayscale(90%) blur(1px)'
+                }}
+              />
+            ))}
+            <ReferenceLine y={0} stroke="#222" strokeWidth={1.5} />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
     );
   }
 
