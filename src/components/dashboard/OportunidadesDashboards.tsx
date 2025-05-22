@@ -1,405 +1,210 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { TipoEmpresa, MatrizData, QualidadeData, BalancoData, RankingData, StatusData, StatusOportunidade } from '@/types';
-import { useToast } from '@/hooks/use-toast';
-import { format, subMonths } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DatePicker } from '@/components/ui/date-picker';
 import { supabase } from '@/lib/supabase';
-import {
-  getMatrizIntragrupo,
-  getMatrizParcerias,
-  getQualidadeIndicacoes,
-  getBalancoGrupoParcerias,
-  getRankingParceirosEnviadas,
-  getRankingParceirosRecebidas,
-  getStatusDistribution
-} from '@/lib/dbFunctions';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-  PieChart,
-  Pie,
-  Cell,
-  LabelList,
-  Treemap,
-  LineChart,
-  Line
-} from 'recharts';
+import { useToast } from '@/hooks/use-toast';
 
-// Types
-interface Empresa {
-  id: string;
-  nome: string;
-  tipo: TipoEmpresa;
-}
-
-interface FilterState {
-  dataInicio: Date | null;
-  dataFim: Date | null;
-  empresaId: string;
-  status: string;
-}
-
-// Colors for charts
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
 const STATUS_COLORS = {
-  'em_contato': '#FFBB28',   // Yellow
-  'negociando': '#0088FE',   // Blue
-  'ganho': '#00C49F',        // Green
-  'perdido': '#FF8042',      // Orange
+  'em_contato': '#FFBB28',
+  'negociando': '#0088FE',
+  'ganho': '#00C49F',
+  'perdido': '#FF8042',
 };
 
-export const OportunidadesDashboards: React.FC = () => {
-  const [matrizIntragrupo, setMatrizIntragrupo] = useState<MatrizData[]>([]);
-  const [matrizParcerias, setMatrizParcerias] = useState<MatrizData[]>([]);
-  const [qualidadeData, setQualidadeData] = useState<QualidadeData[]>([]);
-  const [balancoData, setBalancoData] = useState<BalancoData[]>([]);
-  const [rankingEnviadas, setRankingEnviadas] = useState<RankingData[]>([]);
-  const [rankingRecebidas, setRankingRecebidas] = useState<RankingData[]>([]);
-  const [statusData, setStatusData] = useState<StatusData[]>([]);
-  const [empresas, setEmpresas] = useState<Empresa[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [filters, setFilters] = useState<FilterState>({
-    dataInicio: subMonths(new Date(), 6),
-    dataFim: new Date(),
-    empresaId: '',
-    status: '',
-  });
+function formatDate(dateStr) {
+  if (!dateStr) return '-';
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('pt-BR');
+}
 
+export const OportunidadesDashboards: React.FC = () => {
+  // Dados principais
+  const [empresas, setEmpresas] = useState([]);
+  const [matrizIntra, setMatrizIntra] = useState([]);
+  const [matrizParceiros, setMatrizParceiros] = useState([]);
+  const [statusDistribuicao, setStatusDistribuicao] = useState([]);
+  const [rankingEnviadas, setRankingEnviadas] = useState([]);
+  const [rankingRecebidas, setRankingRecebidas] = useState([]);
+  const [balanco, setBalanco] = useState([]);
+  // Filtros
+  const [dataInicio, setDataInicio] = useState(null);
+  const [dataFim, setDataFim] = useState(null);
+  const [empresaId, setEmpresaId] = useState('');
+  const [status, setStatus] = useState('');
+  const [periodo, setPeriodo] = useState('mes');
+  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
+  // Busca empresas e dados
   useEffect(() => {
-    fetchEmpresas();
-    fetchData();
-  }, [filters]);
+    fetchAll();
+    // eslint-disable-next-line
+  }, [dataInicio, dataFim, empresaId, status, periodo]);
 
-  const fetchEmpresas = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("empresas")
-        .select("*")
-        .order("nome");
-
-      if (error) throw error;
-      
-      // Convert the raw data to match the Empresa type
-      const typedData: Empresa[] = data.map(item => ({
-        id: item.id,
-        nome: item.nome,
-        tipo: item.tipo as TipoEmpresa
-      }));
-      
-      setEmpresas(typedData);
-    } catch (error) {
-      console.error("Erro ao buscar empresas:", error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível carregar as empresas.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const fetchData = async () => {
+  async function fetchAll() {
     setLoading(true);
     try {
-      await Promise.all([
-        fetchMatrizIntragrupo(),
-        fetchMatrizParcerias(),
-        fetchQualidade(),
-        fetchBalanco(),
-        fetchRankingEnviadas(),
-        fetchRankingRecebidas(),
-        fetchStatusDistribution()
-      ]);
-    } catch (error) {
-      console.error("Erro ao buscar dados:", error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível carregar os dados do dashboard.",
-        variant: "destructive",
+      // Empresas
+      const { data: empresasDb } = await supabase.from("empresas").select("*").order("nome");
+      setEmpresas(empresasDb || []);
+      // Dados simulados - troque por fetch real (exemplo):
+      const { data: oportunidadesDb } = await supabase.from("oportunidades").select("*, empresa_origem:empresas!empresa_origem_id(id, nome, tipo), empresa_destino:empresas!empresa_destino_id(id, nome, tipo)");
+      const oportunidades = oportunidadesDb || [];
+
+      // Matriz INTRAGRUPO
+      const intra = empresasDb.filter(e => e.tipo === "intragrupo");
+      const matrizIntraRows = intra.map(orig => {
+        const row = { origem: orig.nome };
+        intra.forEach(dest => {
+          if (orig.id === dest.id) {
+            row[dest.nome] = '-';
+          } else {
+            row[dest.nome] = oportunidades.filter(
+              op =>
+                op.empresa_origem_id === orig.id &&
+                op.empresa_destino_id === dest.id &&
+                op.empresa_origem.tipo === "intragrupo" &&
+                op.empresa_destino.tipo === "intragrupo"
+            ).length;
+          }
+        });
+        return row;
       });
+      setMatrizIntra(matrizIntraRows);
+
+      // Matriz PARCEIROS
+      const parceiros = empresasDb.filter(e => e.tipo === "parceiro");
+      const matrizParceirosRows = parceiros.map(parc => {
+        const row = { parceiro: parc.nome };
+        intra.forEach(intraE => {
+          row[intraE.nome] =
+            oportunidades.filter(op =>
+              (
+                (op.empresa_origem_id === parc.id && op.empresa_destino_id === intraE.id) ||
+                (op.empresa_origem_id === intraE.id && op.empresa_destino_id === parc.id)
+              ) &&
+              (
+                op.empresa_origem.tipo === "parceiro" || op.empresa_destino.tipo === "parceiro"
+              )
+            ).length;
+        });
+        return row;
+      });
+      setMatrizParceiros(matrizParceirosRows);
+
+      // Status - Geral
+      const statusCount = {};
+      oportunidades.forEach(op => {
+        if (!statusCount[op.status]) statusCount[op.status] = 0;
+        statusCount[op.status]++;
+      });
+      setStatusDistribuicao(Object.entries(statusCount).map(([status, total]) => ({ status, total })));
+
+      // Ranking Enviadas/Recebidas
+      const rankingEnv = {};
+      const rankingRec = {};
+      oportunidades.forEach(op => {
+        // Enviadas
+        if (op.empresa_origem?.nome) {
+          if (!rankingEnv[op.empresa_origem.nome]) rankingEnv[op.empresa_origem.nome] = 0;
+          rankingEnv[op.empresa_origem.nome]++;
+        }
+        // Recebidas
+        if (op.empresa_destino?.nome) {
+          if (!rankingRec[op.empresa_destino.nome]) rankingRec[op.empresa_destino.nome] = 0;
+          rankingRec[op.empresa_destino.nome]++;
+        }
+      });
+      setRankingEnviadas(Object.entries(rankingEnv).map(([empresa, indicacoes]) => ({ empresa, indicacoes })).sort((a, b) => b.indicacoes - a.indicacoes));
+      setRankingRecebidas(Object.entries(rankingRec).map(([empresa, indicacoes]) => ({ empresa, indicacoes })).sort((a, b) => b.indicacoes - a.indicacoes));
+
+      // Balanço Grupo x Parceiros
+      const balGrupo = oportunidades.filter(op => op.empresa_origem.tipo === "intragrupo" && op.empresa_destino.tipo === "parceiro").length;
+      const balParc = oportunidades.filter(op => op.empresa_origem.tipo === "parceiro" && op.empresa_destino.tipo === "intragrupo").length;
+      setBalanco([
+        { tipo: "Grupo → Parceiros", valor: balGrupo },
+        { tipo: "Parceiros → Grupo", valor: balParc }
+      ]);
+
+    } catch (error) {
+      toast({ title: "Erro", description: "Erro ao carregar dados.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  const fetchMatrizIntragrupo = async () => {
-    try {
-      // Convert string to StatusOportunidade type or null
-      const statusFilter = filters.status ? filters.status as StatusOportunidade : null;
-      
-      const data = await getMatrizIntragrupo(
-        filters.dataInicio, 
-        filters.dataFim, 
-        filters.empresaId || null, 
-        statusFilter
-      );
-      setMatrizIntragrupo(data as MatrizData[]);
-    } catch (error) {
-      console.error("Erro ao buscar matriz intragrupo:", error);
-      setMatrizIntragrupo([]);
-    }
-  };
-
-  const fetchMatrizParcerias = async () => {
-    try {
-      // Convert string to StatusOportunidade type or null
-      const statusFilter = filters.status ? filters.status as StatusOportunidade : null;
-      
-      const data = await getMatrizParcerias(
-        filters.dataInicio, 
-        filters.dataFim, 
-        filters.empresaId || null, 
-        statusFilter
-      );
-      setMatrizParcerias(data as MatrizData[]);
-    } catch (error) {
-      console.error("Erro ao buscar matriz parcerias:", error);
-      setMatrizParcerias([]);
-    }
-  };
-
-  const fetchQualidade = async () => {
-    try {
-      const data = await getQualidadeIndicacoes(
-        filters.dataInicio, 
-        filters.dataFim, 
-        filters.empresaId || null
-      );
-      setQualidadeData(data as QualidadeData[]);
-    } catch (error) {
-      console.error("Erro ao buscar qualidade das indicações:", error);
-      setQualidadeData([]);
-    }
-  };
-
-  const fetchBalanco = async () => {
-    try {
-      // Convert string to StatusOportunidade type or null
-      const statusFilter = filters.status ? filters.status as StatusOportunidade : null;
-      
-      const data = await getBalancoGrupoParcerias(
-        filters.dataInicio, 
-        filters.dataFim, 
-        filters.empresaId || null, 
-        statusFilter
-      );
-      setBalancoData(data as BalancoData[]);
-    } catch (error) {
-      console.error("Erro ao buscar balanço:", error);
-      setBalancoData([]);
-    }
-  };
-
-  const fetchRankingEnviadas = async () => {
-    try {
-      // Convert string to StatusOportunidade type or null
-      const statusFilter = filters.status ? filters.status as StatusOportunidade : null;
-      
-      const data = await getRankingParceirosEnviadas(
-        filters.dataInicio, 
-        filters.dataFim, 
-        statusFilter
-      );
-      setRankingEnviadas(data as RankingData[]);
-    } catch (error) {
-      console.error("Erro ao buscar ranking de parceiros:", error);
-      setRankingEnviadas([]);
-    }
-  };
-
-  const fetchRankingRecebidas = async () => {
-    try {
-      // Convert string to StatusOportunidade type or null
-      const statusFilter = filters.status ? filters.status as StatusOportunidade : null;
-      
-      const data = await getRankingParceirosRecebidas(
-        filters.dataInicio, 
-        filters.dataFim, 
-        statusFilter
-      );
-      setRankingRecebidas(data as RankingData[]);
-    } catch (error) {
-      console.error("Erro ao buscar ranking de parceiros:", error);
-      setRankingRecebidas([]);
-    }
-  };
-
-  const fetchStatusDistribution = async () => {
-    try {
-      const data = await getStatusDistribution(
-        filters.dataInicio, 
-        filters.dataFim, 
-        filters.empresaId || null
-      );
-      setStatusData(data as StatusData[]);
-    } catch (error) {
-      console.error("Erro ao buscar distribuição de status:", error);
-      setStatusData([]);
-    }
-  };
-
-  // Get a readable status name
-  const getStatusLabel = (status: string) => {
-    switch(status) {
-      case 'em_contato': return 'Em Contato';
-      case 'negociando': return 'Negociando';
-      case 'ganho': return 'Ganho';
-      case 'perdido': return 'Perdido';
-      default: return status;
-    }
-  };
-
-  // Transform to matrix format for heatmap visualization
-  const transformForMatrix = (data: MatrizData[]) => {
-    // Extract all unique companies
-    const uniqueCompanies = Array.from(
-      new Set(data.flatMap(item => [item.origem, item.destino]))
-    ).sort();
-
-    // Create the matrix data structure
-    return uniqueCompanies.map(origem => {
-      const row: any = { name: origem };
-      uniqueCompanies.forEach(destino => {
-        const match = data.find(item => item.origem === origem && item.destino === destino);
-        row[destino] = match ? match.total : 0;
-      });
-      return row;
-    });
-  };
-
-  // Transform data for treemap visualization of the heatmap
-  const transformForTreemap = (data: MatrizData[]) => {
-    return data.map(item => ({
-      name: `${item.origem} → ${item.destino}`,
-      size: item.total,
-      origem: item.origem,
-      destino: item.destino
-    }));
-  };
-
-  const CustomTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-white p-4 rounded shadow-lg border border-gray-200">
-          <p className="font-semibold">{`${payload[0].payload.name}`}</p>
-          <p>{`Total: ${payload[0].value}`}</p>
-        </div>
-      );
-    }
-    return null;
-  };
-
-  const StatusesTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-white p-4 rounded shadow-lg border border-gray-200">
-          <p className="font-semibold">{getStatusLabel(payload[0].name)}</p>
-          <p>{`Total: ${payload[0].value}`}</p>
-        </div>
-      );
-    }
-    return null;
-  };
-
-  // Custom content for Treemap
-  const CustomTreemapContent = (props: any) => {
-    const { x, y, width, height, index, payload, name, size } = props;
-    if (width < 70 || height < 25) return null;
-    
+  // Renderização - TABELA MATRIZ
+  function renderMatrizTable(rows, colKey, label) {
+    const cols = rows.length > 0 ? Object.keys(rows[0]).filter(c => c !== colKey) : [];
     return (
-      <g>
-        <rect
-          x={x}
-          y={y}
-          width={width}
-          height={height}
-          style={{
-            fill: COLORS[index % COLORS.length],
-            stroke: '#fff',
-            strokeWidth: 2,
-            strokeOpacity: 1,
-          }}
-        />
-        <text
-          x={x + width / 2}
-          y={y + height / 2 - 10}
-          textAnchor="middle"
-          fill="#fff"
-          fontSize={14}
-        >
-          {name}
-        </text>
-        <text
-          x={x + width / 2}
-          y={y + height / 2 + 10}
-          textAnchor="middle"
-          fill="#fff"
-          fontSize={16}
-        >
-          {size}
-        </text>
-      </g>
+      <div className="overflow-x-auto">
+        <table className="min-w-full text-xs border">
+          <thead>
+            <tr>
+              <th className="border p-1">{label}</th>
+              {cols.map(c => <th className="border p-1" key={c}>{c}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, idx) => (
+              <tr key={idx}>
+                <td className="border p-1 font-bold">{row[colKey]}</td>
+                {cols.map(c => (
+                  <td className="border p-1 text-center" key={c}>{row[c]}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     );
-  };
+  }
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap gap-4 mb-6">
         <div className="w-full md:w-auto">
           <Label htmlFor="dataInicio">Data Inicial</Label>
-          <DatePicker 
-            date={filters.dataInicio}
-            setDate={(date) => setFilters(prev => ({ ...prev, dataInicio: date }))}
+          <DatePicker
+            date={dataInicio}
+            setDate={setDataInicio}
             className="w-full"
           />
         </div>
         <div className="w-full md:w-auto">
           <Label htmlFor="dataFim">Data Final</Label>
-          <DatePicker 
-            date={filters.dataFim}
-            setDate={(date) => setFilters(prev => ({ ...prev, dataFim: date }))}
+          <DatePicker
+            date={dataFim}
+            setDate={setDataFim}
             className="w-full"
           />
         </div>
         <div className="w-full md:w-auto">
           <Label htmlFor="empresaId">Empresa</Label>
-          <Select 
-            value={filters.empresaId === "" ? "all" : filters.empresaId}
-            onValueChange={(value) => setFilters(prev => ({ ...prev, empresaId: value === "all" ? "" : value }))}>
+          <Select
+            value={empresaId === "" ? "all" : empresaId}
+            onValueChange={v => setEmpresaId(v === "all" ? "" : v)}
+          >
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Todas as empresas" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todas as empresas</SelectItem>
-              {empresas.map(empresa => (
-                <SelectItem key={empresa.id} value={empresa.id}>{empresa.nome}</SelectItem>
+              {empresas.map(e => (
+                <SelectItem key={e.id} value={e.id}>{e.nome}</SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
         <div className="w-full md:w-auto">
           <Label htmlFor="status">Status</Label>
-          <Select 
-            value={filters.status === "" ? "all" : filters.status}
-            onValueChange={(value) => setFilters(prev => ({ ...prev, status: value === "all" ? "" : value }))}>
+          <Select
+            value={status === "" ? "all" : status}
+            onValueChange={v => setStatus(v === "all" ? "" : v)}
+          >
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Todos os status" />
             </SelectTrigger>
@@ -412,221 +217,128 @@ export const OportunidadesDashboards: React.FC = () => {
             </SelectContent>
           </Select>
         </div>
+        <div className="w-full md:w-auto">
+          <Label htmlFor="periodo">Período</Label>
+          <Select value={periodo} onValueChange={v => setPeriodo(v)}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Mensal" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="mes">Mensal</SelectItem>
+              <SelectItem value="quarter">Quarter</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
-      
+
       <Tabs defaultValue="intragrupo">
         <TabsList className="grid grid-cols-3 w-full md:w-[400px]">
           <TabsTrigger value="intragrupo">Intragrupo</TabsTrigger>
           <TabsTrigger value="parcerias">Parcerias</TabsTrigger>
           <TabsTrigger value="geral">Geral</TabsTrigger>
         </TabsList>
-        
+
         <TabsContent value="intragrupo" className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>Matriz de Indicações Intragrupo</CardTitle>
-              <CardDescription>Visualização de quem indica para quem dentro do grupo</CardDescription>
+              <CardDescription>Quem indica para quem dentro do grupo</CardDescription>
             </CardHeader>
             <CardContent>
               {loading ? (
                 <div className="h-64 flex items-center justify-center">Carregando...</div>
-              ) : matrizIntragrupo.length > 0 ? (
-                <div className="h-96">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <Treemap
-                      data={transformForTreemap(matrizIntragrupo)}
-                      dataKey="size"
-                      stroke="#fff"
-                      fill="#8884d8"
-                    >
-                      {transformForTreemap(matrizIntragrupo).map((entry, index) => (
-                        <Treemap
-                          key={`cell-${index}`}
-                          dataKey="size"
-                          stroke="#fff"
-                          fill={COLORS[index % COLORS.length]}
-                          content={<CustomTreemapContent />}
-                        />
-                      ))}
-                      <Tooltip content={<CustomTooltip />} />
-                    </Treemap>
-                  </ResponsiveContainer>
-                </div>
               ) : (
-                <div className="h-64 flex items-center justify-center">Nenhum dado encontrado</div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Qualidade das Indicações por Status (Intragrupo)</CardTitle>
-              <CardDescription>Distribuição dos status das indicações para cada empresa do grupo</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <div className="h-64 flex items-center justify-center">Carregando...</div>
-              ) : qualidadeData.length > 0 ? (
-                <div className="h-96">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={qualidadeData.filter(d => d.origem.includes('Intragrupo') || d.destino.includes('Intragrupo'))}
-                      margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="origem" angle={-45} textAnchor="end" interval={0} height={80} />
-                      <YAxis />
-                      <Tooltip />
-                      <Legend />
-                      <Bar dataKey="total" name="Total" stackId="status" fill={STATUS_COLORS.em_contato || "#FFBB28"}>
-                        {qualidadeData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={STATUS_COLORS[entry.status as keyof typeof STATUS_COLORS] || COLORS[index % COLORS.length]} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              ) : (
-                <div className="h-64 flex items-center justify-center">Nenhum dado encontrado</div>
+                renderMatrizTable(matrizIntra, "origem", "Origem \\ Destino")
               )}
             </CardContent>
           </Card>
         </TabsContent>
-        
+
         <TabsContent value="parcerias" className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>Matriz de Indicações com Parceiros</CardTitle>
-              <CardDescription>Visualização das indicações envolvendo parceiros externos</CardDescription>
+              <CardDescription>Indicações envolvendo parceiros externos</CardDescription>
             </CardHeader>
             <CardContent>
               {loading ? (
                 <div className="h-64 flex items-center justify-center">Carregando...</div>
-              ) : matrizParcerias.length > 0 ? (
-                <div className="h-96">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <Treemap
-                      data={transformForTreemap(matrizParcerias)}
-                      dataKey="size"
-                      stroke="#fff"
-                      fill="#8884d8"
-                    >
-                      {transformForTreemap(matrizParcerias).map((entry, index) => (
-                        <Treemap
-                          key={`cell-${index}`}
-                          dataKey="size"
-                          stroke="#fff"
-                          fill={COLORS[index % COLORS.length]}
-                          content={<CustomTreemapContent />}
-                        />
-                      ))}
-                      <Tooltip content={<CustomTooltip />} />
-                    </Treemap>
-                  </ResponsiveContainer>
-                </div>
               ) : (
-                <div className="h-64 flex items-center justify-center">Nenhum dado encontrado</div>
+                renderMatrizTable(matrizParceiros, "parceiro", "Parceiro \\ Intra")
               )}
             </CardContent>
           </Card>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Top Parceiros que Enviam</CardTitle>
-                <CardDescription>Parceiros que mais enviam indicações para o grupo</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {loading ? (
-                  <div className="h-64 flex items-center justify-center">Carregando...</div>
-                ) : rankingEnviadas.length > 0 ? (
-                  <div className="h-80">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
-                        data={rankingEnviadas}
-                        margin={{ top: 20, right: 30, left: 20, bottom: 110 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="parceiro" angle={-45} textAnchor="end" interval={0} height={100} />
-                        <YAxis />
-                        <Tooltip />
-                        <Bar dataKey="indicacoes" name="Indicações Enviadas" fill="#0088FE">
-                          <LabelList dataKey="indicacoes" position="top" />
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                ) : (
-                  <div className="h-64 flex items-center justify-center">Nenhum dado encontrado</div>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Top Parceiros que Recebem</CardTitle>
-                <CardDescription>Parceiros que mais recebem indicações do grupo</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {loading ? (
-                  <div className="h-64 flex items-center justify-center">Carregando...</div>
-                ) : rankingRecebidas.length > 0 ? (
-                  <div className="h-80">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
-                        data={rankingRecebidas}
-                        margin={{ top: 20, right: 30, left: 20, bottom: 110 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="parceiro" angle={-45} textAnchor="end" interval={0} height={100} />
-                        <YAxis />
-                        <Tooltip />
-                        <Bar dataKey="indicacoes" name="Indicações Recebidas" fill="#00C49F">
-                          <LabelList dataKey="indicacoes" position="top" />
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                ) : (
-                  <div className="h-64 flex items-center justify-center">Nenhum dado encontrado</div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-
           <Card>
             <CardHeader>
-              <CardTitle>Balanço Grupo ↔ Parcerias</CardTitle>
+              <CardTitle>Ranking de Parceiros - Enviadas</CardTitle>
+              <CardDescription>Parceiros que mais enviam indicações</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <table className="min-w-full text-xs border">
+                <thead>
+                  <tr>
+                    <th className="border p-1">Empresa</th>
+                    <th className="border p-1">Indicações Enviadas</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rankingEnviadas.map((r, i) => (
+                    <tr key={i}>
+                      <td className="border p-1">{r.empresa}</td>
+                      <td className="border p-1">{r.indicacoes}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Ranking de Parceiros - Recebidas</CardTitle>
+              <CardDescription>Parceiros que mais recebem indicações</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <table className="min-w-full text-xs border">
+                <thead>
+                  <tr>
+                    <th className="border p-1">Empresa</th>
+                    <th className="border p-1">Indicações Recebidas</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rankingRecebidas.map((r, i) => (
+                    <tr key={i}>
+                      <td className="border p-1">{r.empresa}</td>
+                      <td className="border p-1">{r.indicacoes}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Balanço Grupo × Parceiros</CardTitle>
               <CardDescription>Comparação entre indicações enviadas e recebidas</CardDescription>
             </CardHeader>
             <CardContent>
-              {loading ? (
-                <div className="h-64 flex items-center justify-center">Carregando...</div>
-              ) : balancoData.length > 0 ? (
-                <div className="h-80">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={balancoData}
-                      margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                      barSize={100}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="tipo" />
-                      <YAxis />
-                      <Tooltip />
-                      <Legend />
-                      <Bar dataKey="valor" name="Quantidade" fill="#8884d8">
-                        <LabelList dataKey="valor" position="top" />
-                        {balancoData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={index === 0 ? "#0088FE" : "#00C49F"} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              ) : (
-                <div className="h-64 flex items-center justify-center">Nenhum dado encontrado</div>
-              )}
+              <table className="min-w-full text-xs border">
+                <thead>
+                  <tr>
+                    <th className="border p-1">Tipo</th>
+                    <th className="border p-1">Quantidade</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {balanco.map((b, i) => (
+                    <tr key={i}>
+                      <td className="border p-1">{b.tipo}</td>
+                      <td className="border p-1">{b.valor}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </CardContent>
           </Card>
         </TabsContent>
@@ -638,38 +350,24 @@ export const OportunidadesDashboards: React.FC = () => {
               <CardDescription>Status de todas as oportunidades</CardDescription>
             </CardHeader>
             <CardContent>
-              {loading ? (
-                <div className="h-64 flex items-center justify-center">Carregando...</div>
-              ) : statusData.length > 0 ? (
-                <div className="h-80">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={statusData}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="total"
-                        nameKey="status"
-                        label={({ name, percent }) => `${getStatusLabel(name)} ${(percent * 100).toFixed(0)}%`}
-                      >
-                        {statusData.map((entry, index) => (
-                          <Cell 
-                            key={`cell-${index}`} 
-                            fill={STATUS_COLORS[entry.status as keyof typeof STATUS_COLORS] || COLORS[index % COLORS.length]} 
-                          />
-                        ))}
-                      </Pie>
-                      <Tooltip content={<StatusesTooltip />} />
-                      <Legend formatter={(value) => getStatusLabel(value)} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              ) : (
-                <div className="h-64 flex items-center justify-center">Nenhum dado encontrado</div>
-              )}
+              <table className="min-w-full text-xs border">
+                <thead>
+                  <tr>
+                    <th className="border p-1">Status</th>
+                    <th className="border p-1">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {statusDistribuicao.map((s, i) => (
+                    <tr key={i}>
+                      <td className="border p-1" style={{ color: STATUS_COLORS[s.status] || undefined }}>
+                        {s.status}
+                      </td>
+                      <td className="border p-1">{s.total}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </CardContent>
           </Card>
         </TabsContent>
