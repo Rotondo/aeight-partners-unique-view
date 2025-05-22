@@ -41,7 +41,7 @@ import {
   PolarRadiusAxis,
 } from "recharts";
 import { useToast } from "@/hooks/use-toast";
-import { Edit } from "lucide-react";
+import { Edit, Check, X as Cancel } from "lucide-react";
 
 interface IndicadoresParceiroWithEmpresa extends IndicadoresParceiro {
   empresa?: {
@@ -71,8 +71,9 @@ const IndicadoresPage: React.FC = () => {
   const [sortAsc, setSortAsc] = useState<boolean>(true);
   const { toast } = useToast();
 
-  // MODAL DE EDIÇÃO
-  const [editModal, setEditModal] = useState<{ open: boolean; indicador?: IndicadoresParceiroWithEmpresa }>({ open: false });
+  // Linha em modo edição (id do indicador)
+  const [editRowId, setEditRowId] = useState<string | null>(null);
+  const [editValues, setEditValues] = useState<Partial<IndicadoresParceiro>>({});
 
   useEffect(() => {
     fetchAll();
@@ -219,14 +220,51 @@ const IndicadoresPage: React.FC = () => {
     document.body.removeChild(link);
   }
 
-  function handleEdit(indicador: IndicadoresParceiroWithEmpresa) {
-    setEditModal({ open: true, indicador });
-  }
-  function handleSaveEdit() {
-    toast({ title: "Edição ainda não implementada", description: "Aqui você pode implementar o salvamento via Supabase." });
-    setEditModal({ open: false });
+  async function handleSaveEdit(id: string) {
+    try {
+      const updates: Partial<IndicadoresParceiro> = { ...editValues };
+      // Remove campos calculados ou não editáveis
+      delete (updates as any).empresa;
+      delete (updates as any).oportunidadesIndicadas;
+      delete (updates as any).share_of_wallet;
+
+      const { error } = await supabase
+        .from("indicadores_parceiro")
+        .update(updates)
+        .eq("id", id);
+
+      if (error) throw error;
+      toast({ title: "Sucesso", description: "Indicador atualizado com sucesso." });
+      setEditRowId(null);
+      setEditValues({});
+      fetchAll();
+    } catch (error) {
+      toast({ title: "Erro", description: "Erro ao atualizar indicador.", variant: "destructive" });
+    }
   }
 
+  function handleEdit(indicador: IndicadoresParceiroWithEmpresa) {
+    setEditRowId(indicador.id);
+    setEditValues({ ...indicador });
+  }
+
+  // Cancelar edição
+  function handleCancelEdit() {
+    setEditRowId(null);
+    setEditValues({});
+  }
+
+  // Campos editáveis
+  const editableFields: (keyof IndicadoresParceiro)[] = [
+    "potencial_leads",
+    "base_clientes",
+    "engajamento",
+    "alinhamento",
+    "potencial_investimento",
+    "tamanho",
+  ];
+
+  // Gráficos (mantém igual)
   const chartQuali = filteredIndicadores
     .sort((a, b) => b.potencial_leads - a.potencial_leads)
     .slice(0, 10)
@@ -243,11 +281,10 @@ const IndicadoresPage: React.FC = () => {
     "Base de Clientes": ind.base_clientes || 0,
   }));
 
-  // AJUSTE DO SHARE DINÂMICO
+  // Eixo Y dinâmico para share
   const maxShareValue = Math.max(...filteredIndicadores.map((i) =>
     i.share_of_wallet !== undefined && !isNaN(i.share_of_wallet) ? i.share_of_wallet : 0
   ), 0);
-  // Exemplo: se maxShareValue = 4.2, arredonda para cima para múltiplo de 5 ou 10
   function arredondaParaCima(valor: number) {
     if (valor <= 10) return 10;
     if (valor <= 20) return 20;
@@ -292,6 +329,15 @@ const IndicadoresPage: React.FC = () => {
         <span className="ml-1">&#9660;</span>
       )
     ) : null;
+
+  // Para select de tamanho
+  const TAMANHOS = [
+    { value: "PP", label: "Pequeno Porte (PP)" },
+    { value: "P", label: "Pequeno (P)" },
+    { value: "M", label: "Médio (M)" },
+    { value: "G", label: "Grande (G)" },
+    { value: "GG", label: "Grande Porte (GG)" },
+  ];
 
   return (
     <div className="space-y-6">
@@ -452,72 +498,26 @@ const IndicadoresPage: React.FC = () => {
                       }}>
                       Empresa {renderSortIcon("empresa")}
                     </TableHead>
-                    <TableHead
-                      className="cursor-pointer"
-                      onClick={() => {
-                        if (sortColumn === "potencial_leads") setSortAsc(!sortAsc);
-                        else {
-                          setSortColumn("potencial_leads");
-                          setSortAsc(true);
-                        }
-                      }}>
-                      Potencial Leads {renderSortIcon("potencial_leads")}
-                    </TableHead>
-                    <TableHead
-                      className="cursor-pointer"
-                      onClick={() => {
-                        if (sortColumn === "base_clientes") setSortAsc(!sortAsc);
-                        else {
-                          setSortColumn("base_clientes");
-                          setSortAsc(true);
-                        }
-                      }}>
-                      Base Clientes {renderSortIcon("base_clientes")}
-                    </TableHead>
-                    <TableHead
-                      className="cursor-pointer"
-                      onClick={() => {
-                        if (sortColumn === "engajamento") setSortAsc(!sortAsc);
-                        else {
-                          setSortColumn("engajamento");
-                          setSortAsc(true);
-                        }
-                      }}>
-                      Engajamento {renderSortIcon("engajamento")}
-                    </TableHead>
-                    <TableHead
-                      className="cursor-pointer"
-                      onClick={() => {
-                        if (sortColumn === "alinhamento") setSortAsc(!sortAsc);
-                        else {
-                          setSortColumn("alinhamento");
-                          setSortAsc(true);
-                        }
-                      }}>
-                      Alinhamento {renderSortIcon("alinhamento")}
-                    </TableHead>
-                    <TableHead
-                      className="cursor-pointer"
-                      onClick={() => {
-                        if (sortColumn === "potencial_investimento") setSortAsc(!sortAsc);
-                        else {
-                          setSortColumn("potencial_investimento");
-                          setSortAsc(true);
-                        }
-                      }}>
-                      Pot. Investimento {renderSortIcon("potencial_investimento")}
-                    </TableHead>
-                    <TableHead
-                      className="cursor-pointer"
-                      onClick={() => {
-                        if (sortColumn === "tamanho") setSortAsc(!sortAsc);
-                        else {
-                          setSortColumn("tamanho");
-                          setSortAsc(true);
-                        }
-                      }}>
-                      Tamanho {renderSortIcon("tamanho")}
-                    </TableHead>
+                    {editableFields.map((field) => (
+                      <TableHead
+                        className="cursor-pointer"
+                        key={field}
+                        onClick={() => {
+                          if (sortColumn === field) setSortAsc(!sortAsc);
+                          else {
+                            setSortColumn(field);
+                            setSortAsc(true);
+                          }
+                        }}
+                      >
+                        {field === "potencial_leads" && <>Potencial Leads {renderSortIcon(field)}</>}
+                        {field === "base_clientes" && <>Base Clientes {renderSortIcon(field)}</>}
+                        {field === "engajamento" && <>Engajamento {renderSortIcon(field)}</>}
+                        {field === "alinhamento" && <>Alinhamento {renderSortIcon(field)}</>}
+                        {field === "potencial_investimento" && <>Pot. Investimento {renderSortIcon(field)}</>}
+                        {field === "tamanho" && <>Tamanho {renderSortIcon(field)}</>}
+                      </TableHead>
+                    ))}
                     <TableHead
                       className="cursor-pointer"
                       onClick={() => {
@@ -547,7 +547,7 @@ const IndicadoresPage: React.FC = () => {
                 <TableBody>
                   {filteredIndicadores.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={11} className="text-center">
+                      <TableCell colSpan={12} className="text-center">
                         Nenhum indicador encontrado
                       </TableCell>
                     </TableRow>
@@ -555,12 +555,50 @@ const IndicadoresPage: React.FC = () => {
                     filteredIndicadores.map((indicador) => (
                       <TableRow key={indicador.id}>
                         <TableCell>{indicador.empresa?.nome || "-"}</TableCell>
-                        <TableCell>{indicador.potencial_leads}</TableCell>
-                        <TableCell>{indicador.base_clientes || "-"}</TableCell>
-                        <TableCell>{indicador.engajamento}</TableCell>
-                        <TableCell>{indicador.alinhamento}</TableCell>
-                        <TableCell>{indicador.potencial_investimento}</TableCell>
-                        <TableCell>{indicador.tamanho}</TableCell>
+                        {/* Campos editáveis */}
+                        {editableFields.map((field) => (
+                          <TableCell key={field}>
+                            {editRowId === indicador.id ? (
+                              field === "tamanho" ? (
+                                <Select
+                                  value={editValues.tamanho || ""}
+                                  onValueChange={(value) =>
+                                    setEditValues((v) => ({ ...v, tamanho: value }))
+                                  }
+                                >
+                                  <SelectTrigger className="w-[120px]">
+                                    <SelectValue placeholder="Selecione" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {TAMANHOS.map((t) => (
+                                      <SelectItem key={t.value} value={t.value}>
+                                        {t.label}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              ) : (
+                                <Input
+                                  type={["potencial_leads", "base_clientes", "engajamento", "alinhamento", "potencial_investimento"].includes(field)
+                                    ? "number"
+                                    : "text"}
+                                  min={["potencial_leads", "engajamento", "alinhamento", "potencial_investimento"].includes(field) ? 0 : undefined}
+                                  max={["potencial_leads", "engajamento", "alinhamento", "potencial_investimento"].includes(field) ? 5 : undefined}
+                                  value={editValues[field] ?? ""}
+                                  className="w-[85px]"
+                                  onChange={(e) =>
+                                    setEditValues((v) => ({
+                                      ...v,
+                                      [field]: e.target.value === "" ? "" : isNaN(Number(e.target.value)) ? e.target.value : Number(e.target.value),
+                                    }))
+                                  }
+                                />
+                              )
+                            ) : (
+                              indicador[field] ?? "-"
+                            )}
+                          </TableCell>
+                        ))}
                         <TableCell>{indicador.oportunidadesIndicadas ?? 0}</TableCell>
                         <TableCell>
                           {indicador.share_of_wallet !== undefined
@@ -569,58 +607,41 @@ const IndicadoresPage: React.FC = () => {
                         </TableCell>
                         <TableCell>{formatDate(indicador.data_avaliacao)}</TableCell>
                         <TableCell>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            title="Editar"
-                            onClick={() => handleEdit(indicador)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
+                          {editRowId === indicador.id ? (
+                            <>
+                              <Button
+                                size="icon"
+                                variant="success"
+                                title="Salvar"
+                                onClick={() => handleSaveEdit(indicador.id)}
+                              >
+                                <Check className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                title="Cancelar"
+                                onClick={handleCancelEdit}
+                              >
+                                <Cancel className="h-4 w-4" />
+                              </Button>
+                            </>
+                          ) : (
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              title="Editar"
+                              onClick={() => handleEdit(indicador)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))
                   )}
                 </TableBody>
               </Table>
-              {/* MODAL DE EDIÇÃO SIMPLES */}
-              {editModal.open && (
-                <div className="fixed top-0 left-0 w-full h-full bg-black bg-opacity-30 flex items-center justify-center z-50">
-                  <div className="bg-white p-6 rounded shadow-lg w-[90vw] max-w-lg space-y-4">
-                    <h2 className="text-xl font-bold mb-2">Edição de Indicador</h2>
-                    <div>
-                      <strong>Empresa:</strong>{" "}
-                      {editModal.indicador?.empresa?.nome || "-"}
-                    </div>
-                    <div>
-                      <strong>Potencial Leads:</strong>{" "}
-                      {editModal.indicador?.potencial_leads}
-                    </div>
-                    <div>
-                      <strong>Base Clientes:</strong>{" "}
-                      {editModal.indicador?.base_clientes}
-                    </div>
-                    <div>
-                      <strong>Engajamento:</strong>{" "}
-                      {editModal.indicador?.engajamento}
-                    </div>
-                    <div>
-                      <strong>Alinhamento:</strong>{" "}
-                      {editModal.indicador?.alinhamento}
-                    </div>
-                    <div>
-                      <strong>Pot. Investimento:</strong>{" "}
-                      {editModal.indicador?.potencial_investimento}
-                    </div>
-                    <div>
-                      <Button onClick={handleSaveEdit}>Salvar (exemplo)</Button>
-                      <Button variant="ghost" onClick={() => setEditModal({ open: false })}>
-                        Cancelar
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              )}
             </CardContent>
           </Card>
         </>
