@@ -8,6 +8,7 @@ import OnePagerViewer from '@/components/onepager/OnePagerViewer';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import OnePagerUpload from '@/components/onepager/OnePagerUpload';
 import { useAuth } from '@/hooks/useAuth';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const OnePagerPage: React.FC = () => {
   const { user } = useAuth();
@@ -18,6 +19,9 @@ const OnePagerPage: React.FC = () => {
   const [parceiros, setParceiros] = useState<Empresa[]>([]);
   const [selectedParceiro, setSelectedParceiro] = useState<Empresa | null>(null);
   const [onePager, setOnePager] = useState<OnePager | null>(null);
+
+  // Novo: controla abertura do modal de visualização
+  const [modalAberto, setModalAberto] = useState(false);
 
   // Carrega categorias ao abrir a página
   useEffect(() => {
@@ -147,6 +151,12 @@ const OnePagerPage: React.FC = () => {
     // eslint-disable-next-line
   }, [selectedParceiro, selectedCategoria]);
 
+  // Novo: ao clicar em um parceiro, abre o modal e define o parceiro selecionado
+  const handleSelectParceiro = (parceiro: Empresa) => {
+    setSelectedParceiro(parceiro);
+    setModalAberto(true);
+  };
+
   return (
     <div className="flex flex-col h-full">
       <Tabs defaultValue="view" className="w-full">
@@ -177,19 +187,35 @@ const OnePagerPage: React.FC = () => {
               <ParceirosList
                 parceiros={parceiros}
                 selectedParceiro={selectedParceiro}
-                onSelectParceiro={setSelectedParceiro}
+                onSelectParceiro={handleSelectParceiro} // <-- agora abre modal
                 isLoading={loading}
               />
             </div>
-            {/* Direita - Visualização do OnePager */}
-            <div className="md:col-span-2 bg-card rounded-lg border shadow-sm overflow-auto">
-              <OnePagerViewer
-                onePager={onePager}
-                parceiro={selectedParceiro}
-                isLoading={loading}
-              />
+            {/* Direita - Espaço vazio para manter layout */}
+            <div className="md:col-span-2 bg-card rounded-lg border shadow-sm flex items-center justify-center">
+              <span className="text-gray-400 text-lg text-center">
+                Selecione um parceiro para visualizar o One Pager
+              </span>
             </div>
           </div>
+
+          {/* Modal One Pager */}
+          <Dialog open={modalAberto} onOpenChange={setModalAberto}>
+            <DialogContent className="max-w-5xl w-[90vw] h-[90vh] p-0">
+              <DialogHeader>
+                <DialogTitle>
+                  {selectedParceiro ? `OnePager: ${selectedParceiro.nome}` : "OnePager"}
+                </DialogTitle>
+              </DialogHeader>
+              <div className="flex-1 h-full overflow-auto">
+                <OnePagerViewer
+                  onePager={onePager}
+                  parceiro={selectedParceiro}
+                  isLoading={loading}
+                />
+              </div>
+            </DialogContent>
+          </Dialog>
         </TabsContent>
 
         {/* Aba Upload (apenas admin) */}
