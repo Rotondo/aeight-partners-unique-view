@@ -1,6 +1,12 @@
+
 import { supabase } from './supabase';
 import { format } from 'date-fns';
 import { StatusOportunidade } from '@/types';
+
+// Helper function to format date safely
+const formatDateOrNull = (date: Date | null) => {
+  return date ? format(date, 'yyyy-MM-dd') : null;
+};
 
 // Function to get matriz intragrupo data
 export const getMatrizIntragrupo = async (
@@ -9,50 +15,94 @@ export const getMatrizIntragrupo = async (
   empresaId: string | null,
   status: StatusOportunidade | null
 ) => {
-  let query = supabase
-    .from('oportunidades')
-    .select(`
-      empresa_origem:empresas!oportunidades_empresa_origem_id_fkey(id, nome, tipo),
-      empresa_destino:empresas!oportunidades_empresa_destino_id_fkey(id, nome, tipo),
-      id
-    `)
-    .gte('data_indicacao', dataInicio ? format(dataInicio, 'yyyy-MM-dd') : null)
-    .lte('data_indicacao', dataFim ? format(dataFim, 'yyyy-MM-dd') : null);
-
-  if (status) {
-    query = query.eq('status', status);
-  }
-
-  const { data: initialData, error } = await query;
-  if (error) throw error;
-
-  // Filtro apenas intragrupo
-  let filteredData = initialData?.filter(item =>
-    item.empresa_origem.tipo === 'intragrupo' && item.empresa_destino.tipo === 'intragrupo'
-  ) || [];
-
-  if (empresaId) {
-    filteredData = filteredData.filter(item =>
-      item.empresa_origem.id === empresaId ||
-      item.empresa_destino.id === empresaId
-    );
-  }
-
-  // Group by origem and destino
-  const grouped = filteredData.reduce((acc: any, curr) => {
-    const key = `${curr.empresa_origem.nome}-${curr.empresa_destino.nome}`;
-    if (!acc[key]) {
-      acc[key] = {
-        origem: curr.empresa_origem.nome,
-        destino: curr.empresa_destino.nome,
-        total: 0
-      };
+  try {
+    // First fetch the base data without joins to prevent stack depth issues
+    let query = supabase.from('oportunidades').select('id, empresa_origem_id, empresa_destino_id, status');
+    
+    if (dataInicio) {
+      query = query.gte('data_indicacao', formatDateOrNull(dataInicio));
     }
-    acc[key].total++;
-    return acc;
-  }, {});
+    
+    if (dataFim) {
+      query = query.lte('data_indicacao', formatDateOrNull(dataFim));
+    }
+    
+    if (status) {
+      query = query.eq('status', status);
+    }
+    
+    const { data: oportunidades, error } = await query;
+    if (error) throw error;
 
-  return Object.values(grouped);
+    // Fetch all relevant empresas in one go
+    const empresaIds = new Set<string>();
+    oportunidades?.forEach(op => {
+      if (op.empresa_origem_id) empresaIds.add(op.empresa_origem_id);
+      if (op.empresa_destino_id) empresaIds.add(op.empresa_destino_id);
+    });
+
+    const { data: empresas, error: empresasError } = await supabase
+      .from('empresas')
+      .select('id, nome, tipo')
+      .in('id', Array.from(empresaIds));
+    
+    if (empresasError) throw empresasError;
+
+    // Create a map for quick lookup
+    const empresasMap = new Map();
+    empresas?.forEach(empresa => {
+      empresasMap.set(empresa.id, empresa);
+    });
+
+    // Filter and transform the data
+    let processedData = oportunidades
+      ?.filter(op => {
+        const origem = empresasMap.get(op.empresa_origem_id);
+        const destino = empresasMap.get(op.empresa_destino_id);
+        
+        if (!origem || !destino) return false;
+        
+        const isIntragrupo = origem.tipo === 'intragrupo' && destino.tipo === 'intragrupo';
+        
+        if (!isIntragrupo) return false;
+        
+        if (empresaId) {
+          return op.empresa_origem_id === empresaId || op.empresa_destino_id === empresaId;
+        }
+        
+        return true;
+      })
+      .map(op => {
+        const origem = empresasMap.get(op.empresa_origem_id);
+        const destino = empresasMap.get(op.empresa_destino_id);
+        
+        return {
+          origem_id: op.empresa_origem_id,
+          destino_id: op.empresa_destino_id,
+          origem: origem?.nome,
+          destino: destino?.nome
+        };
+      });
+
+    // Group by origem and destino
+    const grouped = processedData?.reduce((acc: any, curr: any) => {
+      const key = `${curr.origem}-${curr.destino}`;
+      if (!acc[key]) {
+        acc[key] = {
+          origem: curr.origem,
+          destino: curr.destino,
+          total: 0
+        };
+      }
+      acc[key].total++;
+      return acc;
+    }, {});
+
+    return Object.values(grouped || {});
+  } catch (error) {
+    console.error('Error in getMatrizIntragrupo:', error);
+    return [];
+  }
 };
 
 // Function to get matriz parcerias data
@@ -62,50 +112,95 @@ export const getMatrizParcerias = async (
   empresaId: string | null,
   status: StatusOportunidade | null
 ) => {
-  let query = supabase
-    .from('oportunidades')
-    .select(`
-      empresa_origem:empresas!oportunidades_empresa_origem_id_fkey(id, nome, tipo),
-      empresa_destino:empresas!oportunidades_empresa_destino_id_fkey(id, nome, tipo),
-      id
-    `)
-    .gte('data_indicacao', dataInicio ? format(dataInicio, 'yyyy-MM-dd') : null)
-    .lte('data_indicacao', dataFim ? format(dataFim, 'yyyy-MM-dd') : null);
-
-  if (status) {
-    query = query.eq('status', status);
-  }
-
-  const { data: initialData, error } = await query;
-  if (error) throw error;
-
-  // Filtro: pelo menos um lado parceiro
-  let filteredData = initialData?.filter(item =>
-    item.empresa_origem.tipo === 'parceiro' || item.empresa_destino.tipo === 'parceiro'
-  ) || [];
-
-  if (empresaId) {
-    filteredData = filteredData.filter(item =>
-      item.empresa_origem.id === empresaId ||
-      item.empresa_destino.id === empresaId
-    );
-  }
-
-  // Group by origem and destino
-  const grouped = filteredData.reduce((acc: any, curr) => {
-    const key = `${curr.empresa_origem.nome}-${curr.empresa_destino.nome}`;
-    if (!acc[key]) {
-      acc[key] = {
-        origem: curr.empresa_origem.nome,
-        destino: curr.empresa_destino.nome,
-        total: 0
-      };
+  try {
+    // Use the same pattern as getMatrizIntragrupo for optimization
+    // First fetch the base data without joins
+    let query = supabase.from('oportunidades').select('id, empresa_origem_id, empresa_destino_id, status');
+    
+    if (dataInicio) {
+      query = query.gte('data_indicacao', formatDateOrNull(dataInicio));
     }
-    acc[key].total++;
-    return acc;
-  }, {});
+    
+    if (dataFim) {
+      query = query.lte('data_indicacao', formatDateOrNull(dataFim));
+    }
+    
+    if (status) {
+      query = query.eq('status', status);
+    }
+    
+    const { data: oportunidades, error } = await query;
+    if (error) throw error;
 
-  return Object.values(grouped);
+    // Fetch all relevant empresas in one go
+    const empresaIds = new Set<string>();
+    oportunidades?.forEach(op => {
+      if (op.empresa_origem_id) empresaIds.add(op.empresa_origem_id);
+      if (op.empresa_destino_id) empresaIds.add(op.empresa_destino_id);
+    });
+
+    const { data: empresas, error: empresasError } = await supabase
+      .from('empresas')
+      .select('id, nome, tipo')
+      .in('id', Array.from(empresaIds));
+    
+    if (empresasError) throw empresasError;
+
+    // Create a map for quick lookup
+    const empresasMap = new Map();
+    empresas?.forEach(empresa => {
+      empresasMap.set(empresa.id, empresa);
+    });
+
+    // Filter and transform the data - for parcerias, at least one side is a parceiro
+    let processedData = oportunidades
+      ?.filter(op => {
+        const origem = empresasMap.get(op.empresa_origem_id);
+        const destino = empresasMap.get(op.empresa_destino_id);
+        
+        if (!origem || !destino) return false;
+        
+        const hasParceiro = origem.tipo === 'parceiro' || destino.tipo === 'parceiro';
+        
+        if (!hasParceiro) return false;
+        
+        if (empresaId) {
+          return op.empresa_origem_id === empresaId || op.empresa_destino_id === empresaId;
+        }
+        
+        return true;
+      })
+      .map(op => {
+        const origem = empresasMap.get(op.empresa_origem_id);
+        const destino = empresasMap.get(op.empresa_destino_id);
+        
+        return {
+          origem_id: op.empresa_origem_id,
+          destino_id: op.empresa_destino_id,
+          origem: origem?.nome,
+          destino: destino?.nome
+        };
+      });
+
+    // Group by origem and destino
+    const grouped = processedData?.reduce((acc: any, curr: any) => {
+      const key = `${curr.origem}-${curr.destino}`;
+      if (!acc[key]) {
+        acc[key] = {
+          origem: curr.origem,
+          destino: curr.destino,
+          total: 0
+        };
+      }
+      acc[key].total++;
+      return acc;
+    }, {});
+
+    return Object.values(grouped || {});
+  } catch (error) {
+    console.error('Error in getMatrizParcerias:', error);
+    return [];
+  }
 };
 
 // Function to get quality of indications data
@@ -114,42 +209,83 @@ export const getQualidadeIndicacoes = async (
   dataFim: Date | null,
   empresaId: string | null
 ) => {
-  const { data: initialData, error } = await supabase
-    .from('oportunidades')
-    .select(`
-      empresa_origem:empresas!oportunidades_empresa_origem_id_fkey(id, nome, tipo),
-      empresa_destino:empresas!oportunidades_empresa_destino_id_fkey(id, nome, tipo),
-      status
-    `)
-    .gte('data_indicacao', dataInicio ? format(dataInicio, 'yyyy-MM-dd') : null)
-    .lte('data_indicacao', dataFim ? format(dataFim, 'yyyy-MM-dd') : null);
+  try {
+    // Same optimization pattern
+    let query = supabase
+      .from('oportunidades')
+      .select('id, empresa_origem_id, empresa_destino_id, status');
 
-  if (error) throw error;
-
-  let filteredData = initialData;
-  if (empresaId && filteredData) {
-    filteredData = filteredData.filter(item =>
-      item.empresa_origem.id === empresaId ||
-      item.empresa_destino.id === empresaId
-    );
-  }
-
-  // Group by origem, destino and status
-  const grouped = filteredData?.reduce((acc: any, curr) => {
-    const key = `${curr.empresa_origem.nome}-${curr.empresa_destino.nome}-${curr.status}`;
-    if (!acc[key]) {
-      acc[key] = {
-        origem: curr.empresa_origem.nome,
-        destino: curr.empresa_destino.nome,
-        status: curr.status,
-        total: 0
-      };
+    if (dataInicio) {
+      query = query.gte('data_indicacao', formatDateOrNull(dataInicio));
     }
-    acc[key].total++;
-    return acc;
-  }, {}) || {};
+    
+    if (dataFim) {
+      query = query.lte('data_indicacao', formatDateOrNull(dataFim));
+    }
+    
+    const { data: oportunidades, error } = await query;
+    if (error) throw error;
+    
+    // Apply empresa filter if needed
+    let filteredOportunidades = oportunidades;
+    if (empresaId) {
+      filteredOportunidades = oportunidades.filter(op => 
+        op.empresa_origem_id === empresaId || op.empresa_destino_id === empresaId
+      );
+    }
 
-  return Object.values(grouped);
+    // Fetch all relevant empresas in one go
+    const empresaIds = new Set<string>();
+    filteredOportunidades.forEach(op => {
+      if (op.empresa_origem_id) empresaIds.add(op.empresa_origem_id);
+      if (op.empresa_destino_id) empresaIds.add(op.empresa_destino_id);
+    });
+
+    const { data: empresas, error: empresasError } = await supabase
+      .from('empresas')
+      .select('id, nome, tipo')
+      .in('id', Array.from(empresaIds));
+    
+    if (empresasError) throw empresasError;
+
+    // Create a map for quick lookup
+    const empresasMap = new Map();
+    empresas?.forEach(empresa => {
+      empresasMap.set(empresa.id, empresa);
+    });
+
+    // Process data with empresa names
+    const processedData = filteredOportunidades.map(op => {
+      const origem = empresasMap.get(op.empresa_origem_id);
+      const destino = empresasMap.get(op.empresa_destino_id);
+      
+      return {
+        origem: origem?.nome || 'Desconhecido',
+        destino: destino?.nome || 'Desconhecido',
+        status: op.status,
+      };
+    });
+
+    // Group by origen, destino and status
+    const grouped = processedData.reduce((acc: any, curr: any) => {
+      const key = `${curr.origem}-${curr.destino}-${curr.status}`;
+      if (!acc[key]) {
+        acc[key] = {
+          origem: curr.origem,
+          destino: curr.destino,
+          status: curr.status,
+          total: 0
+        };
+      }
+      acc[key].total++;
+      return acc;
+    }, {});
+
+    return Object.values(grouped);
+  } catch (error) {
+    console.error('Error in getQualidadeIndicacoes:', error);
+    return [];
+  }
 };
 
 // Function to get balance data between group and partnerships
@@ -159,47 +295,80 @@ export const getBalancoGrupoParcerias = async (
   empresaId: string | null,
   status: StatusOportunidade | null
 ) => {
-  let query = supabase
-    .from('oportunidades')
-    .select(`
-      empresa_origem:empresas!oportunidades_empresa_origem_id_fkey(id, nome, tipo),
-      empresa_destino:empresas!oportunidades_empresa_destino_id_fkey(id, nome, tipo),
-      id
-    `)
-    .gte('data_indicacao', dataInicio ? format(dataInicio, 'yyyy-MM-dd') : null)
-    .lte('data_indicacao', dataFim ? format(dataFim, 'yyyy-MM-dd') : null);
+  try {
+    // Optimize the query
+    let query = supabase
+      .from('oportunidades')
+      .select('id, empresa_origem_id, empresa_destino_id, status');
 
-  if (status) {
-    query = query.eq('status', status);
+    if (dataInicio) {
+      query = query.gte('data_indicacao', formatDateOrNull(dataInicio));
+    }
+    
+    if (dataFim) {
+      query = query.lte('data_indicacao', formatDateOrNull(dataFim));
+    }
+    
+    if (status) {
+      query = query.eq('status', status);
+    }
+    
+    const { data: oportunidades, error } = await query;
+    if (error) throw error;
+
+    // Apply empresa filter if needed
+    let filteredOportunidades = oportunidades;
+    if (empresaId) {
+      filteredOportunidades = oportunidades.filter(op => 
+        op.empresa_origem_id === empresaId || op.empresa_destino_id === empresaId
+      );
+    }
+
+    // Fetch all relevant empresas in one go
+    const empresaIds = new Set<string>();
+    filteredOportunidades.forEach(op => {
+      if (op.empresa_origem_id) empresaIds.add(op.empresa_origem_id);
+      if (op.empresa_destino_id) empresaIds.add(op.empresa_destino_id);
+    });
+
+    const { data: empresas, error: empresasError } = await supabase
+      .from('empresas')
+      .select('id, nome, tipo')
+      .in('id', Array.from(empresaIds));
+    
+    if (empresasError) throw empresasError;
+
+    // Create a map for quick lookup
+    const empresasMap = new Map();
+    empresas?.forEach(empresa => {
+      empresasMap.set(empresa.id, empresa);
+    });
+
+    // Count sent from group to partners and received by group from partners
+    let enviadas = 0;
+    let recebidas = 0;
+
+    filteredOportunidades.forEach(op => {
+      const origem = empresasMap.get(op.empresa_origem_id);
+      const destino = empresasMap.get(op.empresa_destino_id);
+      
+      if (origem && destino) {
+        if (origem.tipo === 'intragrupo' && destino.tipo === 'parceiro') {
+          enviadas++;
+        } else if (origem.tipo === 'parceiro' && destino.tipo === 'intragrupo') {
+          recebidas++;
+        }
+      }
+    });
+
+    return [
+      { tipo: 'Enviadas', valor: enviadas },
+      { tipo: 'Recebidas', valor: recebidas }
+    ];
+  } catch (error) {
+    console.error('Error in getBalancoGrupoParcerias:', error);
+    return [];
   }
-
-  const { data: initialData, error } = await query;
-  if (error) throw error;
-
-  let filteredData = initialData;
-  if (empresaId && filteredData) {
-    filteredData = filteredData.filter(item =>
-      item.empresa_origem.id === empresaId ||
-      item.empresa_destino.id === empresaId
-    );
-  }
-
-  // Count sent from group to partners
-  const enviadas = filteredData?.filter(item =>
-    item.empresa_origem.tipo === 'intragrupo' &&
-    item.empresa_destino.tipo === 'parceiro'
-  ).length || 0;
-
-  // Count received by group from partners
-  const recebidas = filteredData?.filter(item =>
-    item.empresa_origem.tipo === 'parceiro' &&
-    item.empresa_destino.tipo === 'intragrupo'
-  ).length || 0;
-
-  return [
-    { tipo: 'Enviadas', valor: enviadas },
-    { tipo: 'Recebidas', valor: recebidas }
-  ];
 };
 
 // Function to get ranking of partners by sent indications
@@ -208,43 +377,77 @@ export const getRankingParceirosEnviadas = async (
   dataFim: Date | null,
   status: StatusOportunidade | null
 ) => {
-  let query = supabase
-    .from('oportunidades')
-    .select(`
-      empresa_origem:empresas!oportunidades_empresa_origem_id_fkey(id, nome, tipo),
-      empresa_destino:empresas!oportunidades_empresa_destino_id_fkey(id, nome, tipo),
-      id
-    `)
-    .gte('data_indicacao', dataInicio ? format(dataInicio, 'yyyy-MM-dd') : null)
-    .lte('data_indicacao', dataFim ? format(dataFim, 'yyyy-MM-dd') : null);
+  try {
+    // Similar optimization approach
+    let query = supabase
+      .from('oportunidades')
+      .select('id, empresa_origem_id, empresa_destino_id, status');
 
-  if (status) {
-    query = query.eq('status', status);
-  }
-
-  const { data, error } = await query;
-  if (error) throw error;
-
-  // Filtro: origem = parceiro, destino = intragrupo
-  const filteredData = (data || []).filter(item =>
-    item.empresa_origem.tipo === 'parceiro' &&
-    item.empresa_destino.tipo === 'intragrupo'
-  );
-
-  // Group by partner
-  const grouped = filteredData.reduce((acc: any, curr) => {
-    const key = curr.empresa_origem.nome;
-    if (!acc[key]) {
-      acc[key] = {
-        parceiro: key,
-        indicacoes: 0
-      };
+    if (dataInicio) {
+      query = query.gte('data_indicacao', formatDateOrNull(dataInicio));
     }
-    acc[key].indicacoes++;
-    return acc;
-  }, {});
+    
+    if (dataFim) {
+      query = query.lte('data_indicacao', formatDateOrNull(dataFim));
+    }
+    
+    if (status) {
+      query = query.eq('status', status);
+    }
+    
+    const { data: oportunidades, error } = await query;
+    if (error) throw error;
 
-  return Object.values(grouped).sort((a: any, b: any) => b.indicacoes - a.indicacoes);
+    // Fetch all relevant empresas in one go
+    const empresaIds = new Set<string>();
+    oportunidades?.forEach(op => {
+      if (op.empresa_origem_id) empresaIds.add(op.empresa_origem_id);
+      if (op.empresa_destino_id) empresaIds.add(op.empresa_destino_id);
+    });
+
+    const { data: empresas, error: empresasError } = await supabase
+      .from('empresas')
+      .select('id, nome, tipo')
+      .in('id', Array.from(empresaIds));
+    
+    if (empresasError) throw empresasError;
+
+    // Create a map for quick lookup
+    const empresasMap = new Map();
+    empresas?.forEach(empresa => {
+      empresasMap.set(empresa.id, empresa);
+    });
+
+    // Filter: origin = partner, destination = intragroup
+    const filteredData = oportunidades?.filter(op => {
+      const origem = empresasMap.get(op.empresa_origem_id);
+      const destino = empresasMap.get(op.empresa_destino_id);
+      
+      return origem?.tipo === 'parceiro' && destino?.tipo === 'intragrupo';
+    }).map(op => ({
+      parceiro_id: op.empresa_origem_id,
+      parceiro_nome: empresasMap.get(op.empresa_origem_id)?.nome
+    }));
+
+    // Group by partner
+    const grouped = filteredData?.reduce((acc: any, curr: any) => {
+      if (!curr.parceiro_nome) return acc;
+      
+      if (!acc[curr.parceiro_nome]) {
+        acc[curr.parceiro_nome] = {
+          parceiro: curr.parceiro_nome,
+          indicacoes: 0
+        };
+      }
+      acc[curr.parceiro_nome].indicacoes++;
+      return acc;
+    }, {});
+
+    return Object.values(grouped || {}).sort((a: any, b: any) => b.indicacoes - a.indicacoes);
+  } catch (error) {
+    console.error('Error in getRankingParceirosEnviadas:', error);
+    return [];
+  }
 };
 
 // Function to get ranking of partners by received indications
@@ -253,43 +456,77 @@ export const getRankingParceirosRecebidas = async (
   dataFim: Date | null,
   status: StatusOportunidade | null
 ) => {
-  let query = supabase
-    .from('oportunidades')
-    .select(`
-      empresa_origem:empresas!oportunidades_empresa_origem_id_fkey(id, nome, tipo),
-      empresa_destino:empresas!oportunidades_empresa_destino_id_fkey(id, nome, tipo),
-      id
-    `)
-    .gte('data_indicacao', dataInicio ? format(dataInicio, 'yyyy-MM-dd') : null)
-    .lte('data_indicacao', dataFim ? format(dataFim, 'yyyy-MM-dd') : null);
+  try {
+    // Same optimization pattern
+    let query = supabase
+      .from('oportunidades')
+      .select('id, empresa_origem_id, empresa_destino_id, status');
 
-  if (status) {
-    query = query.eq('status', status);
-  }
-
-  const { data, error } = await query;
-  if (error) throw error;
-
-  // Filtro: origem = intragrupo, destino = parceiro
-  const filteredData = (data || []).filter(item =>
-    item.empresa_origem.tipo === 'intragrupo' &&
-    item.empresa_destino.tipo === 'parceiro'
-  );
-
-  // Group by partner
-  const grouped = filteredData.reduce((acc: any, curr) => {
-    const key = curr.empresa_destino.nome;
-    if (!acc[key]) {
-      acc[key] = {
-        parceiro: key,
-        indicacoes: 0
-      };
+    if (dataInicio) {
+      query = query.gte('data_indicacao', formatDateOrNull(dataInicio));
     }
-    acc[key].indicacoes++;
-    return acc;
-  }, {});
+    
+    if (dataFim) {
+      query = query.lte('data_indicacao', formatDateOrNull(dataFim));
+    }
+    
+    if (status) {
+      query = query.eq('status', status);
+    }
+    
+    const { data: oportunidades, error } = await query;
+    if (error) throw error;
 
-  return Object.values(grouped).sort((a: any, b: any) => b.indicacoes - a.indicacoes);
+    // Fetch all relevant empresas in one go
+    const empresaIds = new Set<string>();
+    oportunidades?.forEach(op => {
+      if (op.empresa_origem_id) empresaIds.add(op.empresa_origem_id);
+      if (op.empresa_destino_id) empresaIds.add(op.empresa_destino_id);
+    });
+
+    const { data: empresas, error: empresasError } = await supabase
+      .from('empresas')
+      .select('id, nome, tipo')
+      .in('id', Array.from(empresaIds));
+    
+    if (empresasError) throw empresasError;
+
+    // Create a map for quick lookup
+    const empresasMap = new Map();
+    empresas?.forEach(empresa => {
+      empresasMap.set(empresa.id, empresa);
+    });
+
+    // Filter: origin = intragroup, destination = partner
+    const filteredData = oportunidades?.filter(op => {
+      const origem = empresasMap.get(op.empresa_origem_id);
+      const destino = empresasMap.get(op.empresa_destino_id);
+      
+      return origem?.tipo === 'intragrupo' && destino?.tipo === 'parceiro';
+    }).map(op => ({
+      parceiro_id: op.empresa_destino_id,
+      parceiro_nome: empresasMap.get(op.empresa_destino_id)?.nome
+    }));
+
+    // Group by partner
+    const grouped = filteredData?.reduce((acc: any, curr: any) => {
+      if (!curr.parceiro_nome) return acc;
+      
+      if (!acc[curr.parceiro_nome]) {
+        acc[curr.parceiro_nome] = {
+          parceiro: curr.parceiro_nome,
+          indicacoes: 0
+        };
+      }
+      acc[curr.parceiro_nome].indicacoes++;
+      return acc;
+    }, {});
+
+    return Object.values(grouped || {}).sort((a: any, b: any) => b.indicacoes - a.indicacoes);
+  } catch (error) {
+    console.error('Error in getRankingParceirosRecebidas:', error);
+    return [];
+  }
 };
 
 // Function to get status distribution
@@ -298,39 +535,46 @@ export const getStatusDistribution = async (
   dataFim: Date | null,
   empresaId: string | null
 ) => {
-  const { data: initialData, error } = await supabase
-    .from('oportunidades')
-    .select(`
-      status,
-      id
-    `)
-    .gte('data_indicacao', dataInicio ? format(dataInicio, 'yyyy-MM-dd') : null)
-    .lte('data_indicacao', dataFim ? format(dataFim, 'yyyy-MM-dd') : null);
-
-  if (error) throw error;
-
-  let filteredData = initialData;
-  if (empresaId) {
-    const { data: empresaFilteredData, error: filteredError } = await supabase
+  try {
+    // Optimize the query
+    let query = supabase
       .from('oportunidades')
-      .select('*')
-      .or(`empresa_origem_id.eq.${empresaId},empresa_destino_id.eq.${empresaId}`);
+      .select('id, status, empresa_origem_id, empresa_destino_id');
 
-    if (filteredError) throw filteredError;
-    filteredData = empresaFilteredData;
-  }
-
-  // Group by status
-  const grouped = (filteredData || []).reduce((acc: any, curr) => {
-    if (!acc[curr.status]) {
-      acc[curr.status] = {
-        status: curr.status,
-        total: 0
-      };
+    if (dataInicio) {
+      query = query.gte('data_indicacao', formatDateOrNull(dataInicio));
     }
-    acc[curr.status].total++;
-    return acc;
-  }, {});
+    
+    if (dataFim) {
+      query = query.lte('data_indicacao', formatDateOrNull(dataFim));
+    }
+    
+    const { data: oportunidades, error } = await query;
+    if (error) throw error;
 
-  return Object.values(grouped);
+    // Apply empresa filter if needed
+    let filteredData = oportunidades;
+    if (empresaId) {
+      filteredData = oportunidades.filter(op => 
+        op.empresa_origem_id === empresaId || op.empresa_destino_id === empresaId
+      );
+    }
+
+    // Group by status
+    const grouped = filteredData.reduce((acc: any, curr: any) => {
+      if (!acc[curr.status]) {
+        acc[curr.status] = {
+          status: curr.status,
+          total: 0
+        };
+      }
+      acc[curr.status].total++;
+      return acc;
+    }, {});
+
+    return Object.values(grouped);
+  } catch (error) {
+    console.error('Error in getStatusDistribution:', error);
+    return [];
+  }
 };

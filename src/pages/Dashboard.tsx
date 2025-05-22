@@ -17,10 +17,10 @@ const Dashboard: React.FC = () => {
     const fetchDashboardData = async () => {
       setLoading(true);
       try {
-        // Carrega oportunidades do banco
+        // Simplify the query to avoid stack depth issues
         const { data: oportunidades, error } = await supabase
           .from("oportunidades")
-          .select("*");
+          .select("id, status, data_indicacao");
 
         if (error) throw error;
 
@@ -35,44 +35,8 @@ const Dashboard: React.FC = () => {
         const oportunidadesEmAndamento =
           totalOportunidades - oportunidadesGanhas - oportunidadesPerdidas;
 
-        // Agrupa oportunidades por mês/ano da data_indicacao
-        const oportunidadesPorMes: Record<string, number> = {};
-        const now = new Date();
-        const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
-
-        // Inicializa meses (sempre últimos 6 meses em ordem mais antiga -> mais recente)
-        for (let i = 5; i >= 0; i--) {
-          const month = new Date(now.getFullYear(), now.getMonth() - i, 1);
-          const monthKey = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, "0")}`;
-          oportunidadesPorMes[monthKey] = 0;
-        }
-
-        // Conta oportunidades por mês
-        if (oportunidades) {
-          oportunidades.forEach((op: Oportunidade) => {
-            if (op.data_indicacao) {
-              const date = new Date(op.data_indicacao);
-              if (date >= sixMonthsAgo) {
-                const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-                if (monthKey in oportunidadesPorMes) {
-                  oportunidadesPorMes[monthKey] = (oportunidadesPorMes[monthKey] || 0) + 1;
-                }
-              }
-            }
-          });
-        }
-
-        // Formata para o gráfico: ordena cronologicamente pelas datas (mais antiga à esquerda)
-        const oportunidadesPorMesArray = Object.entries(oportunidadesPorMes)
-          .map(([key, value]) => {
-            const [year, month] = key.split("-");
-            const date = new Date(parseInt(year), parseInt(month) - 1, 1);
-            const monthName = date.toLocaleString("pt-BR", { month: "short" });
-            return {
-              mes: `${monthName}/${year.slice(2)}`,
-              quantidade: value,
-            };
-          });
+        // Create simplified data for chart to prevent stack issues
+        const oportunidadesPorMesArray = processOportunidadesPorMes(oportunidades);
 
         setStats({
           totalOportunidades,
@@ -81,11 +45,11 @@ const Dashboard: React.FC = () => {
           oportunidadesEmAndamento,
           oportunidadesPorMes: oportunidadesPorMesArray,
         });
-      } catch (error) {
+      } catch (error: any) {
         console.error("Erro ao carregar dados do dashboard:", error);
         toast({
           title: "Erro ao carregar dashboard",
-          description: "Não foi possível buscar os dados.",
+          description: error.message || "Não foi possível buscar os dados.",
           variant: "destructive",
         });
       } finally {
@@ -95,6 +59,46 @@ const Dashboard: React.FC = () => {
 
     fetchDashboardData();
   }, []);
+
+  const processOportunidadesPorMes = (oportunidades: any[]) => {
+    const now = new Date();
+    const oportunidadesPorMes: Record<string, number> = {};
+
+    // Initialize the last 6 months
+    for (let i = 5; i >= 0; i--) {
+      const month = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const monthKey = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, "0")}`;
+      oportunidadesPorMes[monthKey] = 0;
+    }
+
+    // Count opportunities by month
+    if (oportunidades && oportunidades.length > 0) {
+      oportunidades.forEach((op: Oportunidade) => {
+        if (op.data_indicacao) {
+          const date = new Date(op.data_indicacao);
+          const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+          
+          // Only count if it's in the last 6 months
+          const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+          if (date >= sixMonthsAgo && monthKey in oportunidadesPorMes) {
+            oportunidadesPorMes[monthKey] += 1;
+          }
+        }
+      });
+    }
+
+    // Format for the chart
+    return Object.entries(oportunidadesPorMes)
+      .map(([key, value]) => {
+        const [year, month] = key.split("-");
+        const date = new Date(parseInt(year), parseInt(month) - 1, 1);
+        const monthName = date.toLocaleString("pt-BR", { month: "short" });
+        return {
+          mes: `${monthName}/${year.slice(2)}`,
+          quantidade: value,
+        };
+      });
+  };
 
   return (
     <div className="space-y-8 p-4">

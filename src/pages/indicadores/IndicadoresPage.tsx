@@ -51,7 +51,7 @@ const IndicadoresPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (selectedEmpresa) {
+    if (selectedEmpresa && selectedEmpresa !== "all") {
       setFilteredIndicadores(
         indicadores.filter(ind => ind.empresa_id === selectedEmpresa)
       );
@@ -67,18 +67,34 @@ const IndicadoresPage: React.FC = () => {
   const fetchIndicadores = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      
+      // First, fetch the indicadores data without the join to avoid stack depth issues
+      const { data: indicadoresData, error: indicadoresError } = await supabase
         .from("indicadores_parceiro")
-        .select(`
-          *,
-          empresa:empresas(id, nome)
-        `)
+        .select("*")
         .order("data_avaliacao", { ascending: false });
 
-      if (error) throw error;
-      setIndicadores(data as IndicadoresParceiroWithEmpresa[]);
-      setFilteredIndicadores(data as IndicadoresParceiroWithEmpresa[]);
-      console.log("Indicadores carregados:", data);
+      if (indicadoresError) throw indicadoresError;
+      
+      // Then, fetch empresa data separately
+      const { data: empresasData, error: empresasError } = await supabase
+        .from("empresas")
+        .select("id, nome");
+        
+      if (empresasError) throw empresasError;
+      
+      // Map the empresa data to the indicadores
+      const indicadoresWithEmpresas = indicadoresData.map((indicador: any) => {
+        const empresa = empresasData.find((e: any) => e.id === indicador.empresa_id);
+        return {
+          ...indicador,
+          empresa: empresa ? { id: empresa.id, nome: empresa.nome } : undefined
+        };
+      });
+      
+      setIndicadores(indicadoresWithEmpresas as IndicadoresParceiroWithEmpresa[]);
+      setFilteredIndicadores(indicadoresWithEmpresas as IndicadoresParceiroWithEmpresa[]);
+      console.log("Indicadores carregados:", indicadoresWithEmpresas);
     } catch (error) {
       console.error("Erro ao buscar indicadores:", error);
       toast({

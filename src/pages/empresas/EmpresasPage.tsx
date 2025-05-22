@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { 
@@ -27,14 +28,14 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Building2, Users, BarChart3, RefreshCw } from "lucide-react";
-import { Empresa, EmpresaTipoString, Contato, Oportunidade } from "@/types";
+import { Empresa, EmpresaTipoString } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
 
 const EmpresasPage: React.FC = () => {
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
-  const [contatos, setContatos] = useState<Contato[]>([]);
-  const [oportunidades, setOportunidades] = useState<Oportunidade[]>([]);
+  const [contatos, setContatos] = useState<any[]>([]);
+  const [oportunidades, setOportunidades] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [tipoFilter, setTipoFilter] = useState<string>("");
@@ -46,7 +47,7 @@ const EmpresasPage: React.FC = () => {
     const matchesSearch = empresa.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (empresa.descricao && empresa.descricao.toLowerCase().includes(searchTerm.toLowerCase()));
     
-    const matchesType = tipoFilter ? empresa.tipo === tipoFilter : true;
+    const matchesType = tipoFilter && tipoFilter !== "all" ? empresa.tipo === tipoFilter : true;
     
     const matchesTab = currentTab === "todas" 
                       ? true 
@@ -109,7 +110,7 @@ const EmpresasPage: React.FC = () => {
         .select("*");
 
       if (error) throw error;
-      setContatos(data as Contato[]);
+      setContatos(data);
     } catch (error) {
       console.error("Erro ao buscar contatos:", error);
     }
@@ -122,7 +123,7 @@ const EmpresasPage: React.FC = () => {
         .select("*");
 
       if (error) throw error;
-      setOportunidades(data as Oportunidade[]);
+      setOportunidades(data);
     } catch (error) {
       console.error("Erro ao buscar oportunidades:", error);
     }
