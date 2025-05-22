@@ -14,7 +14,7 @@ import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, Legend, ReferenceLine, PieChart, Pie, Cell, LabelList
+  ResponsiveContainer, Legend, ReferenceLine, PieChart, Pie, Cell, LabelList, LineChart, Line
 } from 'recharts';
 import { format, subMonths } from 'date-fns';
 
@@ -28,6 +28,9 @@ const STATUS_COLORS = {
   'ganho': '#00C49F',
   'perdido': '#FF8042',
 };
+const LINE_COLORS = [
+  '#2563eb', '#ef4444', '#10b981', '#a21caf', '#eab308', '#0ea5e9', '#b91c1c', '#059669', '#3b82f6', '#f59e42', '#6366f1', '#f43f5e'
+];
 const COLORS = [BAR_COLOR_RECEBIDAS, BAR_COLOR_ENVIADAS, BAR_COLOR_SALDO, '#8884d8', '#82ca9d'];
 
 const quartersOptions = [
@@ -59,6 +62,10 @@ function getYear(date: Date) {
   return date.getFullYear();
 }
 
+function getMonthYear(date: Date) {
+  return format(date, 'MMM/yyyy');
+}
+
 export const OportunidadesDashboards: React.FC = () => {
   // Estados de dados
   const [empresas, setEmpresas] = useState<any[]>([]);
@@ -79,6 +86,7 @@ export const OportunidadesDashboards: React.FC = () => {
   const [quarterYear, setQuarterYear] = useState(new Date().getFullYear());
   const [availableYears, setAvailableYears] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
+  const [oportunidades, setOportunidades] = useState<any[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -99,7 +107,7 @@ export const OportunidadesDashboards: React.FC = () => {
       }).filter(Boolean))).sort((a, b) => b - a);
       setAvailableYears(anos);
 
-      const oportunidades = (oportunidadesDb || []).filter((op: any) => {
+      const oportunidadesFiltradas = (oportunidadesDb || []).filter((op: any) => {
         const dataInd = op.data_indicacao ? new Date(op.data_indicacao) : null;
         let match = true;
         if (dataInicio && dataInd) match = match && dataInd >= dataInicio;
@@ -112,6 +120,7 @@ export const OportunidadesDashboards: React.FC = () => {
         }
         return match;
       });
+      setOportunidades(oportunidadesFiltradas);
 
       // Matriz INTRAGRUPO
       const intra = empresasDb.filter((e: any) => e.tipo === "intragrupo");
@@ -121,7 +130,7 @@ export const OportunidadesDashboards: React.FC = () => {
           if (orig.id === dest.id) {
             row[dest.nome] = '-';
           } else {
-            row[dest.nome] = oportunidades.filter(
+            row[dest.nome] = oportunidadesFiltradas.filter(
               (op: any) =>
                 op.empresa_origem_id === orig.id &&
                 op.empresa_destino_id === dest.id &&
@@ -140,7 +149,7 @@ export const OportunidadesDashboards: React.FC = () => {
         const row: any = { parceiro: parc.nome };
         intra.forEach((intraE: any) => {
           row[intraE.nome] =
-            oportunidades.filter((op: any) =>
+            oportunidadesFiltradas.filter((op: any) =>
               (
                 (op.empresa_origem_id === parc.id && op.empresa_destino_id === intraE.id) ||
                 (op.empresa_origem_id === intraE.id && op.empresa_destino_id === parc.id)
@@ -159,7 +168,7 @@ export const OportunidadesDashboards: React.FC = () => {
         let total = 0;
         let ganho = 0;
         let perdido = 0;
-        oportunidades.forEach((op: any) => {
+        oportunidadesFiltradas.forEach((op: any) => {
           if (op.empresa_origem?.nome === orig.nome) {
             total++;
             if (op.status === 'ganho') ganho++;
@@ -177,7 +186,7 @@ export const OportunidadesDashboards: React.FC = () => {
 
       // Status - Geral
       const statusCount: any = {};
-      oportunidades.forEach((op: any) => {
+      oportunidadesFiltradas.forEach((op: any) => {
         if (!statusCount[op.status]) statusCount[op.status] = 0;
         statusCount[op.status]++;
       });
@@ -186,7 +195,7 @@ export const OportunidadesDashboards: React.FC = () => {
       // Ranking Enviadas/Recebidas
       const rankingEnv: any = {};
       const rankingRec: any = {};
-      oportunidades.forEach((op: any) => {
+      oportunidadesFiltradas.forEach((op: any) => {
         if (op.empresa_origem?.nome) {
           if (!rankingEnv[op.empresa_origem.nome]) rankingEnv[op.empresa_origem.nome] = 0;
           rankingEnv[op.empresa_origem.nome]++;
@@ -200,8 +209,8 @@ export const OportunidadesDashboards: React.FC = () => {
       setRankingRecebidas(Object.entries(rankingRec).map(([empresa, indicacoes]) => ({ empresa, indicacoes })).sort((a, b) => b.indicacoes - a.indicacoes));
 
       // Balanço Grupo x Parceiros
-      const balGrupo = oportunidades.filter((op: any) => op.empresa_origem.tipo === "intragrupo" && op.empresa_destino.tipo === "parceiro").length;
-      const balParc = oportunidades.filter((op: any) => op.empresa_origem.tipo === "parceiro" && op.empresa_destino.tipo === "intragrupo").length;
+      const balGrupo = oportunidadesFiltradas.filter((op: any) => op.empresa_origem.tipo === "intragrupo" && op.empresa_destino.tipo === "parceiro").length;
+      const balParc = oportunidadesFiltradas.filter((op: any) => op.empresa_origem.tipo === "parceiro" && op.empresa_destino.tipo === "intragrupo").length;
       setBalanco([
         { tipo: "Grupo → Parceiros", valor: balGrupo },
         { tipo: "Parceiros → Grupo", valor: balParc }
@@ -267,8 +276,6 @@ export const OportunidadesDashboards: React.FC = () => {
   function renderMatrizDivergenteBarChart(matrizIntraRows: any[]) {
     if (!matrizIntraRows.length) return <div className="text-center text-xs">Nenhum dado para gráfico</div>;
     const empresasNomes = matrizIntraRows.map(row => row.origem);
-
-    // Para cada empresa, calcula: recebidas, enviadas, saldo
     const dados = empresasNomes.map(nome => {
       let recebidas = 0;
       let enviadas = 0;
@@ -287,7 +294,7 @@ export const OportunidadesDashboards: React.FC = () => {
       return {
         empresa: nome,
         recebidas,
-        enviadas: -enviadas, // Negativo, vai pra baixo
+        enviadas: -enviadas,
         saldo
       };
     });
@@ -339,6 +346,92 @@ export const OportunidadesDashboards: React.FC = () => {
           <Bar dataKey="enviadas" name="Enviadas" fill={BAR_COLOR_ENVIADAS} barSize={20}/>
           <Bar dataKey="saldo" name="Saldo" fill={BAR_COLOR_SALDO} barSize={8}/>
         </BarChart>
+      </ResponsiveContainer>
+    );
+  }
+
+  // NOVO: GRÁFICO DE LINHAS MENSAL INTRAGRUPO
+  function renderMatrizLineChart(oportunidades: any[], empresas: any[]) {
+    if (!empresas.length || !oportunidades.length) return <div className="text-center text-xs">Nenhum dado para gráfico</div>;
+
+    // Gera lista de meses entre dataInicio e dataFim
+    const start = dataInicio ?? new Date();
+    const end = dataFim ?? new Date();
+    let months: Date[] = [];
+    let d = new Date(start.getFullYear(), start.getMonth(), 1);
+    while (d <= end) {
+      months.push(new Date(d));
+      d.setMonth(d.getMonth() + 1);
+    }
+
+    // Para cada mês, para cada empresa, calcula recebidas e enviadas
+    const data: any[] = months.map((monthDate) => {
+      const monthYear = getMonthYear(monthDate);
+      let entry: any = { month: monthYear };
+      empresas.forEach((empresa, idx) => {
+        // Recebidas: oportunidades onde destino é a empresa (tipo intragrupo) nesse mês
+        entry[`rec_${empresa.nome}`] = oportunidades.filter((op: any) => {
+          if (!op.empresa_destino || !op.data_indicacao) return false;
+          const opDate = new Date(op.data_indicacao);
+          return op.empresa_destino.nome === empresa.nome &&
+            op.empresa_destino.tipo === "intragrupo" &&
+            opDate.getMonth() === monthDate.getMonth() &&
+            opDate.getFullYear() === monthDate.getFullYear();
+        }).length;
+        // Enviadas: oportunidades onde origem é a empresa (tipo intragrupo) nesse mês (negativo)
+        entry[`env_${empresa.nome}`] = -oportunidades.filter((op: any) => {
+          if (!op.empresa_origem || !op.data_indicacao) return false;
+          const opDate = new Date(op.data_indicacao);
+          return op.empresa_origem.nome === empresa.nome &&
+            op.empresa_origem.tipo === "intragrupo" &&
+            opDate.getMonth() === monthDate.getMonth() &&
+            opDate.getFullYear() === monthDate.getFullYear();
+        }).length;
+      });
+      return entry;
+    });
+
+    // Monta linhas: uma para recebidas de cada empresa (azul, positiva), uma para enviadas (vermelha, negativa)
+    return (
+      <ResponsiveContainer width="99%" height={380}>
+        <LineChart data={data}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="month" />
+          <YAxis />
+          <Tooltip
+            formatter={v => Math.abs(v)}
+            labelFormatter={v => `Mês: ${v}`}
+          />
+          <Legend />
+          {empresas.map((empresa, idx) => (
+            <Line
+              key={`rec_${empresa.nome}`}
+              type="monotone"
+              dataKey={`rec_${empresa.nome}`}
+              stroke={LINE_COLORS[idx % LINE_COLORS.length]}
+              name={`${empresa.nome} Recebidas`}
+              dot={{ r: 4 }}
+              strokeWidth={2}
+              isAnimationActive={false}
+              legendType="line"
+            />
+          ))}
+          {empresas.map((empresa, idx) => (
+            <Line
+              key={`env_${empresa.nome}`}
+              type="monotone"
+              dataKey={`env_${empresa.nome}`}
+              stroke={LINE_COLORS[idx % LINE_COLORS.length]}
+              strokeDasharray="5 5"
+              name={`${empresa.nome} Enviadas`}
+              dot={{ r: 4 }}
+              strokeWidth={2}
+              isAnimationActive={false}
+              legendType="line"
+            />
+          ))}
+          <ReferenceLine y={0} stroke="#222" strokeWidth={1.5} />
+        </LineChart>
       </ResponsiveContainer>
     );
   }
@@ -562,6 +655,7 @@ export const OportunidadesDashboards: React.FC = () => {
                   {renderMatrizTable(matrizIntra, "origem", "Origem \\ Destino")}
                   <div className="mt-6">{renderMatrizDivergenteBarChart(matrizIntra)}</div>
                   <div className="mt-10">{renderQualidadeBarChart(qualidadeData)}</div>
+                  <div className="mt-10">{renderMatrizLineChart(oportunidades, empresas.filter(e => e.tipo === "intragrupo"))}</div>
                 </>
               )}
             </CardContent>
