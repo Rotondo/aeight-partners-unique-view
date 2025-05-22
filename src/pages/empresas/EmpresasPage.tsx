@@ -303,7 +303,7 @@ const EmpresasPage: React.FC = () => {
                   <SelectValue placeholder="Filtrar por tipo" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos os tipos</SelectItem>
+                  <SelectItem value="all">Todos os tipos</SelectItem>
                   <SelectItem value="intragrupo">Intragrupo</SelectItem>
                   <SelectItem value="parceiro">Parceiro</SelectItem>
                   <SelectItem value="cliente">Cliente</SelectItem>

@@ -153,7 +153,7 @@ const IndicadoresPage: React.FC = () => {
               <SelectValue placeholder="Filtrar por empresa" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todas as empresas</SelectItem>
+              <SelectItem value="all">Todas as empresas</SelectItem>
               {empresas.map(empresa => (
                 <SelectItem key={empresa.id} value={empresa.id}>
                   {empresa.nome}
