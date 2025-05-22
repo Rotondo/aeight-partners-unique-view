@@ -1,5 +1,4 @@
-// (igual ao seu original, pois já é funcional, com feedback e usabilidade ok)
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useOportunidades } from "./OportunidadesContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,6 +30,12 @@ interface OportunidadesFormProps {
   onClose: () => void;
 }
 
+function getGrupoStatus(origemTipo?: string, destinoTipo?: string) {
+  if (origemTipo === "intragrupo" && destinoTipo === "intragrupo") return "intragrupo";
+  if (origemTipo && destinoTipo) return "extragrupo";
+  return undefined;
+}
+
 export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({ oportunidadeId, onClose }) => {
   const { getOportunidade, createOportunidade, updateOportunidade } = useOportunidades();
   const { toast } = useToast();
@@ -39,34 +44,24 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({ oportunida
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  
-  // Aplica apenas campos obrigatórios
   const [formData, setFormData] = useState<Partial<Oportunidade>>({
     nome_lead: "",
     empresa_origem_id: "",
     empresa_destino_id: "",
+    tipo_natureza: undefined,
     data_indicacao: new Date().toISOString(),
+    contato: { nome: "", email: "", telefone: "" },
+    usuario_recebe_nome: ""
   });
-
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
-  // Carrega oportunidade para edição
   useEffect(() => {
     if (isEditing && oportunidadeId) {
       const oportunidade = getOportunidade(oportunidadeId);
       if (oportunidade) {
         setFormData({
-          nome_lead: oportunidade.nome_lead,
-          empresa_origem_id: oportunidade.empresa_origem_id,
-          empresa_destino_id: oportunidade.empresa_destino_id,
-          data_indicacao: oportunidade.data_indicacao,
-          status: oportunidade.status,
-          valor: oportunidade.valor,
-          contato_id: oportunidade.contato_id,
-          data_fechamento: oportunidade.data_fechamento,
-          motivo_perda: oportunidade.motivo_perda,
-          observacoes: oportunidade.observacoes,
-          usuario_recebe_id: oportunidade.usuario_recebe_id
+          ...oportunidade,
+          contato: oportunidade.contato || { nome: "", email: "", telefone: "" }
         });
       } else {
         toast({
@@ -80,7 +75,6 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({ oportunida
     // eslint-disable-next-line
   }, [oportunidadeId, isEditing]);
 
-  // Carrega empresas
   useEffect(() => {
     const fetchEmpresas = async () => {
       setIsLoading(true);
@@ -90,7 +84,6 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({ oportunida
           .select('*')
           .order('nome');
         if (empresasError) throw empresasError;
-        
         if (empresasData) {
           const typedEmpresas = empresasData.map(empresa => ({
             id: empresa.id,
@@ -126,10 +119,23 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({ oportunida
     }
   };
 
+  // Calcular os tipos das empresas selecionadas
+  const empresaOrigemTipo = useMemo(() => {
+    return empresas.find(e => e.id === formData.empresa_origem_id)?.tipo;
+  }, [formData.empresa_origem_id, empresas]);
+  const empresaDestinoTipo = useMemo(() => {
+    return empresas.find(e => e.id === formData.empresa_destino_id)?.tipo;
+  }, [formData.empresa_destino_id, empresas]);
+
+  // Atualiza tipo_natureza sempre que empresas mudarem
+  useEffect(() => {
+    const tipo = getGrupoStatus(empresaOrigemTipo, empresaDestinoTipo);
+    setFormData(prev => ({ ...prev, tipo_natureza: tipo }));
+  }, [empresaOrigemTipo, empresaDestinoTipo]);
+
   // Validação simplificada apenas para os campos mandatórios
   const validateForm = () => {
     const errors: Record<string, string> = {};
-
     if (!formData.nome_lead || !formData.nome_lead.trim()) {
       errors.nome_lead = "Nome da oportunidade é obrigatório";
     }
@@ -142,14 +148,15 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({ oportunida
     if (!formData.data_indicacao) {
       errors.data_indicacao = "Data é obrigatória";
     }
-
+    if (!formData.usuario_recebe_nome || !formData.usuario_recebe_nome.trim()) {
+      errors.usuario_recebe_nome = "Nome do executivo interno é obrigatório";
+    }
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!validateForm()) {
       toast({
         title: "Erro de validação",
@@ -158,7 +165,6 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({ oportunida
       });
       return;
     }
-
     setIsSaving(true);
     try {
       if (isEditing && oportunidadeId) {
@@ -185,6 +191,17 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({ oportunida
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <h2 className="text-xl font-bold">{isEditing ? "Editar Oportunidade" : "Nova Oportunidade"}</h2>
+      {/* Indicador de natureza */}
+      <div className="mb-4">
+        <span className="font-medium">Tipo: </span>
+        {formData.tipo_natureza === "intragrupo" ? (
+          <span className="px-2 py-1 rounded text-green-700 bg-green-100">INTRAGRUPO</span>
+        ) : formData.tipo_natureza === "extragrupo" ? (
+          <span className="px-2 py-1 rounded text-blue-700 bg-blue-100">EXTRAGRUPO</span>
+        ) : (
+          <span className="px-2 py-1 rounded text-gray-700 bg-gray-100">-</span>
+        )}
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Nome */}
         <div className="space-y-2 md:col-span-2">
@@ -283,6 +300,51 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({ oportunida
           </Popover>
           {formErrors.data_indicacao && (
             <p className="text-sm text-red-500">{formErrors.data_indicacao}</p>
+          )}
+        </div>
+        {/* Contato (opcional) */}
+        <div className="space-y-2">
+          <Label>Contato na Empresa Indicada (opcional)</Label>
+          <Input
+            placeholder="Nome"
+            value={formData.contato?.nome || ""}
+            onChange={e => setFormData(prev => ({
+              ...prev,
+              contato: { ...prev.contato, nome: e.target.value }
+            }))}
+          />
+          <Input
+            placeholder="Email"
+            type="email"
+            value={formData.contato?.email || ""}
+            onChange={e => setFormData(prev => ({
+              ...prev,
+              contato: { ...prev.contato, email: e.target.value }
+            }))}
+          />
+          <Input
+            placeholder="Telefone"
+            value={formData.contato?.telefone || ""}
+            onChange={e => setFormData(prev => ({
+              ...prev,
+              contato: { ...prev.contato, telefone: e.target.value }
+            }))}
+          />
+        </div>
+        {/* Executivo interno responsável */}
+        <div className="space-y-2">
+          <Label htmlFor="usuario_recebe_nome">
+            Executivo Interno Responsável <span className="text-red-500">*</span>
+          </Label>
+          <Input
+            id="usuario_recebe_nome"
+            value={formData.usuario_recebe_nome || ""}
+            onChange={e => handleChange("usuario_recebe_nome", e.target.value)}
+            required
+            className={cn(formErrors.usuario_recebe_nome && "border-red-500")}
+          />
+          {formErrors.usuario_recebe_nome && (
+            <p className="text-sm text-red-500">{formErrors.usuario_recebe_nome}</p>
           )}
         </div>
       </div>
