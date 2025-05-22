@@ -147,6 +147,7 @@ const QuadranteForm: React.FC<QuadranteFormProps> = ({
             <FormItem>
               <FormLabel>Parceiro</FormLabel>
               <Select
+                // O campo só é desabilitado se readOnly de fato, nunca por haver indicador selecionado!
                 disabled={readOnly}
                 onValueChange={(val) => {
                   field.onChange(val);
