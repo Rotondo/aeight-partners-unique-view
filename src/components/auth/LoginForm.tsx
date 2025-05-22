@@ -32,7 +32,6 @@ const LoginForm: React.FC = () => {
       margin: '0 auto'
     }}>
       <div style={{ textAlign: 'center', marginBottom: 24 }}>
-        <img src="/favicon.svg" alt="Logo" style={{ width: 52, marginBottom: 12 }} />
         <h2 style={{ margin: 0, fontWeight: 700, fontSize: 26 }}>A&eight Partnership Hub</h2>
         <div style={{ fontSize: 14, color: '#444', marginTop: 4 }}>
           Plataforma Unificada de Parcerias <br /><b>Destinada aos parceiros e empresas do Grupo A&eight</b>
