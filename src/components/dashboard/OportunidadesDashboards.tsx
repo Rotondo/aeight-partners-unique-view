@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { TipoEmpresa, MatrizData, QualidadeData, BalancoData, RankingData, StatusData } from '@/types';
+import { TipoEmpresa, MatrizData, QualidadeData, BalancoData, RankingData, StatusData, StatusOportunidade } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { format, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -142,11 +142,14 @@ export const OportunidadesDashboards: React.FC = () => {
 
   const fetchMatrizIntragrupo = async () => {
     try {
+      // Convert string to StatusOportunidade type or null
+      const statusFilter = filters.status ? filters.status as StatusOportunidade : null;
+      
       const data = await getMatrizIntragrupo(
         filters.dataInicio, 
         filters.dataFim, 
         filters.empresaId || null, 
-        filters.status || null
+        statusFilter
       );
       setMatrizIntragrupo(data as MatrizData[]);
     } catch (error) {
@@ -157,11 +160,14 @@ export const OportunidadesDashboards: React.FC = () => {
 
   const fetchMatrizParcerias = async () => {
     try {
+      // Convert string to StatusOportunidade type or null
+      const statusFilter = filters.status ? filters.status as StatusOportunidade : null;
+      
       const data = await getMatrizParcerias(
         filters.dataInicio, 
         filters.dataFim, 
         filters.empresaId || null, 
-        filters.status || null
+        statusFilter
       );
       setMatrizParcerias(data as MatrizData[]);
     } catch (error) {
@@ -186,11 +192,14 @@ export const OportunidadesDashboards: React.FC = () => {
 
   const fetchBalanco = async () => {
     try {
+      // Convert string to StatusOportunidade type or null
+      const statusFilter = filters.status ? filters.status as StatusOportunidade : null;
+      
       const data = await getBalancoGrupoParcerias(
         filters.dataInicio, 
         filters.dataFim, 
         filters.empresaId || null, 
-        filters.status || null
+        statusFilter
       );
       setBalancoData(data as BalancoData[]);
     } catch (error) {
@@ -201,10 +210,13 @@ export const OportunidadesDashboards: React.FC = () => {
 
   const fetchRankingEnviadas = async () => {
     try {
+      // Convert string to StatusOportunidade type or null
+      const statusFilter = filters.status ? filters.status as StatusOportunidade : null;
+      
       const data = await getRankingParceirosEnviadas(
         filters.dataInicio, 
         filters.dataFim, 
-        filters.status || null
+        statusFilter
       );
       setRankingEnviadas(data as RankingData[]);
     } catch (error) {
@@ -215,10 +227,13 @@ export const OportunidadesDashboards: React.FC = () => {
 
   const fetchRankingRecebidas = async () => {
     try {
+      // Convert string to StatusOportunidade type or null
+      const statusFilter = filters.status ? filters.status as StatusOportunidade : null;
+      
       const data = await getRankingParceirosRecebidas(
         filters.dataInicio, 
         filters.dataFim, 
-        filters.status || null
+        statusFilter
       );
       setRankingRecebidas(data as RankingData[]);
     } catch (error) {
