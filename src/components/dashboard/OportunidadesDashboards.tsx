@@ -16,7 +16,11 @@ import {
   Tooltip,
   ResponsiveContainer,
   Legend,
-  ReferenceLine
+  ReferenceLine,
+  PieChart,
+  Pie,
+  Cell,
+  LabelList // <-- IMPORTAÇÃO ADICIONADA
 } from 'recharts';
 
 // CORES EDITÁVEIS PARA O GRÁFICO DIVERGENTE
