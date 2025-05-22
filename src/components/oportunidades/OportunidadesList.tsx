@@ -33,6 +33,12 @@ interface OportunidadesListProps {
   onEdit: (id: string) => void;
 }
 
+function getGrupoStatus(origemTipo?: string, destinoTipo?: string) {
+  if (origemTipo === "intragrupo" && destinoTipo === "intragrupo") return "intragrupo";
+  if (origemTipo && destinoTipo) return "extragrupo";
+  return undefined;
+}
+
 export const OportunidadesList: React.FC<OportunidadesListProps> = ({ onEdit }) => {
   const { filteredOportunidades, isLoading, deleteOportunidade, oportunidades } = useOportunidades();
   const { user } = useAuth();
@@ -76,6 +82,13 @@ export const OportunidadesList: React.FC<OportunidadesListProps> = ({ onEdit }) 
       default:
         return <Badge>Desconhecido</Badge>;
     }
+  };
+
+  const getTipoBadge = (op: any) => {
+    const tipo = getGrupoStatus(op.empresa_origem?.tipo, op.empresa_destino?.tipo);
+    if (tipo === "intragrupo") return <Badge className="bg-green-100 text-green-700">Intra</Badge>;
+    if (tipo === "extragrupo") return <Badge className="bg-blue-100 text-blue-700">Extra</Badge>;
+    return <Badge className="bg-gray-100 text-gray-700">-</Badge>;
   };
 
   const formatDate = (dateString: string) => {
@@ -174,6 +187,7 @@ export const OportunidadesList: React.FC<OportunidadesListProps> = ({ onEdit }) 
                 <TableHead>Data</TableHead>
                 <TableHead>Origem</TableHead>
                 <TableHead>Destino</TableHead>
+                <TableHead>Tipo</TableHead>
                 <TableHead>Contato</TableHead>
                 <TableHead>Valor</TableHead>
                 <TableHead>Status</TableHead>
@@ -186,6 +200,7 @@ export const OportunidadesList: React.FC<OportunidadesListProps> = ({ onEdit }) 
                   <TableCell>{formatDate(op.data_indicacao)}</TableCell>
                   <TableCell>{op.empresa_origem?.nome || "-"}</TableCell>
                   <TableCell>{op.empresa_destino?.nome || "-"}</TableCell>
+                  <TableCell>{getTipoBadge(op)}</TableCell>
                   <TableCell>{op.contato?.nome || "-"}</TableCell>
                   <TableCell>{formatCurrency(op.valor)}</TableCell>
                   <TableCell>{getStatusBadge(op.status)}</TableCell>
