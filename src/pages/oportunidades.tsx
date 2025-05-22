@@ -1,9 +1,9 @@
 
-import React from 'react';
-import { OportunidadesPage as OportunidadesPagina } from '@/components/oportunidades/OportunidadesPage';
+import React from "react";
+import { OportunidadesPage } from "@/components/oportunidades/OportunidadesPage";
 
-const OportunidadesPage: React.FC = () => {
-  return <OportunidadesPagina />;
+const OportunidadesPageContainer: React.FC = () => {
+  return <OportunidadesPage />;
 };
 
-export default OportunidadesPage;
+export default OportunidadesPageContainer;
