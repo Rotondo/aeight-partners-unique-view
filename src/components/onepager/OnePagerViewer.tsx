@@ -104,47 +104,43 @@ const OnePagerViewer: React.FC<OnePagerViewerProps> = ({
       onePager.url_imagem?.toLowerCase().endsWith('.pdf') ||
       onePager.arquivo_upload?.toLowerCase().endsWith('.pdf');
 
-    // Corrigido: Montar URL pública do storage sempre que arquivo foi enviado pelo sistema
+    // Sempre usar supabase.storage para gerar a URL pública do arquivo
     let publicUrl = '';
     if (onePager.arquivo_upload) {
       const { data } = supabase.storage
         .from('onepagers')
         .getPublicUrl(onePager.arquivo_upload);
       publicUrl = data?.publicUrl || '';
-    }
-    // Se não houver arquivo no storage, usar url_imagem externo (caso legado)
-    else if (onePager.url_imagem) {
+    } else if (onePager.url_imagem) {
       publicUrl = onePager.url_imagem;
+    }
+
+    if (!publicUrl) {
+      return (
+        <div className="flex-1 flex items-center justify-center text-muted-foreground">
+          <span>Arquivo não encontrado no storage do Supabase.</span>
+        </div>
+      );
     }
 
     if (isPdf) {
       return (
         <div className="flex-1 flex flex-col">
-          {publicUrl ? (
-            <iframe
-              src={publicUrl}
-              className="flex-1 w-full h-full border rounded"
-              title={`OnePager de ${parceiro.nome}`}
-            />
-          ) : (
-            <div className="flex-1 flex items-center justify-center text-muted-foreground">
-              <span>Arquivo PDF não encontrado.</span>
-            </div>
-          )}
+          <iframe
+            src={publicUrl}
+            className="flex-1 w-full h-full border rounded"
+            title={`OnePager de ${parceiro.nome}`}
+          />
         </div>
       );
     } else {
       return (
         <div className="flex-1 flex items-center justify-center overflow-auto">
-          {publicUrl ? (
-            <img
-              src={publicUrl}
-              alt={`OnePager de ${parceiro.nome}`}
-              className="max-w-full max-h-full object-contain"
-            />
-          ) : (
-            <span>Arquivo não encontrado.</span>
-          )}
+          <img
+            src={publicUrl}
+            alt={`OnePager de ${parceiro.nome}`}
+            className="max-w-full max-h-full object-contain"
+          />
         </div>
       );
     }
