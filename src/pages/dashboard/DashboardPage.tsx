@@ -4,26 +4,28 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid, LineChart, Line } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid } from "recharts";
 import { DashboardCard } from "@/components/dashboard/DashboardCard";
 import { useToast } from "@/hooks/use-toast";
 import { Oportunidade, Empresa } from "@/types";
 import { QuickAccess } from "@/components/dashboard/QuickAccess";
 import { AboutPlatform } from "@/components/dashboard/AboutPlatform";
+import { Edit, Check, X as Cancel } from "lucide-react";
 
 function getQuarter(date: Date) {
   return Math.floor(date.getMonth() / 3) + 1;
+}
+
+function getQuarterKey(date: Date) {
+  return `Q${getQuarter(date)}/${date.getFullYear()}`;
 }
 
 function groupByQuarter(data: Oportunidade[], tipo: "intra" | "extra" | "all") {
   const result: Record<string, { enviadas: number; recebidas: number }> = {};
   data.forEach((op) => {
     const d = new Date(op.data_indicacao);
-    const year = d.getFullYear();
-    const quarter = getQuarter(d);
-    const key = `${year}-Q${quarter}`;
+    const key = getQuarterKey(d);
     if (!result[key]) result[key] = { enviadas: 0, recebidas: 0 };
-
     if (tipo === "intra" && op.tipo_relacao === "intra") {
       result[key].enviadas += op.isRemetente ? 1 : 0;
       result[key].recebidas += op.isDestinatario ? 1 : 0;
@@ -40,7 +42,6 @@ function groupByQuarter(data: Oportunidade[], tipo: "intra" | "extra" | "all") {
     .sort((a, b) => a.quarter.localeCompare(b.quarter));
 }
 
-// Agrupa por mês para gráfico
 function groupByMonth(data: Oportunidade[], tipo: "intra" | "extra" | "all") {
   const result: Record<string, { enviadas: number; recebidas: number }> = {};
   data.forEach((op) => {
@@ -68,6 +69,29 @@ function groupByMonth(data: Oportunidade[], tipo: "intra" | "extra" | "all") {
     .sort((a, b) => a.mes.localeCompare(b.mes));
 }
 
+// Agrupa oportunidades para status
+function groupByStatus(data: Oportunidade[], tipo: "all" | "intra" | "extra") {
+  const result: Record<string, number> = {};
+  data.forEach((op) => {
+    if (tipo === "intra" && op.tipo_relacao !== "intra") return;
+    if (tipo === "extra" && op.tipo_relacao !== "extra") return;
+    result[op.status] = (result[op.status] || 0) + 1;
+  });
+  return Object.entries(result).map(([status, count]) => ({ status, count }));
+}
+
+const statusLabels: Record<string, string> = {
+  ganho: "Ganho",
+  perdido: "Perdido",
+  negociando: "Negociando",
+  em_contato: "Em Contato",
+  Contato: "Contato",
+};
+
+const editableFields: (keyof Oportunidade)[] = [
+  "status", "empresa_origem_id", "empresa_destino_id", "valor", "motivo_perda", "observacoes", "nome_lead"
+];
+
 const DashboardPage: React.FC = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
@@ -79,54 +103,45 @@ const DashboardPage: React.FC = () => {
   const [empresaFiltro, setEmpresaFiltro] = useState<string>("");
   const [empresaFiltroType, setEmpresaFiltroType] = useState<"remetente" | "destinatario" | "all">("all");
   const [searchTerm, setSearchTerm] = useState("");
+  // Edição da tabela
+  const [editRowId, setEditRowId] = useState<string | null>(null);
+  const [editValues, setEditValues] = useState<Partial<Oportunidade>>({});
+  const [sortColumn, setSortColumn] = useState<string>("data_indicacao");
+  const [sortAsc, setSortAsc] = useState<boolean>(false);
 
   // Cards stats
   const [stats, setStats] = useState<any>({
-    total: 0,
-    ganhas: 0,
-    perdidas: 0,
-    andamento: 0,
-    intra: 0,
-    extra: 0,
-    enviadas: 0,
-    recebidas: 0,
-    saldo: 0,
+    total: 0, ganhas: 0, perdidas: 0, andamento: 0, intra: 0, extra: 0, enviadas: 0, recebidas: 0, saldo: 0
   });
 
-  // Tabela de saldo por empresa
   const [saldoEmpresas, setSaldoEmpresas] = useState<any[]>([]);
-
-  // Gráfico
   const [chartData, setChartData] = useState<any[]>([]);
+  const [statusChart, setStatusChart] = useState<any[]>([]);
+  const [matrizIntra, setMatrizIntra] = useState<string[][]>([]);
+  const [matrizParceiros, setMatrizParceiros] = useState<string[][]>([]);
 
-  useEffect(() => {
-    fetchAll();
-  }, []);
+  useEffect(() => { fetchAll(); }, []);
 
   async function fetchAll() {
     setLoading(true);
     try {
-      // Carrega oportunidades
+      // Carrega oportunidades e empresas
       const { data: oportunidadesData, error } = await supabase
         .from("oportunidades")
         .select("*, empresa_origem:empresas!empresa_origem_id(nome, tipo), empresa_destino:empresas!empresa_destino_id(nome, tipo)");
       if (error) throw error;
-
-      // Carrega empresas
       const { data: empresasData, error: empresasError } = await supabase
         .from("empresas")
         .select("id, nome, tipo, status")
         .order("nome");
       if (empresasError) throw empresasError;
 
-      // Enriquecimento de tipo intra/extra
+      // Marca intra/extra grupo
       const oportunidadesEnriquecidas: Oportunidade[] = oportunidadesData.map((op: any) => {
         const tipoOrigem = op.empresa_origem?.tipo || "";
         const tipoDestino = op.empresa_destino?.tipo || "";
-        // intra se ambos forem intragrupo; extra caso contrário
         let tipo_relacao: "intra" | "extra" = "extra";
         if (tipoOrigem === "intragrupo" && tipoDestino === "intragrupo") tipo_relacao = "intra";
-        // flags para gráficos de enviados/recebidos
         return {
           ...op,
           tipo_relacao,
@@ -140,6 +155,8 @@ const DashboardPage: React.FC = () => {
       processStats(oportunidadesEnriquecidas, empresasData);
       processSaldoEmpresas(oportunidadesEnriquecidas, empresasData);
       processChart(oportunidadesEnriquecidas);
+      processStatusChart(oportunidadesEnriquecidas);
+      processMatrizes(oportunidadesEnriquecidas, empresasData);
     } catch (e) {
       toast({ title: "Erro", description: "Não foi possível carregar dados.", variant: "destructive" });
     } finally {
@@ -147,7 +164,6 @@ const DashboardPage: React.FC = () => {
     }
   }
 
-  // Estatísticas para os cards
   function processStats(oportunidades: Oportunidade[], empresas: Empresa[]) {
     const total = oportunidades.length;
     const ganhas = oportunidades.filter((op) => op.status === "ganho").length;
@@ -155,48 +171,23 @@ const DashboardPage: React.FC = () => {
     const andamento = total - ganhas - perdidas;
     const intra = oportunidades.filter((op) => op.tipo_relacao === "intra").length;
     const extra = oportunidades.filter((op) => op.tipo_relacao === "extra").length;
-
-    // Saldos gerais
     let enviadas = 0, recebidas = 0;
     oportunidades.forEach((op) => {
       if (op.empresa_origem_id) enviadas++;
       if (op.empresa_destino_id) recebidas++;
     });
-
-    setStats({
-      total,
-      ganhas,
-      perdidas,
-      andamento,
-      intra,
-      extra,
-      enviadas,
-      recebidas,
-      saldo: enviadas - recebidas,
-    });
+    setStats({ total, ganhas, perdidas, andamento, intra, extra, enviadas, recebidas, saldo: enviadas - recebidas });
   }
 
-  // Saldo de enviadas/recebidas por empresa
   function processSaldoEmpresas(oportunidades: Oportunidade[], empresas: Empresa[]) {
-    // Só mostra para as empresas ativas
-    const saldos = empresas
-      .filter((e) => e.status)
-      .map((empresa) => {
-        const enviadas = oportunidades.filter((op) => op.empresa_origem_id === empresa.id).length;
-        const recebidas = oportunidades.filter((op) => op.empresa_destino_id === empresa.id).length;
-        return {
-          empresa: empresa.nome,
-          tipo: empresa.tipo,
-          enviadas,
-          recebidas,
-          saldo: enviadas - recebidas,
-        };
-      })
-      .sort((a, b) => b.saldo - a.saldo);
+    const saldos = empresas.filter((e) => e.status).map((empresa) => {
+      const enviadas = oportunidades.filter((op) => op.empresa_origem_id === empresa.id).length;
+      const recebidas = oportunidades.filter((op) => op.empresa_destino_id === empresa.id).length;
+      return { empresa: empresa.nome, tipo: empresa.tipo, enviadas, recebidas, saldo: enviadas - recebidas };
+    }).sort((a, b) => b.saldo - a.saldo);
     setSaldoEmpresas(saldos);
   }
 
-  // Dados para o gráfico
   function processChart(oportunidades: Oportunidade[]) {
     let filtradas = oportunidades;
     if (statusFiltro !== "all") {
@@ -205,14 +196,10 @@ const DashboardPage: React.FC = () => {
         return op.status === statusFiltro;
       });
     }
-    if (tipoFiltro !== "all") {
-      filtradas = filtradas.filter((op) => op.tipo_relacao === tipoFiltro);
-    }
+    if (tipoFiltro !== "all") filtradas = filtradas.filter((op) => op.tipo_relacao === tipoFiltro);
     if (empresaFiltro && empresaFiltroType !== "all") {
       filtradas = filtradas.filter((op) =>
-        empresaFiltroType === "remetente"
-          ? op.empresa_origem_id === empresaFiltro
-          : op.empresa_destino_id === empresaFiltro
+        empresaFiltroType === "remetente" ? op.empresa_origem_id === empresaFiltro : op.empresa_destino_id === empresaFiltro
       );
     }
     if (searchTerm) {
@@ -221,114 +208,132 @@ const DashboardPage: React.FC = () => {
         (op.empresa_destino?.nome || "").toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
-    const data =
-      periodo === "mes"
-        ? groupByMonth(filtradas, tipoFiltro)
-        : groupByQuarter(filtradas, tipoFiltro);
+    const data = periodo === "mes" ? groupByMonth(filtradas, tipoFiltro) : groupByQuarter(filtradas, tipoFiltro);
     setChartData(data);
   }
 
-  // Atualiza gráfico ao mudar filtros
-  useEffect(() => {
-    processChart(oportunidades);
-  }, [oportunidades, tipoFiltro, periodo, statusFiltro, empresaFiltro, empresaFiltroType, searchTerm]);
-
-  // Exportação de tabela de saldos
-  function exportSaldoCSV() {
-    const headers = ["Empresa", "Tipo", "Enviadas", "Recebidas", "Saldo"];
-    const rows = saldoEmpresas.map((s) => [
-      s.empresa,
-      s.tipo,
-      s.enviadas,
-      s.recebidas,
-      s.saldo,
-    ]);
-    let csvContent = [headers, ...rows].map((e) => e.join(";")).join("\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", "saldos_oportunidades.csv");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  function processStatusChart(oportunidades: Oportunidade[]) {
+    setStatusChart(groupByStatus(oportunidades, tipoFiltro));
   }
 
+  function processMatrizes(oportunidades: Oportunidade[], empresas: Empresa[]) {
+    // Matriz IntraGrupo
+    const intraEmpresas = empresas.filter((e) => e.tipo === "intragrupo");
+    const matriz: string[][] = [];
+    matriz.push(["", ...intraEmpresas.map((e) => e.nome)]);
+    intraEmpresas.forEach((rem) => {
+      const row = [rem.nome];
+      intraEmpresas.forEach((dest) => {
+        const count = oportunidades.filter(
+          (op) =>
+            op.empresa_origem_id === rem.id &&
+            op.empresa_destino_id === dest.id &&
+            op.tipo_relacao === "intra"
+        ).length;
+        row.push(count ? String(count) : "");
+      });
+      matriz.push(row);
+    });
+    setMatrizIntra(matriz);
+
+    // Matriz Parceiros
+    const parceiros = empresas.filter((e) => e.tipo === "parceiro");
+    const matrizP: string[][] = [];
+    matrizP.push(["", ...parceiros.map((e) => e.nome)]);
+    parceiros.forEach((rem) => {
+      const row = [rem.nome];
+      parceiros.forEach((dest) => {
+        const count = oportunidades.filter(
+          (op) =>
+            op.empresa_origem_id === rem.id &&
+            op.empresa_destino_id === dest.id &&
+            op.tipo_relacao === "extra"
+        ).length;
+        row.push(count ? String(count) : "");
+      });
+      matrizP.push(row);
+    });
+    setMatrizParceiros(matrizP);
+  }
+
+  // Edição da tabela
+  function handleEdit(op: Oportunidade) {
+    setEditRowId(op.id);
+    setEditValues({ ...op });
+  }
+  function handleEditChange(field: keyof Oportunidade, value: any) {
+    setEditValues((v) => ({ ...v, [field]: value }));
+  }
+  async function handleSaveEdit(id: string) {
+    try {
+      const updates: Partial<Oportunidade> = { ...editValues };
+      delete (updates as any).empresa_origem;
+      delete (updates as any).empresa_destino;
+      delete (updates as any).tipo_relacao;
+      delete (updates as any).isRemetente;
+      delete (updates as any).isDestinatario;
+      delete (updates as any).created_at;
+      delete (updates as any).data_indicacao; // não editável
+      const { error } = await supabase.from("oportunidades").update(updates).eq("id", id);
+      if (error) throw error;
+      toast({ title: "Sucesso", description: "Oportunidade atualizada." });
+      setEditRowId(null); setEditValues({});
+      fetchAll();
+    } catch {
+      toast({ title: "Erro", description: "Falha ao editar.", variant: "destructive" });
+    }
+  }
+  function handleCancelEdit() { setEditRowId(null); setEditValues({}); }
+
+  function formatDate(dateString: string) {
+    if (!dateString) return "-";
+    const date = new Date(dateString);
+    return date.toLocaleDateString("pt-BR");
+  }
+
+  const renderSortIcon = (col: string) =>
+    sortColumn === col ? (sortAsc ? <span className="ml-1">&#9650;</span> : <span className="ml-1">&#9660;</span>) : null;
+
+  // Ordenação da tabela de oportunidades
+  let oportunidadesOrdenadas = [...oportunidades].sort((a, b) => {
+    let vA: any, vB: any;
+    if (sortColumn === "empresa_origem") {
+      vA = a.empresa_origem?.nome || "";
+      vB = b.empresa_origem?.nome || "";
+    } else if (sortColumn === "empresa_destino") {
+      vA = a.empresa_destino?.nome || "";
+      vB = b.empresa_destino?.nome || "";
+    } else {
+      vA = (a as any)[sortColumn] ?? "";
+      vB = (b as any)[sortColumn] ?? "";
+    }
+    if (typeof vA === "string") vA = vA.toLowerCase();
+    if (typeof vB === "string") vB = vB.toLowerCase();
+    if (vA < vB) return sortAsc ? -1 : 1;
+    if (vA > vB) return sortAsc ? 1 : -1;
+    return 0;
+  });
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 p-4">
       <h1 className="text-2xl font-bold">Dashboard de Oportunidades</h1>
       {/* Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <DashboardCard
-          title="Total de Oportunidades"
-          value={loading ? "..." : stats.total}
-          icon={<BarChart className="h-4 w-4 text-primary" />}
-          color="bg-primary/10"
-          description="Todas as oportunidades registradas"
-        />
-        <DashboardCard
-          title="Ganhos"
-          value={loading ? "..." : stats.ganhas}
-          icon={<BarChart className="h-4 w-4 text-green-500" />}
-          color="bg-green-500/10"
-          description="Oportunidades ganhas"
-        />
-        <DashboardCard
-          title="Perdidos"
-          value={loading ? "..." : stats.perdidas}
-          icon={<BarChart className="h-4 w-4 text-destructive" />}
-          color="bg-destructive/10"
-          description="Oportunidades perdidas"
-        />
-        <DashboardCard
-          title="Em Andamento"
-          value={loading ? "..." : stats.andamento}
-          icon={<BarChart className="h-4 w-4 text-amber-500" />}
-          color="bg-amber-500/10"
-          description="Em negociação"
-        />
-        <DashboardCard
-          title="Intra Grupo"
-          value={loading ? "..." : stats.intra}
-          icon={<BarChart className="h-4 w-4 text-blue-500" />}
-          color="bg-blue-500/10"
-          description="Trocas dentro do grupo"
-        />
-        <DashboardCard
-          title="Extra Grupo"
-          value={loading ? "..." : stats.extra}
-          icon={<BarChart className="h-4 w-4 text-purple-600" />}
-          color="bg-purple-600/10"
-          description="Trocas com terceiros"
-        />
-        <DashboardCard
-          title="Enviadas"
-          value={loading ? "..." : stats.enviadas}
-          icon={<BarChart className="h-4 w-4 text-cyan-500" />}
-          color="bg-cyan-500/10"
-          description="Oportunidades enviadas"
-        />
-        <DashboardCard
-          title="Recebidas"
-          value={loading ? "..." : stats.recebidas}
-          icon={<BarChart className="h-4 w-4 text-rose-500" />}
-          color="bg-rose-500/10"
-          description="Oportunidades recebidas"
-        />
-        <DashboardCard
-          title="Saldo Envio-Recebimento"
-          value={loading ? "..." : stats.saldo}
-          icon={<BarChart className="h-4 w-4 text-gray-600" />}
-          color="bg-gray-600/10"
-          description="Saldo entre enviadas e recebidas"
-        />
+        <DashboardCard title="Total de Oportunidades" value={loading ? "..." : stats.total} icon={<BarChart className="h-4 w-4 text-primary" />} color="bg-primary/10" description="Todas as oportunidades registradas" />
+        <DashboardCard title="Ganhos" value={loading ? "..." : stats.ganhas} icon={<BarChart className="h-4 w-4 text-green-500" />} color="bg-green-500/10" description="Oportunidades ganhas" />
+        <DashboardCard title="Perdidos" value={loading ? "..." : stats.perdidas} icon={<BarChart className="h-4 w-4 text-destructive" />} color="bg-destructive/10" description="Oportunidades perdidas" />
+        <DashboardCard title="Em Andamento" value={loading ? "..." : stats.andamento} icon={<BarChart className="h-4 w-4 text-amber-500" />} color="bg-amber-500/10" description="Em negociação" />
+        <DashboardCard title="Intra Grupo" value={loading ? "..." : stats.intra} icon={<BarChart className="h-4 w-4 text-blue-500" />} color="bg-blue-500/10" description="Trocas dentro do grupo" />
+        <DashboardCard title="Extra Grupo" value={loading ? "..." : stats.extra} icon={<BarChart className="h-4 w-4 text-purple-600" />} color="bg-purple-600/10" description="Trocas com terceiros" />
+        <DashboardCard title="Enviadas" value={loading ? "..." : stats.enviadas} icon={<BarChart className="h-4 w-4 text-cyan-500" />} color="bg-cyan-500/10" description="Oportunidades enviadas" />
+        <DashboardCard title="Recebidas" value={loading ? "..." : stats.recebidas} icon={<BarChart className="h-4 w-4 text-rose-500" />} color="bg-rose-500/10" description="Oportunidades recebidas" />
+        <DashboardCard title="Saldo Envio-Recebimento" value={loading ? "..." : stats.saldo} icon={<BarChart className="h-4 w-4 text-gray-600" />} color="bg-gray-600/10" description="Saldo entre enviadas e recebidas" />
       </div>
 
       {/* Filtros */}
       <Card>
         <CardHeader>
           <CardTitle>Filtros do Gráfico</CardTitle>
-          <CardDescription>Refine os dados exibidos no gráfico</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col md:flex-row gap-4">
           <Select value={tipoFiltro} onValueChange={(v) => setTipoFiltro(v as any)}>
@@ -358,7 +363,7 @@ const DashboardPage: React.FC = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="mes">Mensal</SelectItem>
-              <SelectItem value="quarter">Trimestre</SelectItem>
+              <SelectItem value="quarter">Quarter</SelectItem>
             </SelectContent>
           </Select>
           <Select value={empresaFiltroType} onValueChange={(v) => setEmpresaFiltroType(v as any)}>
@@ -391,10 +396,10 @@ const DashboardPage: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Gráfico funcional, editável */}
+      {/* Gráfico por mês/quarter */}
       <Card>
         <CardHeader>
-          <CardTitle>Gráfico de Oportunidades ({periodo === "mes" ? "Mensal" : "Trimestral"})</CardTitle>
+          <CardTitle>Oportunidades {periodo === "mes" ? "Mensal" : "por Quarter"}</CardTitle>
         </CardHeader>
         <CardContent style={{ height: 400 }}>
           <ResponsiveContainer width="100%" height="100%">
@@ -410,36 +415,39 @@ const DashboardPage: React.FC = () => {
           </ResponsiveContainer>
         </CardContent>
       </Card>
-
-      {/* Tabela de saldo por empresa */}
+      {/* Gráfico de status */}
       <Card>
         <CardHeader>
-          <CardTitle>Balanço Geral por Empresa</CardTitle>
-          <CardDescription>
-            Quantidade de oportunidades enviadas, recebidas e saldo por empresa (inclui intra e extra grupo)
-          </CardDescription>
+          <CardTitle>Distribuição por Status ({tipoFiltro === "intra" ? "Intra Grupo" : tipoFiltro === "extra" ? "Extra Grupo" : "Todos"})</CardTitle>
+        </CardHeader>
+        <CardContent style={{ height: 350 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={statusChart}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="status" tickFormatter={(s) => statusLabels[s] ?? s} />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="count" fill="#8884d8" name="Quantidade" />
+            </BarChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+      {/* Matriz de Indicações Intragrupo */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Matriz de Indicações Intragrupo</CardTitle>
+          <CardDescription>Visualização de quem indica para quem dentro do grupo (tabela)</CardDescription>
         </CardHeader>
         <CardContent>
-          <Button size="sm" variant="outline" onClick={exportSaldoCSV}>Exportar CSV</Button>
-          <div className="overflow-x-auto mt-3">
-            <table className="min-w-full text-sm border">
-              <thead>
-                <tr>
-                  <th className="border p-2">Empresa</th>
-                  <th className="border p-2">Tipo</th>
-                  <th className="border p-2">Enviadas</th>
-                  <th className="border p-2">Recebidas</th>
-                  <th className="border p-2">Saldo</th>
-                </tr>
-              </thead>
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-xs border">
               <tbody>
-                {saldoEmpresas.map((s, idx) => (
-                  <tr key={s.empresa + idx}>
-                    <td className="border p-2">{s.empresa}</td>
-                    <td className="border p-2">{s.tipo}</td>
-                    <td className="border p-2">{s.enviadas}</td>
-                    <td className="border p-2">{s.recebidas}</td>
-                    <td className="border p-2">{s.saldo}</td>
+                {matrizIntra.map((row, i) => (
+                  <tr key={i}>
+                    {row.map((cell, j) => (
+                      <td key={j} className={`border p-1 text-center ${i === 0 || j === 0 ? "font-bold bg-gray-100" : ""}`}>{cell}</td>
+                    ))}
                   </tr>
                 ))}
               </tbody>
@@ -447,7 +455,147 @@ const DashboardPage: React.FC = () => {
           </div>
         </CardContent>
       </Card>
-
+      {/* Matriz de Indicações com Parceiros */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Matriz de Indicações com Parceiros</CardTitle>
+          <CardDescription>Visualização de indicações envolvendo parceiros externos</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-xs border">
+              <tbody>
+                {matrizParceiros.map((row, i) => (
+                  <tr key={i}>
+                    {row.map((cell, j) => (
+                      <td key={j} className={`border p-1 text-center ${i === 0 || j === 0 ? "font-bold bg-gray-100" : ""}`}>{cell}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+      {/* Tabela de oportunidades */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Listagem de Oportunidades</CardTitle>
+          <CardDescription>
+            Todos os campos editáveis (exceto data). Clique em editar para modificar, depois salve ou cancele. Clique no cabeçalho para ordenar.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-xs border">
+              <thead>
+                <tr>
+                  <th className="border p-1 cursor-pointer"
+                    onClick={() => { if (sortColumn === "data_indicacao") setSortAsc(!sortAsc); else { setSortColumn("data_indicacao"); setSortAsc(false); } }}>
+                    Data Indicação {renderSortIcon("data_indicacao")}
+                  </th>
+                  <th className="border p-1 cursor-pointer"
+                    onClick={() => { if (sortColumn === "status") setSortAsc(!sortAsc); else { setSortColumn("status"); setSortAsc(true); } }}>
+                    Status {renderSortIcon("status")}
+                  </th>
+                  <th className="border p-1 cursor-pointer"
+                    onClick={() => { if (sortColumn === "empresa_origem") setSortAsc(!sortAsc); else { setSortColumn("empresa_origem"); setSortAsc(true); } }}>
+                    Origem {renderSortIcon("empresa_origem")}
+                  </th>
+                  <th className="border p-1 cursor-pointer"
+                    onClick={() => { if (sortColumn === "empresa_destino") setSortAsc(!sortAsc); else { setSortColumn("empresa_destino"); setSortAsc(true); } }}>
+                    Destino {renderSortIcon("empresa_destino")}
+                  </th>
+                  <th className="border p-1 cursor-pointer"
+                    onClick={() => { if (sortColumn === "valor") setSortAsc(!sortAsc); else { setSortColumn("valor"); setSortAsc(true); } }}>
+                    Valor {renderSortIcon("valor")}
+                  </th>
+                  <th className="border p-1">Motivo Perda</th>
+                  <th className="border p-1">Observações</th>
+                  <th className="border p-1">Nome Lead</th>
+                  <th className="border p-1">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {oportunidadesOrdenadas.map((op) => (
+                  <tr key={op.id}>
+                    <td className="border p-1">{formatDate(op.data_indicacao)}</td>
+                    {/* status */}
+                    <td className="border p-1">
+                      {editRowId === op.id
+                        ? <Select value={editValues.status || ""} onValueChange={val => handleEditChange("status", val)}>
+                            <SelectTrigger className="w-[90px]"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="em_contato">Em Contato</SelectItem>
+                              <SelectItem value="negociando">Negociando</SelectItem>
+                              <SelectItem value="ganho">Ganho</SelectItem>
+                              <SelectItem value="perdido">Perdido</SelectItem>
+                              <SelectItem value="Contato">Contato</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        : statusLabels[op.status] || op.status}
+                    </td>
+                    {/* origem */}
+                    <td className="border p-1">
+                      {editRowId === op.id
+                        ? <Select value={editValues.empresa_origem_id || ""} onValueChange={val => handleEditChange("empresa_origem_id", val)}>
+                            <SelectTrigger className="w-[90px]"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              {empresas.map(e => <SelectItem key={e.id} value={e.id}>{e.nome}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                        : op.empresa_origem?.nome}
+                    </td>
+                    {/* destino */}
+                    <td className="border p-1">
+                      {editRowId === op.id
+                        ? <Select value={editValues.empresa_destino_id || ""} onValueChange={val => handleEditChange("empresa_destino_id", val)}>
+                            <SelectTrigger className="w-[90px]"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              {empresas.map(e => <SelectItem key={e.id} value={e.id}>{e.nome}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                        : op.empresa_destino?.nome}
+                    </td>
+                    {/* valor */}
+                    <td className="border p-1">
+                      {editRowId === op.id
+                        ? <Input type="number" value={editValues.valor ?? ""} className="w-[80px]" onChange={e => handleEditChange("valor", Number(e.target.value) || 0)} />
+                        : op.valor ?? "-"}
+                    </td>
+                    <td className="border p-1">
+                      {editRowId === op.id
+                        ? <Input value={editValues.motivo_perda ?? ""} className="w-[90px]" onChange={e => handleEditChange("motivo_perda", e.target.value)} />
+                        : op.motivo_perda ?? "-"}
+                    </td>
+                    <td className="border p-1">
+                      {editRowId === op.id
+                        ? <Input value={editValues.observacoes ?? ""} className="w-[110px]" onChange={e => handleEditChange("observacoes", e.target.value)} />
+                        : op.observacoes ?? "-"}
+                    </td>
+                    <td className="border p-1">
+                      {editRowId === op.id
+                        ? <Input value={editValues.nome_lead ?? ""} className="w-[110px]" onChange={e => handleEditChange("nome_lead", e.target.value)} />
+                        : op.nome_lead ?? "-"}
+                    </td>
+                    <td className="border p-1">
+                      {editRowId === op.id
+                        ? (
+                          <>
+                            <Button size="icon" variant="success" onClick={() => handleSaveEdit(op.id)}><Check className="h-4 w-4" /></Button>
+                            <Button size="icon" variant="ghost" onClick={handleCancelEdit}><Cancel className="h-4 w-4" /></Button>
+                          </>
+                        )
+                        : <Button size="icon" variant="ghost" onClick={() => handleEdit(op)}><Edit className="h-4 w-4" /></Button>
+                      }
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
       {/* Atalhos e sobre */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <QuickAccess />
