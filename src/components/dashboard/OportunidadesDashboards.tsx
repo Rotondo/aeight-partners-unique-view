@@ -16,11 +16,13 @@ import {
   Tooltip,
   ResponsiveContainer,
   Legend,
-  PieChart,
-  Pie,
-  Cell,
-  LabelList
+  ReferenceLine
 } from 'recharts';
+
+// CORES EDITÁVEIS PARA O GRÁFICO DIVERGENTE
+const BAR_COLOR_RECEBIDAS = '#0088FE';   // para cima (recebidas)
+const BAR_COLOR_ENVIADAS = '#FF8042';    // para baixo (enviadas)
+const BAR_COLOR_SALDO = '#3ad29f';       // barra interna saldo
 
 const STATUS_COLORS = {
   'em_contato': '#FFBB28',
@@ -57,7 +59,6 @@ function getStatusLabel(status) {
 }
 
 export const OportunidadesDashboards: React.FC = () => {
-  // Dados principais
   const [empresas, setEmpresas] = useState([]);
   const [matrizIntra, setMatrizIntra] = useState([]);
   const [matrizParceiros, setMatrizParceiros] = useState([]);
@@ -65,7 +66,6 @@ export const OportunidadesDashboards: React.FC = () => {
   const [rankingEnviadas, setRankingEnviadas] = useState([]);
   const [rankingRecebidas, setRankingRecebidas] = useState([]);
   const [balanco, setBalanco] = useState([]);
-  // Filtros
   const [dataInicio, setDataInicio] = useState(null);
   const [dataFim, setDataFim] = useState(null);
   const [empresaId, setEmpresaId] = useState('');
@@ -227,41 +227,58 @@ export const OportunidadesDashboards: React.FC = () => {
     );
   }
 
-  // Gráfico de barras para matriz (quem indica para quem)
-  function renderMatrizBarChart(rows, rowKey, label) {
-    if (!rows.length) return <div className="text-center">Nenhum dado</div>;
-    const cols = Object.keys(rows[0]).filter(c => c !== rowKey);
-    // Monta array de dados para o gráfico
-    const data = [];
-    rows.forEach(row => {
-      cols.forEach(col => {
-        if (row[col] !== '-' && row[col] > 0) {
-          data.push({
-            origem: row[rowKey],
-            destino: col,
-            total: row[col]
+  // --------- GRÁFICO DIVERGENTE INTRAGRUPO ---------
+  function renderMatrizDivergenteBarChart(matrizIntraRows) {
+    if (!matrizIntraRows.length) return <div className="text-center text-xs">Nenhum dado para gráfico</div>;
+    const empresasNomes = matrizIntraRows.map(row => row.origem);
+
+    // Para cada empresa, calcula:
+    // recebidas: soma das colunas daquele nome (exceto '-')
+    // enviadas: soma da linha dela (exceto '-')
+    const dados = empresasNomes.map(nome => {
+      let recebidas = 0;
+      let enviadas = 0;
+      matrizIntraRows.forEach(row => {
+        if (row.origem === nome) {
+          Object.entries(row).forEach(([key, value]) => {
+            if (key !== "origem" && value !== '-' && key !== nome) enviadas += value;
           });
+        } else {
+          if (row[nome] !== undefined && row[nome] !== '-' && row.origem !== nome) {
+            recebidas += row[nome];
+          }
         }
       });
+      const saldo = recebidas - enviadas;
+      return {
+        empresa: nome,
+        recebidas,
+        enviadas: -enviadas, // Negativo, vai pra baixo
+        saldo
+      };
     });
-    if (!data.length) return <div className="text-center text-xs">Nenhum dado para gráfico</div>;
+
+    // Descobre o maior módulo para ajustar o eixo
+    const maxAbs = Math.max(...dados.map(d => Math.abs(d.recebidas)), ...dados.map(d => Math.abs(d.enviadas)), 10);
+
     return (
-      <ResponsiveContainer width="100%" height={300}>
-        <BarChart data={data}>
+      <ResponsiveContainer width="100%" height={340}>
+        <BarChart data={dados} margin={{top: 20, right: 30, left: 0, bottom: 10}}>
           <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="origem" />
-          <YAxis />
-          <Tooltip />
+          <XAxis dataKey="empresa" />
+          <YAxis domain={[-maxAbs, maxAbs]} />
+          <Tooltip formatter={v => Math.abs(v)} />
           <Legend />
-          <Bar dataKey="total" name="Indicações" fill={COLORS[0]}>
-            <LabelList dataKey="destino" position="top" />
-          </Bar>
+          <ReferenceLine y={0} stroke="#888" />
+          <Bar dataKey="recebidas" name="Recebidas" fill={BAR_COLOR_RECEBIDAS} stackId="a" />
+          <Bar dataKey="enviadas" name="Enviadas" fill={BAR_COLOR_ENVIADAS} stackId="a" />
+          <Bar dataKey="saldo" name="Saldo" fill={BAR_COLOR_SALDO} barSize={18} />
         </BarChart>
       </ResponsiveContainer>
     );
   }
 
-  // Gráfico de barras para ranking
+  // Gráficos dos rankings, balanço e status - igual ao anterior
   function renderRankingBarChart(ranking, label) {
     if (!ranking.length) return <div className="text-center">Nenhum dado</div>;
     return (
@@ -278,8 +295,6 @@ export const OportunidadesDashboards: React.FC = () => {
       </ResponsiveContainer>
     );
   }
-
-  // Gráfico de barras para balanço
   function renderBalancoBarChart(balanco) {
     if (!balanco.length) return <div className="text-center">Nenhum dado</div>;
     return (
@@ -296,8 +311,6 @@ export const OportunidadesDashboards: React.FC = () => {
       </ResponsiveContainer>
     );
   }
-
-  // Gráfico de pizza para status
   function renderStatusPieChart(statusDistribuicao) {
     if (!statusDistribuicao.length) return <div className="text-center">Nenhum dado</div>;
     return (
@@ -437,7 +450,7 @@ export const OportunidadesDashboards: React.FC = () => {
               ) : (
                 <>
                   {renderMatrizTable(matrizIntra, "origem", "Origem \\ Destino")}
-                  <div className="mt-6">{renderMatrizBarChart(matrizIntra, "origem", "Indicações Intragrupo")}</div>
+                  <div className="mt-6">{renderMatrizDivergenteBarChart(matrizIntra)}</div>
                 </>
               )}
             </CardContent>
@@ -454,10 +467,7 @@ export const OportunidadesDashboards: React.FC = () => {
               {loading ? (
                 <div className="h-64 flex items-center justify-center">Carregando...</div>
               ) : (
-                <>
-                  {renderMatrizTable(matrizParceiros, "parceiro", "Parceiro \\ Intra")}
-                  <div className="mt-6">{renderMatrizBarChart(matrizParceiros, "parceiro", "Indicações com Parceiros")}</div>
-                </>
+                renderMatrizTable(matrizParceiros, "parceiro", "Parceiro \\ Intra")
               )}
             </CardContent>
           </Card>
