@@ -51,7 +51,7 @@ const DashboardPage: React.FC = () => {
   const [tipoFiltro, setTipoFiltro] = useState<"all" | "intra" | "extra">("all");
   const [periodo, setPeriodo] = useState<"mes" | "quarter">("mes");
   const [statusFiltro, setStatusFiltro] = useState<"all" | "ganho" | "perdido" | "andamento">("all");
-  const [empresaFiltro, setEmpresaFiltro] = useState<string>("");
+  const [empresaFiltro, setEmpresaFiltro] = useState<string>("all"); // <-- inicializa como "all"
   const [empresaFiltroType, setEmpresaFiltroType] = useState<"remetente" | "destinatario" | "all">("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [stats, setStats] = useState<any>({});
@@ -218,7 +218,7 @@ const DashboardPage: React.FC = () => {
     if (tipoFiltro !== "all") {
       filtradas = filtradas.filter((op) => op.tipo_relacao === tipoFiltro);
     }
-    if (empresaFiltro && empresaFiltroType !== "all") {
+    if (empresaFiltro !== "all" && empresaFiltroType !== "all") {
       filtradas = filtradas.filter((op) =>
         empresaFiltroType === "remetente"
           ? op.empresa_origem_id === empresaFiltro
@@ -428,12 +428,12 @@ const DashboardPage: React.FC = () => {
               <SelectItem value="destinatario">Destino</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={empresaFiltro} onValueChange={setEmpresaFiltro}>
+          <Select value={empresaFiltro} onValueChange={(v) => setEmpresaFiltro(v)}>
             <SelectTrigger className="w-[240px]">
               <SelectValue placeholder="Empresa" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todas</SelectItem>
+              <SelectItem value="all">Todas</SelectItem>
               {empresas.map((e) => (
                 <SelectItem key={e.id} value={e.id}>{e.nome}</SelectItem>
               ))}
