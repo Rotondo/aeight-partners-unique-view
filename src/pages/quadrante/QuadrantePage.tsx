@@ -69,14 +69,26 @@ const QuadrantePage: React.FC = () => {
       setLoading(true);
       const { data: empresasData } = await supabase.from("empresas").select("*");
       setEmpresas(empresasData || []);
-      const { data: indicadoresData } = await supabase.from("indicadores_parceiro").select("*");
-      setIndicadores(indicadoresData || []);
+      const { data: indicadoresData } = await supabase
+        .from("indicadores_parceiro")
+        .select("*")
+        .order("data_avaliacao", { ascending: false }); // Ordena do mais recente para o mais antigo
+
+      // Mantém apenas o registro mais recente de cada empresa/parceiro
+      const unicosPorEmpresa: Record<string, IndicadoresParceiro> = {};
+      (indicadoresData || []).forEach((item) => {
+        // Só inclui o primeiro registro encontrado para a empresa (pois está ordenado do mais novo pro mais antigo)
+        if (item.empresa_id && !unicosPorEmpresa[item.empresa_id]) {
+          unicosPorEmpresa[item.empresa_id] = item;
+        }
+      });
+      setIndicadores(Object.values(unicosPorEmpresa));
       setLoading(false);
     };
     fetchData();
   }, []);
 
-  // Cria pontos do quadrante a partir dos indicadores e empresas
+  // Cria pontos do quadrante a partir dos indicadores e empresas (já filtrados)
   useEffect(() => {
     if (indicadores.length && empresas.length) {
       setQuadrantPoints(
@@ -125,7 +137,20 @@ const QuadrantePage: React.FC = () => {
           .insert([newIndicador])
           .select();
         if (error) throw error;
-        updatedIndicadores = [...indicadores, ...(data || [])];
+
+        // Após inserir, atualiza para manter apenas o mais novo por empresa
+        const novaLista = [newIndicador, ...indicadores].sort(
+          (a, b) =>
+            new Date(b.data_avaliacao || "").getTime() -
+            new Date(a.data_avaliacao || "").getTime()
+        );
+        const unicosPorEmpresa: Record<string, IndicadoresParceiro> = {};
+        novaLista.forEach((item) => {
+          if (item.empresa_id && !unicosPorEmpresa[item.empresa_id]) {
+            unicosPorEmpresa[item.empresa_id] = item;
+          }
+        });
+        updatedIndicadores = Object.values(unicosPorEmpresa);
         setIndicadores(updatedIndicadores);
       }
       toast({
