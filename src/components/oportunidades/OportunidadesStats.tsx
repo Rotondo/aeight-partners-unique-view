@@ -231,7 +231,7 @@ export const OportunidadesStats: React.FC = () => {
               </CardDescription>
               <div className="flex flex-wrap gap-3 mt-4">
                 <div>
-                  <Label>Período</Label>
+                  <label>Período</label>
                   <Select value={periodo} onValueChange={setPeriodo}>
                     <SelectTrigger className="w-32">
                       <SelectValue />
@@ -245,7 +245,7 @@ export const OportunidadesStats: React.FC = () => {
                 {periodo === "quarter" && (
                   <>
                     <div>
-                      <Label>Quarter</Label>
+                      <label>Quarter</label>
                       <Select
                         value={quarters.join(",")}
                         onValueChange={v => setQuarters(v ? v.split(",") : [])}
@@ -262,7 +262,7 @@ export const OportunidadesStats: React.FC = () => {
                       </Select>
                     </div>
                     <div>
-                      <Label>Ano</Label>
+                      <label>Ano</label>
                       <Select value={String(quarterYear)} onValueChange={v => setQuarterYear(Number(v))}>
                         <SelectTrigger className="w-24">
                           <SelectValue />
@@ -277,7 +277,7 @@ export const OportunidadesStats: React.FC = () => {
                   </>
                 )}
                 <div>
-                  <Label>Natureza</Label>
+                  <label>Natureza</label>
                   <Select value={grupoStatus} onValueChange={setGrupoStatus}>
                     <SelectTrigger className="w-32">
                       <SelectValue />
