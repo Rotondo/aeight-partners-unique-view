@@ -1,121 +1,118 @@
-
 import React, { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { useAuth } from '@/hooks/useAuth';
-import { useToast } from '@/hooks/use-toast';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Loader2 } from 'lucide-react';
-
-const loginSchema = z.object({
-  email: z.string().email('Email inválido'),
-  password: z.string().min(6, 'A senha deve ter pelo menos 6 caracteres'),
-});
-
-type LoginFormValues = z.infer<typeof loginSchema>;
 
 const LoginForm: React.FC = () => {
   const { login, loading, error } = useAuth();
-  const { toast } = useToast();
+  const [email, setEmail] = useState('');
+  const [senha, setSenha] = useState('');
+  const [mensagem, setMensagem] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  const form = useForm<LoginFormValues>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: {
-      email: '',
-      password: '',
-    },
-  });
 
-  const onSubmit = async (data: LoginFormValues) => {
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
     setIsSubmitting(true);
-    
-    try {
-      await login(data.email, data.password);
-    } catch (error) {
-      toast({
-        title: 'Erro ao fazer login',
-        description: error instanceof Error ? error.message : 'Ocorreu um erro durante o login.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsSubmitting(false);
+    setMensagem('');
+    const sucesso = await login(email, senha);
+    if (sucesso) {
+      setMensagem('Login bem-sucedido!');
+    } else {
+      setMensagem('E-mail ou senha incorretos.');
     }
+    setIsSubmitting(false);
   };
 
   return (
-    <Card className="w-full max-w-md">
-      <CardHeader>
-        <CardTitle className="text-center text-2xl">A&eight Partnership Hub</CardTitle>
-        <CardDescription className="text-center">Faça login para acessar a plataforma</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            {error && (
-              <div className="bg-destructive/10 p-3 rounded-md text-sm text-destructive mb-4">
-                {error}
-              </div>
-            )}
-            
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email</FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="email" 
-                      placeholder="seu.email@exemplo.com" 
-                      disabled={isSubmitting}
-                      {...field} 
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Senha</FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="password" 
-                      disabled={isSubmitting}
-                      {...field} 
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <Button 
-              type="submit" 
-              className="w-full" 
-              disabled={isSubmitting}
-            >
-              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isSubmitting ? 'Entrando...' : 'Entrar'}
-            </Button>
-          </form>
-        </Form>
-      </CardContent>
-      <CardFooter className="flex justify-center">
-        <p className="text-sm text-muted-foreground">
-          Plataforma Unificada de Parcerias A&eight
-        </p>
-      </CardFooter>
-    </Card>
+    <div style={{
+      background: '#fff',
+      borderRadius: '12px',
+      boxShadow: '0 6px 32px rgba(0,0,0,0.09)',
+      padding: '38px 32px 32px 32px',
+      maxWidth: 400,
+      margin: '0 auto'
+    }}>
+      <div style={{ textAlign: 'center', marginBottom: 24 }}>
+        <img src="/favicon.svg" alt="Logo" style={{ width: 52, marginBottom: 12 }} />
+        <h2 style={{ margin: 0, fontWeight: 700, fontSize: 26 }}>A&eight Partnership Hub</h2>
+        <div style={{ fontSize: 14, color: '#444', marginTop: 4 }}>
+          Plataforma Unificada de Parcerias <br /><b>Destinada aos parceiros e empresas do Grupo A&eight</b>
+        </div>
+      </div>
+      <form onSubmit={handleLogin}>
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ fontWeight: 600, display: 'block', marginBottom: 6 }}>Email</label>
+          <input
+            type="email"
+            placeholder="seu.email@exemplo.com"
+            style={{
+              width: '100%',
+              padding: '12px 10px',
+              borderRadius: 7,
+              border: '1.5px solid #d4d4d4',
+              fontSize: 15,
+              outline: 'none',
+              transition: 'border 0.2s'
+            }}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            disabled={isSubmitting}
+          />
+        </div>
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ fontWeight: 600, display: 'block', marginBottom: 6 }}>Senha</label>
+          <input
+            type="password"
+            placeholder="Digite sua senha"
+            style={{
+              width: '100%',
+              padding: '12px 10px',
+              borderRadius: 7,
+              border: '1.5px solid #d4d4d4',
+              fontSize: 15,
+              outline: 'none',
+              transition: 'border 0.2s'
+            }}
+            value={senha}
+            onChange={(e) => setSenha(e.target.value)}
+            required
+            disabled={isSubmitting}
+          />
+        </div>
+        <button
+          type="submit"
+          style={{
+            width: '100%',
+            background: '#22223b',
+            color: '#fff',
+            padding: '12px',
+            border: 'none',
+            borderRadius: 7,
+            fontWeight: 700,
+            fontSize: 16,
+            marginTop: 10,
+            cursor: isSubmitting ? 'not-allowed' : 'pointer'
+          }}
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? <Loader2 style={{ display: 'inline', verticalAlign: 'middle', marginRight: 8 }} className="animate-spin" size={18} /> : null}
+          {isSubmitting ? 'Entrando...' : 'Entrar'}
+        </button>
+      </form>
+      {(mensagem || error) && (
+        <div style={{
+          marginTop: 18,
+          color: mensagem?.includes('sucesso') ? 'green' : '#b91c1c',
+          fontWeight: 500,
+          textAlign: 'center'
+        }}>
+          {mensagem || error}
+        </div>
+      )}
+      <div style={{ marginTop: 22, color: '#7c7c7c', fontSize: 13, textAlign: 'center' }}>
+        Acesso restrito aos integrantes do Grupo A&eight e parceiros autorizados.
+      </div>
+    </div>
   );
 };
 
