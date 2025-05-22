@@ -4,7 +4,19 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell } from "recharts";
+import {
+  BarChart as ReBarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  CartesianGrid,
+  PieChart,
+  Pie,
+  Cell
+} from "recharts";
 import { DashboardCard } from "@/components/dashboard/DashboardCard";
 import { useToast } from "@/hooks/use-toast";
 import { Oportunidade, Empresa } from "@/types";
@@ -18,64 +30,11 @@ function getQuarter(date: Date) {
 function getQuarterLabel(date: Date) {
   return `Q${getQuarter(date)}/${date.getFullYear()}`;
 }
-
-// Agrupa por quarter
-function groupByQuarter(data: Oportunidade[], tipo: "intra" | "extra" | "all") {
-  const result: Record<string, { enviadas: number; recebidas: number }> = {};
-  data.forEach((op) => {
-    const d = new Date(op.data_indicacao);
-    const key = getQuarterLabel(d);
-    if (!result[key]) result[key] = { enviadas: 0, recebidas: 0 };
-    if (tipo === "intra" && op.tipo_relacao === "intra") {
-      result[key].enviadas += op.isRemetente ? 1 : 0;
-      result[key].recebidas += op.isDestinatario ? 1 : 0;
-    } else if (tipo === "extra" && op.tipo_relacao === "extra") {
-      result[key].enviadas += op.isRemetente ? 1 : 0;
-      result[key].recebidas += op.isDestinatario ? 1 : 0;
-    } else if (tipo === "all") {
-      result[key].enviadas += op.isRemetente ? 1 : 0;
-      result[key].recebidas += op.isDestinatario ? 1 : 0;
-    }
-  });
-  return Object.entries(result)
-    .map(([quarter, vals]) => ({ quarter, ...vals }))
-    .sort((a, b) => a.quarter.localeCompare(b.quarter));
-}
-
-// Agrupa por mês
-function groupByMonth(data: Oportunidade[], tipo: "intra" | "extra" | "all") {
-  const result: Record<string, { enviadas: number; recebidas: number }> = {};
-  data.forEach((op) => {
-    const d = new Date(op.data_indicacao);
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-    if (!result[key]) result[key] = { enviadas: 0, recebidas: 0 };
-    if (tipo === "intra" && op.tipo_relacao === "intra") {
-      result[key].enviadas += op.isRemetente ? 1 : 0;
-      result[key].recebidas += op.isDestinatario ? 1 : 0;
-    } else if (tipo === "extra" && op.tipo_relacao === "extra") {
-      result[key].enviadas += op.isRemetente ? 1 : 0;
-      result[key].recebidas += op.isDestinatario ? 1 : 0;
-    } else if (tipo === "all") {
-      result[key].enviadas += op.isRemetente ? 1 : 0;
-      result[key].recebidas += op.isDestinatario ? 1 : 0;
-    }
-  });
-  return Object.entries(result)
-    .map(([mes, vals]) => {
-      const [year, month] = mes.split("-");
-      const date = new Date(Number(year), Number(month) - 1, 1);
-      const mesLabel = date.toLocaleString("pt-BR", { month: "short" });
-      return { mes: `${mesLabel}/${year.slice(2)}`, ...vals };
-    })
-    .sort((a, b) => a.mes.localeCompare(b.mes));
-}
-
 function formatDate(dateString: string) {
   if (!dateString) return "-";
   const date = new Date(dateString);
   return date.toLocaleDateString("pt-BR");
 }
-
 const STATUS_COLORS = {
   ganho: "#22c55e",
   perdido: "#ef4444",
@@ -151,6 +110,56 @@ const DashboardPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  }
+
+  // Agrupa por quarter
+  function groupByQuarter(data: Oportunidade[], tipo: "intra" | "extra" | "all") {
+    const result: Record<string, { enviadas: number; recebidas: number }> = {};
+    data.forEach((op) => {
+      const d = new Date(op.data_indicacao);
+      const key = getQuarterLabel(d);
+      if (!result[key]) result[key] = { enviadas: 0, recebidas: 0 };
+      if (tipo === "intra" && op.tipo_relacao === "intra") {
+        result[key].enviadas += op.isRemetente ? 1 : 0;
+        result[key].recebidas += op.isDestinatario ? 1 : 0;
+      } else if (tipo === "extra" && op.tipo_relacao === "extra") {
+        result[key].enviadas += op.isRemetente ? 1 : 0;
+        result[key].recebidas += op.isDestinatario ? 1 : 0;
+      } else if (tipo === "all") {
+        result[key].enviadas += op.isRemetente ? 1 : 0;
+        result[key].recebidas += op.isDestinatario ? 1 : 0;
+      }
+    });
+    return Object.entries(result)
+      .map(([quarter, vals]) => ({ quarter, ...vals }))
+      .sort((a, b) => a.quarter.localeCompare(b.quarter));
+  }
+  // Agrupa por mês
+  function groupByMonth(data: Oportunidade[], tipo: "intra" | "extra" | "all") {
+    const result: Record<string, { enviadas: number; recebidas: number }> = {};
+    data.forEach((op) => {
+      const d = new Date(op.data_indicacao);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      if (!result[key]) result[key] = { enviadas: 0, recebidas: 0 };
+      if (tipo === "intra" && op.tipo_relacao === "intra") {
+        result[key].enviadas += op.isRemetente ? 1 : 0;
+        result[key].recebidas += op.isDestinatario ? 1 : 0;
+      } else if (tipo === "extra" && op.tipo_relacao === "extra") {
+        result[key].enviadas += op.isRemetente ? 1 : 0;
+        result[key].recebidas += op.isDestinatario ? 1 : 0;
+      } else if (tipo === "all") {
+        result[key].enviadas += op.isRemetente ? 1 : 0;
+        result[key].recebidas += op.isDestinatario ? 1 : 0;
+      }
+    });
+    return Object.entries(result)
+      .map(([mes, vals]) => {
+        const [year, month] = mes.split("-");
+        const date = new Date(Number(year), Number(month) - 1, 1);
+        const mesLabel = date.toLocaleString("pt-BR", { month: "short" });
+        return { mes: `${mesLabel}/${year.slice(2)}`, ...vals };
+      })
+      .sort((a, b) => a.mes.localeCompare(b.mes));
   }
 
   function processStats(oportunidades: Oportunidade[], empresas: Empresa[]) {
@@ -251,7 +260,6 @@ const DashboardPage: React.FC = () => {
   function processMatriz(oportunidades: Oportunidade[], empresas: Empresa[]) {
     // Matriz intra
     const intragrupo = empresas.filter((e) => e.tipo === "intragrupo");
-    // Cria matriz: origem = linha, destino = coluna
     let matrizIntra: any[] = [];
     for (const origem of intragrupo) {
       const row: any = { origem: origem.nome };
@@ -344,7 +352,6 @@ const DashboardPage: React.FC = () => {
     setEditValues({});
   }
 
-  // Ordenação da tabela
   function ordenarLista(col: string) {
     setOrdemLista((prev) => ({
       col,
@@ -364,19 +371,17 @@ const DashboardPage: React.FC = () => {
   return (
     <div className="space-y-8">
       <h1 className="text-2xl font-bold">Dashboard de Oportunidades</h1>
-      {/* Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <DashboardCard title="Total de Oportunidades" value={loading ? "..." : stats.total} icon={<BarChart className="h-4 w-4 text-primary" />} color="bg-primary/10" description="Todas as oportunidades registradas" />
-        <DashboardCard title="Ganhos" value={loading ? "..." : stats.ganhas} icon={<BarChart className="h-4 w-4 text-green-500" />} color="bg-green-500/10" description="Oportunidades ganhas" />
-        <DashboardCard title="Perdidos" value={loading ? "..." : stats.perdidas} icon={<BarChart className="h-4 w-4 text-destructive" />} color="bg-destructive/10" description="Oportunidades perdidas" />
-        <DashboardCard title="Em Andamento" value={loading ? "..." : stats.andamento} icon={<BarChart className="h-4 w-4 text-amber-500" />} color="bg-amber-500/10" description="Em negociação" />
-        <DashboardCard title="Intra Grupo" value={loading ? "..." : stats.intra} icon={<BarChart className="h-4 w-4 text-blue-500" />} color="bg-blue-500/10" description="Trocas dentro do grupo" />
-        <DashboardCard title="Extra Grupo" value={loading ? "..." : stats.extra} icon={<BarChart className="h-4 w-4 text-purple-600" />} color="bg-purple-600/10" description="Trocas com terceiros" />
-        <DashboardCard title="Enviadas" value={loading ? "..." : stats.enviadas} icon={<BarChart className="h-4 w-4 text-cyan-500" />} color="bg-cyan-500/10" description="Oportunidades enviadas" />
-        <DashboardCard title="Recebidas" value={loading ? "..." : stats.recebidas} icon={<BarChart className="h-4 w-4 text-rose-500" />} color="bg-rose-500/10" description="Oportunidades recebidas" />
-        <DashboardCard title="Saldo Envio-Recebimento" value={loading ? "..." : stats.saldo} icon={<BarChart className="h-4 w-4 text-gray-600" />} color="bg-gray-600/10" description="Saldo entre enviadas e recebidas" />
+        <DashboardCard title="Total de Oportunidades" value={loading ? "..." : stats.total} icon={<ReBarChart className="h-4 w-4 text-primary" />} color="bg-primary/10" description="Todas as oportunidades registradas" />
+        <DashboardCard title="Ganhos" value={loading ? "..." : stats.ganhas} icon={<ReBarChart className="h-4 w-4 text-green-500" />} color="bg-green-500/10" description="Oportunidades ganhas" />
+        <DashboardCard title="Perdidos" value={loading ? "..." : stats.perdidas} icon={<ReBarChart className="h-4 w-4 text-destructive" />} color="bg-destructive/10" description="Oportunidades perdidas" />
+        <DashboardCard title="Em Andamento" value={loading ? "..." : stats.andamento} icon={<ReBarChart className="h-4 w-4 text-amber-500" />} color="bg-amber-500/10" description="Em negociação" />
+        <DashboardCard title="Intra Grupo" value={loading ? "..." : stats.intra} icon={<ReBarChart className="h-4 w-4 text-blue-500" />} color="bg-blue-500/10" description="Trocas dentro do grupo" />
+        <DashboardCard title="Extra Grupo" value={loading ? "..." : stats.extra} icon={<ReBarChart className="h-4 w-4 text-purple-600" />} color="bg-purple-600/10" description="Trocas com terceiros" />
+        <DashboardCard title="Enviadas" value={loading ? "..." : stats.enviadas} icon={<ReBarChart className="h-4 w-4 text-cyan-500" />} color="bg-cyan-500/10" description="Oportunidades enviadas" />
+        <DashboardCard title="Recebidas" value={loading ? "..." : stats.recebidas} icon={<ReBarChart className="h-4 w-4 text-rose-500" />} color="bg-rose-500/10" description="Oportunidades recebidas" />
+        <DashboardCard title="Saldo Envio-Recebimento" value={loading ? "..." : stats.saldo} icon={<ReBarChart className="h-4 w-4 text-gray-600" />} color="bg-gray-600/10" description="Saldo entre enviadas e recebidas" />
       </div>
-      {/* Filtros */}
       <Card>
         <CardHeader>
           <CardTitle>Filtros do Gráfico</CardTitle>
@@ -444,7 +449,7 @@ const DashboardPage: React.FC = () => {
         </CardHeader>
         <CardContent style={{ height: 400 }}>
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData}>
+            <ReBarChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey={periodo === "mes" ? "mes" : "quarter"} />
               <YAxis />
@@ -452,7 +457,7 @@ const DashboardPage: React.FC = () => {
               <Legend />
               <Bar dataKey="enviadas" fill="#0088fe" name="Enviadas" />
               <Bar dataKey="recebidas" fill="#00c49f" name="Recebidas" />
-            </BarChart>
+            </ReBarChart>
           </ResponsiveContainer>
         </CardContent>
       </Card>
@@ -609,7 +614,6 @@ const DashboardPage: React.FC = () => {
           </div>
         </CardContent>
       </Card>
-      {/* Atalhos e sobre */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <QuickAccess />
         <AboutPlatform />
