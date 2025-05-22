@@ -14,13 +14,26 @@ const STATUS_COLORS = {
   'perdido': '#FF8042',
 };
 
-function formatDate(dateStr) {
-  if (!dateStr) return '-';
-  const date = new Date(dateStr);
-  return date.toLocaleDateString('pt-BR');
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
+
+// Opções de quarters
+const quartersOptions = [
+  { value: 'Q1', label: 'Q1 (jan-mar)' },
+  { value: 'Q2', label: 'Q2 (abr-jun)' },
+  { value: 'Q3', label: 'Q3 (jul-set)' },
+  { value: 'Q4', label: 'Q4 (out-dez)' },
+];
+
+function getQuarter(date) {
+  const month = date.getMonth();
+  if (month < 3) return 'Q1';
+  if (month < 6) return 'Q2';
+  if (month < 9) return 'Q3';
+  return 'Q4';
 }
 
 export const OportunidadesDashboards: React.FC = () => {
+  // Dados principais
   const [empresas, setEmpresas] = useState([]);
   const [matrizIntra, setMatrizIntra] = useState([]);
   const [matrizParceiros, setMatrizParceiros] = useState([]);
@@ -28,75 +41,69 @@ export const OportunidadesDashboards: React.FC = () => {
   const [rankingEnviadas, setRankingEnviadas] = useState([]);
   const [rankingRecebidas, setRankingRecebidas] = useState([]);
   const [balanco, setBalanco] = useState([]);
+  // Filtros
   const [dataInicio, setDataInicio] = useState(null);
   const [dataFim, setDataFim] = useState(null);
   const [empresaId, setEmpresaId] = useState('');
   const [status, setStatus] = useState('');
   const [periodo, setPeriodo] = useState('mes');
+  const [quarters, setQuarters] = useState(['Q1', 'Q2', 'Q3', 'Q4']);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
     fetchAll();
-  }, [dataInicio, dataFim, empresaId, status, periodo]);
+    // eslint-disable-next-line
+  }, [dataInicio, dataFim, empresaId, status, periodo, quarters]);
 
   async function fetchAll() {
     setLoading(true);
     try {
-      // Empresas
       const { data: empresasDb } = await supabase.from("empresas").select("*").order("nome");
       setEmpresas(empresasDb || []);
-      // Oportunidades (com empresas de origem/destino)
       const { data: oportunidadesDb } = await supabase.from("oportunidades").select("*, empresa_origem:empresas!empresa_origem_id(id, nome, tipo), empresa_destino:empresas!empresa_destino_id(id, nome, tipo)");
-      const oportunidades = oportunidadesDb || [];
+      const oportunidades = (oportunidadesDb || []).filter(op => {
+        // Filtros de data
+        const dataInd = op.data_indicacao ? new Date(op.data_indicacao) : null;
+        let match = true;
+        if (dataInicio && dataInd) match = match && dataInd >= dataInicio;
+        if (dataFim && dataInd) match = match && dataInd <= dataFim;
+        // Filtro de empresaId
+        if (empresaId) match = match && (op.empresa_origem_id === empresaId || op.empresa_destino_id === empresaId);
+        // Filtro de status
+        if (status) match = match && op.status === status;
+        // Filtro de quarter se for o caso
+        if (periodo === "quarter" && dataInd) match = match && quarters.includes(getQuarter(dataInd));
+        return match;
+      });
+
       // Matriz INTRAGRUPO
       const intra = empresasDb.filter(e => e.tipo === "intragrupo");
       const matrizIntraRows = intra.map(orig => {
         const row = { origem: orig.nome };
-        let totalLinha = 0;
         intra.forEach(dest => {
           if (orig.id === dest.id) {
             row[dest.nome] = '-';
           } else {
-            const val = oportunidades.filter(
+            row[dest.nome] = oportunidades.filter(
               op =>
                 op.empresa_origem_id === orig.id &&
                 op.empresa_destino_id === dest.id &&
                 op.empresa_origem.tipo === "intragrupo" &&
                 op.empresa_destino.tipo === "intragrupo"
             ).length;
-            row[dest.nome] = val;
-            totalLinha += val;
           }
         });
-        row["Total"] = totalLinha;
         return row;
       });
-      // Totalizadores de coluna
-      if (matrizIntraRows.length > 0) {
-        const colunas = Object.keys(matrizIntraRows[0]).filter(c => c !== "origem" && c !== "Total");
-        const totalCol: any = { origem: <b>Total</b> };
-        let somaTotal = 0;
-        colunas.forEach(col => {
-          let soma = 0;
-          matrizIntraRows.forEach(row => {
-            if (typeof row[col] === "number") soma += row[col];
-          });
-          totalCol[col] = soma;
-          somaTotal += soma;
-        });
-        totalCol["Total"] = somaTotal;
-        matrizIntraRows.push(totalCol);
-      }
       setMatrizIntra(matrizIntraRows);
 
       // Matriz PARCEIROS
       const parceiros = empresasDb.filter(e => e.tipo === "parceiro");
       const matrizParceirosRows = parceiros.map(parc => {
         const row = { parceiro: parc.nome };
-        let totalLinha = 0;
         intra.forEach(intraE => {
-          const val =
+          row[intraE.nome] =
             oportunidades.filter(op =>
               (
                 (op.empresa_origem_id === parc.id && op.empresa_destino_id === intraE.id) ||
@@ -106,28 +113,9 @@ export const OportunidadesDashboards: React.FC = () => {
                 op.empresa_origem.tipo === "parceiro" || op.empresa_destino.tipo === "parceiro"
               )
             ).length;
-          row[intraE.nome] = val;
-          totalLinha += val;
         });
-        row["Total"] = totalLinha;
         return row;
       });
-      // Totalizadores de coluna
-      if (matrizParceirosRows.length > 0) {
-        const colunas = Object.keys(matrizParceirosRows[0]).filter(c => c !== "parceiro" && c !== "Total");
-        const totalCol: any = { parceiro: <b>Total</b> };
-        let somaTotal = 0;
-        colunas.forEach(col => {
-          let soma = 0;
-          matrizParceirosRows.forEach(row => {
-            if (typeof row[col] === "number") soma += row[col];
-          });
-          totalCol[col] = soma;
-          somaTotal += soma;
-        });
-        totalCol["Total"] = somaTotal;
-        matrizParceirosRows.push(totalCol);
-      }
       setMatrizParceiros(matrizParceirosRows);
 
       // Status - Geral
@@ -163,6 +151,7 @@ export const OportunidadesDashboards: React.FC = () => {
         { tipo: "Grupo → Parceiros", valor: balGrupo },
         { tipo: "Parceiros → Grupo", valor: balParc }
       ]);
+
     } catch (error) {
       toast({ title: "Erro", description: "Erro ao carregar dados.", variant: "destructive" });
     } finally {
@@ -170,42 +159,52 @@ export const OportunidadesDashboards: React.FC = () => {
     }
   }
 
-  // Renderização - TABELA MATRIZ
+  // Renderização - TABELA MATRIZ com totalizadores e opacidade nos zeros
   function renderMatrizTable(rows, colKey, label) {
-    if (rows.length === 0) return <div className="h-64 flex items-center justify-center">Nenhum dado encontrado</div>;
+    if (!rows.length) return <div className="text-center">Nenhum dado</div>;
     const cols = Object.keys(rows[0]).filter(c => c !== colKey);
+    // Calcula totais por coluna
+    const colTotals = {};
+    cols.forEach(c => {
+      colTotals[c] = rows.reduce((acc, row) => acc + (row[c] !== '-' ? row[c] : 0), 0);
+    });
+    const grandTotal = Object.values(colTotals).reduce((a, b) => a + b, 0);
     return (
       <div className="overflow-x-auto">
         <table className="min-w-full text-xs border">
           <thead>
             <tr>
               <th className="border p-1">{label}</th>
-              {cols.map(c => (
-                <th className="border p-1" key={c}>{c}</th>
-              ))}
+              {cols.map(c => <th className="border p-1" key={c}>{c}</th>)}
+              <th className="border p-1">Total</th>
             </tr>
           </thead>
           <tbody>
-            {rows.map((row, idx) => (
-              <tr key={idx}>
-                <td className={`border p-1 font-bold ${row[colKey] === 'Total' ? 'bg-muted' : ''}`}>{row[colKey]}</td>
-                {cols.map(c => {
-                  // Opacidade para zero
-                  const isTotal = row[colKey] === 'Total' || c === 'Total';
-                  const isZero = !isTotal && (row[c] === 0 || row[c] === '-');
-                  return (
-                    <td
-                      className={`border p-1 text-center ${isTotal ? 'font-bold bg-muted' : ''}`}
-                      key={c}
-                      style={isZero ? { opacity: 0.3 } : {}}
-                    >
-                      {row[c]}
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
+            {rows.map((row, idx) => {
+              let rowTotal = 0;
+              return (
+                <tr key={idx}>
+                  <td className="border p-1 font-bold">{row[colKey]}</td>
+                  {cols.map(c => {
+                    let value = row[c];
+                    if (value === '-') return <td className="border p-1 text-center opacity-60" key={c}>-</td>;
+                    rowTotal += value;
+                    return <td className={`border p-1 text-center ${value === 0 ? 'opacity-40' : ''}`} key={c}>{value}</td>;
+                  })}
+                  <td className="border p-1 text-center font-bold">{rowTotal}</td>
+                </tr>
+              );
+            })}
           </tbody>
+          <tfoot>
+            <tr>
+              <td className="border p-1 font-bold">Total</td>
+              {cols.map(c => (
+                <td className={`border p-1 text-center font-bold ${colTotals[c] === 0 ? 'opacity-40' : ''}`} key={c}>{colTotals[c]}</td>
+              ))}
+              <td className="border p-1 text-center font-bold">{grandTotal}</td>
+            </tr>
+          </tfoot>
         </table>
       </div>
     );
@@ -277,6 +276,28 @@ export const OportunidadesDashboards: React.FC = () => {
             </SelectContent>
           </Select>
         </div>
+        {periodo === "quarter" && (
+          <div className="w-full md:w-auto">
+            <Label htmlFor="quarter">Quarter</Label>
+            <Select
+              value={quarters.join(',')}
+              onValueChange={v => setQuarters(
+                v ? v.split(',') : []
+              )}
+              multiple
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Selecione quarter(s)" />
+              </SelectTrigger>
+              <SelectContent>
+                {quartersOptions.map(q => (
+                  <SelectItem key={q.value} value={q.value}>{q.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <div className="text-xs text-muted-foreground mt-1">Você pode selecionar um ou mais quarters</div>
+          </div>
+        )}
       </div>
 
       <Tabs defaultValue="intragrupo">
