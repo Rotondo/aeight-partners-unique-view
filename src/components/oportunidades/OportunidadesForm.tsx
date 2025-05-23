@@ -24,19 +24,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 
-/**
- * OportunidadesForm
- * Este componente permite criar e editar oportunidades, conectando corretamente
- * com as funções do contexto, validando os campos e suportando todos os fluxos esperados
- * para as páginas de listagem, detalhes e edição.
- */
-
-interface OportunidadesFormProps {
-  oportunidadeId?: string | null;
-  onClose: () => void;
-}
-
-// Se usar textarea custom, ajuste para seu projeto
+// Textarea custom para campos longos (ajuste para seu design system se necessário)
 const Textarea: React.FC<React.TextareaHTMLAttributes<HTMLTextAreaElement>> = (
   props
 ) => (
@@ -48,6 +36,11 @@ const Textarea: React.FC<React.TextareaHTMLAttributes<HTMLTextAreaElement>> = (
     )}
   />
 );
+
+interface OportunidadesFormProps {
+  oportunidadeId?: string | null;
+  onClose: () => void;
+}
 
 type Usuario = {
   id: string;
@@ -71,7 +64,7 @@ const statusOptions: StatusOportunidade[] = [
   "Contato",
 ];
 
-// Lista de campos válidos para payload (evitar envio de campos extras à API)
+// Somente os campos válidos para inserção/atualização
 const allowedPayloadFields: (keyof Oportunidade)[] = [
   "nome_lead",
   "empresa_origem_id",
@@ -115,7 +108,7 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({
     if (isEditing && oportunidadeId) {
       const oportunidade = getOportunidade(oportunidadeId);
       if (oportunidade) {
-        // Remover campos de join do formData (caso já tenha vindo de algum lugar)
+        // Remove campos de join do formData
         const {
           contato,
           empresa_origem,
@@ -179,7 +172,7 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({
     fetchEmpresas();
   }, []);
 
-  // Buscar usuários ativos para "Executivo Interno Responsável"
+  // Buscar usuários ativos
   useEffect(() => {
     const fetchUsuarios = async () => {
       try {
@@ -201,7 +194,7 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({
     fetchUsuarios();
   }, []);
 
-  // Atualiza campo tipo_natureza apenas para uso visual
+  // Atualiza campo tipo_natureza apenas para visualização
   useEffect(() => {
     if (!formData) return;
     const empresaOrigemTipo = empresas.find(
