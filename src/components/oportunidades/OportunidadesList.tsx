@@ -11,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Edit, Trash2, Download, Search } from "lucide-react";
+import { Edit, Trash2, Download, Search, ArrowUp, ArrowDown } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -46,7 +46,21 @@ export const OportunidadesList: React.FC<OportunidadesListProps> = ({ onEdit }) 
 
   const [selectedOportunidadeId, setSelectedOportunidadeId] = useState<string | null>(null);
   const [isExportOpen, setIsExportOpen] = useState(false);
-  const [search, setSearch] = useState("");
+
+  // Filtros por coluna
+  const [searchGlobal, setSearchGlobal] = useState("");
+  const [filters, setFilters] = useState({
+    data: "",
+    origem: "",
+    destino: "",
+    tipo: "",
+    nome_lead: "",
+    status: "",
+  });
+
+  // Ordenação
+  const [sortBy, setSortBy] = useState<string>("data_indicacao");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
   // KPIs
   const total = oportunidades.length;
@@ -56,18 +70,89 @@ export const OportunidadesList: React.FC<OportunidadesListProps> = ({ onEdit }) 
     op => ['em_contato', 'negociando'].includes(op.status)
   ).length;
 
-  // Busca global aplicada sobre filteredOportunidades
+  // Aplica filtros por coluna e busca global
   const displayOportunidades = useMemo(() => {
-    if (!search.trim()) return filteredOportunidades;
-    const s = search.trim().toLowerCase();
-    return filteredOportunidades.filter(op =>
-      (op.nome_lead || "").toLowerCase().includes(s) ||
-      (op.empresa_origem?.nome || "").toLowerCase().includes(s) ||
-      (op.empresa_destino?.nome || "").toLowerCase().includes(s) ||
-      (op.contato?.nome || "").toLowerCase().includes(s) ||
-      (op.status || "").toLowerCase().includes(s)
-    );
-  }, [filteredOportunidades, search]);
+    let ops = filteredOportunidades;
+
+    // Filtro global
+    if (searchGlobal.trim()) {
+      const s = searchGlobal.trim().toLowerCase();
+      ops = ops.filter(op =>
+        (op.nome_lead || "").toLowerCase().includes(s) ||
+        (op.empresa_origem?.nome || "").toLowerCase().includes(s) ||
+        (op.empresa_destino?.nome || "").toLowerCase().includes(s) ||
+        (op.status || "").toLowerCase().includes(s)
+      );
+    }
+
+    // Filtros por coluna
+    if (filters.data) {
+      ops = ops.filter(op => {
+        const d = formatDate(op.data_indicacao);
+        return d.includes(filters.data);
+      });
+    }
+    if (filters.origem) {
+      ops = ops.filter(op => (op.empresa_origem?.nome || "-").toLowerCase().includes(filters.origem.toLowerCase()));
+    }
+    if (filters.destino) {
+      ops = ops.filter(op => (op.empresa_destino?.nome || "-").toLowerCase().includes(filters.destino.toLowerCase()));
+    }
+    if (filters.tipo) {
+      const tipoFiltro = filters.tipo.toLowerCase();
+      ops = ops.filter(op => {
+        const tipo = getGrupoStatus(op.empresa_origem?.tipo, op.empresa_destino?.tipo);
+        if (tipo === "intragrupo") return "intra".includes(tipoFiltro);
+        if (tipo === "extragrupo") return "extra".includes(tipoFiltro);
+        return false;
+      });
+    }
+    if (filters.nome_lead) {
+      ops = ops.filter(op => (op.nome_lead || "-").toLowerCase().includes(filters.nome_lead.toLowerCase()));
+    }
+    if (filters.status) {
+      ops = ops.filter(op => (op.status || "-").toLowerCase().includes(filters.status.toLowerCase()));
+    }
+
+    // Ordenação
+    ops = ops.slice().sort((a, b) => {
+      let aVal: any, bVal: any;
+      switch (sortBy) {
+        case "data_indicacao":
+          aVal = a.data_indicacao ?? "";
+          bVal = b.data_indicacao ?? "";
+          break;
+        case "empresa_origem":
+          aVal = a.empresa_origem?.nome ?? "";
+          bVal = b.empresa_origem?.nome ?? "";
+          break;
+        case "empresa_destino":
+          aVal = a.empresa_destino?.nome ?? "";
+          bVal = b.empresa_destino?.nome ?? "";
+          break;
+        case "tipo":
+          aVal = getGrupoStatus(a.empresa_origem?.tipo, a.empresa_destino?.tipo) ?? "";
+          bVal = getGrupoStatus(b.empresa_origem?.tipo, b.empresa_destino?.tipo) ?? "";
+          break;
+        case "nome_lead":
+          aVal = a.nome_lead ?? "";
+          bVal = b.nome_lead ?? "";
+          break;
+        case "status":
+          aVal = a.status ?? "";
+          bVal = b.status ?? "";
+          break;
+        default:
+          aVal = "";
+          bVal = "";
+      }
+      if (aVal < bVal) return sortOrder === "asc" ? -1 : 1;
+      if (aVal > bVal) return sortOrder === "asc" ? 1 : -1;
+      return 0;
+    });
+
+    return ops;
+  }, [filteredOportunidades, searchGlobal, filters, sortBy, sortOrder]);
 
   const getStatusBadge = (status: StatusOportunidade) => {
     switch (status) {
@@ -99,14 +184,6 @@ export const OportunidadesList: React.FC<OportunidadesListProps> = ({ onEdit }) 
     }
   };
 
-  const formatCurrency = (value: number | undefined | null) => {
-    if (value === undefined || value === null) return "-";
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
-  };
-
   const handleDelete = async (id: string) => {
     try {
       await deleteOportunidade(id);
@@ -123,15 +200,14 @@ export const OportunidadesList: React.FC<OportunidadesListProps> = ({ onEdit }) 
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="space-y-2">
-        {[1, 2, 3, 4, 5].map((i) => (
-          <Skeleton key={i} className="h-12 w-full" />
-        ))}
-      </div>
-    );
-  }
+  const handleSort = (col: string) => {
+    if (sortBy === col) {
+      setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(col);
+      setSortOrder("asc");
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -155,12 +231,12 @@ export const OportunidadesList: React.FC<OportunidadesListProps> = ({ onEdit }) 
         </div>
       </div>
 
-      {/* Filtro rápido */}
+      {/* Filtro global */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
         <Input
           placeholder="Buscar por lead, empresa, status..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
+          value={searchGlobal}
+          onChange={e => setSearchGlobal(e.target.value)}
           className="max-w-xs"
         />
         <Button
@@ -173,7 +249,13 @@ export const OportunidadesList: React.FC<OportunidadesListProps> = ({ onEdit }) 
         </Button>
       </div>
 
-      {displayOportunidades.length === 0 ? (
+      {isLoading ? (
+        <div className="space-y-2">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <Skeleton key={i} className="h-12 w-full" />
+          ))}
+        </div>
+      ) : displayOportunidades.length === 0 ? (
         <div className="text-center py-8">
           <p className="text-muted-foreground">
             Nenhuma oportunidade encontrada com os filtros atuais.
@@ -184,13 +266,138 @@ export const OportunidadesList: React.FC<OportunidadesListProps> = ({ onEdit }) 
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Data</TableHead>
-                <TableHead>Origem</TableHead>
-                <TableHead>Destino</TableHead>
-                <TableHead>Tipo</TableHead>
-                <TableHead>Contato</TableHead>
-                <TableHead>Valor</TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead
+                  className="cursor-pointer"
+                  onClick={() => handleSort("data_indicacao")}
+                >
+                  Data{" "}
+                  {sortBy === "data_indicacao" &&
+                    (sortOrder === "asc" ? (
+                      <ArrowUp className="inline w-3 h-3" />
+                    ) : (
+                      <ArrowDown className="inline w-3 h-3" />
+                    ))}
+                  <div>
+                    <Input
+                      placeholder="Filtrar"
+                      value={filters.data}
+                      onChange={e =>
+                        setFilters(f => ({ ...f, data: e.target.value }))
+                      }
+                      className="mt-1 text-xs"
+                    />
+                  </div>
+                </TableHead>
+                <TableHead
+                  className="cursor-pointer"
+                  onClick={() => handleSort("empresa_origem")}
+                >
+                  Origem{" "}
+                  {sortBy === "empresa_origem" &&
+                    (sortOrder === "asc" ? (
+                      <ArrowUp className="inline w-3 h-3" />
+                    ) : (
+                      <ArrowDown className="inline w-3 h-3" />
+                    ))}
+                  <div>
+                    <Input
+                      placeholder="Filtrar"
+                      value={filters.origem}
+                      onChange={e =>
+                        setFilters(f => ({ ...f, origem: e.target.value }))
+                      }
+                      className="mt-1 text-xs"
+                    />
+                  </div>
+                </TableHead>
+                <TableHead
+                  className="cursor-pointer"
+                  onClick={() => handleSort("empresa_destino")}
+                >
+                  Destino{" "}
+                  {sortBy === "empresa_destino" &&
+                    (sortOrder === "asc" ? (
+                      <ArrowUp className="inline w-3 h-3" />
+                    ) : (
+                      <ArrowDown className="inline w-3 h-3" />
+                    ))}
+                  <div>
+                    <Input
+                      placeholder="Filtrar"
+                      value={filters.destino}
+                      onChange={e =>
+                        setFilters(f => ({ ...f, destino: e.target.value }))
+                      }
+                      className="mt-1 text-xs"
+                    />
+                  </div>
+                </TableHead>
+                <TableHead
+                  className="cursor-pointer"
+                  onClick={() => handleSort("tipo")}
+                >
+                  Tipo{" "}
+                  {sortBy === "tipo" &&
+                    (sortOrder === "asc" ? (
+                      <ArrowUp className="inline w-3 h-3" />
+                    ) : (
+                      <ArrowDown className="inline w-3 h-3" />
+                    ))}
+                  <div>
+                    <Input
+                      placeholder="Filtrar"
+                      value={filters.tipo}
+                      onChange={e =>
+                        setFilters(f => ({ ...f, tipo: e.target.value }))
+                      }
+                      className="mt-1 text-xs"
+                    />
+                  </div>
+                </TableHead>
+                <TableHead
+                  className="cursor-pointer"
+                  onClick={() => handleSort("nome_lead")}
+                >
+                  Nome da Oportunidade{" "}
+                  {sortBy === "nome_lead" &&
+                    (sortOrder === "asc" ? (
+                      <ArrowUp className="inline w-3 h-3" />
+                    ) : (
+                      <ArrowDown className="inline w-3 h-3" />
+                    ))}
+                  <div>
+                    <Input
+                      placeholder="Filtrar"
+                      value={filters.nome_lead}
+                      onChange={e =>
+                        setFilters(f => ({ ...f, nome_lead: e.target.value }))
+                      }
+                      className="mt-1 text-xs"
+                    />
+                  </div>
+                </TableHead>
+                <TableHead
+                  className="cursor-pointer"
+                  onClick={() => handleSort("status")}
+                >
+                  Status{" "}
+                  {sortBy === "status" &&
+                    (sortOrder === "asc" ? (
+                      <ArrowUp className="inline w-3 h-3" />
+                    ) : (
+                      <ArrowDown className="inline w-3 h-3" />
+                    ))}
+                  <div>
+                    <Input
+                      placeholder="Filtrar"
+                      value={filters.status}
+                      onChange={e =>
+                        setFilters(f => ({ ...f, status: e.target.value }))
+                      }
+                      className="mt-1 text-xs"
+                    />
+                  </div>
+                </TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
@@ -201,8 +408,7 @@ export const OportunidadesList: React.FC<OportunidadesListProps> = ({ onEdit }) 
                   <TableCell>{op.empresa_origem?.nome || "-"}</TableCell>
                   <TableCell>{op.empresa_destino?.nome || "-"}</TableCell>
                   <TableCell>{getTipoBadge(op)}</TableCell>
-                  <TableCell>{op.contato?.nome || "-"}</TableCell>
-                  <TableCell>{formatCurrency(op.valor)}</TableCell>
+                  <TableCell>{op.nome_lead || "-"}</TableCell>
                   <TableCell>{getStatusBadge(op.status)}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
