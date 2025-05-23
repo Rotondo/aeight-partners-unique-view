@@ -51,7 +51,7 @@ const DashboardPage: React.FC = () => {
   const [tipoFiltro, setTipoFiltro] = useState<"all" | "intra" | "extra">("all");
   const [periodo, setPeriodo] = useState<"mes" | "quarter">("mes");
   const [statusFiltro, setStatusFiltro] = useState<"all" | "ganho" | "perdido" | "andamento">("all");
-  const [empresaFiltro, setEmpresaFiltro] = useState<string>("all"); // <-- inicializa como "all"
+  const [empresaFiltro, setEmpresaFiltro] = useState<string>("all");
   const [empresaFiltroType, setEmpresaFiltroType] = useState<"remetente" | "destinatario" | "all">("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [stats, setStats] = useState<any>({});
@@ -114,11 +114,11 @@ const DashboardPage: React.FC = () => {
 
   // Agrupa por quarter
   function groupByQuarter(data: Oportunidade[], tipo: "intra" | "extra" | "all") {
-    const result: Record<string, { enviadas: number; recebidas: number }> = {};
+    const result: Record<string, { enviadas: number; recebidas: number; dateObj: Date }> = {};
     data.forEach((op) => {
       const d = new Date(op.data_indicacao);
       const key = getQuarterLabel(d);
-      if (!result[key]) result[key] = { enviadas: 0, recebidas: 0 };
+      if (!result[key]) result[key] = { enviadas: 0, recebidas: 0, dateObj: d };
       if (tipo === "intra" && op.tipo_relacao === "intra") {
         result[key].enviadas += op.isRemetente ? 1 : 0;
         result[key].recebidas += op.isDestinatario ? 1 : 0;
@@ -132,15 +132,16 @@ const DashboardPage: React.FC = () => {
     });
     return Object.entries(result)
       .map(([quarter, vals]) => ({ quarter, ...vals }))
-      .sort((a, b) => a.quarter.localeCompare(b.quarter));
+      .sort((a, b) => a.dateObj.getTime() - b.dateObj.getTime());
   }
-  // Agrupa por mês
+
+  // Agrupa por mês (CORRIGIDO PARA ORDENAR POR DATA REAL)
   function groupByMonth(data: Oportunidade[], tipo: "intra" | "extra" | "all") {
-    const result: Record<string, { enviadas: number; recebidas: number }> = {};
+    const result: Record<string, { enviadas: number; recebidas: number; dateObj: Date }> = {};
     data.forEach((op) => {
       const d = new Date(op.data_indicacao);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-      if (!result[key]) result[key] = { enviadas: 0, recebidas: 0 };
+      if (!result[key]) result[key] = { enviadas: 0, recebidas: 0, dateObj: d };
       if (tipo === "intra" && op.tipo_relacao === "intra") {
         result[key].enviadas += op.isRemetente ? 1 : 0;
         result[key].recebidas += op.isDestinatario ? 1 : 0;
@@ -157,9 +158,9 @@ const DashboardPage: React.FC = () => {
         const [year, month] = mes.split("-");
         const date = new Date(Number(year), Number(month) - 1, 1);
         const mesLabel = date.toLocaleString("pt-BR", { month: "short" });
-        return { mes: `${mesLabel}/${year.slice(2)}`, ...vals };
+        return { mes: `${mesLabel}/${year.slice(2)}`, ...vals, dateObj: date };
       })
-      .sort((a, b) => a.mes.localeCompare(b.mes));
+      .sort((a, b) => a.dateObj.getTime() - b.dateObj.getTime());
   }
 
   function processStats(oportunidades: Oportunidade[], empresas: Empresa[]) {
@@ -239,7 +240,6 @@ const DashboardPage: React.FC = () => {
   }
 
   function processStatusChart(oportunidades: Oportunidade[]) {
-    // Com filtro intra/extra grupo
     let filtradas = oportunidades;
     if (tipoFiltro !== "all") {
       filtradas = filtradas.filter((op) => op.tipo_relacao === tipoFiltro);
@@ -258,7 +258,6 @@ const DashboardPage: React.FC = () => {
   }
 
   function processMatriz(oportunidades: Oportunidade[], empresas: Empresa[]) {
-    // Matriz intra
     const intragrupo = empresas.filter((e) => e.tipo === "intragrupo");
     let matrizIntra: any[] = [];
     for (const origem of intragrupo) {
@@ -279,7 +278,6 @@ const DashboardPage: React.FC = () => {
     }
     setMatrizIntra(matrizIntra);
 
-    // Matriz parceiros: linhas = parceiros, colunas = intragrupo
     const parceiros = empresas.filter((e) => e.tipo === "parceiro");
     let matrizParc: any[] = [];
     for (const parceiro of parceiros) {
@@ -372,7 +370,7 @@ const DashboardPage: React.FC = () => {
     <div className="space-y-8">
       <h1 className="text-2xl font-bold">Dashboard de Oportunidades</h1>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <DashboardCard title="Total de Oportunidades" value={loading ? "..." : stats.total} icon={<ReBarChart className="h-4 w-4 text-primary" />} color="bg-primary/10" description="Todas as oportunidades registradas" />
+        <DashboardCard title="Total de Oportunidades" value={loading ? "..." : stats.total} icon={<ReBarChart className="h-4 w-4 text-primary" />} color="bg-primary/10" description="Todas as oportunidades" />
         <DashboardCard title="Ganhos" value={loading ? "..." : stats.ganhas} icon={<ReBarChart className="h-4 w-4 text-green-500" />} color="bg-green-500/10" description="Oportunidades ganhas" />
         <DashboardCard title="Perdidos" value={loading ? "..." : stats.perdidas} icon={<ReBarChart className="h-4 w-4 text-destructive" />} color="bg-destructive/10" description="Oportunidades perdidas" />
         <DashboardCard title="Em Andamento" value={loading ? "..." : stats.andamento} icon={<ReBarChart className="h-4 w-4 text-amber-500" />} color="bg-amber-500/10" description="Em negociação" />
@@ -380,7 +378,7 @@ const DashboardPage: React.FC = () => {
         <DashboardCard title="Extra Grupo" value={loading ? "..." : stats.extra} icon={<ReBarChart className="h-4 w-4 text-purple-600" />} color="bg-purple-600/10" description="Trocas com terceiros" />
         <DashboardCard title="Enviadas" value={loading ? "..." : stats.enviadas} icon={<ReBarChart className="h-4 w-4 text-cyan-500" />} color="bg-cyan-500/10" description="Oportunidades enviadas" />
         <DashboardCard title="Recebidas" value={loading ? "..." : stats.recebidas} icon={<ReBarChart className="h-4 w-4 text-rose-500" />} color="bg-rose-500/10" description="Oportunidades recebidas" />
-        <DashboardCard title="Saldo Envio-Recebimento" value={loading ? "..." : stats.saldo} icon={<ReBarChart className="h-4 w-4 text-gray-600" />} color="bg-gray-600/10" description="Saldo entre enviadas e recebidas" />
+        <DashboardCard title="Saldo Envio-Recebimento" value={loading ? "..." : stats.saldo} icon={<ReBarChart className="h-4 w-4 text-gray-600" />} color="bg-gray-600/10" description="Saldo entre envio e recebimento" />
       </div>
       <Card>
         <CardHeader>
