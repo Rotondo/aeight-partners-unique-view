@@ -24,7 +24,19 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 
-// Textarea component for optional fields if your project doesn't already have one
+/**
+ * OportunidadesForm
+ * Este componente permite criar e editar oportunidades, conectando corretamente
+ * com as funções do contexto, validando os campos e suportando todos os fluxos esperados
+ * para as páginas de listagem, detalhes e edição.
+ */
+
+interface OportunidadesFormProps {
+  oportunidadeId?: string | null;
+  onClose: () => void;
+}
+
+// Se usar textarea custom, ajuste para seu projeto
 const Textarea: React.FC<React.TextareaHTMLAttributes<HTMLTextAreaElement>> = (
   props
 ) => (
@@ -36,11 +48,6 @@ const Textarea: React.FC<React.TextareaHTMLAttributes<HTMLTextAreaElement>> = (
     )}
   />
 );
-
-interface OportunidadesFormProps {
-  oportunidadeId?: string | null;
-  onClose: () => void;
-}
 
 type Usuario = {
   id: string;
@@ -64,6 +71,29 @@ const statusOptions: StatusOportunidade[] = [
   "Contato",
 ];
 
+// Lista de campos válidos para payload (evitar envio de campos extras à API)
+const allowedPayloadFields: (keyof Oportunidade)[] = [
+  "nome_lead",
+  "empresa_origem_id",
+  "empresa_destino_id",
+  "data_indicacao",
+  "usuario_recebe_id",
+  "status",
+  "valor",
+  "data_fechamento",
+  "observacoes",
+  "motivo_perda",
+  "contato_id",
+];
+
+function filterPayloadOportunidade(data: Partial<Oportunidade>) {
+  const result: any = {};
+  allowedPayloadFields.forEach((k) => {
+    if (data[k] !== undefined) result[k] = data[k];
+  });
+  return result;
+}
+
 export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({
   oportunidadeId,
   onClose,
@@ -86,7 +116,6 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({
       const oportunidade = getOportunidade(oportunidadeId);
       if (oportunidade) {
         // Remover campos de join do formData (caso já tenha vindo de algum lugar)
-        // Limpar campos não salvos diretamente em oportunidades
         const {
           contato,
           empresa_origem,
@@ -111,7 +140,6 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({
         nome_lead: "",
         empresa_origem_id: undefined,
         empresa_destino_id: undefined,
-        tipo_natureza: undefined,
         data_indicacao: new Date().toISOString(),
         usuario_recebe_id: undefined,
         status: "em_contato",
@@ -125,6 +153,7 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({
     // eslint-disable-next-line
   }, [oportunidadeId, isEditing, getOportunidade]);
 
+  // Buscar empresas
   useEffect(() => {
     const fetchEmpresas = async () => {
       setIsLoading(true);
@@ -150,6 +179,7 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({
     fetchEmpresas();
   }, []);
 
+  // Buscar usuários ativos para "Executivo Interno Responsável"
   useEffect(() => {
     const fetchUsuarios = async () => {
       try {
@@ -171,7 +201,7 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({
     fetchUsuarios();
   }, []);
 
-  // Sync empresa origem/destino para calcular tipo_natureza
+  // Atualiza campo tipo_natureza apenas para uso visual
   useEffect(() => {
     if (!formData) return;
     const empresaOrigemTipo = empresas.find(
@@ -181,9 +211,11 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({
       (e) => e.id === formData.empresa_destino_id
     )?.tipo;
     const tipo = getGrupoStatus(empresaOrigemTipo, empresaDestinoTipo);
-    setFormData((prev) =>
-      prev ? { ...prev, tipo_natureza: tipo } : prev
-    );
+    if (formData.tipo_natureza !== tipo) {
+      setFormData((prev) =>
+        prev ? { ...prev, tipo_natureza: tipo } : prev
+      );
+    }
     // eslint-disable-next-line
   }, [formData?.empresa_origem_id, formData?.empresa_destino_id, empresas]);
 
@@ -230,29 +262,6 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({
     return Object.keys(errors).length === 0;
   };
 
-  // Remove campos irrelevantes antes de enviar ao backend
-  function filterPayload(data: Partial<Oportunidade>) {
-    const allowed: (keyof Oportunidade)[] = [
-      "nome_lead",
-      "empresa_origem_id",
-      "empresa_destino_id",
-      "tipo_natureza",
-      "data_indicacao",
-      "usuario_recebe_id",
-      "status",
-      "valor",
-      "data_fechamento",
-      "observacoes",
-      "motivo_perda",
-      "contato_id",
-    ];
-    const result: any = {};
-    allowed.forEach((k) => {
-      if (data[k] !== undefined) result[k] = data[k];
-    });
-    return result;
-  }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) {
@@ -265,7 +274,8 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({
     }
     setIsSaving(true);
     try {
-      const dataToSave = filterPayload(formData);
+      // Só envia campos válidos para o backend
+      const dataToSave = filterPayloadOportunidade(formData);
 
       if (isEditing && oportunidadeId) {
         await updateOportunidade(oportunidadeId, dataToSave);
@@ -471,7 +481,9 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({
         </div>
         {/* Executivo interno responsável (opcional) */}
         <div className="space-y-2">
-          <Label htmlFor="usuario_recebe_id">Executivo Interno Responsável</Label>
+          <Label htmlFor="usuario_recebe_id">
+            Executivo Interno Responsável
+          </Label>
           <Select
             value={formData.usuario_recebe_id || "none"}
             onValueChange={(value) =>
