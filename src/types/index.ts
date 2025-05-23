@@ -52,6 +52,7 @@ export interface Usuario {
 
 // Oportunidade (Opportunity)
 export type StatusOportunidade = "em_contato" | "negociando" | "ganho" | "perdido" | "Contato";
+export { StatusOportunidade }; // Garantir exportação nomeada
 
 // Natureza da oportunidade (intra/extragrupo)
 export type TipoNatureza = "intragrupo" | "extragrupo";
