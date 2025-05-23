@@ -28,6 +28,13 @@ import { OportunidadesExport } from "./OportunidadesExport";
 import { StatusOportunidade } from "@/types";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface OportunidadesListProps {
   onEdit: (id: string) => void;
@@ -38,6 +45,62 @@ function getGrupoStatus(origemTipo?: string, destinoTipo?: string) {
   if (origemTipo && destinoTipo) return "extragrupo";
   return undefined;
 }
+
+const statusOptions: StatusOportunidade[] = [
+  "em_contato",
+  "negociando",
+  "ganho",
+  "perdido",
+  "Contato",
+];
+
+// Componente de célula para edição inline do status
+const StatusCell: React.FC<{
+  oportunidade: any;
+}> = ({ oportunidade }) => {
+  const { updateOportunidade } = useOportunidades();
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
+  const [value, setValue] = useState<StatusOportunidade>(oportunidade.status);
+
+  // Atualiza e salva status no backend
+  const handleStatusChange = async (status: StatusOportunidade) => {
+    setValue(status);
+    setLoading(true);
+    try {
+      // Se o status for "perdido", motivo_perda deve ser enviado, mas não obrigatório do usuário
+      const payload: any = { status };
+      if (status === "perdido") {
+        payload.motivo_perda = "";
+      }
+      await updateOportunidade(oportunidade.id, payload);
+      toast({ title: "Status atualizado!" });
+    } catch {
+      toast({ title: "Erro ao atualizar status", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Select
+      value={value}
+      onValueChange={handleStatusChange}
+      disabled={loading}
+    >
+      <SelectTrigger className={loading ? "opacity-70 pointer-events-none" : ""}>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {statusOptions.map(status => (
+          <SelectItem key={status} value={status}>
+            {status.replace("_", " ").replace(/^./, s => s.toUpperCase())}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+};
 
 export const OportunidadesList: React.FC<OportunidadesListProps> = ({ onEdit }) => {
   const { filteredOportunidades, isLoading, deleteOportunidade, oportunidades } = useOportunidades();
@@ -153,21 +216,6 @@ export const OportunidadesList: React.FC<OportunidadesListProps> = ({ onEdit }) 
 
     return ops;
   }, [filteredOportunidades, searchGlobal, filters, sortBy, sortOrder]);
-
-  const getStatusBadge = (status: StatusOportunidade) => {
-    switch (status) {
-      case "em_contato":
-        return <Badge className="bg-blue-500 text-white">Em Contato</Badge>;
-      case "negociando":
-        return <Badge className="bg-yellow-500 text-white">Negociando</Badge>;
-      case "ganho":
-        return <Badge className="bg-green-600 text-white">Ganho</Badge>;
-      case "perdido":
-        return <Badge className="bg-red-500 text-white">Perdido</Badge>;
-      default:
-        return <Badge>Desconhecido</Badge>;
-    }
-  };
 
   const getTipoBadge = (op: any) => {
     const tipo = getGrupoStatus(op.empresa_origem?.tipo, op.empresa_destino?.tipo);
@@ -409,7 +457,9 @@ export const OportunidadesList: React.FC<OportunidadesListProps> = ({ onEdit }) 
                   <TableCell>{op.empresa_destino?.nome || "-"}</TableCell>
                   <TableCell>{getTipoBadge(op)}</TableCell>
                   <TableCell>{op.nome_lead || "-"}</TableCell>
-                  <TableCell>{getStatusBadge(op.status)}</TableCell>
+                  <TableCell>
+                    <StatusCell oportunidade={op} />
+                  </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
                       <Dialog>
