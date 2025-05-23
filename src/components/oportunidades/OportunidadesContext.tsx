@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import { Oportunidade, StatusOportunidade, OportunidadesFilterParams } from "@/types";
 import { useToast } from "@/hooks/use-toast";
@@ -42,15 +41,29 @@ export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ child
       setIsLoading(true);
       setError(null);
 
+      // Seleção de campos explícitos para evitar sobrescrita e estrutura inconsistente
       let query = supabase
         .from('oportunidades')
         .select(`
-          *,
-          empresa_origem:empresas!empresa_origem_id(*),
-          empresa_destino:empresas!empresa_destino_id(*),
-          contato:contatos(*),
-          usuario_envio:usuarios!usuario_envio_id(*),
-          usuario_recebe:usuarios!usuario_recebe_id(*)
+          id,
+          empresa_origem_id,
+          empresa_destino_id,
+          contato_id,
+          valor,
+          status,
+          data_indicacao,
+          data_fechamento,
+          motivo_perda,
+          usuario_envio_id,
+          usuario_recebe_id,
+          observacoes,
+          created_at,
+          nome_lead,
+          empresa_origem:empresas!empresa_origem_id(id, nome, tipo, status, descricao),
+          empresa_destino:empresas!empresa_destino_id(id, nome, tipo, status, descricao),
+          contato:contatos(id, nome, email, telefone),
+          usuario_envio:usuarios!usuario_envio_id(id, nome, email, papel, ativo),
+          usuario_recebe:usuarios!usuario_recebe_id(id, nome, email, papel, ativo)
         `)
         .order('data_indicacao', { ascending: false });
 
@@ -60,7 +73,7 @@ export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ child
         throw error;
       }
 
-      // Ensure data exists and is an array
+      // Garantia de estrutura e tipos corretos
       if (data && Array.isArray(data)) {
         const processedData: Oportunidade[] = data.map(item => ({
           id: item.id,
@@ -68,7 +81,7 @@ export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ child
           empresa_destino_id: item.empresa_destino_id,
           contato_id: item.contato_id,
           valor: item.valor,
-          status: item.status as StatusOportunidade,
+          status: typeof item.status === "string" ? item.status as StatusOportunidade : String(item.status),
           data_indicacao: item.data_indicacao,
           data_fechamento: item.data_fechamento,
           motivo_perda: item.motivo_perda,
@@ -77,22 +90,25 @@ export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ child
           observacoes: item.observacoes,
           nome_lead: item.nome_lead,
           created_at: item.created_at,
-          // Relações
-          empresa_origem: item.empresa_origem ? {
-            id: item.empresa_origem.id,
-            nome: item.empresa_origem.nome,
-            tipo: item.empresa_origem.tipo as "intragrupo" | "parceiro" | "cliente",
-            status: item.empresa_origem.status,
-            descricao: item.empresa_origem.descricao || ""
-          } : undefined,
-          empresa_destino: item.empresa_destino ? {
-            id: item.empresa_destino.id,
-            nome: item.empresa_destino.nome,
-            tipo: item.empresa_destino.tipo as "intragrupo" | "parceiro" | "cliente",
-            status: item.empresa_destino.status,
-            descricao: item.empresa_destino.descricao || ""
-          } : undefined,
-          contato: item.contato?.[0],
+          empresa_origem: item.empresa_origem
+            ? {
+                id: item.empresa_origem.id,
+                nome: item.empresa_origem.nome,
+                tipo: item.empresa_origem.tipo as "intragrupo" | "parceiro" | "cliente",
+                status: item.empresa_origem.status,
+                descricao: item.empresa_origem.descricao || ""
+              }
+            : undefined,
+          empresa_destino: item.empresa_destino
+            ? {
+                id: item.empresa_destino.id,
+                nome: item.empresa_destino.nome,
+                tipo: item.empresa_destino.tipo as "intragrupo" | "parceiro" | "cliente",
+                status: item.empresa_destino.status,
+                descricao: item.empresa_destino.descricao || ""
+              }
+            : undefined,
+          contato: Array.isArray(item.contato) ? item.contato[0] : item.contato,
           usuario_envio: item.usuario_envio,
           usuario_recebe: item.usuario_recebe
         }));
@@ -119,7 +135,7 @@ export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ child
     if (params.dataInicio && params.dataFim) {
       const dataInicio = new Date(params.dataInicio);
       const dataFim = new Date(params.dataFim);
-      dataFim.setHours(23, 59, 59, 999); // Set end of day for date range
+      dataFim.setHours(23, 59, 59, 999);
 
       filtered = filtered.filter(op => {
         const dataIndicacao = new Date(op.data_indicacao);
@@ -130,7 +146,7 @@ export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ child
       filtered = filtered.filter(op => new Date(op.data_indicacao) >= dataInicio);
     } else if (params.dataFim) {
       const dataFim = new Date(params.dataFim);
-      dataFim.setHours(23, 59, 59, 999); // Set end of day
+      dataFim.setHours(23, 59, 59, 999);
       filtered = filtered.filter(op => new Date(op.data_indicacao) <= dataFim);
     }
 
@@ -147,9 +163,10 @@ export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ child
     }
 
     if (params.usuarioId) {
-      filtered = filtered.filter(op => 
-        op.usuario_envio_id === params.usuarioId || 
-        op.usuario_recebe_id === params.usuarioId
+      filtered = filtered.filter(
+        op =>
+          op.usuario_envio_id === params.usuarioId ||
+          op.usuario_recebe_id === params.usuarioId
       );
     }
 
@@ -158,17 +175,13 @@ export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ child
 
   // Record opportunity history when updating
   const recordHistory = async (
-    oportunidadeId: string, 
-    campo: string, 
-    valorAntigo: any, 
+    oportunidadeId: string,
+    campo: string,
+    valorAntigo: any,
     valorNovo: any
   ) => {
     if (!user) return;
-
-    // Don't record if values are the same
     if (valorAntigo === valorNovo) return;
-
-    // Format values for storage
     const oldValue = valorAntigo !== null ? String(valorAntigo) : null;
     const newValue = valorNovo !== null ? String(valorNovo) : null;
 
@@ -198,7 +211,6 @@ export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ child
     }
 
     try {
-      // Make sure the required fields are present
       if (!oportunidade.empresa_origem_id || !oportunidade.empresa_destino_id) {
         toast({
           title: "Erro",
@@ -208,7 +220,6 @@ export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ child
         return null;
       }
 
-      // Ensure required fields are present
       const newOportunidade = {
         empresa_origem_id: oportunidade.empresa_origem_id,
         empresa_destino_id: oportunidade.empresa_destino_id,
@@ -261,7 +272,6 @@ export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ child
     }
 
     try {
-      // Get the current opportunity to compare changes for history
       const currentOp = oportunidades.find(op => op.id === id);
       if (!currentOp) throw new Error("Oportunidade não encontrada");
 
@@ -272,7 +282,6 @@ export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ child
 
       if (error) throw error;
 
-      // Record history for each changed field
       for (const [key, newValue] of Object.entries(updates)) {
         const oldValue = (currentOp as any)[key];
         await recordHistory(id, key, oldValue, newValue);
@@ -336,14 +345,12 @@ export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ child
     return oportunidades.find(op => op.id === id);
   };
 
-  // Apply filters when filterParams or oportunidades change
   useEffect(() => {
     if (oportunidades.length > 0) {
       applyFilters(oportunidades, filterParams);
     }
   }, [filterParams, oportunidades]);
 
-  // Fetch oportunidades on mount and when user changes
   useEffect(() => {
     fetchOportunidades();
   }, [user]);
