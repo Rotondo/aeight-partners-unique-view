@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import {
   Card, CardContent, CardDescription, CardHeader, CardTitle
@@ -190,12 +189,12 @@ export const OportunidadesDashboards: React.FC = () => {
       setQualidadeData(qualidade);
 
       // Status - Geral
-      const statusCount: any = {};
+      const statusCount: Record<string, number> = {};
       oportunidadesFiltradas.forEach((op: any) => {
         if (!statusCount[op.status]) statusCount[op.status] = 0;
         statusCount[op.status]++;
       });
-      setStatusDistribuicao(Object.entries(statusCount).map(([status, total]) => ({ status, total })));
+      setStatusDistribuicao(Object.entries(statusCount).map(([status, total]) => ({ status, total: total as number })));
 
       // Ranking Enviadas/Recebidas
       const rankingEnv: any = {};

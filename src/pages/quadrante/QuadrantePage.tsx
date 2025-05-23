@@ -116,7 +116,7 @@ const QuadrantePage: React.FC = () => {
         );
         setIndicadores(updatedIndicadores);
       } else {
-        const newIndicador = {
+        const newIndicador: IndicadoresParceiro = {
           empresa_id: indicador.empresa_id!,
           potencial_leads: indicador.potencial_leads || 0,
           engajamento: indicador.engajamento || 0,
@@ -124,7 +124,6 @@ const QuadrantePage: React.FC = () => {
           potencial_investimento: indicador.potencial_investimento || 0,
           tamanho: indicador.tamanho || "M",
           data_avaliacao: indicador.data_avaliacao || new Date().toISOString(),
-          ...indicador
         };
 
         const { data, error } = await supabase
