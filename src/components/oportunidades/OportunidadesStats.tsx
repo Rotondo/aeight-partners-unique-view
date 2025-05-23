@@ -7,7 +7,6 @@ import { format, differenceInDays, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -15,14 +14,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-
-// Quarter options for filter
-const quartersOptions = [
-  { value: 'Q1', label: 'Q1 (jan-mar)' },
-  { value: 'Q2', label: 'Q2 (abr-jun)' },
-  { value: 'Q3', label: 'Q3 (jul-set)' },
-  { value: 'Q4', label: 'Q4 (out-dez)' },
-];
 
 function getGrupoStatus(empresa_origem_tipo: string, empresa_destino_tipo: string) {
   if (empresa_origem_tipo === "intragrupo" && empresa_destino_tipo === "intragrupo") return "intragrupo";
@@ -261,20 +252,19 @@ export const OportunidadesStats: React.FC = () => {
                 </div>
                 {periodo === "quarter" && (
                   <>
-                    <div className="flex space-x-2 mb-2">
-                      <Label className="my-auto w-20">Quarter:</Label>
+                    <div>
+                      <label>Quarter</label>
                       <Select
                         value={quarters.join(",")}
                         onValueChange={v => setQuarters(v ? v.split(",") : [])}
+                        multiple
                       >
                         <SelectTrigger className="w-36">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {quartersOptions.map(q => (
-                            <SelectItem key={q.value} value={q.value}>
-                              {q.label}
-                            </SelectItem>
+                          {["Q1", "Q2", "Q3", "Q4"].map(q => (
+                            <SelectItem key={q} value={q}>{q}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>

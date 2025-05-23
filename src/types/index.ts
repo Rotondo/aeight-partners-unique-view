@@ -52,7 +52,6 @@ export interface Usuario {
 
 // Oportunidade (Opportunity)
 export type StatusOportunidade = "em_contato" | "negociando" | "ganho" | "perdido" | "Contato";
-export { StatusOportunidade }; // Garantir exportação nomeada
 
 // Natureza da oportunidade (intra/extragrupo)
 export type TipoNatureza = "intragrupo" | "extragrupo";
@@ -80,18 +79,13 @@ export interface Oportunidade {
   usuario_envio?: Usuario;
   usuario_recebe?: Usuario;
   created_at?: string;
-  
-  // Novas propriedades para dashboard
-  tipo_relacao?: "intra" | "extra";
-  isRemetente?: boolean;
-  isDestinatario?: boolean;
 }
 
 // IndicadoresParceiro (PartnerIndicators)
 export type TamanhoEmpresa = "PP" | "P" | "M" | "G" | "GG";
 
 export interface IndicadoresParceiro {
-  id?: string; // Making ID optional for new records
+  id: string;
   empresa_id: string;
   potencial_leads: number;
   base_clientes?: number;
@@ -205,11 +199,4 @@ export interface RankingData {
 export interface StatusData {
   status: string;
   total: number;
-}
-
-// Add variant "success" to button
-declare module "@/components/ui/button" {
-  interface ButtonVariants {
-    variant?: "link" | "default" | "destructive" | "outline" | "secondary" | "ghost" | "success";
-  }
 }

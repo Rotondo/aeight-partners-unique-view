@@ -441,8 +441,6 @@ export type Database = {
         | "ganho"
         | "perdido"
         | "Contato"
-        | "Apresentado"
-        | "Sem contato"
       tipo_empresa: "grupo" | "parceiro" | "cliente" | "intragrupo"
       user_role: "admin" | "user" | "manager"
     }
@@ -568,8 +566,6 @@ export const Constants = {
         "ganho",
         "perdido",
         "Contato",
-        "Apresentado",
-        "Sem contato",
       ],
       tipo_empresa: ["grupo", "parceiro", "cliente", "intragrupo"],
       user_role: ["admin", "user", "manager"],
