@@ -34,9 +34,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Função que busca dados completos do usuário na tabela customizada
+  // Função para buscar dados completos do usuário na tabela 'usuarios'
   const fetchUserProfile = async (email: string) => {
-    // Troque 'usuarios' pelo nome da sua tabela customizada, se não for esse
     const { data, error } = await supabase
       .from('usuarios')
       .select('id, nome, email, papel, empresa_id, ativo')
@@ -117,7 +116,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return false;
     }
 
-    // Busca o perfil completo na tabela customizada
+    // Busca o perfil completo na tabela usuarios
     const profile = await fetchUserProfile(email);
 
     if (profile) {
