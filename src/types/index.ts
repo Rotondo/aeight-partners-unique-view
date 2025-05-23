@@ -1,3 +1,4 @@
+
 // Common types
 
 // Categoria (Category)
@@ -79,6 +80,11 @@ export interface Oportunidade {
   usuario_envio?: Usuario;
   usuario_recebe?: Usuario;
   created_at?: string;
+  
+  // Novas propriedades para dashboard
+  tipo_relacao?: "intra" | "extra";
+  isRemetente?: boolean;
+  isDestinatario?: boolean;
 }
 
 // IndicadoresParceiro (PartnerIndicators)
@@ -199,4 +205,11 @@ export interface RankingData {
 export interface StatusData {
   status: string;
   total: number;
+}
+
+// Add variant "success" to button
+declare module "@/components/ui/button" {
+  interface ButtonVariants {
+    variant?: "link" | "default" | "destructive" | "outline" | "secondary" | "ghost" | "success";
+  }
 }

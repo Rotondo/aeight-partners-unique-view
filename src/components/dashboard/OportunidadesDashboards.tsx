@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import {
   Card, CardContent, CardDescription, CardHeader, CardTitle
@@ -8,6 +9,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from '@/components/ui/select';
+import { MultiSelect } from '@/components/ui/multi-select';
 import { Label } from '@/components/ui/label';
 import { DatePicker } from '@/components/ui/date-picker';
 import { supabase } from '@/lib/supabase';
@@ -208,8 +210,8 @@ export const OportunidadesDashboards: React.FC = () => {
           rankingRec[op.empresa_destino.nome]++;
         }
       });
-      setRankingEnviadas(Object.entries(rankingEnv).map(([empresa, indicacoes]) => ({ empresa, indicacoes })).sort((a, b) => b.indicacoes - a.indicacoes));
-      setRankingRecebidas(Object.entries(rankingRec).map(([empresa, indicacoes]) => ({ empresa, indicacoes })).sort((a, b) => b.indicacoes - a.indicacoes));
+      setRankingEnviadas(Object.entries(rankingEnv).map(([empresa, indicacoes]) => ({ empresa, indicacoes })).sort((a, b) => (b.indicacoes as number) - (a.indicacoes as number)));
+      setRankingRecebidas(Object.entries(rankingRec).map(([empresa, indicacoes]) => ({ empresa, indicacoes })).sort((a, b) => (b.indicacoes as number) - (a.indicacoes as number)));
 
       // Balanço Grupo x Parceiros
       const balGrupo = oportunidadesFiltradas.filter((op: any) => op.empresa_origem.tipo === "intragrupo" && op.empresa_destino.tipo === "parceiro").length;
@@ -253,7 +255,7 @@ export const OportunidadesDashboards: React.FC = () => {
                   {cols.map(c => {
                     let value = row[c];
                     if (value === '-') return <td className="border p-1 text-center opacity-60" key={c}>-</td>;
-                    rowTotal += value;
+                    rowTotal += (value as number);
                     return <td className={`border p-1 text-center ${value === 0 ? 'opacity-40' : ''}`} key={c}>{value}</td>;
                   })}
                   <td className="border p-1 text-center font-bold">{rowTotal}</td>
@@ -285,11 +287,11 @@ export const OportunidadesDashboards: React.FC = () => {
       matrizIntraRows.forEach(row => {
         if (row.origem === nome) {
           Object.entries(row).forEach(([key, value]) => {
-            if (key !== "origem" && value !== '-' && key !== nome) enviadas += value;
+            if (key !== "origem" && value !== '-' && key !== nome) enviadas += (value as number);
           });
         } else {
           if (row[nome] !== undefined && row[nome] !== '-' && row.origem !== nome) {
-            recebidas += row[nome];
+            recebidas += (row[nome] as number);
           }
         }
       });
@@ -425,7 +427,7 @@ export const OportunidadesDashboards: React.FC = () => {
             <XAxis dataKey="month" />
             <YAxis />
             <Tooltip
-              formatter={v => Math.abs(v)}
+              formatter={(v: any) => Math.abs(Number(v))}
               labelFormatter={v => `Mês: ${v}`}
             />
             <Legend />
@@ -519,7 +521,7 @@ export const OportunidadesDashboards: React.FC = () => {
             fill={BAR_COLOR_RECEBIDAS}
             dataKey="total"
             nameKey="status"
-            label={({ name, percent }: any) => `${getStatusLabel(name)} ${(percent * 100).toFixed(0)}%`}
+            label={({ name, percent }: any) => `${getStatusLabel(name)} ${(Number(percent) * 100).toFixed(0)}%`}
           >
             {statusDistribuicao.map((entry, index) => (
               <Cell
@@ -631,22 +633,14 @@ export const OportunidadesDashboards: React.FC = () => {
           <>
           <div className="w-full md:w-auto">
             <Label htmlFor="quarter">Quarter</Label>
-            <Select
+            <MultiSelect
               value={quarters.join(',')}
-              onValueChange={v => setQuarters(
-                v ? v.split(',') : []
-              )}
-              multiple
+              onValueChange={(v) => setQuarters(v ? v.split(',') : [])}
             >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Selecione quarter(s)" />
-              </SelectTrigger>
-              <SelectContent>
-                {quartersOptions.map(q => (
-                  <SelectItem key={q.value} value={q.value}>{q.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              {quartersOptions.map(q => (
+                <SelectItem key={q.value} value={q.value}>{q.label}</SelectItem>
+              ))}
+            </MultiSelect>
             <div className="text-xs text-muted-foreground mt-1">Você pode selecionar um ou mais quarters</div>
           </div>
           <div className="w-full md:w-auto">

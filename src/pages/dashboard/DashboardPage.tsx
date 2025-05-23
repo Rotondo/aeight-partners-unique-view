@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -19,7 +20,7 @@ import {
 } from "recharts";
 import { DashboardCard } from "@/components/dashboard/DashboardCard";
 import { useToast } from "@/hooks/use-toast";
-import { Oportunidade, Empresa } from "@/types";
+import { Oportunidade, Empresa, StatusOportunidade } from "@/types";
 import { QuickAccess } from "@/components/dashboard/QuickAccess";
 import { AboutPlatform } from "@/components/dashboard/AboutPlatform";
 import { Edit, Check, X as Cancel } from "lucide-react";
@@ -43,10 +44,16 @@ const STATUS_COLORS = {
   Contato: "#6366f1",
 };
 
+interface OpportunityExtended extends Oportunidade {
+  tipo_relacao: "intra" | "extra";
+  isRemetente: boolean;
+  isDestinatario: boolean;
+}
+
 const DashboardPage: React.FC = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
-  const [oportunidades, setOportunidades] = useState<Oportunidade[]>([]);
+  const [oportunidades, setOportunidades] = useState<OpportunityExtended[]>([]);
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [tipoFiltro, setTipoFiltro] = useState<"all" | "intra" | "extra">("all");
   const [periodo, setPeriodo] = useState<"mes" | "quarter">("mes");
@@ -60,7 +67,7 @@ const DashboardPage: React.FC = () => {
   const [statusChartData, setStatusChartData] = useState<any[]>([]);
   const [editRowId, setEditRowId] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<Partial<Oportunidade>>({});
-  const [opportunidadesList, setOportunidadesList] = useState<Oportunidade[]>([]);
+  const [oportunidadesList, setOportunidadesList] = useState<OpportunityExtended[]>([]);
   const [ordemLista, setOrdemLista] = useState<{ col: string; asc: boolean }>({ col: "data_indicacao", asc: false });
   const [matrizIntra, setMatrizIntra] = useState<any[]>([]);
   const [matrizParceiros, setMatrizParceiros] = useState<any[]>([]);
@@ -84,7 +91,7 @@ const DashboardPage: React.FC = () => {
       if (empresasError) throw empresasError;
 
       // Enriquecimento
-      const oportunidadesEnriquecidas: Oportunidade[] = oportunidadesData.map((op: any) => {
+      const oportunidadesEnriquecidas: OpportunityExtended[] = oportunidadesData.map((op: any) => {
         const tipoOrigem = op.empresa_origem?.tipo || "";
         const tipoDestino = op.empresa_destino?.tipo || "";
         let tipo_relacao: "intra" | "extra" = "extra";
@@ -113,7 +120,7 @@ const DashboardPage: React.FC = () => {
   }
 
   // Agrupa por quarter
-  function groupByQuarter(data: Oportunidade[], tipo: "intra" | "extra" | "all") {
+  function groupByQuarter(data: OpportunityExtended[], tipo: "intra" | "extra" | "all") {
     const result: Record<string, { enviadas: number; recebidas: number; dateObj: Date }> = {};
     data.forEach((op) => {
       const d = new Date(op.data_indicacao);
@@ -136,7 +143,7 @@ const DashboardPage: React.FC = () => {
   }
 
   // Agrupa por mês (ordenado por data)
-  function groupByMonth(data: Oportunidade[], tipo: "intra" | "extra" | "all") {
+  function groupByMonth(data: OpportunityExtended[], tipo: "intra" | "extra" | "all") {
     const result: Record<string, { enviadas: number; recebidas: number; dateObj: Date }> = {};
     data.forEach((op) => {
       const d = new Date(op.data_indicacao);
@@ -163,7 +170,7 @@ const DashboardPage: React.FC = () => {
       .sort((a, b) => a.dateObj.getTime() - b.dateObj.getTime());
   }
 
-  function processStats(oportunidades: Oportunidade[], empresas: Empresa[]) {
+  function processStats(oportunidades: OpportunityExtended[], empresas: Empresa[]) {
     const total = oportunidades.length;
     const ganhas = oportunidades.filter((op) => op.status === "ganho").length;
     const perdidas = oportunidades.filter((op) => op.status === "perdido").length;
@@ -190,7 +197,7 @@ const DashboardPage: React.FC = () => {
     });
   }
 
-  function processSaldoEmpresas(oportunidades: Oportunidade[], empresas: Empresa[]) {
+  function processSaldoEmpresas(oportunidades: OpportunityExtended[], empresas: Empresa[]) {
     const saldos = empresas
       .filter((e) => e.status)
       .map((empresa) => {
@@ -208,7 +215,7 @@ const DashboardPage: React.FC = () => {
     setSaldoEmpresas(saldos);
   }
 
-  function processChart(oportunidades: Oportunidade[]) {
+  function processChart(oportunidades: OpportunityExtended[]) {
     let filtradas = oportunidades;
     if (statusFiltro !== "all") {
       filtradas = filtradas.filter((op) => {
@@ -234,12 +241,12 @@ const DashboardPage: React.FC = () => {
     }
     const data =
       periodo === "mes"
-        ? groupByMonth(filtradas, tipoFiltro)
-        : groupByQuarter(filtradas, tipoFiltro);
+        ? groupByMonth(filtradas, tipoFiltro as "intra" | "extra" | "all")
+        : groupByQuarter(filtradas, tipoFiltro as "intra" | "extra" | "all");
     setChartData(data);
   }
 
-  function processStatusChart(oportunidades: Oportunidade[]) {
+  function processStatusChart(oportunidades: OpportunityExtended[]) {
     let filtradas = oportunidades;
     if (tipoFiltro !== "all") {
       filtradas = filtradas.filter((op) => op.tipo_relacao === tipoFiltro);
@@ -250,14 +257,14 @@ const DashboardPage: React.FC = () => {
       statusCount[s] = (statusCount[s] || 0) + 1;
     });
     setStatusChartData(
-      Object.entries(statusCount).map(([status, value]) => ({
+      Object.entries(statusCount).map(([status, total]) => ({
         status,
-        value,
+        total,
       }))
     );
   }
 
-  function processMatriz(oportunidades: Oportunidade[], empresas: Empresa[]) {
+  function processMatriz(oportunidades: OpportunityExtended[], empresas: Empresa[]) {
     const intragrupo = empresas.filter((e) => e.tipo === "intragrupo");
     let matrizIntra: any[] = [];
     for (const origem of intragrupo) {
@@ -296,8 +303,8 @@ const DashboardPage: React.FC = () => {
     setMatrizParceiros(matrizParc);
   }
 
-  function processOportunidadesList(oportunidades: Oportunidade[]) {
-    setOpportunidadesList(oportunidades);
+  function processOportunidadesList(oportunidades: OpportunityExtended[]) {
+    setOportunidadesList(oportunidades);
   }
 
   function exportSaldoCSV() {
@@ -341,7 +348,7 @@ const DashboardPage: React.FC = () => {
       toast({ title: "Erro", description: "Erro ao atualizar oportunidade.", variant: "destructive" });
     }
   }
-  function handleEdit(oportunidade: Oportunidade) {
+  function handleEdit(oportunidade: OpportunityExtended) {
     setEditRowId(oportunidade.id);
     setEditValues({ ...oportunidade });
   }
@@ -356,7 +363,7 @@ const DashboardPage: React.FC = () => {
       asc: prev.col === col ? !prev.asc : true,
     }));
   }
-  const listaOrdenada = [...opportunidadesList].sort((a, b) => {
+  const listaOrdenada = [...oportunidadesList].sort((a, b) => {
     let vA: any = (a as any)[ordemLista.col];
     let vB: any = (b as any)[ordemLista.col];
     if (typeof vA === "string") vA = vA.toLowerCase();
@@ -477,7 +484,7 @@ const DashboardPage: React.FC = () => {
             <PieChart>
               <Pie data={statusChartData} dataKey="value" nameKey="status" cx="50%" cy="50%" outerRadius={100} fill="#8884d8" label>
                 {statusChartData.map((entry, idx) => (
-                  <Cell key={`cell-${idx}`} fill={STATUS_COLORS[entry.status] || "#8884d8"} />
+                  <Cell key={`cell-${idx}`} fill={STATUS_COLORS[entry.status as keyof typeof STATUS_COLORS] || "#8884d8"} />
                 ))}
               </Pie>
               <Tooltip />
@@ -576,7 +583,10 @@ const DashboardPage: React.FC = () => {
                     <td className="border p-1">{op.empresa_destino?.nome || "-"}</td>
                     <td className="border p-1">
                       {editRowId === op.id ? (
-                        <Select value={editValues.status || ""} onValueChange={v => setEditValues(e => ({ ...e, status: v }))}>
+                        <Select 
+                          value={editValues.status || ""} 
+                          onValueChange={(v) => setEditValues(e => ({ ...e, status: v as StatusOportunidade }))}
+                        >
                           <SelectTrigger className="w-[90px]"><SelectValue /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="em_contato">Em Contato</SelectItem>
@@ -606,7 +616,7 @@ const DashboardPage: React.FC = () => {
                     <td className="border p-1">
                       {editRowId === op.id ? (
                         <>
-                          <Button size="icon" variant="success" title="Salvar" onClick={() => handleSaveEdit(op.id)}><Check className="h-4 w-4" /></Button>
+                          <Button size="icon" variant="outline" title="Salvar" onClick={() => handleSaveEdit(op.id)}><Check className="h-4 w-4" /></Button>
                           <Button size="icon" variant="ghost" title="Cancelar" onClick={handleCancelEdit}><Cancel className="h-4 w-4" /></Button>
                         </>
                       ) : (

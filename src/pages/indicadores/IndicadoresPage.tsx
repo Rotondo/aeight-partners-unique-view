@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import {
@@ -24,7 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { IndicadoresParceiro, Empresa, Oportunidade } from "@/types";
+import { IndicadoresParceiro, Empresa, Oportunidade, TamanhoEmpresa } from "@/types";
 import {
   BarChart,
   Bar,
@@ -563,7 +564,7 @@ const IndicadoresPage: React.FC = () => {
                                 <Select
                                   value={editValues.tamanho || ""}
                                   onValueChange={(value) =>
-                                    setEditValues((v) => ({ ...v, tamanho: value }))
+                                    setEditValues((v) => ({ ...v, tamanho: value as TamanhoEmpresa }))
                                   }
                                 >
                                   <SelectTrigger className="w-[120px]">
@@ -611,7 +612,7 @@ const IndicadoresPage: React.FC = () => {
                             <>
                               <Button
                                 size="icon"
-                                variant="success"
+                                variant="outline"
                                 title="Salvar"
                                 onClick={() => handleSaveEdit(indicador.id)}
                               >
