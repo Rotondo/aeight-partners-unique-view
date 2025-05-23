@@ -102,8 +102,7 @@ export const OportunidadesDashboards: React.FC = () => {
     try {
       const { data: empresasDb } = await supabase.from("empresas").select("*").order("nome");
       setEmpresas(empresasDb || []);
-      const { data: oportunidadesDb } = await supabase.from("oportunidades").select("*, empresa_origem:empresas!empresa_origem_id(id, nome, tipo), empresa_destino:empresas!empresa_destino_id(id, nome, tipo)").order("data_indicacao", { ascending: false });
-
+      const { data: oportunidadesDb } = await supabase.from("oportunidades").select("*, empresa_origem:empresas!empresa_origem_id(id, nome, tipo), empresa_destino:empresas!empresa_destino_id(id, nome, tipo)");
       // Coletar todos os anos disponíveis para filtro
       const anos = Array.from(new Set((oportunidadesDb || []).map((op: any) => {
         if (!op.data_indicacao) return null;
@@ -209,8 +208,8 @@ export const OportunidadesDashboards: React.FC = () => {
           rankingRec[op.empresa_destino.nome]++;
         }
       });
-      setRankingEnviadas(Object.entries(rankingEnv).map(([empresa, indicacoes]) => ({ empresa, indicacoes: Number(indicacoes) })).sort((a, b) => b.indicacoes - a.indicacoes));
-      setRankingRecebidas(Object.entries(rankingRec).map(([empresa, indicacoes]) => ({ empresa, indicacoes: Number(indicacoes) })).sort((a, b) => b.indicacoes - a.indicacoes));
+      setRankingEnviadas(Object.entries(rankingEnv).map(([empresa, indicacoes]) => ({ empresa, indicacoes })).sort((a, b) => b.indicacoes - a.indicacoes));
+      setRankingRecebidas(Object.entries(rankingRec).map(([empresa, indicacoes]) => ({ empresa, indicacoes })).sort((a, b) => b.indicacoes - a.indicacoes));
 
       // Balanço Grupo x Parceiros
       const balGrupo = oportunidadesFiltradas.filter((op: any) => op.empresa_origem.tipo === "intragrupo" && op.empresa_destino.tipo === "parceiro").length;
@@ -232,9 +231,9 @@ export const OportunidadesDashboards: React.FC = () => {
     const cols = Object.keys(rows[0]).filter(c => c !== colKey);
     const colTotals: any = {};
     cols.forEach(c => {
-      colTotals[c] = rows.reduce((acc, row) => acc + (row[c] !== '-' ? Number(row[c]) : 0), 0);
+      colTotals[c] = rows.reduce((acc, row) => acc + (row[c] !== '-' ? row[c] : 0), 0);
     });
-    const grandTotal = Object.values(colTotals).reduce((a: any, b: any) => Number(a) + Number(b), 0);
+    const grandTotal = Object.values(colTotals).reduce((a: any, b: any) => a + b, 0);
     return (
       <div className="overflow-x-auto">
         <table className="min-w-full text-xs border">
@@ -254,7 +253,7 @@ export const OportunidadesDashboards: React.FC = () => {
                   {cols.map(c => {
                     let value = row[c];
                     if (value === '-') return <td className="border p-1 text-center opacity-60" key={c}>-</td>;
-                    rowTotal += Number(value);
+                    rowTotal += value;
                     return <td className={`border p-1 text-center ${value === 0 ? 'opacity-40' : ''}`} key={c}>{value}</td>;
                   })}
                   <td className="border p-1 text-center font-bold">{rowTotal}</td>
@@ -286,11 +285,11 @@ export const OportunidadesDashboards: React.FC = () => {
       matrizIntraRows.forEach(row => {
         if (row.origem === nome) {
           Object.entries(row).forEach(([key, value]) => {
-            if (key !== "origem" && value !== '-' && key !== nome) enviadas += Number(value);
+            if (key !== "origem" && value !== '-' && key !== nome) enviadas += value;
           });
         } else {
           if (row[nome] !== undefined && row[nome] !== '-' && row.origem !== nome) {
-            recebidas += Number(row[nome]);
+            recebidas += row[nome];
           }
         }
       });
@@ -318,7 +317,7 @@ export const OportunidadesDashboards: React.FC = () => {
             <ul style={{ margin: 0, padding: 0, listStyle: "none" }}>
               {payload.map((entry: any, idx: number) => (
                 <li key={idx} style={{ color: entry.color }}>
-                  {entry.name}: {Math.abs(Number(entry.value))}
+                  {entry.name}: {Math.abs(entry.value)}
                 </li>
               ))}
             </ul>
@@ -423,7 +422,7 @@ export const OportunidadesDashboards: React.FC = () => {
             <XAxis dataKey="month" />
             <YAxis />
             <Tooltip
-              formatter={v => Math.abs(Number(v))}
+              formatter={v => Math.abs(v)}
               labelFormatter={v => `Mês: ${v}`}
             />
             <Legend />
@@ -630,8 +629,11 @@ export const OportunidadesDashboards: React.FC = () => {
           <div className="w-full md:w-auto">
             <Label htmlFor="quarter">Quarter</Label>
             <Select
-              value={quarters[0]}
-              onValueChange={v => setQuarters([v])}
+              value={quarters.join(',')}
+              onValueChange={v => setQuarters(
+                v ? v.split(',') : []
+              )}
+              multiple
             >
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Selecione quarter(s)" />
@@ -642,7 +644,7 @@ export const OportunidadesDashboards: React.FC = () => {
                 ))}
               </SelectContent>
             </Select>
-            <div className="text-xs text-muted-foreground mt-1">Você pode selecionar apenas um quarter por vez</div>
+            <div className="text-xs text-muted-foreground mt-1">Você pode selecionar um ou mais quarters</div>
           </div>
           <div className="w-full md:w-auto">
             <Label htmlFor="quarterYear">Ano</Label>
