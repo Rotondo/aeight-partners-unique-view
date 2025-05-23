@@ -135,7 +135,7 @@ const DashboardPage: React.FC = () => {
       .sort((a, b) => a.dateObj.getTime() - b.dateObj.getTime());
   }
 
-  // Agrupa por mês (CORRIGIDO PARA ORDENAR POR DATA REAL)
+  // Agrupa por mês (ordenado por data)
   function groupByMonth(data: Oportunidade[], tipo: "intra" | "extra" | "all") {
     const result: Record<string, { enviadas: number; recebidas: number; dateObj: Date }> = {};
     data.forEach((op) => {
@@ -297,7 +297,7 @@ const DashboardPage: React.FC = () => {
   }
 
   function processOportunidadesList(oportunidades: Oportunidade[]) {
-    setOportunidadesList(oportunidades);
+    setOpportunidadesList(oportunidades);
   }
 
   function exportSaldoCSV() {
@@ -365,6 +365,14 @@ const DashboardPage: React.FC = () => {
     if (vA > vB) return ordemLista.asc ? 1 : -1;
     return 0;
   });
+
+  // Função para renderizar uma célula da matriz/tabela com destaque baixo se for zero
+  function renderCellValue(value: any) {
+    if (value === 0) {
+      return <span style={{ opacity: 0.3, color: "#888" }}>0</span>;
+    }
+    return value;
+  }
 
   return (
     <div className="space-y-8">
@@ -500,7 +508,7 @@ const DashboardPage: React.FC = () => {
                   <tr key={row.origem + idx}>
                     <td className="border p-1 font-bold">{row.origem}</td>
                     {empresas.filter(e => e.tipo === "intragrupo").map(dest => (
-                      <td className="border p-1 text-center" key={dest.id}>{row[dest.nome]}</td>
+                      <td className="border p-1 text-center" key={dest.id}>{renderCellValue(row[dest.nome])}</td>
                     ))}
                   </tr>
                 ))}
@@ -531,7 +539,7 @@ const DashboardPage: React.FC = () => {
                   <tr key={row.parceiro + idx}>
                     <td className="border p-1 font-bold">{row.parceiro}</td>
                     {empresas.filter(e => e.tipo === "intragrupo").map(intra => (
-                      <td className="border p-1 text-center" key={intra.id}>{row[intra.nome]}</td>
+                      <td className="border p-1 text-center" key={intra.id}>{renderCellValue(row[intra.nome])}</td>
                     ))}
                   </tr>
                 ))}
