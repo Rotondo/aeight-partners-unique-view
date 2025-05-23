@@ -7,6 +7,7 @@ import { format, differenceInDays, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -14,6 +15,14 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+
+// Quarter options for filter
+const quartersOptions = [
+  { value: 'Q1', label: 'Q1 (jan-mar)' },
+  { value: 'Q2', label: 'Q2 (abr-jun)' },
+  { value: 'Q3', label: 'Q3 (jul-set)' },
+  { value: 'Q4', label: 'Q4 (out-dez)' },
+];
 
 function getGrupoStatus(empresa_origem_tipo: string, empresa_destino_tipo: string) {
   if (empresa_origem_tipo === "intragrupo" && empresa_destino_tipo === "intragrupo") return "intragrupo";

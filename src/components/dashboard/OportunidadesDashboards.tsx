@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import {
   Card, CardContent, CardDescription, CardHeader, CardTitle
@@ -533,7 +532,7 @@ export const OportunidadesDashboards: React.FC = () => {
             ))}
           </Pie>
           <Tooltip formatter={(value, name, props: any) => [`${value}`, getStatusLabel(props.payload.status)]} />
-          <Legend formatter={(value) => getStatusLabel(value as string)} />
+          <Legend formatter={(value: string) => getStatusLabel(value)} />
         </PieChart>
       </ResponsiveContainer>
     );
