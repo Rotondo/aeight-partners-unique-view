@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
@@ -42,7 +41,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const checkSession = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
-        
+
         if (error) {
           console.error("Erro ao verificar sessão:", error);
         }
@@ -99,9 +98,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const loginAsAdmin = async () => {
       try {
+        // Corrigido para usar a senha correta
         const { data, error } = await supabase.auth.signInWithPassword({
           email: 'rotondo@aeight.global',
-          password: 'Ae8.2024!'
+          password: '123456'
         });
 
         if (error) {
@@ -162,7 +162,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log("Auth state changed:", event, session?.user?.email);
-        
+
         if (session?.user) {
           const { data: userData } = await supabase
             .from('usuarios')
