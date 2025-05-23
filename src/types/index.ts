@@ -1,4 +1,3 @@
-
 // Common types
 
 // Categoria (Category)
