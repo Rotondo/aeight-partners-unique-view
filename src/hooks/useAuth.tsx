@@ -34,29 +34,60 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Função que busca dados completos do usuário na tabela customizada
+  const fetchUserProfile = async (email: string) => {
+    // Troque 'usuarios' pelo nome da sua tabela customizada, se não for esse
+    const { data, error } = await supabase
+      .from('usuarios')
+      .select('id, nome, email, papel, empresa_id, ativo')
+      .eq('email', email)
+      .maybeSingle();
+
+    if (error || !data) {
+      return null;
+    }
+    return data as User;
+  };
+
   // Carrega o usuário atual do Supabase ao iniciar
   useEffect(() => {
-    const session = supabase.auth.getSession().then(({ data }) => {
-      if (data.session && data.session.user) {
-        setUser({
-          id: data.session.user.id,
-          email: data.session.user.email ?? "",
-        });
-        setIsAuthenticated(true);
+    const loadSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session && session.user) {
+        // Busca perfil completo
+        const profile = await fetchUserProfile(session.user.email ?? "");
+        if (profile) {
+          setUser(profile);
+          setIsAuthenticated(true);
+        } else {
+          setUser({
+            id: session.user.id,
+            email: session.user.email ?? "",
+          });
+          setIsAuthenticated(true);
+        }
       } else {
         setUser(null);
         setIsAuthenticated(false);
       }
-    });
+    };
+
+    loadSession();
 
     // Subscrição para mudanças de autenticação (login/logout)
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session && session.user) {
-        setUser({
-          id: session.user.id,
-          email: session.user.email ?? "",
-        });
-        setIsAuthenticated(true);
+        const profile = await fetchUserProfile(session.user.email ?? "");
+        if (profile) {
+          setUser(profile);
+          setIsAuthenticated(true);
+        } else {
+          setUser({
+            id: session.user.id,
+            email: session.user.email ?? "",
+          });
+          setIsAuthenticated(true);
+        }
       } else {
         setUser(null);
         setIsAuthenticated(false);
@@ -86,10 +117,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return false;
     }
 
-    setUser({
-      id: data.user.id,
-      email: data.user.email ?? "",
-    });
+    // Busca o perfil completo na tabela customizada
+    const profile = await fetchUserProfile(email);
+
+    if (profile) {
+      setUser(profile);
+    } else {
+      setUser({
+        id: data.user.id,
+        email: data.user.email ?? "",
+      });
+    }
     setIsAuthenticated(true);
     setLoading(false);
     return true;
