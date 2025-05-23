@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import {
   Card, CardContent, CardDescription, CardHeader, CardTitle
@@ -520,7 +521,9 @@ export const OportunidadesDashboards: React.FC = () => {
             fill={BAR_COLOR_RECEBIDAS}
             dataKey="total"
             nameKey="status"
-            label={({ name, percent }: any) => `${getStatusLabel(name)} ${(Number(percent) * 100).toFixed(0)}%`}
+            label={({ name, percent }: { name: string, percent: number }) => 
+              `${getStatusLabel(name)} ${(Number(percent) * 100).toFixed(0)}%`
+            }
           >
             {statusDistribuicao.map((entry, index) => (
               <Cell
@@ -530,7 +533,7 @@ export const OportunidadesDashboards: React.FC = () => {
             ))}
           </Pie>
           <Tooltip formatter={(value, name, props: any) => [`${value}`, getStatusLabel(props.payload.status)]} />
-          <Legend formatter={getStatusLabel} />
+          <Legend formatter={(value) => getStatusLabel(value as string)} />
         </PieChart>
       </ResponsiveContainer>
     );

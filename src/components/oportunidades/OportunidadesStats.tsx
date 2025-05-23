@@ -252,8 +252,8 @@ export const OportunidadesStats: React.FC = () => {
                 </div>
                 {periodo === "quarter" && (
                   <>
-                    <div>
-                      <label>Quarter</label>
+                    <div className="flex space-x-2 mb-2">
+                      <Label className="my-auto w-20">Quarter:</Label>
                       <Select
                         value={quarters.join(",")}
                         onValueChange={v => setQuarters(v ? v.split(",") : [])}
@@ -262,8 +262,10 @@ export const OportunidadesStats: React.FC = () => {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {["Q1", "Q2", "Q3", "Q4"].map(q => (
-                            <SelectItem key={q} value={q}>{q}</SelectItem>
+                          {quartersOptions.map(q => (
+                            <SelectItem key={q.value} value={q.value}>
+                              {q.label}
+                            </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
