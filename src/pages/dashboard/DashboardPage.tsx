@@ -67,6 +67,7 @@ const DashboardPage: React.FC = () => {
 
   useEffect(() => {
     fetchAll();
+    // eslint-disable-next-line
   }, []);
 
   async function fetchAll() {
@@ -105,8 +106,12 @@ const DashboardPage: React.FC = () => {
       processStatusChart(oportunidadesEnriquecidas);
       processMatriz(oportunidadesEnriquecidas, empresasData);
       processOportunidadesList(oportunidadesEnriquecidas);
-    } catch (e) {
-      toast({ title: "Erro", description: "Não foi possível carregar dados.", variant: "destructive" });
+    } catch (e: any) {
+      toast({
+        title: "Erro",
+        description: e?.message ?? JSON.stringify(e) ?? "Não foi possível carregar dados.",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
