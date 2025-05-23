@@ -60,7 +60,7 @@ const DashboardPage: React.FC = () => {
   const [statusChartData, setStatusChartData] = useState<any[]>([]);
   const [editRowId, setEditRowId] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<Partial<Oportunidade>>({});
-  const [opportunidadesList, setOportunidadesList] = useState<Oportunidade[]>([]);
+  const [opportunidadesList, setOpportunidadesList] = useState<Oportunidade[]>([]);
   const [ordemLista, setOrdemLista] = useState<{ col: string; asc: boolean }>({ col: "data_indicacao", asc: false });
   const [matrizIntra, setMatrizIntra] = useState<any[]>([]);
   const [matrizParceiros, setMatrizParceiros] = useState<any[]>([]);
