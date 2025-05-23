@@ -7,10 +7,10 @@ import { OportunidadesPage } from "@/components/oportunidades/OportunidadesPage"
 import IndicadoresPage from "@/pages/indicadores/IndicadoresPage";
 import EmpresasPage from "@/pages/empresas/EmpresasPage";
 import NotFoundPage from "@/pages/NotFoundPage";
-import LoginPage from "@/pages/LoginPage";
+import LoginPage from "@/pages/auth/LoginPage";
 import LoadingScreen from "@/components/ui/LoadingScreen";
 import { AuthProvider } from "@/hooks/useAuth";
-import PrivateRoute from "@/components/PrivateRoute";
+import PrivateRoute from "@/components/auth/PrivateRoute";
 import OnePagerPage from "@/pages/onepager/OnePagerPage";
 import QuadrantePage from "@/pages/quadrante/QuadrantePage";
 import Admin from "@/pages/admin";

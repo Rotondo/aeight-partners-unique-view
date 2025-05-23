@@ -1,32 +1,38 @@
+
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/hooks/useAuth";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 
 const LoginForm: React.FC = () => {
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
-  const [mensagem, setMensagem] = useState("");
   const [loading, setLoading] = useState(false);
+  const { login, error: authError } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setMensagem("");
     setLoading(true);
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password: senha,
-    });
-
-    if (error) {
-      setMensagem("E-mail ou senha incorretos.");
+    try {
+      const success = await login(email, senha);
+      
+      if (success) {
+        toast({
+          title: "Login bem-sucedido",
+          description: "Redirecionando...",
+          variant: "default",
+        });
+        // O redirecionamento será feito automaticamente pelo useAuth através do LoginPage
+      }
+    } catch (error) {
+      console.error("Erro durante login:", error);
+    } finally {
       setLoading(false);
-    } else {
-      setMensagem("Login bem-sucedido! Redirecionando...");
-      setTimeout(() => {
-        navigate("/");
-      }, 1500);
     }
   };
 
@@ -64,22 +70,12 @@ const LoginForm: React.FC = () => {
           color: '#22223b',
           fontSize: '1.03rem'
         }}>Email</label>
-        <input
+        <Input
           id="email"
           type="email"
           placeholder="seu@email.com"
           required
-          style={{
-            width: '100%',
-            padding: '13px 11px',
-            borderRadius: 8,
-            border: '1.5px solid #d1d5db',
-            fontSize: '1rem',
-            marginBottom: 18,
-            transition: 'border 0.2s',
-            outline: 'none',
-            background: '#f8fafc'
-          }}
+          className="mb-4"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           disabled={loading}
@@ -92,62 +88,31 @@ const LoginForm: React.FC = () => {
           color: '#22223b',
           fontSize: '1.03rem'
         }}>Senha</label>
-        <input
+        <Input
           id="senha"
           type="password"
           placeholder="Digite sua senha"
           required
-          style={{
-            width: '100%',
-            padding: '13px 11px',
-            borderRadius: 8,
-            border: '1.5px solid #d1d5db',
-            fontSize: '1rem',
-            marginBottom: 18,
-            transition: 'border 0.2s',
-            outline: 'none',
-            background: '#f8fafc'
-          }}
+          className="mb-4"
           value={senha}
           onChange={(e) => setSenha(e.target.value)}
           disabled={loading}
         />
-        <button
+        <Button
           type="submit"
-          style={{
-            width: '100%',
-            background: '#22223b',
-            color: '#fff',
-            padding: '14px 0',
-            border: 'none',
-            borderRadius: 8,
-            fontWeight: 700,
-            fontSize: '1.15rem',
-            marginTop: 10,
-            cursor: loading ? 'not-allowed' : 'pointer',
-            letterSpacing: '0.02em'
-          }}
+          className="w-full mt-4 text-lg font-bold"
+          variant="default"
           disabled={loading}
         >
           {loading ? 'Entrando...' : 'Entrar'}
-        </button>
+        </Button>
       </form>
-      {mensagem && (
-        <div style={{
-          marginTop: 18,
-          color: mensagem?.includes('sucesso') ? 'green' : '#b91c1c',
-          fontWeight: 500,
-          textAlign: 'center'
-        }}>
-          {mensagem}
+      {authError && (
+        <div className="mt-4 text-red-600 font-medium text-center">
+          {authError}
         </div>
       )}
-      <div className="login-footer" style={{
-        marginTop: 25,
-        color: '#8d99ae',
-        fontSize: '0.96rem',
-        lineHeight: 1.3
-      }}>
+      <div className="mt-6 text-sm text-slate-500">
         Acesso restrito aos integrantes do Grupo A&eight e parceiros autorizados.
       </div>
     </div>
