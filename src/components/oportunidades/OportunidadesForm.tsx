@@ -11,7 +11,7 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue
+  SelectValue,
 } from "@/components/ui/select";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
@@ -24,7 +24,10 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 
-const Textarea: React.FC<React.TextareaHTMLAttributes<HTMLTextAreaElement>> = (props) => (
+// Textarea component for optional fields if your project doesn't already have one
+const Textarea: React.FC<React.TextareaHTMLAttributes<HTMLTextAreaElement>> = (
+  props
+) => (
   <textarea
     {...props}
     className={cn(
@@ -47,7 +50,8 @@ type Usuario = {
 };
 
 function getGrupoStatus(origemTipo?: string, destinoTipo?: string) {
-  if (origemTipo === "intragrupo" && destinoTipo === "intragrupo") return "intragrupo";
+  if (origemTipo === "intragrupo" && destinoTipo === "intragrupo")
+    return "intragrupo";
   if (origemTipo && destinoTipo) return "extragrupo";
   return undefined;
 }
@@ -57,14 +61,15 @@ const statusOptions: StatusOportunidade[] = [
   "negociando",
   "ganho",
   "perdido",
-  "Contato"
+  "Contato",
 ];
 
 export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({
   oportunidadeId,
   onClose,
 }) => {
-  const { getOportunidade, createOportunidade, updateOportunidade } = useOportunidades();
+  const { getOportunidade, createOportunidade, updateOportunidade } =
+    useOportunidades();
   const { toast } = useToast();
   const isEditing = !!oportunidadeId;
 
@@ -75,19 +80,29 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({
   const [formData, setFormData] = useState<Partial<Oportunidade> | null>(null);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
+  // Carrega dados da oportunidade selecionada para edição
   useEffect(() => {
     if (isEditing && oportunidadeId) {
       const oportunidade = getOportunidade(oportunidadeId);
       if (oportunidade) {
-        const { contato, ...rest } = oportunidade as any;
-        setFormData({
+        // Remover campos de join do formData (caso já tenha vindo de algum lugar)
+        // Limpar campos não salvos diretamente em oportunidades
+        const {
+          contato,
+          empresa_origem,
+          empresa_destino,
+          usuario_envio,
+          usuario_recebe,
           ...rest
+        } = oportunidade as any;
+        setFormData({
+          ...rest,
         });
       } else {
         toast({
           title: "Erro",
           description: "Oportunidade não encontrada.",
-          variant: "destructive"
+          variant: "destructive",
         });
         onClose();
       }
@@ -156,12 +171,19 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({
     fetchUsuarios();
   }, []);
 
+  // Sync empresa origem/destino para calcular tipo_natureza
   useEffect(() => {
     if (!formData) return;
-    const empresaOrigemTipo = empresas.find((e) => e.id === formData.empresa_origem_id)?.tipo;
-    const empresaDestinoTipo = empresas.find((e) => e.id === formData.empresa_destino_id)?.tipo;
+    const empresaOrigemTipo = empresas.find(
+      (e) => e.id === formData.empresa_origem_id
+    )?.tipo;
+    const empresaDestinoTipo = empresas.find(
+      (e) => e.id === formData.empresa_destino_id
+    )?.tipo;
     const tipo = getGrupoStatus(empresaOrigemTipo, empresaDestinoTipo);
-    setFormData((prev) => (prev ? { ...prev, tipo_natureza: tipo } : prev));
+    setFormData((prev) =>
+      prev ? { ...prev, tipo_natureza: tipo } : prev
+    );
     // eslint-disable-next-line
   }, [formData?.empresa_origem_id, formData?.empresa_destino_id, empresas]);
 
@@ -180,6 +202,7 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({
     }
   };
 
+  // Validação dos campos obrigatórios
   const validateForm = () => {
     const errors: Record<string, string> = {};
     if (!formData.nome_lead || !formData.nome_lead.trim()) {
@@ -197,12 +220,38 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({
     if (!formData.status) {
       errors.status = "Status é obrigatório";
     }
-    if (formData.status === "perdido" && (!formData.motivo_perda || !formData.motivo_perda.trim())) {
+    if (
+      formData.status === "perdido" &&
+      (!formData.motivo_perda || !formData.motivo_perda.trim())
+    ) {
       errors.motivo_perda = "Motivo da perda é obrigatório";
     }
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
+
+  // Remove campos irrelevantes antes de enviar ao backend
+  function filterPayload(data: Partial<Oportunidade>) {
+    const allowed: (keyof Oportunidade)[] = [
+      "nome_lead",
+      "empresa_origem_id",
+      "empresa_destino_id",
+      "tipo_natureza",
+      "data_indicacao",
+      "usuario_recebe_id",
+      "status",
+      "valor",
+      "data_fechamento",
+      "observacoes",
+      "motivo_perda",
+      "contato_id",
+    ];
+    const result: any = {};
+    allowed.forEach((k) => {
+      if (data[k] !== undefined) result[k] = data[k];
+    });
+    return result;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -216,7 +265,8 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({
     }
     setIsSaving(true);
     try {
-      const { contato, ...dataToSave } = formData;
+      const dataToSave = filterPayload(formData);
+
       if (isEditing && oportunidadeId) {
         await updateOportunidade(oportunidadeId, dataToSave);
       } else {
@@ -236,15 +286,24 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <h2 className="text-xl font-bold">{isEditing ? "Editar Oportunidade" : "Nova Oportunidade"}</h2>
+      <h2 className="text-xl font-bold">
+        {isEditing ? "Editar Oportunidade" : "Nova Oportunidade"}
+      </h2>
+      {/* Indicador de natureza */}
       <div className="mb-4">
         <span className="font-medium">Tipo: </span>
         {formData.tipo_natureza === "intragrupo" ? (
-          <span className="px-2 py-1 rounded text-green-700 bg-green-100">INTRAGRUPO</span>
+          <span className="px-2 py-1 rounded text-green-700 bg-green-100">
+            INTRAGRUPO
+          </span>
         ) : formData.tipo_natureza === "extragrupo" ? (
-          <span className="px-2 py-1 rounded text-blue-700 bg-blue-100">EXTRAGRUPO</span>
+          <span className="px-2 py-1 rounded text-blue-700 bg-blue-100">
+            EXTRAGRUPO
+          </span>
         ) : (
-          <span className="px-2 py-1 rounded text-gray-700 bg-gray-100">-</span>
+          <span className="px-2 py-1 rounded text-gray-700 bg-gray-100">
+            -
+          </span>
         )}
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -256,7 +315,7 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({
           <Input
             id="nome_lead"
             value={formData.nome_lead || ""}
-            onChange={e => handleChange("nome_lead", e.target.value)}
+            onChange={(e) => handleChange("nome_lead", e.target.value)}
             required
             className={cn(formErrors.nome_lead && "border-red-500")}
           />
@@ -271,20 +330,32 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({
           </Label>
           <Select
             value={formData.empresa_origem_id || "none"}
-            onValueChange={value => handleChange("empresa_origem_id", value === "none" ? undefined : value)}
+            onValueChange={(value) =>
+              handleChange(
+                "empresa_origem_id",
+                value === "none" ? undefined : value
+              )
+            }
           >
-            <SelectTrigger id="empresa_origem_id" className={cn(formErrors.empresa_origem_id && "border-red-500")}>
+            <SelectTrigger
+              id="empresa_origem_id"
+              className={cn(formErrors.empresa_origem_id && "border-red-500")}
+            >
               <SelectValue placeholder="Selecione a empresa de origem" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="none">Nenhuma</SelectItem>
               {empresas.map((empresa) => (
-                <SelectItem key={empresa.id} value={empresa.id}>{empresa.nome}</SelectItem>
+                <SelectItem key={empresa.id} value={empresa.id}>
+                  {empresa.nome}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
           {formErrors.empresa_origem_id && (
-            <p className="text-sm text-red-500">{formErrors.empresa_origem_id}</p>
+            <p className="text-sm text-red-500">
+              {formErrors.empresa_origem_id}
+            </p>
           )}
         </div>
         {/* Destino */}
@@ -294,20 +365,32 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({
           </Label>
           <Select
             value={formData.empresa_destino_id || "none"}
-            onValueChange={value => handleChange("empresa_destino_id", value === "none" ? undefined : value)}
+            onValueChange={(value) =>
+              handleChange(
+                "empresa_destino_id",
+                value === "none" ? undefined : value
+              )
+            }
           >
-            <SelectTrigger id="empresa_destino_id" className={cn(formErrors.empresa_destino_id && "border-red-500")}>
+            <SelectTrigger
+              id="empresa_destino_id"
+              className={cn(formErrors.empresa_destino_id && "border-red-500")}
+            >
               <SelectValue placeholder="Selecione a empresa de destino" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="none">Nenhuma</SelectItem>
               {empresas.map((empresa) => (
-                <SelectItem key={empresa.id} value={empresa.id}>{empresa.nome}</SelectItem>
+                <SelectItem key={empresa.id} value={empresa.id}>
+                  {empresa.nome}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
           {formErrors.empresa_destino_id && (
-            <p className="text-sm text-red-500">{formErrors.empresa_destino_id}</p>
+            <p className="text-sm text-red-500">
+              {formErrors.empresa_destino_id}
+            </p>
           )}
         </div>
         {/* Status */}
@@ -317,15 +400,22 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({
           </Label>
           <Select
             value={formData.status || "em_contato"}
-            onValueChange={value => handleChange("status", value as StatusOportunidade)}
+            onValueChange={(value) =>
+              handleChange("status", value as StatusOportunidade)
+            }
           >
-            <SelectTrigger id="status" className={cn(formErrors.status && "border-red-500")}>
+            <SelectTrigger
+              id="status"
+              className={cn(formErrors.status && "border-red-500")}
+            >
               <SelectValue placeholder="Selecione o status" />
             </SelectTrigger>
             <SelectContent>
               {statusOptions.map((status) => (
                 <SelectItem key={status} value={status}>
-                  {status.replace("_", " ").replace(/^./, s => s.toUpperCase())}
+                  {status
+                    .replace("_", " ")
+                    .replace(/^./, (s) => s.toUpperCase())}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -352,7 +442,9 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({
               >
                 <CalendarIcon className="mr-2 h-4 w-4" />
                 {formData.data_indicacao ? (
-                  format(new Date(formData.data_indicacao), "dd/MM/yyyy", { locale: ptBR })
+                  format(new Date(formData.data_indicacao), "dd/MM/yyyy", {
+                    locale: ptBR,
+                  })
                 ) : (
                   <span>Selecione a data</span>
                 )}
@@ -361,8 +453,14 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({
             <PopoverContent className="w-auto p-0">
               <Calendar
                 mode="single"
-                selected={formData.data_indicacao ? new Date(formData.data_indicacao) : undefined}
-                onSelect={(date) => date && handleChange("data_indicacao", date.toISOString())}
+                selected={
+                  formData.data_indicacao
+                    ? new Date(formData.data_indicacao)
+                    : undefined
+                }
+                onSelect={(date) =>
+                  date && handleChange("data_indicacao", date.toISOString())
+                }
                 initialFocus
               />
             </PopoverContent>
@@ -373,42 +471,51 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({
         </div>
         {/* Executivo interno responsável (opcional) */}
         <div className="space-y-2">
-          <Label htmlFor="usuario_recebe_id">
-            Executivo Interno Responsável
-          </Label>
+          <Label htmlFor="usuario_recebe_id">Executivo Interno Responsável</Label>
           <Select
             value={formData.usuario_recebe_id || "none"}
-            onValueChange={value => handleChange("usuario_recebe_id", value === "none" ? undefined : value)}
+            onValueChange={(value) =>
+              handleChange(
+                "usuario_recebe_id",
+                value === "none" ? undefined : value
+              )
+            }
           >
-            <SelectTrigger id="usuario_recebe_id" className={cn(formErrors.usuario_recebe_id && "border-red-500")}>
+            <SelectTrigger
+              id="usuario_recebe_id"
+              className={cn(formErrors.usuario_recebe_id && "border-red-500")}
+            >
               <SelectValue placeholder="Selecione o executivo interno" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="none">Nenhum</SelectItem>
               {usuarios.map((usuario) => (
-                <SelectItem key={usuario.id} value={usuario.id}>{usuario.nome}</SelectItem>
+                <SelectItem key={usuario.id} value={usuario.id}>
+                  {usuario.nome}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
         {/* Valor (opcional) */}
         <div className="space-y-2">
-          <Label htmlFor="valor">
-            Valor (R$)
-          </Label>
+          <Label htmlFor="valor">Valor (R$)</Label>
           <Input
             id="valor"
             type="number"
             value={formData.valor ?? ""}
-            onChange={e => handleChange("valor", e.target.value ? parseFloat(e.target.value) : undefined)}
+            onChange={(e) =>
+              handleChange(
+                "valor",
+                e.target.value ? parseFloat(e.target.value) : undefined
+              )
+            }
             min={0}
           />
         </div>
         {/* Data de fechamento (opcional) */}
         <div className="space-y-2">
-          <Label htmlFor="data_fechamento">
-            Data de Fechamento
-          </Label>
+          <Label htmlFor="data_fechamento">Data de Fechamento</Label>
           <Popover>
             <PopoverTrigger asChild>
               <Button
@@ -421,7 +528,9 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({
               >
                 <CalendarIcon className="mr-2 h-4 w-4" />
                 {formData.data_fechamento ? (
-                  format(new Date(formData.data_fechamento), "dd/MM/yyyy", { locale: ptBR })
+                  format(new Date(formData.data_fechamento), "dd/MM/yyyy", {
+                    locale: ptBR,
+                  })
                 ) : (
                   <span>Selecione a data</span>
                 )}
@@ -430,8 +539,14 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({
             <PopoverContent className="w-auto p-0">
               <Calendar
                 mode="single"
-                selected={formData.data_fechamento ? new Date(formData.data_fechamento) : undefined}
-                onSelect={(date) => date && handleChange("data_fechamento", date.toISOString())}
+                selected={
+                  formData.data_fechamento
+                    ? new Date(formData.data_fechamento)
+                    : undefined
+                }
+                onSelect={(date) =>
+                  date && handleChange("data_fechamento", date.toISOString())
+                }
                 initialFocus
               />
             </PopoverContent>
@@ -443,7 +558,7 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({
           <Textarea
             id="observacoes"
             value={formData.observacoes || ""}
-            onChange={e => handleChange("observacoes", e.target.value)}
+            onChange={(e) => handleChange("observacoes", e.target.value)}
             rows={3}
           />
         </div>
@@ -456,7 +571,7 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({
             <Textarea
               id="motivo_perda"
               value={formData.motivo_perda || ""}
-              onChange={e => handleChange("motivo_perda", e.target.value)}
+              onChange={(e) => handleChange("motivo_perda", e.target.value)}
               rows={2}
               className={cn(formErrors.motivo_perda && "border-red-500")}
             />
@@ -467,11 +582,20 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({
         )}
       </div>
       <div className="flex justify-end space-x-2 pt-4">
-        <Button type="button" variant="outline" onClick={onClose} disabled={isSaving}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onClose}
+          disabled={isSaving}
+        >
           Cancelar
         </Button>
         <Button type="submit" disabled={isSaving}>
-          {isSaving ? "Salvando..." : isEditing ? "Atualizar" : "Salvar"}
+          {isSaving
+            ? "Salvando..."
+            : isEditing
+            ? "Atualizar"
+            : "Salvar"}
         </Button>
       </div>
     </form>
