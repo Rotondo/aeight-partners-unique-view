@@ -41,7 +41,7 @@ export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ child
       setIsLoading(true);
       setError(null);
 
-      // Seleção de campos explícitos para evitar sobrescrita e estrutura inconsistente
+      // Seleção de campos explícitos para evitar stack overflow e sobrescrita
       let query = supabase
         .from('oportunidades')
         .select(`
@@ -73,7 +73,6 @@ export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ child
         throw error;
       }
 
-      // Garantia de estrutura e tipos corretos
       if (data && Array.isArray(data)) {
         const processedData: Oportunidade[] = data.map(item => ({
           id: item.id,
@@ -173,7 +172,6 @@ export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ child
     setFilteredOportunidades(filtered);
   };
 
-  // Record opportunity history when updating
   const recordHistory = async (
     oportunidadeId: string,
     campo: string,
