@@ -367,6 +367,9 @@ export const OportunidadesDashboards: React.FC = () => {
       d.setMonth(d.getMonth() + 1);
     }
 
+    // GARANTE ORDEM CRESCENTE (mais antigo primeiro)
+    months.sort((a, b) => a.getTime() - b.getTime());
+
     // Para cada mês, para cada empresa, calcula recebidas e enviadas
     const data: any[] = months.map((monthDate) => {
       const monthYear = getMonthYear(monthDate);
