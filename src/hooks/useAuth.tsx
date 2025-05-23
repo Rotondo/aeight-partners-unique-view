@@ -1,96 +1,123 @@
+import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { supabase } from "@/lib/supabase";
 
-import React, { createContext, useContext, useState, ReactNode, useEffect } from "react";
-import { Usuario } from "@/types";
+interface User {
+  id: string;
+  nome?: string | null;
+  email: string;
+  papel?: string;
+  empresa_id?: string;
+  ativo?: boolean;
+}
 
-// Definição do contexto de autenticação
-export interface AuthContextType {
+interface AuthContextType {
+  user: User | null;
   isAuthenticated: boolean;
-  user: Usuario | null;
   loading: boolean;
   error: string | null;
-  login: (email: string, senha: string) => boolean;
+  login: (email: string, senha: string) => Promise<boolean>;
   logout: () => void;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType>({
+  user: null,
+  isAuthenticated: false,
+  loading: false,
+  error: null,
+  login: async () => false,
+  logout: () => {},
+});
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    // Recupera do localStorage
-    return localStorage.getItem("isAuthenticated") === "true";
-  });
-  const [user, setUser] = useState<Usuario | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Carrega o usuário atual do Supabase ao iniciar
   useEffect(() => {
-    // Ao inicializar, verifica se tem autenticação salva
-    if (isAuthenticated) {
-      // Simula um usuário admin para teste
-      setUser({
-        id: "1",
-        nome: "Admin",
-        email: "admin@admin.com",
-        papel: "admin",
-        empresa_id: "",
-        ativo: true
-      });
-    }
-    localStorage.setItem("isAuthenticated", isAuthenticated ? "true" : "false");
-  }, [isAuthenticated]);
+    const session = supabase.auth.getSession().then(({ data }) => {
+      if (data.session && data.session.user) {
+        setUser({
+          id: data.session.user.id,
+          email: data.session.user.email ?? "",
+        });
+        setIsAuthenticated(true);
+      } else {
+        setUser(null);
+        setIsAuthenticated(false);
+      }
+    });
 
-  const login = (email: string, senha: string) => {
+    // Subscrição para mudanças de autenticação (login/logout)
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session && session.user) {
+        setUser({
+          id: session.user.id,
+          email: session.user.email ?? "",
+        });
+        setIsAuthenticated(true);
+      } else {
+        setUser(null);
+        setIsAuthenticated(false);
+      }
+    });
+
+    return () => {
+      listener?.subscription.unsubscribe();
+    };
+  }, []);
+
+  // Função de login real com Supabase
+  const login = async (email: string, senha: string): Promise<boolean> => {
     setLoading(true);
     setError(null);
-    
-    try {
-      // Lógica simples: só permite usuário fixo para teste
-      if (email === "admin@admin.com" && senha === "123456") {
-        setIsAuthenticated(true);
-        setUser({
-          id: "1",
-          nome: "Admin",
-          email: "admin@admin.com",
-          papel: "admin",
-          empresa_id: "",
-          ativo: true
-        });
-        setLoading(false);
-        return true;
-      }
-      
-      setIsAuthenticated(false);
-      setUser(null);
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password: senha,
+    });
+
+    if (error || !data?.user) {
       setError("Credenciais inválidas");
-      setLoading(false);
-      return false;
-    } catch (err) {
-      setError("Erro ao fazer login");
       setIsAuthenticated(false);
       setUser(null);
       setLoading(false);
       return false;
     }
+
+    setUser({
+      id: data.user.id,
+      email: data.user.email ?? "",
+    });
+    setIsAuthenticated(true);
+    setLoading(false);
+    return true;
   };
 
-  const logout = () => {
-    setIsAuthenticated(false);
+  const logout = async () => {
+    setLoading(true);
+    await supabase.auth.signOut();
     setUser(null);
-    localStorage.setItem("isAuthenticated", "false");
+    setIsAuthenticated(false);
+    setLoading(false);
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, loading, error, login, logout }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        isAuthenticated,
+        loading,
+        error,
+        login,
+        logout,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
 };
 
-// Hook de autenticação
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error("useAuth deve ser usado dentro de um AuthProvider");
-  }
-  return context;
-};
+// Hook para usar autenticação em outros componentes
+export const useAuth = () => useContext(AuthContext);
