@@ -255,9 +255,8 @@ export const OportunidadesStats: React.FC = () => {
                     <div>
                       <label>Quarter</label>
                       <Select
-                        value={quarters.join(",")}
-                        onValueChange={v => setQuarters(v ? v.split(",") : [])}
-                        multiple
+                        value={quarters[0]}
+                        onValueChange={v => setQuarters([v])}
                       >
                         <SelectTrigger className="w-36">
                           <SelectValue />
