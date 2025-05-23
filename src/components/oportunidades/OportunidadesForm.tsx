@@ -60,9 +60,10 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({ oportunida
     if (isEditing && oportunidadeId) {
       const oportunidade = getOportunidade(oportunidadeId);
       if (oportunidade) {
+        // Remover campo contato do formData (caso já tenha vindo de algum lugar)
+        const { contato, ...rest } = oportunidade as any;
         setFormData({
-          ...oportunidade,
-          contato: oportunidade.contato || { nome: "", email: "", telefone: "" }
+          ...rest
         });
       } else {
         toast({
@@ -80,7 +81,6 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({ oportunida
         empresa_destino_id: "",
         tipo_natureza: undefined,
         data_indicacao: new Date().toISOString(),
-        contato: { nome: "", email: "", telefone: "" },
         usuario_recebe_nome: "",
         status: "em_contato"
       });
@@ -183,10 +183,12 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({ oportunida
     }
     setIsSaving(true);
     try {
+      // Remove o campo contato antes de enviar ao backend
+      const { contato, ...dataToSave } = formData;
       if (isEditing && oportunidadeId) {
-        await updateOportunidade(oportunidadeId, formData);
+        await updateOportunidade(oportunidadeId, dataToSave);
       } else {
-        await createOportunidade(formData);
+        await createOportunidade(dataToSave);
       }
       onClose();
     } catch (error) {
@@ -337,44 +339,6 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({ oportunida
           {formErrors.data_indicacao && (
             <p className="text-sm text-red-500">{formErrors.data_indicacao}</p>
           )}
-        </div>
-        {/* Contato (opcional) */}
-        <div className="space-y-2">
-          <Label>Contato na Empresa Indicada (opcional)</Label>
-          <Input
-            placeholder="Nome"
-            value={formData.contato?.nome || ""}
-            onChange={e =>
-              setFormData(prev =>
-                prev
-                  ? { ...prev, contato: { ...prev.contato, nome: e.target.value } }
-                  : prev
-              )
-            }
-          />
-          <Input
-            placeholder="Email"
-            type="email"
-            value={formData.contato?.email || ""}
-            onChange={e =>
-              setFormData(prev =>
-                prev
-                  ? { ...prev, contato: { ...prev.contato, email: e.target.value } }
-                  : prev
-              )
-            }
-          />
-          <Input
-            placeholder="Telefone"
-            value={formData.contato?.telefone || ""}
-            onChange={e =>
-              setFormData(prev =>
-                prev
-                  ? { ...prev, contato: { ...prev.contato, telefone: e.target.value } }
-                  : prev
-              )
-            }
-          />
         </div>
         {/* Executivo interno responsável */}
         <div className="space-y-2">
