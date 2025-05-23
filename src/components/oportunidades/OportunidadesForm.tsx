@@ -1,305 +1,375 @@
-import React, { useEffect, useState, useMemo } from "react";
-import { useOportunidades } from "./OportunidadesContext";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Oportunidade, Empresa, StatusOportunidade } from "@/types";
-import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/lib/supabase";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from "@/components/ui/select";
-import { Calendar as CalendarIcon } from "lucide-react";
-import { Calendar } from "@/components/ui/calendar";
+import React, { useState, useEffect } from 'react';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form"
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/lib/utils";
+import { format } from "date-fns";
+import { ptBR } from 'date-fns/locale';
+import { Oportunidade, StatusOportunidade } from "@/types";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/lib/supabase";
+
+const formSchema = z.object({
+  nome_lead: z.string().min(2, {
+    message: "Nome deve ter pelo menos 2 caracteres.",
+  }).max(50, {
+    message: "Nome não pode ter mais de 50 caracteres.",
+  }),
+  empresa_origem_id: z.string().min(1, {
+    message: "Selecione a empresa de origem.",
+  }),
+  empresa_destino_id: z.string().min(1, {
+    message: "Selecione a empresa de destino.",
+  }),
+  contato_id: z.string().optional(),
+  valor: z.string().optional(),
+  status: z.enum([StatusOportunidade.EM_CONTATO, StatusOportunidade.NEGOCIANDO, StatusOportunidade.GANHO, StatusOportunidade.PERDIDO]),
+  data_indicacao: z.date(),
+  data_fechamento: z.date().optional(),
+  motivo_perda: z.string().optional(),
+  usuario_recebe_id: z.string().optional(),
+  observacoes: z.string().optional(),
+});
 
 interface OportunidadesFormProps {
-  oportunidadeId?: string | null;
-  onClose: () => void;
+  onSubmit: (data: z.infer<typeof formSchema>) => void;
+  oportunidade?: Oportunidade;
+  isLoading: boolean;
 }
 
-function getGrupoStatus(origemTipo?: string, destinoTipo?: string) {
-  if (origemTipo === "intragrupo" && destinoTipo === "intragrupo") return "intragrupo";
-  if (origemTipo && destinoTipo) return "extragrupo";
-  return undefined;
-}
-
-const STATUS_OPTIONS: { value: StatusOportunidade; label: string }[] = [
-  { value: "em_contato", label: "Em Contato" },
-  { value: "negociando", label: "Negociando" },
-  { value: "ganho", label: "Ganho" },
-  { value: "perdido", label: "Perdido" },
-];
-
-export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({ oportunidadeId, onClose }) => {
-  const { getOportunidade, createOportunidade, updateOportunidade } = useOportunidades();
+const OportunidadesForm: React.FC<OportunidadesFormProps> = ({
+  onSubmit,
+  oportunidade,
+  isLoading
+}) => {
+  const [empresas, setEmpresas] = useState<{ id: string; nome: string; tipo: string; status: boolean }[]>([]);
+  const [contatos, setContatos] = useState<{ id: string; nome: string }[]>([]);
   const { toast } = useToast();
-  const isEditing = !!oportunidadeId;
 
-  const [empresas, setEmpresas] = useState<Empresa[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [formData, setFormData] = useState<Partial<Oportunidade>>({
-    nome_lead: "",
-    empresa_origem_id: "",
-    empresa_destino_id: "",
-    tipo_natureza: undefined,
-    data_indicacao: new Date().toISOString(),
-    contato: { nome: "", email: "", telefone: "" },
-    usuario_recebe_nome: "",
-    status: "em_contato"
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      nome_lead: oportunidade?.nome_lead || "",
+      empresa_origem_id: oportunidade?.empresa_origem_id || "",
+      empresa_destino_id: oportunidade?.empresa_destino_id || "",
+      contato_id: oportunidade?.contato_id || "",
+      valor: oportunidade?.valor || "",
+      status: oportunidade?.status || StatusOportunidade.EM_CONTATO,
+      data_indicacao: oportunidade?.data_indicacao ? new Date(oportunidade.data_indicacao) : new Date(),
+      data_fechamento: oportunidade?.data_fechamento ? new Date(oportunidade.data_fechamento) : undefined,
+      motivo_perda: oportunidade?.motivo_perda || "",
+      usuario_recebe_id: oportunidade?.usuario_recebe_id || "",
+      observacoes: oportunidade?.observacoes || "",
+    },
   });
-  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
-
-  useEffect(() => {
-    if (isEditing && oportunidadeId) {
-      const oportunidade = getOportunidade(oportunidadeId);
-      if (oportunidade) {
-        setFormData({
-          ...oportunidade,
-          contato: oportunidade.contato || { nome: "", email: "", telefone: "" },
-          status: oportunidade.status || "em_contato"
-        });
-      } else {
-        toast({
-          title: "Erro",
-          description: "Oportunidade não encontrada.",
-          variant: "destructive"
-        });
-        onClose();
-      }
-    }
-    // eslint-disable-next-line
-  }, [oportunidadeId, isEditing]);
 
   useEffect(() => {
     const fetchEmpresas = async () => {
-      setIsLoading(true);
       try {
-        const { data: empresasData, error: empresasError } = await supabase
+        const { data, error } = await supabase
           .from('empresas')
-          .select('*')
+          .select('id, nome, tipo, status')
+          .eq('status', true)
           .order('nome');
-        if (empresasError) throw empresasError;
-        if (empresasData) {
-          const typedEmpresas = empresasData.map(empresa => ({
-            id: empresa.id,
-            nome: empresa.nome,
-            tipo: empresa.tipo,
-          }));
-          setEmpresas(typedEmpresas);
-        }
+
+        if (error) throw error;
+
+        setEmpresas(data || []);
       } catch (error) {
+        console.error('Erro ao buscar empresas:', error);
         toast({
           title: "Erro",
-          description: "Não foi possível carregar empresas.",
-          variant: "destructive"
+          description: "Não foi possível carregar as empresas.",
+          variant: "destructive",
         });
-      } finally {
-        setIsLoading(false);
       }
     };
+
+    const fetchContatos = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('contatos')
+          .select('id, nome')
+          .order('nome');
+
+        if (error) throw error;
+
+        setContatos(data || []);
+      } catch (error) {
+        console.error('Erro ao buscar contatos:', error);
+        toast({
+          title: "Erro",
+          description: "Não foi possível carregar os contatos.",
+          variant: "destructive",
+        });
+      }
+    };
+
     fetchEmpresas();
-    // eslint-disable-next-line
+    fetchContatos();
   }, []);
 
-  const handleChange = (field: string, value: any) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
-  const handleDateChange = (date: Date | undefined) => {
-    setFormData((prev) => ({
-      ...prev,
-      data_indicacao: date ? date.toISOString() : undefined,
-    }));
-  };
-
-  const validate = () => {
-    const errors: Record<string, string> = {};
-    if (!formData.nome_lead) errors.nome_lead = "Nome do lead é obrigatório";
-    if (!formData.empresa_origem_id) errors.empresa_origem_id = "Empresa de origem é obrigatória";
-    if (!formData.empresa_destino_id) errors.empresa_destino_id = "Empresa de destino é obrigatória";
-    if (!formData.status) errors.status = "Status é obrigatório";
-    setFormErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validate()) return;
-    setIsSaving(true);
-    try {
-      if (isEditing && oportunidadeId) {
-        const ok = await updateOportunidade(oportunidadeId, formData);
-        if (ok) {
-          toast({
-            title: "Sucesso",
-            description: "Oportunidade atualizada com sucesso!",
-          });
-          onClose();
-        } else {
-          toast({
-            title: "Erro",
-            description: "Não foi possível atualizar a oportunidade.",
-            variant: "destructive",
-          });
-        }
-      } else {
-        const newId = await createOportunidade(formData);
-        if (newId) {
-          toast({
-            title: "Sucesso",
-            description: "Oportunidade criada com sucesso!",
-          });
-          onClose();
-        } else {
-          toast({
-            title: "Erro",
-            description: "Não foi possível criar a oportunidade.",
-            variant: "destructive",
-          });
-        }
-      }
-    } catch (error) {
-      toast({
-        title: "Erro",
-        description: "Ocorreu um erro ao salvar.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 bg-white p-6 rounded shadow-md">
-      <h2 className="text-xl font-semibold mb-4">{isEditing ? "Editar Oportunidade" : "Nova Oportunidade"}</h2>
-      
-      <div>
-        <Label htmlFor="nome_lead">Nome do Lead</Label>
-        <Input
-          id="nome_lead"
-          value={formData.nome_lead || ""}
-          onChange={(e) => handleChange("nome_lead", e.target.value)}
-          required
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+        <FormField
+          control={form.control}
+          name="nome_lead"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Nome do Lead</FormLabel>
+              <FormControl>
+                <Input placeholder="Nome do lead" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
         />
-        {formErrors.nome_lead && <span className="text-red-500 text-xs">{formErrors.nome_lead}</span>}
-      </div>
 
-      <div>
-        <Label htmlFor="empresa_origem_id">Empresa de Origem</Label>
-        <Select
-          value={formData.empresa_origem_id || ""}
-          onValueChange={(value) => handleChange("empresa_origem_id", value)}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Selecione a empresa de origem" />
-          </SelectTrigger>
-          <SelectContent>
-            {empresas.map((empresa) => (
-              <SelectItem key={empresa.id} value={empresa.id}>
-                {empresa.nome}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {formErrors.empresa_origem_id && <span className="text-red-500 text-xs">{formErrors.empresa_origem_id}</span>}
-      </div>
+        <FormField
+          control={form.control}
+          name="empresa_origem_id"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Empresa de Origem</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a empresa de origem" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {empresas.map((empresa) => (
+                    <SelectItem key={empresa.id} value={empresa.id}>{empresa.nome}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-      <div>
-        <Label htmlFor="empresa_destino_id">Empresa de Destino</Label>
-        <Select
-          value={formData.empresa_destino_id || ""}
-          onValueChange={(value) => handleChange("empresa_destino_id", value)}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Selecione a empresa de destino" />
-          </SelectTrigger>
-          <SelectContent>
-            {empresas.map((empresa) => (
-              <SelectItem key={empresa.id} value={empresa.id}>
-                {empresa.nome}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {formErrors.empresa_destino_id && <span className="text-red-500 text-xs">{formErrors.empresa_destino_id}</span>}
-      </div>
+        <FormField
+          control={form.control}
+          name="empresa_destino_id"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Empresa de Destino</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a empresa de destino" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {empresas.map((empresa) => (
+                    <SelectItem key={empresa.id} value={empresa.id}>{empresa.nome}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-      <div>
-        <Label>Status</Label>
-        <Select
-          value={formData.status || "em_contato"}
-          onValueChange={(value: StatusOportunidade) => handleChange("status", value)}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Selecione o status da oportunidade" />
-          </SelectTrigger>
-          <SelectContent>
-            {STATUS_OPTIONS.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {formErrors.status && <span className="text-red-500 text-xs">{formErrors.status}</span>}
-      </div>
+        <FormField
+          control={form.control}
+          name="contato_id"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Contato</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o contato" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {contatos.map((contato) => (
+                    <SelectItem key={contato.id} value={contato.id}>{contato.nome}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-      <div>
-        <Label htmlFor="data_indicacao">Data de Indicação</Label>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant={"outline"}
-              className={cn(
-                "w-full justify-start text-left font-normal",
-                !formData.data_indicacao && "text-muted-foreground"
-              )}
-              type="button"
-            >
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {formData.data_indicacao
-                ? format(new Date(formData.data_indicacao), "dd/MM/yyyy", { locale: ptBR })
-                : "Selecione a data"}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
-            <Calendar
-              mode="single"
-              selected={formData.data_indicacao ? new Date(formData.data_indicacao) : undefined}
-              onSelect={handleDateChange}
-              initialFocus
-            />
-          </PopoverContent>
-        </Popover>
-      </div>
+        <FormField
+          control={form.control}
+          name="valor"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Valor</FormLabel>
+              <FormControl>
+                <Input placeholder="Valor da oportunidade" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-      {/* Outros campos do formulário (contato, valor, etc) podem ser adicionados aqui */}
+        <FormField
+          control={form.control}
+          name="status"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Status</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o status" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value={StatusOportunidade.EM_CONTATO}>Em Contato</SelectItem>
+                  <SelectItem value={StatusOportunidade.NEGOCIANDO}>Negociando</SelectItem>
+                  <SelectItem value={StatusOportunidade.GANHO}>Ganho</SelectItem>
+                  <SelectItem value={StatusOportunidade.PERDIDO}>Perdido</SelectItem>
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-      <div className="flex gap-2 justify-end pt-4">
-        <Button type="button" variant="outline" onClick={onClose} disabled={isSaving}>
-          Cancelar
+        <FormField
+          control={form.control}
+          name="data_indicacao"
+          render={({ field }) => (
+            <FormItem className="flex flex-col">
+              <FormLabel>Data de Indicação</FormLabel>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <FormControl>
+                    <Button
+                      variant={"outline"}
+                      className={cn(
+                        "w-[240px] pl-3 text-left font-normal",
+                        !field.value && "text-muted-foreground"
+                      )}
+                    >
+                      {field.value ? (
+                        format(field.value, "PPP", { locale: ptBR })
+                      ) : (
+                        <span>Selecione a data</span>
+                      )}
+                    </Button>
+                  </FormControl>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="center" side="bottom">
+                  <Calendar
+                    mode="single"
+                    locale={ptBR}
+                    selected={field.value}
+                    onSelect={field.onChange}
+                    disabled={(date) =>
+                      date > new Date()
+                    }
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="data_fechamento"
+          render={({ field }) => (
+            <FormItem className="flex flex-col">
+              <FormLabel>Data de Fechamento</FormLabel>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <FormControl>
+                    <Button
+                      variant={"outline"}
+                      className={cn(
+                        "w-[240px] pl-3 text-left font-normal",
+                        !field.value && "text-muted-foreground"
+                      )}
+                    >
+                      {field.value ? (
+                        format(field.value, "PPP", { locale: ptBR })
+                      ) : (
+                        <span>Selecione a data</span>
+                      )}
+                    </Button>
+                  </FormControl>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="center" side="bottom">
+                  <Calendar
+                    mode="single"
+                    locale={ptBR}
+                    selected={field.value}
+                    onSelect={field.onChange}
+                    disabled={(date) =>
+                      date > new Date()
+                    }
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="motivo_perda"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Motivo da Perda</FormLabel>
+              <FormControl>
+                <Input placeholder="Motivo da perda" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="observacoes"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Observações</FormLabel>
+              <FormControl>
+                <Textarea
+                  placeholder="Observações sobre a oportunidade"
+                  className="resize-none"
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <Button type="submit" disabled={isLoading}>
+          {isLoading ? "Salvando..." : "Salvar"}
         </Button>
-        <Button type="submit" disabled={isSaving}>
-          {isSaving ? "Salvando..." : "Salvar"}
-        </Button>
-      </div>
-    </form>
+      </form>
+    </Form>
   );
 };
+
+export default OportunidadesForm;

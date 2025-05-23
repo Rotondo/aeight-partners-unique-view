@@ -1,6 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/lib/supabase";
 
 interface User {
   id: string;
@@ -20,20 +21,10 @@ interface AuthContextType {
   logout: () => void;
 }
 
-// Usuário hardcoded para acesso livre
-const HARDCODED_USER: User = {
-  id: "hardcoded-user-id",
-  nome: "Usuário Teste",
-  email: "usuario@teste.com",
-  papel: "admin",
-  empresa_id: "empresa-teste",
-  ativo: true,
-};
-
 // Criar o contexto de autenticação
 const AuthContext = createContext<AuthContextType>({
   user: null,
-  isAuthenticated: false,
+  isAuthenticated: true, // Sempre autenticado para acesso livre
   loading: false,
   error: null,
   login: async () => true,
@@ -41,15 +32,161 @@ const AuthContext = createContext<AuthContextType>({
 });
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [user, setUser] = useState<User | null>(HARDCODED_USER);
-  const [loading, setLoading] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  // Definir usuário hardcoded imediatamente
   useEffect(() => {
-    setUser(HARDCODED_USER);
-    setLoading(false);
+    // Verificar se já existe uma sessão ativa no Supabase
+    const checkSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error("Erro ao verificar sessão:", error);
+        }
+
+        if (session?.user) {
+          // Buscar dados do usuário na tabela usuarios
+          const { data: userData, error: userError } = await supabase
+            .from('usuarios')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+
+          if (userError) {
+            console.error("Erro ao buscar dados do usuário:", userError);
+          }
+
+          if (userData) {
+            setUser({
+              id: userData.id,
+              nome: userData.nome,
+              email: userData.email,
+              papel: userData.papel,
+              empresa_id: userData.empresa_id,
+              ativo: userData.ativo,
+            });
+          } else {
+            // Se não encontrar o usuário na tabela, usar dados do auth
+            setUser({
+              id: session.user.id,
+              email: session.user.email || "",
+              nome: session.user.user_metadata?.nome || "Usuário Admin",
+              papel: "admin",
+              ativo: true,
+            });
+          }
+        } else {
+          // Se não há sessão, fazer login automático como admin
+          await loginAsAdmin();
+        }
+      } catch (error) {
+        console.error("Erro ao verificar autenticação:", error);
+        // Em caso de erro, definir usuário padrão para manter acesso
+        setUser({
+          id: "admin-fallback",
+          email: "admin@aeight.global",
+          nome: "Admin",
+          papel: "admin",
+          ativo: true,
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const loginAsAdmin = async () => {
+      try {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: 'rotondo@aeight.global',
+          password: 'Ae8.2024!'
+        });
+
+        if (error) {
+          console.error("Erro no login automático:", error);
+          // Fallback para usuário hardcoded
+          setUser({
+            id: "admin-fallback",
+            email: "rotondo@aeight.global",
+            nome: "Admin",
+            papel: "admin",
+            ativo: true,
+          });
+          return;
+        }
+
+        if (data.user) {
+          // Buscar dados do usuário na tabela usuarios
+          const { data: userData, error: userError } = await supabase
+            .from('usuarios')
+            .select('*')
+            .eq('id', data.user.id)
+            .single();
+
+          if (userData) {
+            setUser({
+              id: userData.id,
+              nome: userData.nome,
+              email: userData.email,
+              papel: userData.papel,
+              empresa_id: userData.empresa_id,
+              ativo: userData.ativo,
+            });
+          } else {
+            setUser({
+              id: data.user.id,
+              email: data.user.email || "",
+              nome: "Admin",
+              papel: "admin",
+              ativo: true,
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Erro no login automático:", error);
+        setUser({
+          id: "admin-fallback",
+          email: "rotondo@aeight.global",
+          nome: "Admin",
+          papel: "admin",
+          ativo: true,
+        });
+      }
+    };
+
+    checkSession();
+
+    // Listener para mudanças de autenticação
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log("Auth state changed:", event, session?.user?.email);
+        
+        if (session?.user) {
+          const { data: userData } = await supabase
+            .from('usuarios')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+
+          if (userData) {
+            setUser({
+              id: userData.id,
+              nome: userData.nome,
+              email: userData.email,
+              papel: userData.papel,
+              empresa_id: userData.empresa_id,
+              ativo: userData.ativo,
+            });
+          }
+        }
+      }
+    );
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   const login = async (email: string, senha: string): Promise<boolean> => {
@@ -57,8 +194,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setLoading(true);
       setError(null);
 
-      // Simular login bem-sucedido
-      setUser(HARDCODED_USER);
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password: senha
+      });
+
+      if (error) throw error;
+
       toast({
         title: "Login bem-sucedido",
         description: "Bem-vindo ao sistema!",
@@ -81,10 +223,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const logout = async () => {
     try {
       setLoading(true);
-      // Manter usuário logado (acesso livre)
+      await supabase.auth.signOut();
+      setUser(null);
       toast({
-        title: "Logout simulado",
-        description: "Mantendo acesso livre.",
+        title: "Logout realizado",
+        description: "Você foi desconectado do sistema.",
       });
     } catch (err) {
       console.error("Erro ao fazer logout:", err);
@@ -102,7 +245,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     <AuthContext.Provider
       value={{
         user,
-        isAuthenticated: true, // Sempre autenticado
+        isAuthenticated: true, // Sempre autenticado para acesso livre
         loading,
         error,
         login,

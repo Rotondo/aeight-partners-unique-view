@@ -6,7 +6,7 @@ import LoginForm from '@/components/auth/LoginForm';
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   
-  // Redirecionar automaticamente para a página principal
+  // Redirecionar automaticamente para manter acesso livre
   useEffect(() => {
     navigate("/");
   }, [navigate]);

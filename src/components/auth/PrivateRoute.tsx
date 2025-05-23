@@ -6,7 +6,7 @@ interface PrivateRouteProps {
 }
 
 const PrivateRoute: React.FC<PrivateRouteProps> = ({ children }) => {
-  // Acesso livre - sem verificações de autenticação
+  // Acesso livre - mantendo conexão com dados do Supabase
   return <>{children}</>;
 };
 
