@@ -15,6 +15,7 @@ import QuadrantePage from "@/pages/quadrante/QuadrantePage";
 import Admin from "@/pages/admin";
 import { Toaster } from "@/components/ui/toaster";
 import OportunidadesDashboardPage from "@/pages/oportunidades-dashboard";
+import { SpeedInsights } from "@vercel/speed-insights/react"; // <- Importação do Vercel Speed Insights
 
 const App: React.FC = () => (
   <Router>
@@ -41,6 +42,7 @@ const App: React.FC = () => (
           </Route>
         </Routes>
         <Toaster />
+        <SpeedInsights /> {/* <- Mantém o Speed Insights sempre carregado */}
       </React.Suspense>
     </AuthProvider>
   </Router>
