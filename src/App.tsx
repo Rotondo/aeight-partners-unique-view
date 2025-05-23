@@ -1,5 +1,6 @@
+
 import React from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import MainLayout from "@/components/layout/MainLayout";
 import DashboardPage from "@/pages/dashboard/DashboardPage";
 import { OportunidadesPage } from "@/components/oportunidades/OportunidadesPage";
@@ -9,7 +10,7 @@ import NotFoundPage from "@/pages/NotFoundPage";
 import LoginPage from "@/pages/auth/LoginPage";
 import LoadingScreen from "@/components/ui/LoadingScreen";
 import { AuthProvider } from "@/hooks/useAuth";
-// import PrivateRoute from "@/components/auth/PrivateRoute";
+import PrivateRoute from "@/components/auth/PrivateRoute";
 import OnePagerPage from "@/pages/onepager/OnePagerPage";
 import QuadrantePage from "@/pages/quadrante/QuadrantePage";
 import Admin from "@/pages/admin";
@@ -25,10 +26,12 @@ const App: React.FC = () => (
           <Route
             path="/"
             element={
-              <MainLayout />
+              <PrivateRoute>
+                <MainLayout />
+              </PrivateRoute>
             }
           >
-            {/* Rotas internas agora abertas, sem proteção */}
+            {/* Rotas internas protegidas */}
             <Route index element={<DashboardPage />} />
             <Route path="oportunidades" element={<OportunidadesPage />} />
             <Route path="oportunidades-dashboard" element={<OportunidadesDashboardPage />} />

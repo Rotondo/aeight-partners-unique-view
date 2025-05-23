@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Navigate } from 'react-router-dom';
@@ -12,24 +13,11 @@ const LoginPage: React.FC = () => {
   }
   
   return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      background: '#f9fafb'
-    }}>
-      <div style={{ width: '100%', maxWidth: 420 }}>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="w-full max-w-md">
         {loading ? (
-          <div style={{ display: 'flex', justifyContent: 'center' }}>
-            <div style={{
-              border: '4px solid #e5e7eb',
-              borderTop: '4px solid #22223b',
-              borderRadius: '50%',
-              width: 48,
-              height: 48,
-              animation: 'spin 1s linear infinite'
-            }} />
+          <div className="flex justify-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
           </div>
         ) : (
           <LoginForm />

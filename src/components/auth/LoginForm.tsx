@@ -27,7 +27,7 @@ const LoginForm: React.FC = () => {
           description: "Redirecionando...",
           variant: "default",
         });
-        // O redirecionamento será feito automaticamente pelo useAuth através do LoginPage
+        navigate("/");
       }
     } catch (error) {
       console.error("Erro durante login:", error);
