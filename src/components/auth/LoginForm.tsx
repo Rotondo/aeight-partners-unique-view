@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 
 const LoginForm: React.FC = () => {
@@ -6,6 +7,7 @@ const LoginForm: React.FC = () => {
   const [senha, setSenha] = useState("");
   const [mensagem, setMensagem] = useState("");
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,9 +23,10 @@ const LoginForm: React.FC = () => {
       setMensagem("E-mail ou senha incorretos.");
       setLoading(false);
     } else {
-      setMensagem("Login bem-sucedido! Aguarde...");
-      // Não navegue aqui! O redirecionamento será feito automaticamente pelo LoginPage.tsx quando a autenticação for detectada.
-      setLoading(false);
+      setMensagem("Login bem-sucedido! Redirecionando...");
+      setTimeout(() => {
+        navigate("/");
+      }, 1500);
     }
   };
 
