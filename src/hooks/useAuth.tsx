@@ -1,6 +1,5 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 
 interface User {
@@ -21,95 +20,36 @@ interface AuthContextType {
   logout: () => void;
 }
 
+// Usuário hardcoded para acesso livre
+const HARDCODED_USER: User = {
+  id: "hardcoded-user-id",
+  nome: "Usuário Teste",
+  email: "usuario@teste.com",
+  papel: "admin",
+  empresa_id: "empresa-teste",
+  ativo: true,
+};
+
 // Criar o contexto de autenticação
 const AuthContext = createContext<AuthContextType>({
   user: null,
   isAuthenticated: false,
-  loading: true,
+  loading: false,
   error: null,
-  login: async () => false,
+  login: async () => true,
   logout: () => {},
 });
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(HARDCODED_USER);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  // Verificar sessão atual do usuário ao carregar
+  // Definir usuário hardcoded imediatamente
   useEffect(() => {
-    const checkUser = async () => {
-      try {
-        // Configurar o listener para mudanças de autenticação
-        const { data: authListener } = supabase.auth.onAuthStateChange(
-          async (event, session) => {
-            if (session?.user) {
-              // Buscar informações adicionais do usuário no banco de dados
-              const { data: userData, error: userError } = await supabase
-                .from("usuarios")
-                .select("*")
-                .eq("id", session.user.id)
-                .single();
-
-              if (userError) {
-                console.error("Erro ao buscar dados do usuário:", userError);
-                setUser(null);
-                setError("Erro ao carregar dados do usuário");
-              } else if (userData) {
-                // Se encontrou o usuário, atualiza o estado
-                setUser(userData);
-                setError(null);
-              } else {
-                // Se não encontrou o usuário
-                setUser(null);
-                setError("Usuário não encontrado");
-              }
-            } else {
-              // Sem sessão ativa
-              setUser(null);
-            }
-            setLoading(false);
-          }
-        );
-
-        // Verificar sessão atual
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          const { data: userData, error: userError } = await supabase
-            .from("usuarios")
-            .select("*")
-            .eq("id", session.user.id)
-            .single();
-
-          if (userError) {
-            console.error("Erro ao buscar dados do usuário:", userError);
-            setUser(null);
-            setError("Erro ao carregar dados do usuário");
-          } else if (userData) {
-            setUser(userData);
-            setError(null);
-          } else {
-            setUser(null);
-            setError("Usuário não encontrado");
-          }
-        }
-        
-        setLoading(false);
-
-        // Cleanup do listener quando o componente for desmontado
-        return () => {
-          authListener.subscription.unsubscribe();
-        };
-      } catch (err) {
-        console.error("Erro na verificação de autenticação:", err);
-        setUser(null);
-        setError("Erro na verificação de autenticação");
-        setLoading(false);
-      }
-    };
-
-    checkUser();
+    setUser(HARDCODED_USER);
+    setLoading(false);
   }, []);
 
   const login = async (email: string, senha: string): Promise<boolean> => {
@@ -117,66 +57,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setLoading(true);
       setError(null);
 
-      const { data, error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password: senha,
+      // Simular login bem-sucedido
+      setUser(HARDCODED_USER);
+      toast({
+        title: "Login bem-sucedido",
+        description: "Bem-vindo ao sistema!",
       });
-
-      if (signInError) {
-        console.error("Erro no login:", signInError);
-        setError("Credenciais inválidas. Por favor, tente novamente.");
-        toast({
-          title: "Erro no login",
-          description: "Credenciais inválidas. Por favor, tente novamente.",
-          variant: "destructive",
-        });
-        return false;
-      }
-
-      if (data.user) {
-        const { data: userData, error: userError } = await supabase
-          .from("usuarios")
-          .select("*")
-          .eq("id", data.user.id)
-          .single();
-
-        if (userError) {
-          console.error("Erro ao buscar dados do usuário:", userError);
-          setError("Erro ao carregar dados do usuário");
-          return false;
-        }
-
-        if (userData) {
-          if (!userData.ativo) {
-            setError("Usuário inativo. Entre em contato com o administrador.");
-            toast({
-              title: "Acesso negado",
-              description: "Usuário inativo. Entre em contato com o administrador.",
-              variant: "destructive",
-            });
-            await supabase.auth.signOut();
-            return false;
-          }
-
-          setUser(userData);
-          toast({
-            title: "Login bem-sucedido",
-            description: "Bem-vindo ao sistema!",
-          });
-          return true;
-        } else {
-          setError("Usuário não encontrado no sistema.");
-          toast({
-            title: "Erro no login",
-            description: "Usuário não encontrado no sistema.",
-            variant: "destructive",
-          });
-          await supabase.auth.signOut();
-          return false;
-        }
-      }
-
-      return false;
+      return true;
     } catch (err) {
       console.error("Erro no processo de login:", err);
       setError("Ocorreu um erro durante o login. Tente novamente.");
@@ -194,11 +81,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const logout = async () => {
     try {
       setLoading(true);
-      await supabase.auth.signOut();
-      setUser(null);
+      // Manter usuário logado (acesso livre)
       toast({
-        title: "Logout realizado",
-        description: "Você foi desconectado com sucesso.",
+        title: "Logout simulado",
+        description: "Mantendo acesso livre.",
       });
     } catch (err) {
       console.error("Erro ao fazer logout:", err);
@@ -216,7 +102,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     <AuthContext.Provider
       value={{
         user,
-        isAuthenticated: !!user,
+        isAuthenticated: true, // Sempre autenticado
         loading,
         error,
         login,

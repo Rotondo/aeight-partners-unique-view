@@ -1,27 +1,20 @@
 
-import React from 'react';
-import { useAuth } from '@/hooks/useAuth';
-import { Navigate } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import LoginForm from '@/components/auth/LoginForm';
 
 const LoginPage: React.FC = () => {
-  const { isAuthenticated, loading } = useAuth();
+  const navigate = useNavigate();
   
-  // Redireciona se já estiver autenticado
-  if (isAuthenticated) {
-    return <Navigate to="/" />;
-  }
+  // Redirecionar automaticamente para a página principal
+  useEffect(() => {
+    navigate("/");
+  }, [navigate]);
   
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="w-full max-w-md">
-        {loading ? (
-          <div className="flex justify-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
-          </div>
-        ) : (
-          <LoginForm />
-        )}
+        <LoginForm />
       </div>
     </div>
   );
