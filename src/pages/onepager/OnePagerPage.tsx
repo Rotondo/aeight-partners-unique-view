@@ -1,30 +1,33 @@
-import React, { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
-import { useToast } from "@/hooks/use-toast";
-import { Empresa, Categoria, OnePager } from "@/types";
-import OnePagerViewer from "@/components/onepager/OnePagerViewer";
-import { File } from "lucide-react";
+import React, { useState, useEffect } from 'react';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/lib/supabase';
+import { Categoria, Empresa, OnePager } from '@/types';
+import CategoriasList from '@/components/onepager/CategoriasList';
+import ParceirosList from '@/components/onepager/ParceirosList';
+import OnePagerViewer from '@/components/onepager/OnePagerViewer';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import OnePagerUpload from '@/components/onepager/OnePagerUpload';
+import { useAuth } from '@/hooks/useAuth';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const OnePagerPage: React.FC = () => {
+  const { user } = useAuth();
   const { toast } = useToast();
-
+  const [loading, setLoading] = useState<boolean>(true);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [selectedCategoria, setSelectedCategoria] = useState<Categoria | null>(null);
-
   const [parceiros, setParceiros] = useState<Empresa[]>([]);
   const [selectedParceiro, setSelectedParceiro] = useState<Empresa | null>(null);
-
   const [onePager, setOnePager] = useState<OnePager | null>(null);
-  const [loading, setLoading] = useState(true);
 
-  // Estado do modal de visualização (tela cheia)
+  // Novo: controla abertura do modal de visualização
   const [modalAberto, setModalAberto] = useState(false);
 
   // Carrega categorias ao abrir a página
   useEffect(() => {
     const fetchCategorias = async () => {
       try {
-        const { data, error } = await supabase
+        const { data, error } = await (supabase as any)
           .from('categorias')
           .select('*')
           .order('nome');
@@ -33,6 +36,7 @@ const OnePagerPage: React.FC = () => {
 
         if (data) {
           setCategorias(data as Categoria[]);
+          // Seleciona a primeira categoria por padrão
           if (data.length > 0) {
             setSelectedCategoria(data[0] as Categoria);
           }
@@ -64,7 +68,8 @@ const OnePagerPage: React.FC = () => {
     const fetchParceiros = async () => {
       setLoading(true);
       try {
-        const { data, error } = await supabase
+        // Busca IDs das empresas vinculadas à categoria
+        const { data, error } = await (supabase as any)
           .from('empresa_categoria')
           .select('empresa_id')
           .eq('categoria_id', selectedCategoria.id);
@@ -74,7 +79,8 @@ const OnePagerPage: React.FC = () => {
         if (data && data.length > 0) {
           const empresaIds = data.map((item: any) => item.empresa_id);
 
-          const { data: empresas, error: empresasError } = await supabase
+          // Busca dados das empresas parceiras
+          const { data: empresas, error: empresasError } = await (supabase as any)
             .from('empresas')
             .select('*')
             .in('id', empresaIds)
@@ -85,6 +91,7 @@ const OnePagerPage: React.FC = () => {
 
           if (empresas) {
             setParceiros(empresas as Empresa[]);
+            // Seleciona o primeiro parceiro por padrão
             if (empresas.length > 0) {
               setSelectedParceiro(empresas[0] as Empresa);
             } else {
@@ -120,7 +127,7 @@ const OnePagerPage: React.FC = () => {
 
     const fetchOnePager = async () => {
       try {
-        const { data, error } = await supabase
+        const { data, error } = await (supabase as any)
           .from('onepager')
           .select('*')
           .eq('empresa_id', selectedParceiro.id)
@@ -129,9 +136,9 @@ const OnePagerPage: React.FC = () => {
 
         if (error) throw error;
 
-        setOnePager(data as OnePager | null);
+        setOnePager(data as OnePager || null);
       } catch (error) {
-        console.error('Error fetching OnePager:', error);
+        console.error('Error fetching onepager:', error);
         toast({
           title: 'Erro',
           description: 'Não foi possível carregar o OnePager.',
@@ -144,177 +151,117 @@ const OnePagerPage: React.FC = () => {
     // eslint-disable-next-line
   }, [selectedParceiro, selectedCategoria]);
 
-  // NOVO: função para abrir modal ao clicar no card
-  const handleAbrirModal = () => {
-    setModalAberto(true);
+  // Ao clicar em um parceiro, apenas seleciona (não abre modal!)
+  const handleSelectParceiro = (parceiro: Empresa) => {
+    setSelectedParceiro(parceiro);
+    // NÃO abre modal aqui!
   };
 
-  // NOVO: função para fechar modal
-  const handleFecharModal = () => {
-    setModalAberto(false);
+  // Ao clicar na imagem reduzida, abre o modal
+  const handleOpenModal = () => {
+    if (onePager) setModalAberto(true);
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: '#fafbfc', padding: '40px 0' }}>
-      <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', gap: 32 }}>
-        {/* Coluna categorias */}
-        <div style={{ width: 240 }}>
-          <h3 style={{ fontWeight: 700, fontSize: 18, marginBottom: 12 }}>Categorias</h3>
-          {categorias.length === 0 ? (
-            <div style={{ color: '#888' }}>Nenhuma categoria disponível</div>
-          ) : (
-            <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-              {categorias.map((cat) => (
-                <li
-                  key={cat.id}
-                  style={{
-                    padding: '10px 18px',
-                    marginBottom: 8,
-                    background: selectedCategoria?.id === cat.id ? '#e7e8fc' : 'transparent',
-                    borderRadius: 8,
-                    fontWeight: selectedCategoria?.id === cat.id ? 600 : 400,
-                    color: selectedCategoria?.id === cat.id ? '#22223b' : '#444',
-                    cursor: 'pointer',
-                  }}
-                  onClick={() => setSelectedCategoria(cat)}
-                >
-                  {cat.nome}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-
-        {/* Coluna parceiros */}
-        <div style={{ width: 260 }}>
-          <h3 style={{ fontWeight: 700, fontSize: 18, marginBottom: 12 }}>Parceiros</h3>
-          {parceiros.length === 0 ? (
-            <div style={{ color: '#888' }}>Nenhum parceiro disponível</div>
-          ) : (
-            <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-              {parceiros.map((parc) => (
-                <li
-                  key={parc.id}
-                  style={{
-                    padding: '9px 16px',
-                    marginBottom: 7,
-                    background: selectedParceiro?.id === parc.id ? '#e8f9f1' : 'transparent',
-                    borderRadius: 8,
-                    fontWeight: selectedParceiro?.id === parc.id ? 600 : 400,
-                    color: selectedParceiro?.id === parc.id ? '#187c5c' : '#444',
-                    cursor: 'pointer',
-                  }}
-                  onClick={() => setSelectedParceiro(parc)}
-                >
-                  {parc.nome}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-
-        {/* Coluna OnePager */}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <h3 style={{ fontWeight: 700, fontSize: 18, marginBottom: 12 }}>OnePager</h3>
-          {/* Versão reduzida (card) do OnePager */}
-          <div
-            style={{
-              border: '1.5px solid #ececec',
-              borderRadius: 12,
-              padding: 24,
-              background: '#fff',
-              minHeight: 220,
-              cursor: onePager ? 'pointer' : 'default',
-              transition: 'box-shadow 0.2s',
-              boxShadow: onePager ? '0 4px 16px rgba(0,0,0,0.07)' : 'none',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}
-            onClick={onePager ? handleAbrirModal : undefined}
-            title={onePager ? "Clique para ver em tela cheia" : undefined}
-          >
-            {loading ? (
-              <div style={{ color: '#aaa', fontSize: 16 }}>Carregando...</div>
-            ) : !selectedParceiro ? (
-              <div style={{ color: '#aaa', textAlign: 'center' }}>
-                <File size={48} className="mx-auto mb-4" />
-                Selecione um parceiro para visualizar o OnePager
-              </div>
-            ) : !onePager ? (
-              <div style={{ color: '#aaa', textAlign: 'center' }}>
-                <File size={48} className="mx-auto mb-4" />
-                Nenhum OnePager disponível para este parceiro
-              </div>
-            ) : (
-              <OnePagerViewer
-                onePager={onePager}
-                parceiro={selectedParceiro}
-                isLoading={loading}
-                reduzido
-              />
+    <div className="flex flex-col h-full">
+      <Tabs defaultValue="view" className="w-full">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold">OnePager de Parceiros</h1>
+          <TabsList>
+            <TabsTrigger value="view">Visualizar</TabsTrigger>
+            {user?.papel === 'admin' && (
+              <TabsTrigger value="upload">Upload</TabsTrigger>
             )}
-          </div>
+          </TabsList>
         </div>
-      </div>
 
-      {/* Modal de visualização em tela cheia */}
-      {modalAberto && onePager && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0, left: 0, width: '100vw', height: '100vh',
-            background: 'rgba(24,28,34,0.77)',
-            zIndex: 1000,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}
-          onClick={handleFecharModal}
-        >
-          <div
-            style={{
-              background: '#fff',
-              padding: 32,
-              borderRadius: 18,
-              minWidth: 320,
-              maxWidth: '90vw',
-              maxHeight: '90vh',
-              overflowY: 'auto',
-              boxShadow: '0 8px 32px rgba(0,0,0,0.14)',
-              position: 'relative'
-            }}
-            onClick={e => e.stopPropagation()}
-          >
-            <button
-              onClick={handleFecharModal}
-              style={{
-                position: 'absolute',
-                top: 18,
-                right: 18,
-                background: '#eee',
-                border: 'none',
-                borderRadius: '50%',
-                width: 36,
-                height: 36,
-                fontWeight: 700,
-                fontSize: 20,
-                color: '#222',
-                cursor: 'pointer'
-              }}
-              aria-label="Fechar"
-            >
-              ×
-            </button>
-            <OnePagerViewer
-              onePager={onePager}
-              parceiro={selectedParceiro}
-              isLoading={loading}
-              reduzido={false}
-            />
+        {/* Aba Visualizar */}
+        <TabsContent value="view" className="mt-0">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 h-[calc(100vh-220px)]">
+            {/* Menu lateral esquerdo - Categorias */}
+            <div className="md:col-span-1 bg-card rounded-lg border shadow-sm overflow-auto">
+              <CategoriasList
+                categorias={categorias}
+                selectedCategoria={selectedCategoria}
+                onSelectCategoria={setSelectedCategoria}
+                isLoading={loading}
+              />
+            </div>
+            {/* Centro - Lista de Parceiros */}
+            <div className="md:col-span-1 bg-card rounded-lg border shadow-sm overflow-auto">
+              <ParceirosList
+                parceiros={parceiros}
+                selectedParceiro={selectedParceiro}
+                onSelectParceiro={handleSelectParceiro}
+                isLoading={loading}
+              />
+            </div>
+            {/* Direita - Versão reduzida do OnePager OU mensagem */}
+            <div className="md:col-span-2 bg-card rounded-lg border shadow-sm flex items-center justify-center">
+              {selectedParceiro && onePager ? (
+                <div
+                  className="w-full max-w-3xl cursor-pointer hover:shadow-lg transition"
+                  onClick={handleOpenModal}
+                  title="Clique para ampliar"
+                >
+                  <OnePagerViewer
+                    onePager={onePager}
+                    parceiro={selectedParceiro}
+                    isLoading={loading}
+                  />
+                </div>
+              ) : (
+                <span className="text-gray-400 text-lg text-center w-full">
+                  Selecione um parceiro para visualizar o One Pager
+                </span>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+
+          {/* Modal One Pager */}
+          <Dialog open={modalAberto} onOpenChange={setModalAberto}>
+            <DialogContent className="max-w-5xl w-[90vw] h-[90vh] p-0">
+              <DialogHeader>
+                <DialogTitle>
+                  {selectedParceiro ? `OnePager: ${selectedParceiro.nome}` : "OnePager"}
+                </DialogTitle>
+              </DialogHeader>
+              <div className="flex-1 h-full overflow-auto">
+                <OnePagerViewer
+                  onePager={onePager}
+                  parceiro={selectedParceiro}
+                  isLoading={loading}
+                />
+              </div>
+            </DialogContent>
+          </Dialog>
+        </TabsContent>
+
+        {/* Aba Upload (apenas admin) */}
+        {user?.papel === 'admin' && (
+          <TabsContent value="upload" className="mt-0">
+            <OnePagerUpload
+              categorias={categorias}
+              onSuccess={() => {
+                // Refaz o carregamento caso faça upload de novo arquivo
+                if (selectedParceiro && selectedCategoria) {
+                  const fetchOnePager = async () => {
+                    const { data } = await (supabase as any)
+                      .from('onepager')
+                      .select('*')
+                      .eq('empresa_id', selectedParceiro.id)
+                      .eq('categoria_id', selectedCategoria.id)
+                      .maybeSingle();
+
+                    setOnePager(data as OnePager || null);
+                  };
+                  fetchOnePager();
+                }
+              }}
+            />
+          </TabsContent>
+        )}
+      </Tabs>
     </div>
   );
 };
