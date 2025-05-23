@@ -3,7 +3,7 @@ import { useOportunidades } from "./OportunidadesContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Oportunidade, Empresa } from "@/types";
+import { Oportunidade, Empresa, StatusOportunidade } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
@@ -36,11 +36,18 @@ function getGrupoStatus(origemTipo?: string, destinoTipo?: string) {
   return undefined;
 }
 
+const STATUS_OPTIONS: { value: StatusOportunidade; label: string }[] = [
+  { value: "em_contato", label: "Em Contato" },
+  { value: "negociando", label: "Negociando" },
+  { value: "ganho", label: "Ganho" },
+  { value: "perdido", label: "Perdido" },
+];
+
 export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({ oportunidadeId, onClose }) => {
   const { getOportunidade, createOportunidade, updateOportunidade } = useOportunidades();
   const { toast } = useToast();
   const isEditing = !!oportunidadeId;
-  
+
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -51,7 +58,8 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({ oportunida
     tipo_natureza: undefined,
     data_indicacao: new Date().toISOString(),
     contato: { nome: "", email: "", telefone: "" },
-    usuario_recebe_nome: ""
+    usuario_recebe_nome: "",
+    status: "em_contato"
   });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
@@ -61,7 +69,8 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({ oportunida
       if (oportunidade) {
         setFormData({
           ...oportunidade,
-          contato: oportunidade.contato || { nome: "", email: "", telefone: "" }
+          contato: oportunidade.contato || { nome: "", email: "", telefone: "" },
+          status: oportunidade.status || "em_contato"
         });
       } else {
         toast({
@@ -88,17 +97,14 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({ oportunida
           const typedEmpresas = empresasData.map(empresa => ({
             id: empresa.id,
             nome: empresa.nome,
-            tipo: empresa.tipo as "intragrupo" | "parceiro" | "cliente",
-            status: empresa.status,
-            descricao: empresa.descricao,
-            created_at: empresa.created_at
+            tipo: empresa.tipo,
           }));
           setEmpresas(typedEmpresas);
         }
       } catch (error) {
         toast({
           title: "Erro",
-          description: "Não foi possível carregar as empresas.",
+          description: "Não foi possível carregar empresas.",
           variant: "destructive"
         });
       } finally {
@@ -106,254 +112,192 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({ oportunida
       }
     };
     fetchEmpresas();
+    // eslint-disable-next-line
   }, []);
 
-  const handleChange = (field: keyof Oportunidade, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    if (formErrors[field]) {
-      setFormErrors(prev => {
-        const newErrors = { ...prev };
-        delete newErrors[field];
-        return newErrors;
-      });
-    }
+  const handleChange = (field: string, value: any) => {
+    setFormData((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
   };
 
-  // Calcular os tipos das empresas selecionadas
-  const empresaOrigemTipo = useMemo(() => {
-    return empresas.find(e => e.id === formData.empresa_origem_id)?.tipo;
-  }, [formData.empresa_origem_id, empresas]);
-  const empresaDestinoTipo = useMemo(() => {
-    return empresas.find(e => e.id === formData.empresa_destino_id)?.tipo;
-  }, [formData.empresa_destino_id, empresas]);
+  const handleDateChange = (date: Date | undefined) => {
+    setFormData((prev) => ({
+      ...prev,
+      data_indicacao: date ? date.toISOString() : undefined,
+    }));
+  };
 
-  // Atualiza tipo_natureza sempre que empresas mudarem
-  useEffect(() => {
-    const tipo = getGrupoStatus(empresaOrigemTipo, empresaDestinoTipo);
-    setFormData(prev => ({ ...prev, tipo_natureza: tipo }));
-  }, [empresaOrigemTipo, empresaDestinoTipo]);
-
-  // Validação simplificada apenas para os campos mandatórios
-  const validateForm = () => {
+  const validate = () => {
     const errors: Record<string, string> = {};
-    if (!formData.nome_lead || !formData.nome_lead.trim()) {
-      errors.nome_lead = "Nome da oportunidade é obrigatório";
-    }
-    if (!formData.empresa_origem_id) {
-      errors.empresa_origem_id = "Origem é obrigatória";
-    }
-    if (!formData.empresa_destino_id) {
-      errors.empresa_destino_id = "Destino é obrigatório";
-    }
-    if (!formData.data_indicacao) {
-      errors.data_indicacao = "Data é obrigatória";
-    }
-    if (!formData.usuario_recebe_nome || !formData.usuario_recebe_nome.trim()) {
-      errors.usuario_recebe_nome = "Nome do executivo interno é obrigatório";
-    }
+    if (!formData.nome_lead) errors.nome_lead = "Nome do lead é obrigatório";
+    if (!formData.empresa_origem_id) errors.empresa_origem_id = "Empresa de origem é obrigatória";
+    if (!formData.empresa_destino_id) errors.empresa_destino_id = "Empresa de destino é obrigatória";
+    if (!formData.status) errors.status = "Status é obrigatório";
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateForm()) {
-      toast({
-        title: "Erro de validação",
-        description: "Corrija os erros no formulário para continuar.",
-        variant: "destructive"
-      });
-      return;
-    }
+    if (!validate()) return;
     setIsSaving(true);
     try {
       if (isEditing && oportunidadeId) {
-        await updateOportunidade(oportunidadeId, formData);
+        const ok = await updateOportunidade(oportunidadeId, formData);
+        if (ok) {
+          toast({
+            title: "Sucesso",
+            description: "Oportunidade atualizada com sucesso!",
+          });
+          onClose();
+        } else {
+          toast({
+            title: "Erro",
+            description: "Não foi possível atualizar a oportunidade.",
+            variant: "destructive",
+          });
+        }
       } else {
-        await createOportunidade(formData);
+        const newId = await createOportunidade(formData);
+        if (newId) {
+          toast({
+            title: "Sucesso",
+            description: "Oportunidade criada com sucesso!",
+          });
+          onClose();
+        } else {
+          toast({
+            title: "Erro",
+            description: "Não foi possível criar a oportunidade.",
+            variant: "destructive",
+          });
+        }
       }
-      onClose();
     } catch (error) {
       toast({
         title: "Erro",
-        description: "Falha ao salvar oportunidade.",
-        variant: "destructive"
+        description: "Ocorreu um erro ao salvar.",
+        variant: "destructive",
       });
     } finally {
       setIsSaving(false);
     }
   };
 
-  if (isLoading) {
-    return <div className="text-center py-8">Carregando...</div>;
-  }
-
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <h2 className="text-xl font-bold">{isEditing ? "Editar Oportunidade" : "Nova Oportunidade"}</h2>
-      {/* Indicador de natureza */}
-      <div className="mb-4">
-        <span className="font-medium">Tipo: </span>
-        {formData.tipo_natureza === "intragrupo" ? (
-          <span className="px-2 py-1 rounded text-green-700 bg-green-100">INTRAGRUPO</span>
-        ) : formData.tipo_natureza === "extragrupo" ? (
-          <span className="px-2 py-1 rounded text-blue-700 bg-blue-100">EXTRAGRUPO</span>
-        ) : (
-          <span className="px-2 py-1 rounded text-gray-700 bg-gray-100">-</span>
-        )}
+    <form onSubmit={handleSubmit} className="space-y-4 bg-white p-6 rounded shadow-md">
+      <h2 className="text-xl font-semibold mb-4">{isEditing ? "Editar Oportunidade" : "Nova Oportunidade"}</h2>
+      
+      <div>
+        <Label htmlFor="nome_lead">Nome do Lead</Label>
+        <Input
+          id="nome_lead"
+          value={formData.nome_lead || ""}
+          onChange={(e) => handleChange("nome_lead", e.target.value)}
+          required
+        />
+        {formErrors.nome_lead && <span className="text-red-500 text-xs">{formErrors.nome_lead}</span>}
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Nome */}
-        <div className="space-y-2 md:col-span-2">
-          <Label htmlFor="nome_lead">
-            Nome da Oportunidade <span className="text-red-500">*</span>
-          </Label>
-          <Input
-            id="nome_lead"
-            value={formData.nome_lead || ""}
-            onChange={e => handleChange("nome_lead", e.target.value)}
-            required
-            className={cn(formErrors.nome_lead && "border-red-500")}
-          />
-          {formErrors.nome_lead && (
-            <p className="text-sm text-red-500">{formErrors.nome_lead}</p>
-          )}
-        </div>
-        {/* Origem */}
-        <div className="space-y-2">
-          <Label htmlFor="empresa_origem_id">
-            Origem <span className="text-red-500">*</span>
-          </Label>
-          <Select 
-            value={formData.empresa_origem_id || "none"}
-            onValueChange={value => handleChange("empresa_origem_id", value === "none" ? undefined : value)}
-          >
-            <SelectTrigger id="empresa_origem_id" className={cn(formErrors.empresa_origem_id && "border-red-500")}>
-              <SelectValue placeholder="Selecione a empresa de origem" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">Nenhuma</SelectItem>
-              {empresas.map(empresa => (
-                <SelectItem key={empresa.id} value={empresa.id}>{empresa.nome}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {formErrors.empresa_origem_id && (
-            <p className="text-sm text-red-500">{formErrors.empresa_origem_id}</p>
-          )}
-        </div>
-        {/* Destino */}
-        <div className="space-y-2">
-          <Label htmlFor="empresa_destino_id">
-            Destino <span className="text-red-500">*</span>
-          </Label>
-          <Select 
-            value={formData.empresa_destino_id || "none"}
-            onValueChange={value => handleChange("empresa_destino_id", value === "none" ? undefined : value)}
-          >
-            <SelectTrigger id="empresa_destino_id" className={cn(formErrors.empresa_destino_id && "border-red-500")}>
-              <SelectValue placeholder="Selecione a empresa de destino" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">Nenhuma</SelectItem>
-              {empresas.map(empresa => (
-                <SelectItem key={empresa.id} value={empresa.id}>{empresa.nome}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {formErrors.empresa_destino_id && (
-            <p className="text-sm text-red-500">{formErrors.empresa_destino_id}</p>
-          )}
-        </div>
-        {/* Data */}
-        <div className="space-y-2">
-          <Label htmlFor="data_indicacao">
-            Data <span className="text-red-500">*</span>
-          </Label>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                id="data_indicacao"
-                variant={"outline"}
-                className={cn(
-                  "w-full justify-start text-left font-normal",
-                  formErrors.data_indicacao && "border-red-500",
-                  !formData.data_indicacao && "text-muted-foreground"
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {formData.data_indicacao ? (
-                  format(new Date(formData.data_indicacao), "dd/MM/yyyy", { locale: ptBR })
-                ) : (
-                  <span>Selecione a data</span>
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0">
-              <Calendar
-                mode="single"
-                selected={formData.data_indicacao ? new Date(formData.data_indicacao) : undefined}
-                onSelect={(date) => date && handleChange("data_indicacao", date.toISOString())}
-                initialFocus
-              />
-            </PopoverContent>
-          </Popover>
-          {formErrors.data_indicacao && (
-            <p className="text-sm text-red-500">{formErrors.data_indicacao}</p>
-          )}
-        </div>
-        {/* Contato (opcional) */}
-        <div className="space-y-2">
-          <Label>Contato na Empresa Indicada (opcional)</Label>
-          <Input
-            placeholder="Nome"
-            value={formData.contato?.nome || ""}
-            onChange={e => setFormData(prev => ({
-              ...prev,
-              contato: { ...prev.contato, nome: e.target.value }
-            }))}
-          />
-          <Input
-            placeholder="Email"
-            type="email"
-            value={formData.contato?.email || ""}
-            onChange={e => setFormData(prev => ({
-              ...prev,
-              contato: { ...prev.contato, email: e.target.value }
-            }))}
-          />
-          <Input
-            placeholder="Telefone"
-            value={formData.contato?.telefone || ""}
-            onChange={e => setFormData(prev => ({
-              ...prev,
-              contato: { ...prev.contato, telefone: e.target.value }
-            }))}
-          />
-        </div>
-        {/* Executivo interno responsável */}
-        <div className="space-y-2">
-          <Label htmlFor="usuario_recebe_nome">
-            Executivo Interno Responsável <span className="text-red-500">*</span>
-          </Label>
-          <Input
-            id="usuario_recebe_nome"
-            value={formData.usuario_recebe_nome || ""}
-            onChange={e => handleChange("usuario_recebe_nome", e.target.value)}
-            required
-            className={cn(formErrors.usuario_recebe_nome && "border-red-500")}
-          />
-          {formErrors.usuario_recebe_nome && (
-            <p className="text-sm text-red-500">{formErrors.usuario_recebe_nome}</p>
-          )}
-        </div>
+
+      <div>
+        <Label htmlFor="empresa_origem_id">Empresa de Origem</Label>
+        <Select
+          value={formData.empresa_origem_id || ""}
+          onValueChange={(value) => handleChange("empresa_origem_id", value)}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Selecione a empresa de origem" />
+          </SelectTrigger>
+          <SelectContent>
+            {empresas.map((empresa) => (
+              <SelectItem key={empresa.id} value={empresa.id}>
+                {empresa.nome}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {formErrors.empresa_origem_id && <span className="text-red-500 text-xs">{formErrors.empresa_origem_id}</span>}
       </div>
-      <div className="flex justify-end space-x-2 pt-4">
+
+      <div>
+        <Label htmlFor="empresa_destino_id">Empresa de Destino</Label>
+        <Select
+          value={formData.empresa_destino_id || ""}
+          onValueChange={(value) => handleChange("empresa_destino_id", value)}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Selecione a empresa de destino" />
+          </SelectTrigger>
+          <SelectContent>
+            {empresas.map((empresa) => (
+              <SelectItem key={empresa.id} value={empresa.id}>
+                {empresa.nome}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {formErrors.empresa_destino_id && <span className="text-red-500 text-xs">{formErrors.empresa_destino_id}</span>}
+      </div>
+
+      <div>
+        <Label>Status</Label>
+        <Select
+          value={formData.status || "em_contato"}
+          onValueChange={(value: StatusOportunidade) => handleChange("status", value)}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Selecione o status da oportunidade" />
+          </SelectTrigger>
+          <SelectContent>
+            {STATUS_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {formErrors.status && <span className="text-red-500 text-xs">{formErrors.status}</span>}
+      </div>
+
+      <div>
+        <Label htmlFor="data_indicacao">Data de Indicação</Label>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant={"outline"}
+              className={cn(
+                "w-full justify-start text-left font-normal",
+                !formData.data_indicacao && "text-muted-foreground"
+              )}
+              type="button"
+            >
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {formData.data_indicacao
+                ? format(new Date(formData.data_indicacao), "dd/MM/yyyy", { locale: ptBR })
+                : "Selecione a data"}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              mode="single"
+              selected={formData.data_indicacao ? new Date(formData.data_indicacao) : undefined}
+              onSelect={handleDateChange}
+              initialFocus
+            />
+          </PopoverContent>
+        </Popover>
+      </div>
+
+      {/* Outros campos do formulário (contato, valor, etc) podem ser adicionados aqui */}
+
+      <div className="flex gap-2 justify-end pt-4">
         <Button type="button" variant="outline" onClick={onClose} disabled={isSaving}>
           Cancelar
         </Button>
         <Button type="submit" disabled={isSaving}>
-          {isSaving ? "Salvando..." : isEditing ? "Atualizar" : "Salvar"}
+          {isSaving ? "Salvando..." : "Salvar"}
         </Button>
       </div>
     </form>
