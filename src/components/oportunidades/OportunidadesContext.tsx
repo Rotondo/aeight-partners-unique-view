@@ -20,6 +20,11 @@ interface OportunidadesContextType {
 
 const OportunidadesContext = createContext<OportunidadesContextType | undefined>(undefined);
 
+function isValidUUID(uuid: string | undefined | null): boolean {
+  if (!uuid) return false;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(uuid);
+}
+
 export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [oportunidades, setOportunidades] = useState<Oportunidade[]>([]);
   const [filteredOportunidades, setFilteredOportunidades] = useState<Oportunidade[]>([]);
@@ -41,7 +46,6 @@ export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ child
       setIsLoading(true);
       setError(null);
 
-      // Seleção de campos explícitos para evitar stack overflow e sobrescrita
       let query = supabase
         .from('oportunidades')
         .select(`
@@ -80,7 +84,7 @@ export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ child
           empresa_destino_id: item.empresa_destino_id,
           contato_id: item.contato_id,
           valor: item.valor,
-          status: item.status as StatusOportunidade, // Garantir cast correto
+          status: item.status as StatusOportunidade,
           data_indicacao: item.data_indicacao,
           data_fechamento: item.data_fechamento,
           motivo_perda: item.motivo_perda,
@@ -89,7 +93,6 @@ export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ child
           observacoes: item.observacoes,
           nome_lead: item.nome_lead,
           created_at: item.created_at,
-          // Adicionar propriedades calculadas
           tipo_relacao: item.empresa_origem?.tipo === "intragrupo" && item.empresa_destino?.tipo === "intragrupo" ? "intra" : "extra",
           isRemetente: item.usuario_envio_id === user?.id,
           isDestinatario: item.usuario_recebe_id === user?.id,
@@ -228,10 +231,43 @@ export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ child
     }
 
     try {
+      // Validação UUID dos campos obrigatórios
       if (!oportunidade.empresa_origem_id || !oportunidade.empresa_destino_id) {
         toast({
           title: "Erro",
           description: "Empresa de origem e destino são obrigatórias.",
+          variant: "destructive",
+        });
+        return null;
+      }
+      if (!isValidUUID(oportunidade.empresa_origem_id)) {
+        toast({
+          title: "Erro",
+          description: "ID da empresa de origem é inválido.",
+          variant: "destructive",
+        });
+        return null;
+      }
+      if (!isValidUUID(oportunidade.empresa_destino_id)) {
+        toast({
+          title: "Erro",
+          description: "ID da empresa de destino é inválido.",
+          variant: "destructive",
+        });
+        return null;
+      }
+      if (oportunidade.contato_id && !isValidUUID(oportunidade.contato_id)) {
+        toast({
+          title: "Erro",
+          description: "ID do contato é inválido.",
+          variant: "destructive",
+        });
+        return null;
+      }
+      if (oportunidade.usuario_recebe_id && !isValidUUID(oportunidade.usuario_recebe_id)) {
+        toast({
+          title: "Erro",
+          description: "ID do executivo responsável é inválido.",
           variant: "destructive",
         });
         return null;
