@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import {
   Card, CardContent, CardDescription, CardHeader, CardTitle
@@ -271,9 +270,13 @@ export const OportunidadesDashboards: React.FC = () => {
           <tfoot>
             <tr>
               <td className="border p-1 font-bold">Total</td>
-              {cols.map(c => (
-                <td className={`border p-1 text-center font-bold ${colTotals[c] === 0 ? 'opacity-40' : ''}`} key={c}>{colTotals[c]}</td>
-              ))}
+              {cols.map(c => {
+                const totalValue = colTotals[c];
+                const displayTotal = totalValue !== null && totalValue !== undefined ? String(totalValue) : '0';
+                return (
+                  <td className={`border p-1 text-center font-bold ${totalValue === 0 ? 'opacity-40' : ''}`} key={c}>{displayTotal}</td>
+                );
+              })}
               <td className="border p-1 text-center font-bold">{grandTotal}</td>
             </tr>
           </tfoot>
