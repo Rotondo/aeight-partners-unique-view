@@ -103,12 +103,13 @@ export const OportunidadesDashboards: React.FC = () => {
       const { data: empresasDb } = await supabase.from("empresas").select("*").order("nome");
       setEmpresas(empresasDb || []);
       const { data: oportunidadesDb } = await supabase.from("oportunidades").select("*, empresa_origem:empresas!empresa_origem_id(id, nome, tipo), empresa_destino:empresas!empresa_destino_id(id, nome, tipo)");
+      
       // Coletar todos os anos disponíveis para filtro
       const anos = Array.from(new Set((oportunidadesDb || []).map((op: any) => {
         if (!op.data_indicacao) return null;
         return (new Date(op.data_indicacao)).getFullYear();
-      }).filter(Boolean))).sort((a, b) => b - a);
-      setAvailableYears(anos);
+      }).filter(Boolean))).sort((a, b) => (b as number) - (a as number));
+      setAvailableYears(anos as number[]);
 
       const oportunidadesFiltradas = (oportunidadesDb || []).filter((op: any) => {
         const dataInd = op.data_indicacao ? new Date(op.data_indicacao) : null;
@@ -126,7 +127,7 @@ export const OportunidadesDashboards: React.FC = () => {
       setOportunidades(oportunidadesFiltradas);
 
       // Matriz INTRAGRUPO
-      const intra = empresasDb.filter((e: any) => e.tipo === "intragrupo");
+      const intra = empresasDb?.filter((e: any) => e.tipo === "intragrupo") || [];
       const matrizIntraRows = intra.map((orig: any) => {
         const row: any = { origem: orig.nome };
         intra.forEach((dest: any) => {
@@ -137,8 +138,8 @@ export const OportunidadesDashboards: React.FC = () => {
               (op: any) =>
                 op.empresa_origem_id === orig.id &&
                 op.empresa_destino_id === dest.id &&
-                op.empresa_origem.tipo === "intragrupo" &&
-                op.empresa_destino.tipo === "intragrupo"
+                op.empresa_origem?.tipo === "intragrupo" &&
+                op.empresa_destino?.tipo === "intragrupo"
             ).length;
           }
         });
@@ -147,7 +148,7 @@ export const OportunidadesDashboards: React.FC = () => {
       setMatrizIntra(matrizIntraRows);
 
       // Matriz PARCEIROS
-      const parceiros = empresasDb.filter((e: any) => e.tipo === "parceiro");
+      const parceiros = empresasDb?.filter((e: any) => e.tipo === "parceiro") || [];
       const matrizParceirosRows = parceiros.map((parc: any) => {
         const row: any = { parceiro: parc.nome };
         intra.forEach((intraE: any) => {
@@ -158,7 +159,7 @@ export const OportunidadesDashboards: React.FC = () => {
                 (op.empresa_origem_id === intraE.id && op.empresa_destino_id === parc.id)
               ) &&
               (
-                op.empresa_origem.tipo === "parceiro" || op.empresa_destino.tipo === "parceiro"
+                op.empresa_origem?.tipo === "parceiro" || op.empresa_destino?.tipo === "parceiro"
               )
             ).length;
         });
@@ -193,7 +194,7 @@ export const OportunidadesDashboards: React.FC = () => {
         if (!statusCount[op.status]) statusCount[op.status] = 0;
         statusCount[op.status]++;
       });
-      setStatusDistribuicao(Object.entries(statusCount).map(([status, total]) => ({ status, total })));
+      setStatusDistribuicao(Object.entries(statusCount).map(([status, total]) => ({ status, total: total as number })));
 
       // Ranking Enviadas/Recebidas
       const rankingEnv: any = {};
@@ -208,12 +209,12 @@ export const OportunidadesDashboards: React.FC = () => {
           rankingRec[op.empresa_destino.nome]++;
         }
       });
-      setRankingEnviadas(Object.entries(rankingEnv).map(([empresa, indicacoes]) => ({ empresa, indicacoes })).sort((a, b) => b.indicacoes - a.indicacoes));
-      setRankingRecebidas(Object.entries(rankingRec).map(([empresa, indicacoes]) => ({ empresa, indicacoes })).sort((a, b) => b.indicacoes - a.indicacoes));
+      setRankingEnviadas(Object.entries(rankingEnv).map(([empresa, indicacoes]) => ({ empresa, indicacoes: indicacoes as number })).sort((a, b) => b.indicacoes - a.indicacoes));
+      setRankingRecebidas(Object.entries(rankingRec).map(([empresa, indicacoes]) => ({ empresa, indicacoes: indicacoes as number })).sort((a, b) => b.indicacoes - a.indicacoes));
 
       // Balanço Grupo x Parceiros
-      const balGrupo = oportunidadesFiltradas.filter((op: any) => op.empresa_origem.tipo === "intragrupo" && op.empresa_destino.tipo === "parceiro").length;
-      const balParc = oportunidadesFiltradas.filter((op: any) => op.empresa_origem.tipo === "parceiro" && op.empresa_destino.tipo === "intragrupo").length;
+      const balGrupo = oportunidadesFiltradas.filter((op: any) => op.empresa_origem?.tipo === "intragrupo" && op.empresa_destino?.tipo === "parceiro").length;
+      const balParc = oportunidadesFiltradas.filter((op: any) => op.empresa_origem?.tipo === "parceiro" && op.empresa_destino?.tipo === "intragrupo").length;
       setBalanco([
         { tipo: "Grupo → Parceiros", valor: balGrupo },
         { tipo: "Parceiros → Grupo", valor: balParc }
@@ -231,9 +232,10 @@ export const OportunidadesDashboards: React.FC = () => {
     const cols = Object.keys(rows[0]).filter(c => c !== colKey);
     const colTotals: any = {};
     cols.forEach(c => {
-      colTotals[c] = rows.reduce((acc, row) => acc + (row[c] !== '-' ? row[c] : 0), 0);
+      colTotals[c] = rows.reduce((acc, row) => acc + (typeof row[c] === 'number' ? row[c] : 0), 0);
     });
-    const grandTotal = Object.values(colTotals).reduce((a: any, b: any) => a + b, 0);
+    const grandTotal = Object.values(colTotals).reduce((a: any, b: any) => (a as number) + (b as number), 0);
+    
     return (
       <div className="overflow-x-auto">
         <table className="min-w-full text-xs border">
@@ -253,7 +255,9 @@ export const OportunidadesDashboards: React.FC = () => {
                   {cols.map(c => {
                     let value = row[c];
                     if (value === '-') return <td className="border p-1 text-center opacity-60" key={c}>-</td>;
-                    rowTotal += value;
+                    if (typeof value === 'number') {
+                      rowTotal += value;
+                    }
                     return <td className={`border p-1 text-center ${value === 0 ? 'opacity-40' : ''}`} key={c}>{value}</td>;
                   })}
                   <td className="border p-1 text-center font-bold">{rowTotal}</td>
@@ -632,14 +636,11 @@ export const OportunidadesDashboards: React.FC = () => {
           <div className="w-full md:w-auto">
             <Label htmlFor="quarter">Quarter</Label>
             <Select
-              value={quarters.join(',')}
-              onValueChange={v => setQuarters(
-                v ? v.split(',') : []
-              )}
-              multiple
+              value={quarters[0] || "Q1"}
+              onValueChange={v => setQuarters([v])}
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Selecione quarter(s)" />
+                <SelectValue placeholder="Selecione quarter" />
               </SelectTrigger>
               <SelectContent>
                 {quartersOptions.map(q => (

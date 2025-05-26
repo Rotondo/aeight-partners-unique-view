@@ -39,7 +39,7 @@ export const OportunidadesStats: React.FC = () => {
   const [selectedTab, setSelectedTab] = useState("mensal");
 
   const [periodo, setPeriodo] = useState("mes");
-  const [quarters, setQuarters] = useState(['Q1', 'Q2', 'Q3', 'Q4']);
+  const [quarterSelected, setQuarterSelected] = useState('Q1'); // Mudança: single quarter
   const [quarterYear, setQuarterYear] = useState<number>(new Date().getFullYear());
   const [grupoStatus, setGrupoStatus] = useState("all"); // all, intra, extra
 
@@ -52,7 +52,7 @@ export const OportunidadesStats: React.FC = () => {
       if (!op.data_indicacao) return null;
       try { return new Date(op.data_indicacao).getFullYear(); }
       catch { return null; }
-    }).filter(Boolean))).sort((a, b) => b - a);
+    }).filter(Boolean))).sort((a, b) => (b as number) - (a as number));
   }, [oportunidades]);
 
   const oportunidadesFiltradas = useMemo(() => {
@@ -61,17 +61,17 @@ export const OportunidadesStats: React.FC = () => {
       const dataInd = parseISO(op.data_indicacao);
       let match = true;
       if (periodo === "quarter") {
-        match = match && quarters.includes(getQuarter(dataInd)) && getYear(dataInd) === quarterYear;
+        match = match && quarterSelected === getQuarter(dataInd) && getYear(dataInd) === quarterYear;
       }
       if (grupoStatus === "intragrupo") {
-        match = match && getGrupoStatus(op.empresa_origem?.tipo, op.empresa_destino?.tipo) === "intragrupo";
+        match = match && getGrupoStatus(op.empresa_origem?.tipo || "", op.empresa_destino?.tipo || "") === "intragrupo";
       }
       if (grupoStatus === "extragrupo") {
-        match = match && getGrupoStatus(op.empresa_origem?.tipo, op.empresa_destino?.tipo) === "extragrupo";
+        match = match && getGrupoStatus(op.empresa_origem?.tipo || "", op.empresa_destino?.tipo || "") === "extragrupo";
       }
       return match;
     });
-  }, [oportunidades, periodo, quarters, quarterYear, grupoStatus]);
+  }, [oportunidades, periodo, quarterSelected, quarterYear, grupoStatus]);
 
   // KPIs
   const total = oportunidades.length;
@@ -255,9 +255,8 @@ export const OportunidadesStats: React.FC = () => {
                     <div>
                       <label>Quarter</label>
                       <Select
-                        value={quarters.join(",")}
-                        onValueChange={v => setQuarters(v ? v.split(",") : [])}
-                        multiple
+                        value={quarterSelected}
+                        onValueChange={setQuarterSelected}
                       >
                         <SelectTrigger className="w-36">
                           <SelectValue />

@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import { Oportunidade, StatusOportunidade, OportunidadesFilterParams } from "@/types";
 import { useToast } from "@/hooks/use-toast";
@@ -80,7 +81,7 @@ export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ child
           empresa_destino_id: item.empresa_destino_id,
           contato_id: item.contato_id,
           valor: item.valor,
-          status: typeof item.status === "string" ? item.status as StatusOportunidade : String(item.status),
+          status: item.status as StatusOportunidade, // Garantir cast correto
           data_indicacao: item.data_indicacao,
           data_fechamento: item.data_fechamento,
           motivo_perda: item.motivo_perda,
@@ -89,6 +90,11 @@ export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ child
           observacoes: item.observacoes,
           nome_lead: item.nome_lead,
           created_at: item.created_at,
+          // Adicionar propriedades calculadas
+          tipo_relacao: item.empresa_origem?.tipo === "intragrupo" && item.empresa_destino?.tipo === "intragrupo" ? "intra" : "extra",
+          isRemetente: item.usuario_envio_id === user?.id,
+          isDestinatario: item.usuario_recebe_id === user?.id,
+          tipo_natureza: item.empresa_origem?.tipo === "intragrupo" && item.empresa_destino?.tipo === "intragrupo" ? "intragrupo" : "extragrupo",
           empresa_origem: item.empresa_origem
             ? {
                 id: item.empresa_origem.id,
