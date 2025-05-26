@@ -1,8 +1,9 @@
+
 import React, { useState } from "react";
 import { OportunidadesProvider } from "@/components/oportunidades/OportunidadesContext";
 import { OportunidadesList } from "@/components/oportunidades/OportunidadesList";
 import { OportunidadesFilter } from "@/components/oportunidades/OportunidadesFilter";
-import { OportunidadesForm } from "@/components/oportunidades/OportunidadesForm";
+import { OportunidadesForm } from "@/components/oportunidades/OportunidadesForm"; // Corrigido: import named
 import { OportunidadesStats } from "@/components/oportunidades/OportunidadesStats";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";

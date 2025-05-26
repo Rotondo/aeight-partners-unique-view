@@ -56,7 +56,8 @@ function getGrupoStatus(origemTipo?: string, destinoTipo?: string) {
   return undefined;
 }
 
-const statusOptions: StatusOportunidade[] = [
+// Array de valores válidos para o status (em vez de usar o tipo como valor)
+const statusOptions: string[] = [
   "em_contato",
   "negociando",
   "ganho",
@@ -144,7 +145,7 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({
       });
     }
     // eslint-disable-next-line
-  }, [oportunidadeId, isEditing, getOportunidade]);
+  }, [oportunidadeId, isEditing, getOportunidade, onClose, toast]);
 
   // Buscar empresas
   useEffect(() => {
@@ -170,7 +171,7 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({
       }
     };
     fetchEmpresas();
-  }, []);
+  }, [toast]);
 
   // Buscar usuários ativos
   useEffect(() => {
@@ -192,7 +193,7 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({
       }
     };
     fetchUsuarios();
-  }, []);
+  }, [toast]);
 
   // Atualiza campo tipo_natureza apenas para visualização
   useEffect(() => {
@@ -210,7 +211,7 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({
       );
     }
     // eslint-disable-next-line
-  }, [formData?.empresa_origem_id, formData?.empresa_destino_id, empresas]);
+  }, [formData?.empresa_origem_id, formData?.empresa_destino_id, empresas, formData]);
 
   if (!formData) {
     return <div className="text-center py-8">Carregando...</div>;
