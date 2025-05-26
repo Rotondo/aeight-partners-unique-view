@@ -20,6 +20,7 @@ interface OportunidadesContextType {
 
 const OportunidadesContext = createContext<OportunidadesContextType | undefined>(undefined);
 
+// Validação de UUID v4
 function isValidUUID(uuid: string | undefined | null): boolean {
   if (!uuid) return false;
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(uuid);
@@ -231,7 +232,7 @@ export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ child
     }
 
     try {
-      // Validação UUID dos campos obrigatórios
+      // Validação UUID dos campos obrigatórios e opcionais
       if (!oportunidade.empresa_origem_id || !oportunidade.empresa_destino_id) {
         toast({
           title: "Erro",
