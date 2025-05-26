@@ -24,7 +24,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 
-// Textarea custom para campos longos (ajuste para seu design system se necessário)
+// Textarea custom para campos longos
 const Textarea: React.FC<React.TextareaHTMLAttributes<HTMLTextAreaElement>> = (
   props
 ) => (
@@ -56,7 +56,6 @@ function getGrupoStatus(origemTipo?: string, destinoTipo?: string) {
   return undefined;
 }
 
-// Array de valores válidos para o status (em vez de usar o tipo como valor)
 const statusOptions: string[] = [
   "em_contato",
   "negociando",
@@ -65,7 +64,6 @@ const statusOptions: string[] = [
   "Contato",
 ];
 
-// Somente os campos válidos para inserção/atualização
 const allowedPayloadFields: (keyof Oportunidade)[] = [
   "nome_lead",
   "empresa_origem_id",
@@ -88,6 +86,12 @@ function filterPayloadOportunidade(data: Partial<Oportunidade>) {
   return result;
 }
 
+// Função utilitária para validar UUID
+function isValidUUID(uuid: string | undefined | null): boolean {
+  if (!uuid) return false;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(uuid);
+}
+
 export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({
   oportunidadeId,
   onClose,
@@ -104,12 +108,10 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({
   const [formData, setFormData] = useState<Partial<Oportunidade> | null>(null);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
-  // Carrega dados da oportunidade selecionada para edição
   useEffect(() => {
     if (isEditing && oportunidadeId) {
       const oportunidade = getOportunidade(oportunidadeId);
       if (oportunidade) {
-        // Remove campos de join do formData
         const {
           contato,
           empresa_origem,
@@ -147,7 +149,6 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({
     // eslint-disable-next-line
   }, [oportunidadeId, isEditing, getOportunidade, onClose, toast]);
 
-  // Buscar empresas
   useEffect(() => {
     const fetchEmpresas = async () => {
       setIsLoading(true);
@@ -173,7 +174,6 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({
     fetchEmpresas();
   }, [toast]);
 
-  // Buscar usuários ativos
   useEffect(() => {
     const fetchUsuarios = async () => {
       try {
@@ -195,7 +195,6 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({
     fetchUsuarios();
   }, [toast]);
 
-  // Atualiza campo tipo_natureza apenas para visualização
   useEffect(() => {
     if (!formData) return;
     const empresaOrigemTipo = empresas.find(
@@ -228,7 +227,7 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({
     }
   };
 
-  // Validação dos campos obrigatórios
+  // Validação dos campos obrigatórios e do formato dos IDs
   const validateForm = () => {
     const errors: Record<string, string> = {};
     if (!formData.nome_lead || !formData.nome_lead.trim()) {
@@ -236,9 +235,13 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({
     }
     if (!formData.empresa_origem_id || formData.empresa_origem_id === "none") {
       errors.empresa_origem_id = "Origem é obrigatória";
+    } else if (!isValidUUID(formData.empresa_origem_id)) {
+      errors.empresa_origem_id = "Origem inválida. Entre em contato com o suporte.";
     }
     if (!formData.empresa_destino_id || formData.empresa_destino_id === "none") {
       errors.empresa_destino_id = "Destino é obrigatória";
+    } else if (!isValidUUID(formData.empresa_destino_id)) {
+      errors.empresa_destino_id = "Destino inválido. Entre em contato com o suporte.";
     }
     if (!formData.data_indicacao) {
       errors.data_indicacao = "Data é obrigatória";
@@ -251,6 +254,21 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({
       (!formData.motivo_perda || !formData.motivo_perda.trim())
     ) {
       errors.motivo_perda = "Motivo da perda é obrigatório";
+    }
+    // Validação de usuário_recebe_id (quando preenchido)
+    if (
+      formData.usuario_recebe_id &&
+      formData.usuario_recebe_id !== "none" &&
+      !isValidUUID(formData.usuario_recebe_id)
+    ) {
+      errors.usuario_recebe_id = "Executivo responsável inválido.";
+    }
+    // Validação de contato_id (quando preenchido)
+    if (
+      formData.contato_id &&
+      !isValidUUID(formData.contato_id)
+    ) {
+      errors.contato_id = "Contato inválido.";
     }
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
@@ -268,7 +286,6 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({
     }
     setIsSaving(true);
     try {
-      // Só envia campos válidos para o backend
       const dataToSave = filterPayloadOportunidade(formData);
 
       if (isEditing && oportunidadeId) {
@@ -502,6 +519,9 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({
               ))}
             </SelectContent>
           </Select>
+          {formErrors.usuario_recebe_id && (
+            <p className="text-sm text-red-500">{formErrors.usuario_recebe_id}</p>
+          )}
         </div>
         {/* Valor (opcional) */}
         <div className="space-y-2">
