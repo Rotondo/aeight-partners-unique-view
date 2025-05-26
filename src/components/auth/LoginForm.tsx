@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -20,7 +19,7 @@ const LoginForm: React.FC = () => {
 
     try {
       const success = await login(email, senha);
-      
+
       if (success) {
         toast({
           title: "Login bem-sucedido",
@@ -115,6 +114,9 @@ const LoginForm: React.FC = () => {
       <div className="mt-6 text-sm text-slate-500">
         Acesso restrito aos integrantes do Grupo A&eight e parceiros autorizados.
       </div>
+      <footer style={{ marginTop: 32, fontSize: 12, color: '#888' }}>
+        Desenvolvido por Thiago Rotondo
+      </footer>
     </div>
   );
 };
