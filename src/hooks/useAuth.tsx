@@ -17,6 +17,7 @@ interface AuthContextType {
   error: string | null;
   login: (email: string, senha: string) => Promise<boolean>;
   logout: () => void;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -26,6 +27,7 @@ const AuthContext = createContext<AuthContextType>({
   error: null,
   login: async () => false,
   logout: () => {},
+  refreshUser: async () => {},
 });
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
@@ -33,39 +35,50 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Recupera sessão persistida
-  useEffect(() => {
-    const getSession = async () => {
-      setLoading(true);
-      const { data } = await supabase.auth.getUser();
-      if (data?.user) {
-        const { user: supaUser } = data;
-        // Busca dados adicionais do usuário na tabela usuarios
-        const { data: dbUser } = await supabase
-          .from("usuarios")
-          .select("*")
-          .eq("email", supaUser.email)
-          .maybeSingle();
-        if (dbUser) {
-          setUser({
-            id: dbUser.id,
-            nome: dbUser.nome,
-            email: dbUser.email,
-            papel: dbUser.papel,
-            empresa_id: dbUser.empresa_id,
-            ativo: dbUser.ativo,
-          });
-        } else {
-          // Caso não haja dados na tabela, usa o mínimo do auth
-          setUser({
-            id: supaUser.id,
-            email: supaUser.email ?? "",
-          });
-        }
-      }
+  // Busca usuário da tabela usuarios pelo e-mail do Auth
+  const fetchUserFromDB = async (email: string | null | undefined) => {
+    if (!email) return null;
+    const { data, error: dbError } = await supabase
+      .from("usuarios")
+      .select("*")
+      .eq("email", email)
+      .maybeSingle();
+    if (dbError) {
+      setError("Erro ao buscar seus dados no banco: " + dbError.message);
+      return null;
+    }
+    if (data) {
+      return {
+        id: data.id,
+        nome: data.nome,
+        email: data.email,
+        papel: data.papel,
+        empresa_id: data.empresa_id,
+        ativo: data.ativo,
+      } as User;
+    }
+    return null;
+  };
+
+  // Atualiza o usuário logado (ex: após login, logout, refresh)
+  const refreshUser = async () => {
+    setLoading(true);
+    setError(null);
+    const { data: authData, error: authError } = await supabase.auth.getUser();
+    if (authError || !authData?.user) {
+      setUser(null);
       setLoading(false);
-    };
-    getSession();
+      return;
+    }
+    const dbUser = await fetchUserFromDB(authData.user.email);
+    setUser(dbUser);
+    setLoading(false);
+  };
+
+  // Inicialização: tenta restaurar a sessão persistida e busca dados do usuário da tabela usuarios
+  useEffect(() => {
+    refreshUser();
+    // eslint-disable-next-line
   }, []);
 
   const login = async (email: string, senha: string): Promise<boolean> => {
@@ -83,36 +96,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       return false;
     }
 
-    // Busca dados adicionais na tabela usuarios
-    const { user: supaUser } = data;
-    if (supaUser) {
-      const { data: dbUser } = await supabase
-        .from("usuarios")
-        .select("*")
-        .eq("email", supaUser.email)
-        .maybeSingle();
-      if (dbUser) {
-        setUser({
-          id: dbUser.id,
-          nome: dbUser.nome,
-          email: dbUser.email,
-          papel: dbUser.papel,
-          empresa_id: dbUser.empresa_id,
-          ativo: dbUser.ativo,
-        });
-      } else {
-        setUser({
-          id: supaUser.id,
-          email: supaUser.email ?? "",
-        });
-      }
-      setLoading(false);
-      return true;
-    }
-    setError("Erro inesperado ao autenticar.");
-    setUser(null);
+    // Busca dados da tabela usuarios
+    const dbUser = await fetchUserFromDB(email);
+    setUser(dbUser);
     setLoading(false);
-    return false;
+    return !!dbUser;
   };
 
   const logout = async () => {
@@ -126,11 +114,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     <AuthContext.Provider
       value={{
         user,
-        isAuthenticated: !!user,
+        isAuthenticated: !!user && user.ativo !== false,
         loading,
         error,
         login,
         logout,
+        refreshUser,
       }}
     >
       {children}
