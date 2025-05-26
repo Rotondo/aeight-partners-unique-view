@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface User {
   id: string;
@@ -18,44 +19,116 @@ interface AuthContextType {
   logout: () => void;
 }
 
-const adminUser: User = {
-  id: "admin-mock-id",
-  nome: "Administrador",
-  email: "admin@admin.com",
-  papel: "admin",
-  empresa_id: "admin-empresa-id",
-  ativo: true,
-};
-
 const AuthContext = createContext<AuthContextType>({
-  user: adminUser,
-  isAuthenticated: true,
+  user: null,
+  isAuthenticated: false,
   loading: false,
   error: null,
-  login: async () => true,
+  login: async () => false,
   logout: () => {},
 });
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  // Sempre retorna admin logado
-  const [user, setUser] = useState<User | null>(adminUser);
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const login = async (_email: string, _senha: string): Promise<boolean> => {
-    setUser(adminUser);
-    return true;
+  // Recupera sessão persistida
+  useEffect(() => {
+    const getSession = async () => {
+      setLoading(true);
+      const { data } = await supabase.auth.getUser();
+      if (data?.user) {
+        const { user: supaUser } = data;
+        // Busca dados adicionais do usuário na tabela usuarios
+        const { data: dbUser } = await supabase
+          .from("usuarios")
+          .select("*")
+          .eq("email", supaUser.email)
+          .maybeSingle();
+        if (dbUser) {
+          setUser({
+            id: dbUser.id,
+            nome: dbUser.nome,
+            email: dbUser.email,
+            papel: dbUser.papel,
+            empresa_id: dbUser.empresa_id,
+            ativo: dbUser.ativo,
+          });
+        } else {
+          // Caso não haja dados na tabela, usa o mínimo do auth
+          setUser({
+            id: supaUser.id,
+            email: supaUser.email ?? "",
+          });
+        }
+      }
+      setLoading(false);
+    };
+    getSession();
+  }, []);
+
+  const login = async (email: string, senha: string): Promise<boolean> => {
+    setLoading(true);
+    setError(null);
+    const { data, error: authError } = await supabase.auth.signInWithPassword({
+      email,
+      password: senha,
+    });
+
+    if (authError) {
+      setError("Usuário ou senha inválidos.");
+      setUser(null);
+      setLoading(false);
+      return false;
+    }
+
+    // Busca dados adicionais na tabela usuarios
+    const { user: supaUser } = data;
+    if (supaUser) {
+      const { data: dbUser } = await supabase
+        .from("usuarios")
+        .select("*")
+        .eq("email", supaUser.email)
+        .maybeSingle();
+      if (dbUser) {
+        setUser({
+          id: dbUser.id,
+          nome: dbUser.nome,
+          email: dbUser.email,
+          papel: dbUser.papel,
+          empresa_id: dbUser.empresa_id,
+          ativo: dbUser.ativo,
+        });
+      } else {
+        setUser({
+          id: supaUser.id,
+          email: supaUser.email ?? "",
+        });
+      }
+      setLoading(false);
+      return true;
+    }
+    setError("Erro inesperado ao autenticar.");
+    setUser(null);
+    setLoading(false);
+    return false;
   };
 
-  const logout = () => {
-    setUser(adminUser);
+  const logout = async () => {
+    setLoading(true);
+    await supabase.auth.signOut();
+    setUser(null);
+    setLoading(false);
   };
 
   return (
     <AuthContext.Provider
       value={{
         user,
-        isAuthenticated: true,
-        loading: false,
-        error: null,
+        isAuthenticated: !!user,
+        loading,
+        error,
         login,
         logout,
       }}
