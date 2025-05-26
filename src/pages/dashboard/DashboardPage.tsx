@@ -119,7 +119,6 @@ const DashboardPage: React.FC = () => {
     }
   }
 
-  // Agrupa por quarter
   function groupByQuarter(data: Oportunidade[], tipo: "intra" | "extra" | "all") {
     const result: Record<string, { enviadas: number; recebidas: number; dateObj: Date }> = {};
     data.forEach((op) => {
@@ -142,7 +141,6 @@ const DashboardPage: React.FC = () => {
       .sort((a, b) => a.dateObj.getTime() - b.dateObj.getTime());
   }
 
-  // Agrupa por mês (ordenado por data)
   function groupByMonth(data: Oportunidade[], tipo: "intra" | "extra" | "all") {
     const result: Record<string, { enviadas: number; recebidas: number; dateObj: Date }> = {};
     data.forEach((op) => {
@@ -170,21 +168,35 @@ const DashboardPage: React.FC = () => {
       .sort((a, b) => a.dateObj.getTime() - b.dateObj.getTime());
   }
 
-  // ATUALIZAÇÃO: Cálculo do saldo apenas para oportunidades "extra"
   function processStats(oportunidades: Oportunidade[], empresas: Empresa[]) {
+    // 1. Total de Oportunidades
     const total = oportunidades.length;
+    // 2. Ganhos
     const ganhas = oportunidades.filter((op) => op.status === "ganho").length;
+    // 3. Perdidos
     const perdidas = oportunidades.filter((op) => op.status === "perdido").length;
-    const andamento = total - ganhas - perdidas;
+    // 4. Em Andamento
+    const andamento = oportunidades.filter((op) => op.status !== "ganho" && op.status !== "perdido").length;
+    // 5. Intra Grupo
     const intra = oportunidades.filter((op) => op.tipo_relacao === "intra").length;
+    // 6. Extra Grupo
     const extra = oportunidades.filter((op) => op.tipo_relacao === "extra").length;
-
-    // Saldo Envio-Recebimento: apenas "extra"
-    let enviadas = 0, recebidas = 0;
-    oportunidades.forEach((op) => {
-      if (op.tipo_relacao === "extra" && op.empresa_origem_id) enviadas++;
-      if (op.tipo_relacao === "extra" && op.empresa_destino_id) recebidas++;
-    });
+    // 7. Enviadas: oportunidades enviadas para parceiros extragrupo
+    const enviadas = oportunidades.filter(
+      (op) =>
+        op.tipo_relacao === "extra" &&
+        op.empresa_origem?.tipo === "intragrupo" &&
+        op.empresa_destino?.tipo === "parceiro"
+    ).length;
+    // 8. Recebidas: oportunidades recebidas de parceiros extragrupo
+    const recebidas = oportunidades.filter(
+      (op) =>
+        op.tipo_relacao === "extra" &&
+        op.empresa_origem?.tipo === "parceiro" &&
+        op.empresa_destino?.tipo === "intragrupo"
+    ).length;
+    // 9. Saldo Envio-Recebimento: diferença entre enviadas e recebidas (extragrupo)
+    const saldo = enviadas - recebidas;
 
     setStats({
       total,
@@ -195,7 +207,7 @@ const DashboardPage: React.FC = () => {
       extra,
       enviadas,
       recebidas,
-      saldo: enviadas - recebidas,
+      saldo,
     });
   }
 
@@ -375,7 +387,6 @@ const DashboardPage: React.FC = () => {
     return 0;
   });
 
-  // Função para renderizar uma célula da matriz/tabela com destaque baixo se for zero
   function renderCellValue(value: any) {
     if (value === 0) {
       return <span style={{ opacity: 0.3, color: "#888" }}>0</span>;
@@ -393,8 +404,8 @@ const DashboardPage: React.FC = () => {
         <DashboardCard title="Em Andamento" value={loading ? "..." : stats.andamento} icon={<ReBarChart className="h-4 w-4 text-amber-500" />} color="bg-amber-500/10" description="Em negociação" />
         <DashboardCard title="Intra Grupo" value={loading ? "..." : stats.intra} icon={<ReBarChart className="h-4 w-4 text-blue-500" />} color="bg-blue-500/10" description="Trocas dentro do grupo" />
         <DashboardCard title="Extra Grupo" value={loading ? "..." : stats.extra} icon={<ReBarChart className="h-4 w-4 text-purple-600" />} color="bg-purple-600/10" description="Trocas com terceiros" />
-        <DashboardCard title="Enviadas" value={loading ? "..." : stats.enviadas} icon={<ReBarChart className="h-4 w-4 text-cyan-500" />} color="bg-cyan-500/10" description="Oportunidades enviadas" />
-        <DashboardCard title="Recebidas" value={loading ? "..." : stats.recebidas} icon={<ReBarChart className="h-4 w-4 text-rose-500" />} color="bg-rose-500/10" description="Oportunidades recebidas" />
+        <DashboardCard title="Enviadas" value={loading ? "..." : stats.enviadas} icon={<ReBarChart className="h-4 w-4 text-cyan-500" />} color="bg-cyan-500/10" description="Oportunidades enviadas para parceiros extragrupo" />
+        <DashboardCard title="Recebidas" value={loading ? "..." : stats.recebidas} icon={<ReBarChart className="h-4 w-4 text-rose-500" />} color="bg-rose-500/10" description="Oportunidades recebidas de parceiros extragrupo" />
         <DashboardCard title="Saldo Envio-Recebimento" value={loading ? "..." : stats.saldo} icon={<ReBarChart className="h-4 w-4 text-gray-600" />} color="bg-gray-600/10" description="Saldo entre envio e recebimento (apenas Extra Grupo)" />
       </div>
       <Card>
