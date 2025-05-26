@@ -259,7 +259,9 @@ export const OportunidadesDashboards: React.FC = () => {
                     if (typeof value === 'number') {
                       rowTotal += value;
                     }
-                    return <td className={`border p-1 text-center ${value === 0 ? 'opacity-40' : ''}`} key={c}>{value}</td>;
+                    // Ensure we render a string or number, not unknown
+                    const displayValue = value !== null && value !== undefined ? String(value) : '0';
+                    return <td className={`border p-1 text-center ${value === 0 ? 'opacity-40' : ''}`} key={c}>{displayValue}</td>;
                   })}
                   <td className="border p-1 text-center font-bold">{rowTotal}</td>
                 </tr>

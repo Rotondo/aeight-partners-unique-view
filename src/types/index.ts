@@ -90,7 +90,7 @@ export interface Oportunidade {
 export type TamanhoEmpresa = "PP" | "P" | "M" | "G" | "GG";
 
 export interface IndicadoresParceiro {
-  id: string;
+  id?: string;
   empresa_id: string;
   potencial_leads: number;
   base_clientes?: number;
