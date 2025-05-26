@@ -170,6 +170,7 @@ const DashboardPage: React.FC = () => {
       .sort((a, b) => a.dateObj.getTime() - b.dateObj.getTime());
   }
 
+  // ATUALIZAÇÃO: Cálculo do saldo apenas para oportunidades "extra"
   function processStats(oportunidades: Oportunidade[], empresas: Empresa[]) {
     const total = oportunidades.length;
     const ganhas = oportunidades.filter((op) => op.status === "ganho").length;
@@ -178,10 +179,11 @@ const DashboardPage: React.FC = () => {
     const intra = oportunidades.filter((op) => op.tipo_relacao === "intra").length;
     const extra = oportunidades.filter((op) => op.tipo_relacao === "extra").length;
 
+    // Saldo Envio-Recebimento: apenas "extra"
     let enviadas = 0, recebidas = 0;
     oportunidades.forEach((op) => {
-      if (op.empresa_origem_id) enviadas++;
-      if (op.empresa_destino_id) recebidas++;
+      if (op.tipo_relacao === "extra" && op.empresa_origem_id) enviadas++;
+      if (op.tipo_relacao === "extra" && op.empresa_destino_id) recebidas++;
     });
 
     setStats({
@@ -393,7 +395,7 @@ const DashboardPage: React.FC = () => {
         <DashboardCard title="Extra Grupo" value={loading ? "..." : stats.extra} icon={<ReBarChart className="h-4 w-4 text-purple-600" />} color="bg-purple-600/10" description="Trocas com terceiros" />
         <DashboardCard title="Enviadas" value={loading ? "..." : stats.enviadas} icon={<ReBarChart className="h-4 w-4 text-cyan-500" />} color="bg-cyan-500/10" description="Oportunidades enviadas" />
         <DashboardCard title="Recebidas" value={loading ? "..." : stats.recebidas} icon={<ReBarChart className="h-4 w-4 text-rose-500" />} color="bg-rose-500/10" description="Oportunidades recebidas" />
-        <DashboardCard title="Saldo Envio-Recebimento" value={loading ? "..." : stats.saldo} icon={<ReBarChart className="h-4 w-4 text-gray-600" />} color="bg-gray-600/10" description="Saldo entre envio e recebimento" />
+        <DashboardCard title="Saldo Envio-Recebimento" value={loading ? "..." : stats.saldo} icon={<ReBarChart className="h-4 w-4 text-gray-600" />} color="bg-gray-600/10" description="Saldo entre envio e recebimento (apenas Extra Grupo)" />
       </div>
       <Card>
         <CardHeader>
