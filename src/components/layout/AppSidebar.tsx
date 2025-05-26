@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -20,8 +19,10 @@ import {
   BarChart,
   ChartBar,
   Grid,
-  Database
+  Database,
+  LogOut,
 } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 const AppSidebar: React.FC = () => {
   const location = useLocation();
@@ -64,6 +65,8 @@ const AppSidebar: React.FC = () => {
     },
   ];
 
+  const { user, isAuthenticated, logout } = useAuth();
+
   return (
     <Sidebar>
       <SidebarHeader>
@@ -89,7 +92,25 @@ const AppSidebar: React.FC = () => {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+        {isAuthenticated && user && (
+          <div className="mt-8 mb-4 px-3">
+            <div className="font-semibold">{user.nome || user.email}</div>
+            <div className="text-xs text-muted-foreground mb-1">{user.email}</div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full flex gap-2 items-center mt-2"
+              onClick={logout}
+            >
+              <LogOut size={16} />
+              Sair
+            </Button>
+          </div>
+        )}
       </SidebarContent>
+      <footer className="mt-auto p-4 text-center text-xs text-muted-foreground border-t">
+        Desenvolvido por Thiago Rotondo
+      </footer>
     </Sidebar>
   );
 };
