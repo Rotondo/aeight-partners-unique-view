@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import {
   Card, CardContent, CardDescription, CardHeader, CardTitle
@@ -289,11 +290,14 @@ export const OportunidadesDashboards: React.FC = () => {
       matrizIntraRows.forEach(row => {
         if (row.origem === nome) {
           Object.entries(row).forEach(([key, value]) => {
-            if (key !== "origem" && value !== '-' && key !== nome) enviadas += value;
+            if (key !== "origem" && value !== '-' && key !== nome && typeof value === 'number') {
+              enviadas += value;
+            }
           });
         } else {
-          if (row[nome] !== undefined && row[nome] !== '-' && row.origem !== nome) {
-            recebidas += row[nome];
+          const cellValue = row[nome];
+          if (cellValue !== undefined && cellValue !== '-' && row.origem !== nome && typeof cellValue === 'number') {
+            recebidas += cellValue;
           }
         }
       });
@@ -429,7 +433,7 @@ export const OportunidadesDashboards: React.FC = () => {
             <XAxis dataKey="month" />
             <YAxis />
             <Tooltip
-              formatter={v => Math.abs(v)}
+              formatter={(value: any) => Math.abs(Number(value))}
               labelFormatter={v => `Mês: ${v}`}
             />
             <Legend />

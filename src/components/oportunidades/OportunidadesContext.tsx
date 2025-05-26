@@ -1,6 +1,5 @@
-
 import React, { createContext, useContext, useState, ReactNode, useEffect } from "react";
-import { Oportunidade, StatusOportunidade, OportunidadesFilterParams } from "@/types";
+import { Oportunidade, StatusOportunidade, OportunidadesFilterParams, Usuario } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
@@ -63,8 +62,8 @@ export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ child
           empresa_origem:empresas!empresa_origem_id(id, nome, tipo, status, descricao),
           empresa_destino:empresas!empresa_destino_id(id, nome, tipo, status, descricao),
           contato:contatos(id, nome, email, telefone),
-          usuario_envio:usuarios!usuario_envio_id(id, nome, email, papel, ativo),
-          usuario_recebe:usuarios!usuario_recebe_id(id, nome, email, papel, ativo)
+          usuario_envio:usuarios!usuario_envio_id(id, nome, email, papel, ativo, empresa_id),
+          usuario_recebe:usuarios!usuario_recebe_id(id, nome, email, papel, ativo, empresa_id)
         `)
         .order('data_indicacao', { ascending: false });
 
@@ -114,8 +113,22 @@ export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ child
               }
             : undefined,
           contato: Array.isArray(item.contato) ? item.contato[0] : item.contato,
-          usuario_envio: item.usuario_envio,
-          usuario_recebe: item.usuario_recebe
+          usuario_envio: item.usuario_envio ? {
+            id: item.usuario_envio.id,
+            nome: item.usuario_envio.nome,
+            email: item.usuario_envio.email,
+            papel: item.usuario_envio.papel,
+            ativo: item.usuario_envio.ativo,
+            empresa_id: item.usuario_envio.empresa_id || ''
+          } : undefined,
+          usuario_recebe: item.usuario_recebe ? {
+            id: item.usuario_recebe.id,
+            nome: item.usuario_recebe.nome,
+            email: item.usuario_recebe.email,
+            papel: item.usuario_recebe.papel,
+            ativo: item.usuario_recebe.ativo,
+            empresa_id: item.usuario_recebe.empresa_id || ''
+          } : undefined
         }));
 
         setOportunidades(processedData);
