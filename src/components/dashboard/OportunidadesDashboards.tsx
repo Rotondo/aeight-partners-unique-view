@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import {
   Card, CardContent, CardDescription, CardHeader, CardTitle
@@ -234,7 +235,7 @@ export const OportunidadesDashboards: React.FC = () => {
     cols.forEach(c => {
       colTotals[c] = rows.reduce((acc, row) => acc + (typeof row[c] === 'number' ? row[c] : 0), 0);
     });
-    const grandTotal = Object.values(colTotals).reduce((a: any, b: any) => (a as number) + (b as number), 0);
+    const grandTotal = Object.values(colTotals).reduce((a: any, b: any) => (a as number) + (b as number), 0) as number;
     
     return (
       <div className="overflow-x-auto">
@@ -277,7 +278,7 @@ export const OportunidadesDashboards: React.FC = () => {
                   <td className={`border p-1 text-center font-bold ${totalValue === 0 ? 'opacity-40' : ''}`} key={c}>{displayTotal}</td>
                 );
               })}
-              <td className="border p-1 text-center font-bold">{grandTotal}</td>
+              <td className="border p-1 text-center font-bold">{String(grandTotal)}</td>
             </tr>
           </tfoot>
         </table>
