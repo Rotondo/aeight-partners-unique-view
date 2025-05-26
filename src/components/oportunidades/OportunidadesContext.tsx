@@ -36,7 +36,9 @@ export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ child
   const { user } = useAuth();
 
   const fetchOportunidades = async () => {
-    if (!user) {
+    // Se não há usuário autenticado, apenas limpa os dados
+    if (!user || !isValidUUID(user.id)) {
+      console.log("Usuário não autenticado ou ID inválido, limpando dados");
       setOportunidades([]);
       setFilteredOportunidades([]);
       setIsLoading(false);
@@ -201,7 +203,7 @@ export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ child
     valorAntigo: any,
     valorNovo: any
   ) => {
-    if (!user) return;
+    if (!user || !isValidUUID(user.id)) return;
     if (valorAntigo === valorNovo) return;
     const oldValue = valorAntigo !== null ? String(valorAntigo) : null;
     const newValue = valorNovo !== null ? String(valorNovo) : null;
@@ -222,10 +224,10 @@ export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ child
   };
 
   const createOportunidade = async (oportunidade: Partial<Oportunidade>): Promise<string | null> => {
-    if (!user) {
+    if (!user || !isValidUUID(user.id)) {
       toast({
         title: "Erro",
-        description: "Você precisa estar autenticado para criar uma oportunidade.",
+        description: "Você precisa estar autenticado com um ID válido para criar uma oportunidade.",
         variant: "destructive",
       });
       return null;
@@ -289,6 +291,8 @@ export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ child
         nome_lead: oportunidade.nome_lead || ""
       };
 
+      console.log("Criando oportunidade com dados:", newOportunidade);
+
       const { data, error } = await supabase
         .from('oportunidades')
         .insert(newOportunidade)
@@ -316,10 +320,10 @@ export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ child
   };
 
   const updateOportunidade = async (id: string, updates: Partial<Oportunidade>): Promise<boolean> => {
-    if (!user) {
+    if (!user || !isValidUUID(user.id)) {
       toast({
         title: "Erro",
-        description: "Você precisa estar autenticado para atualizar uma oportunidade.",
+        description: "Você precisa estar autenticado com um ID válido para atualizar uma oportunidade.",
         variant: "destructive",
       });
       return false;
@@ -360,10 +364,10 @@ export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ child
   };
 
   const deleteOportunidade = async (id: string): Promise<boolean> => {
-    if (!user) {
+    if (!user || !isValidUUID(user.id)) {
       toast({
         title: "Erro",
-        description: "Você precisa estar autenticado para excluir uma oportunidade.",
+        description: "Você precisa estar autenticado com um ID válido para excluir uma oportunidade.",
         variant: "destructive",
       });
       return false;
