@@ -101,12 +101,18 @@ const Dashboard: React.FC = () => {
   };
 
   return (
-    <div className="space-y-8 p-4">
-      <h1 className="text-2xl font-bold">Dashboard</h1>
-      <DashboardStatsSection stats={stats} loading={loading} />
-      <OpportunitiesChart stats={stats} loading={loading} />
-      <QuickAccess />
-      <AboutPlatform />
+    <div className="space-y-4 md:space-y-8">
+      <div className="px-2 md:px-0">
+        <h1 className="text-xl md:text-2xl font-bold">Dashboard</h1>
+      </div>
+      <div className="space-y-4 md:space-y-6">
+        <DashboardStatsSection stats={stats} loading={loading} />
+        <div className="w-full">
+          <OpportunitiesChart stats={stats} loading={loading} />
+        </div>
+        <QuickAccess />
+        <AboutPlatform />
+      </div>
     </div>
   );
 };

@@ -32,14 +32,14 @@ export const OportunidadesPage: React.FC = () => {
 
   return (
     <OportunidadesProvider>
-      <div className="container mx-auto p-4 space-y-6 relative">
-        {/* Botão Nova Oportunidade sempre fixo no topo direito */}
-        <div className="flex justify-between items-center mb-6 sticky top-0 bg-white z-10 py-2">
-          <h1 className="text-2xl font-bold">Gestão de Oportunidades</h1>
+      <div className="space-y-4 md:space-y-6">
+        {/* Header responsivo */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 px-2 md:px-0">
+          <h1 className="text-xl md:text-2xl font-bold">Gestão de Oportunidades</h1>
           {user && (
             <Button
               onClick={abrirNovaOportunidade}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 w-full sm:w-auto"
               variant="default"
             >
               <Plus className="h-4 w-4" />
@@ -47,25 +47,32 @@ export const OportunidadesPage: React.FC = () => {
             </Button>
           )}
         </div>
+
         {isFormOpen ? (
-          <OportunidadesForm 
-            oportunidadeId={selectedOportunidadeId} 
-            onClose={handleClose} 
-          />
+          <div className="w-full">
+            <OportunidadesForm 
+              oportunidadeId={selectedOportunidadeId} 
+              onClose={handleClose} 
+            />
+          </div>
         ) : (
           <Tabs defaultValue="lista" className="w-full">
-            <TabsList className="mb-4">
-              <TabsTrigger value="lista">Lista de Oportunidades</TabsTrigger>
-              <TabsTrigger value="estatisticas">Estatísticas</TabsTrigger>
+            <TabsList className="mb-4 w-full sm:w-auto">
+              <TabsTrigger value="lista" className="flex-1 sm:flex-none">Lista</TabsTrigger>
+              <TabsTrigger value="estatisticas" className="flex-1 sm:flex-none">Estatísticas</TabsTrigger>
             </TabsList>
             <TabsContent value="lista">
               <div className="space-y-4">
                 <OportunidadesFilter />
-                <OportunidadesList onEdit={handleEdit} />
+                <div className="w-full overflow-hidden">
+                  <OportunidadesList onEdit={handleEdit} />
+                </div>
               </div>
             </TabsContent>
             <TabsContent value="estatisticas">
-              <OportunidadesStats />
+              <div className="w-full overflow-hidden">
+                <OportunidadesStats />
+              </div>
             </TabsContent>
           </Tabs>
         )}
