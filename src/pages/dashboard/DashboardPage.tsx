@@ -19,7 +19,7 @@ import {
 } from "recharts";
 import { DashboardCard } from "@/components/dashboard/DashboardCard";
 import { useToast } from "@/hooks/use-toast";
-import { Oportunidade, Empresa } from "@/types";
+import { Oportunidade, Empresa, StatusOportunidade } from "@/types";
 import { QuickAccess } from "@/components/dashboard/QuickAccess";
 import { AboutPlatform } from "@/components/dashboard/AboutPlatform";
 import { Edit, Check, X as Cancel } from "lucide-react";
@@ -41,6 +41,8 @@ const STATUS_COLORS = {
   negociando: "#fbbf24",
   em_contato: "#3b82f6",
   Contato: "#6366f1",
+  Apresentado: "#8b5cf6",
+  "Sem contato": "#64748b",
 };
 
 const DashboardPage: React.FC = () => {
@@ -84,7 +86,7 @@ const DashboardPage: React.FC = () => {
         .order("nome");
       if (empresasError) throw empresasError;
 
-      // Enriquecimento
+      // Enriquecimento com propriedades calculadas
       const oportunidadesEnriquecidas: Oportunidade[] = oportunidadesData.map((op: any) => {
         const tipoOrigem = op.empresa_origem?.tipo || "";
         const tipoDestino = op.empresa_destino?.tipo || "";
@@ -482,7 +484,7 @@ const DashboardPage: React.FC = () => {
             <PieChart>
               <Pie data={statusChartData} dataKey="value" nameKey="status" cx="50%" cy="50%" outerRadius={100} fill="#8884d8" label>
                 {statusChartData.map((entry, idx) => (
-                  <Cell key={`cell-${idx}`} fill={STATUS_COLORS[entry.status] || "#8884d8"} />
+                  <Cell key={`cell-${idx}`} fill={STATUS_COLORS[entry.status as keyof typeof STATUS_COLORS] || "#8884d8"} />
                 ))}
               </Pie>
               <Tooltip />
@@ -581,7 +583,7 @@ const DashboardPage: React.FC = () => {
                     <td className="border p-1">{op.empresa_destino?.nome || "-"}</td>
                     <td className="border p-1">
                       {editRowId === op.id ? (
-                        <Select value={editValues.status || ""} onValueChange={v => setEditValues(e => ({ ...e, status: v }))}>
+                        <Select value={editValues.status || ""} onValueChange={v => setEditValues(e => ({ ...e, status: v as StatusOportunidade }))}>
                           <SelectTrigger className="w-[90px]"><SelectValue /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="em_contato">Em Contato</SelectItem>
@@ -589,6 +591,8 @@ const DashboardPage: React.FC = () => {
                             <SelectItem value="ganho">Ganho</SelectItem>
                             <SelectItem value="perdido">Perdido</SelectItem>
                             <SelectItem value="Contato">Contato</SelectItem>
+                            <SelectItem value="Apresentado">Apresentado</SelectItem>
+                            <SelectItem value="Sem contato">Sem contato</SelectItem>
                           </SelectContent>
                         </Select>
                       ) : op.status}
@@ -611,7 +615,7 @@ const DashboardPage: React.FC = () => {
                     <td className="border p-1">
                       {editRowId === op.id ? (
                         <>
-                          <Button size="icon" variant="success" title="Salvar" onClick={() => handleSaveEdit(op.id)}><Check className="h-4 w-4" /></Button>
+                          <Button size="icon" variant="default" title="Salvar" onClick={() => handleSaveEdit(op.id)}><Check className="h-4 w-4" /></Button>
                           <Button size="icon" variant="ghost" title="Cancelar" onClick={handleCancelEdit}><Cancel className="h-4 w-4" /></Button>
                         </>
                       ) : (

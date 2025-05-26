@@ -51,7 +51,7 @@ export interface Usuario {
 }
 
 // Oportunidade (Opportunity)
-export type StatusOportunidade = "em_contato" | "negociando" | "ganho" | "perdido" | "Contato";
+export type StatusOportunidade = "em_contato" | "negociando" | "ganho" | "perdido" | "Contato" | "Apresentado" | "Sem contato";
 
 // Natureza da oportunidade (intra/extragrupo)
 export type TipoNatureza = "intragrupo" | "extragrupo";
@@ -72,6 +72,10 @@ export interface Oportunidade {
   observacoes?: string;
   nome_lead: string;
   tipo_natureza?: TipoNatureza; // "intragrupo" ou "extragrupo"
+  // Propriedades calculadas para uso em dashboards
+  tipo_relacao?: "intra" | "extra";
+  isRemetente?: boolean;
+  isDestinatario?: boolean;
   // Relações para UI
   empresa_origem?: Empresa;
   empresa_destino?: Empresa;
