@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 import { Categoria, Empresa, RepositorioMaterial, RepositorioTag } from '@/types';
-// Corrigido: imports agora da pasta pages/repositorio
 import CategoriasList from './CategoriasList';
 import ParceirosList from './ParceirosList';
 import MateriaisList from './MateriaisList';
@@ -21,7 +20,6 @@ const RepositorioPage: React.FC = () => {
   const [materiais, setMateriais] = useState<RepositorioMaterial[]>([]);
   const [tags, setTags] = useState<RepositorioTag[]>([]);
 
-  // Carrega categorias ao abrir a página
   useEffect(() => {
     const fetchCategorias = async () => {
       try {
@@ -43,7 +41,6 @@ const RepositorioPage: React.FC = () => {
     fetchCategorias();
   }, []);
 
-  // Carrega parceiros vinculados à categoria selecionada
   useEffect(() => {
     if (!selectedCategoria) {
       setParceiros([]);
@@ -92,7 +89,6 @@ const RepositorioPage: React.FC = () => {
     fetchParceiros();
   }, [selectedCategoria]);
 
-  // Carrega materiais para o parceiro e categoria selecionados
   useEffect(() => {
     if (!selectedParceiro || !selectedCategoria) {
       setMateriais([]);
@@ -121,7 +117,6 @@ const RepositorioPage: React.FC = () => {
     fetchMateriais();
   }, [selectedParceiro, selectedCategoria]);
 
-  // Carrega tags para exibição no formulário de upload
   useEffect(() => {
     const fetchTags = async () => {
       try {
@@ -140,7 +135,6 @@ const RepositorioPage: React.FC = () => {
     fetchTags();
   }, []);
 
-  // Atualiza os materiais ao realizar upload
   const handleUploadSuccess = () => {
     if (selectedParceiro && selectedCategoria) {
       const fetchMateriais = async () => {
@@ -167,10 +161,8 @@ const RepositorioPage: React.FC = () => {
           </TabsList>
         </div>
 
-        {/* Aba Visualizar */}
         <TabsContent value="view" className="mt-0">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 h-[calc(100vh-220px)]">
-            {/* Categorias */}
             <div className="md:col-span-1 bg-card rounded-lg border shadow-sm overflow-auto">
               <CategoriasList
                 categorias={categorias}
@@ -179,7 +171,6 @@ const RepositorioPage: React.FC = () => {
                 isLoading={loading}
               />
             </div>
-            {/* Parceiros */}
             <div className="md:col-span-1 bg-card rounded-lg border shadow-sm overflow-auto">
               <ParceirosList
                 parceiros={parceiros}
@@ -188,14 +179,12 @@ const RepositorioPage: React.FC = () => {
                 isLoading={loading}
               />
             </div>
-            {/* Materiais */}
             <div className="md:col-span-2 bg-card rounded-lg border shadow-sm overflow-auto">
               <MateriaisList materiais={materiais} isLoading={loading} />
             </div>
           </div>
         </TabsContent>
 
-        {/* Aba Upload */}
         {user?.papel === 'admin' && (
           <TabsContent value="upload" className="mt-0">
             <MaterialUpload
