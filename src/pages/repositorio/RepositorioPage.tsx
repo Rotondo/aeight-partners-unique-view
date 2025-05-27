@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 import { Categoria, Empresa, RepositorioMaterial, RepositorioTag } from '@/types';
-import CategoriasList from '@/components/repositorio/CategoriasList';
-import ParceirosList from '@/components/repositorio/ParceirosList';
-import MateriaisList from '@/components/repositorio/MateriaisList';
-import MaterialUpload from '@/components/repositorio/MaterialUpload';
+// Corrigido: imports agora da pasta pages/repositorio
+import CategoriasList from './CategoriasList';
+import ParceirosList from './ParceirosList';
+import MateriaisList from './MateriaisList';
+import MaterialUpload from './MaterialUpload';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/useAuth';
 
