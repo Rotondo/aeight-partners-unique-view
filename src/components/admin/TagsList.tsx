@@ -15,24 +15,25 @@ const TagsList: React.FC<TagsListProps> = ({ onTagSelect }) => {
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [isFormOpen, setIsFormOpen] = useState<boolean>(false);
 
-  useEffect(() => {
-    const fetchTags = async () => {
-      setIsLoading(true);
-      try {
-        const { data, error } = await supabase.from('repositorio_tags').select('*').order('nome');
-        if (error) throw error;
-        setTags(data || []);
-      } catch (error) {
-        toast({
-          title: 'Erro',
-          description: 'Não foi possível carregar as tags.',
-          variant: 'destructive',
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  // Função para carregar tags do Supabase
+  const fetchTags = async () => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase.from('repositorio_tags').select('*').order('nome');
+      if (error) throw error;
+      setTags(data || []);
+    } catch (error) {
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível carregar as tags.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchTags();
   }, []);
 
@@ -41,7 +42,7 @@ const TagsList: React.FC<TagsListProps> = ({ onTagSelect }) => {
       setCurrentTag(tag);
       setIsEditing(true);
     } else {
-      setCurrentTag(null);
+      setCurrentTag({ id: '', nome: '', descricao: '', cor: '#000000' });
       setIsEditing(false);
     }
     setIsFormOpen(true);
@@ -65,15 +66,14 @@ const TagsList: React.FC<TagsListProps> = ({ onTagSelect }) => {
       return;
     }
 
+    setIsLoading(true);
     try {
       if (isEditing && currentTag.id) {
         const { error } = await supabase
           .from('repositorio_tags')
           .update({ nome: currentTag.nome, descricao: currentTag.descricao, cor: currentTag.cor })
           .eq('id', currentTag.id);
-
         if (error) throw error;
-
         toast({
           title: 'Sucesso',
           description: 'Tag atualizada com sucesso!',
@@ -82,10 +82,8 @@ const TagsList: React.FC<TagsListProps> = ({ onTagSelect }) => {
       } else {
         const { error } = await supabase
           .from('repositorio_tags')
-          .insert({ nome: currentTag?.nome, descricao: currentTag?.descricao, cor: currentTag?.cor });
-
+          .insert({ nome: currentTag.nome, descricao: currentTag.descricao, cor: currentTag.cor });
         if (error) throw error;
-
         toast({
           title: 'Sucesso',
           description: 'Tag criada com sucesso!',
@@ -94,18 +92,20 @@ const TagsList: React.FC<TagsListProps> = ({ onTagSelect }) => {
       }
 
       handleCloseForm();
-      const { data } = await supabase.from('repositorio_tags').select('*').order('nome');
-      setTags(data || []);
+      fetchTags(); // Atualizar lista de tags após criação ou edição
     } catch (error) {
       toast({
         title: 'Erro',
         description: 'Não foi possível salvar a tag.',
         variant: 'destructive',
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleDelete = async (id: string) => {
+    setIsLoading(true);
     try {
       const { error } = await supabase.from('repositorio_tags').delete().eq('id', id);
       if (error) throw error;
@@ -114,15 +114,15 @@ const TagsList: React.FC<TagsListProps> = ({ onTagSelect }) => {
         description: 'Tag excluída com sucesso!',
         variant: 'success',
       });
-
-      const { data } = await supabase.from('repositorio_tags').select('*').order('nome');
-      setTags(data || []);
+      fetchTags(); // Atualizar lista de tags após exclusão
     } catch (error) {
       toast({
         title: 'Erro',
         description: 'Não foi possível excluir a tag.',
         variant: 'destructive',
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -144,7 +144,7 @@ const TagsList: React.FC<TagsListProps> = ({ onTagSelect }) => {
               <input
                 type="text"
                 value={currentTag?.nome || ''}
-                onChange={(e) => setCurrentTag({ ...currentTag, nome: e.target.value } as RepositorioTag)}
+                onChange={(e) => setCurrentTag({ ...currentTag, nome: e.target.value })}
                 className="w-full px-4 py-2 border rounded-lg"
                 placeholder="Nome da Tag"
               />
@@ -154,7 +154,7 @@ const TagsList: React.FC<TagsListProps> = ({ onTagSelect }) => {
               <input
                 type="text"
                 value={currentTag?.descricao || ''}
-                onChange={(e) => setCurrentTag({ ...currentTag, descricao: e.target.value } as RepositorioTag)}
+                onChange={(e) => setCurrentTag({ ...currentTag, descricao: e.target.value })}
                 className="w-full px-4 py-2 border rounded-lg"
                 placeholder="Descrição (opcional)"
               />
@@ -164,7 +164,7 @@ const TagsList: React.FC<TagsListProps> = ({ onTagSelect }) => {
               <input
                 type="color"
                 value={currentTag?.cor || '#000000'}
-                onChange={(e) => setCurrentTag({ ...currentTag, cor: e.target.value } as RepositorioTag)}
+                onChange={(e) => setCurrentTag({ ...currentTag, cor: e.target.value })}
                 className="w-full px-4 py-2 border rounded-lg"
               />
             </div>
