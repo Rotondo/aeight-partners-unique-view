@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { RepositorioMaterial, Categoria, Empresa, RepositorioTag } from '@/types';
-import { FileText, Link2, Image, FilePdf, Edit2, Trash } from 'lucide-react';
+import { FileText, Link2, Image, File, Edit2, Trash } from 'lucide-react';
 import dayjs from 'dayjs';
 import MaterialEditModal from './MaterialEditModal';
 
