@@ -21,6 +21,7 @@ import {
   Grid,
   Database,
   LogOut,
+  Folder, // Usando Folder como ícone para Repositório
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -57,6 +58,11 @@ const AppSidebar: React.FC = () => {
       title: "Quadrante",
       url: "/quadrante",
       icon: BarChart,
+    },
+    {
+      title: "Repositório",
+      url: "/repositorio",
+      icon: Folder, // Ícone para o menu Repositório
     },
     {
       title: "Administração",
