@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Categoria, Empresa, RepositorioTag } from '@/types';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
@@ -26,6 +26,10 @@ const MaterialUpload: React.FC<MaterialUploadProps> = ({
   const [link, setLink] = useState<string>('');
   const [validade, setValidade] = useState<string>('');
   const [isUploading, setIsUploading] = useState<boolean>(false);
+
+  useEffect(() => {
+    console.log('Tags recebidas:', tags); // Log para verificar o estado das tags
+  }, [tags]);
 
   const resetForm = () => {
     setSelectedCategoria(null);
