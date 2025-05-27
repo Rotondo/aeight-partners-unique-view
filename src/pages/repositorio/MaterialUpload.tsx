@@ -86,7 +86,7 @@ const MaterialUpload: React.FC<MaterialUploadProps> = ({
         .insert({
           categoria_id: selectedCategoria,
           empresa_id: selectedParceiro,
-          tag_categoria: selectedTags,
+          tag_categoria: selectedTags.length > 0 ? selectedTags : null,
           nome: nome.trim(),
           tipo_arquivo,
           url_arquivo,
