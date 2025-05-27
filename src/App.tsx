@@ -1,4 +1,3 @@
-
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import MainLayout from "@/components/layout/MainLayout";
@@ -16,6 +15,7 @@ import QuadrantePage from "@/pages/quadrante/QuadrantePage";
 import Admin from "@/pages/admin";
 import { Toaster } from "@/components/ui/toaster";
 import OportunidadesDashboardPage from "@/pages/oportunidades-dashboard";
+import RepositorioPage from "@/pages/repositorio/RepositorioPage"; // <-- Adicionado
 
 const App: React.FC = () => (
   <Router>
@@ -36,6 +36,7 @@ const App: React.FC = () => (
             <Route path="indicadores" element={<IndicadoresPage />} />
             <Route path="empresas" element={<EmpresasPage />} />
             <Route path="onepager/*" element={<OnePagerPage />} />
+            <Route path="repositorio" element={<RepositorioPage />} /> {/* <-- Corrigido */}
             <Route path="quadrante" element={<QuadrantePage />} />
             <Route path="admin" element={<Admin />} />
             <Route path="*" element={<NotFoundPage />} />
