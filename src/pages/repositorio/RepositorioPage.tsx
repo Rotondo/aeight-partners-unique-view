@@ -21,6 +21,7 @@ const RepositorioPage: React.FC = () => {
   const [materiais, setMateriais] = useState<RepositorioMaterial[]>([]);
   const [tags, setTags] = useState<RepositorioTag[]>([]);
 
+  // Função para carregar categorias
   useEffect(() => {
     const fetchCategorias = async () => {
       try {
@@ -42,6 +43,7 @@ const RepositorioPage: React.FC = () => {
     fetchCategorias();
   }, []);
 
+  // Função para carregar parceiros relacionados à categoria selecionada
   useEffect(() => {
     if (!selectedCategoria) {
       setParceiros([]);
@@ -90,6 +92,7 @@ const RepositorioPage: React.FC = () => {
     fetchParceiros();
   }, [selectedCategoria]);
 
+  // Função para carregar materiais relacionados ao parceiro e categoria selecionados
   useEffect(() => {
     if (!selectedParceiro || !selectedCategoria) {
       setMateriais([]);
@@ -118,12 +121,14 @@ const RepositorioPage: React.FC = () => {
     fetchMateriais();
   }, [selectedParceiro, selectedCategoria]);
 
+  // Função para carregar tags
   useEffect(() => {
     const fetchTags = async () => {
       try {
         const { data, error } = await supabase.from('repositorio_tags').select('*').order('nome');
         if (error) throw error;
         setTags(data || []);
+        console.log('Tags carregadas:', data); // Log para verificar se as tags foram carregadas
       } catch (error) {
         toast({
           title: 'Erro',
