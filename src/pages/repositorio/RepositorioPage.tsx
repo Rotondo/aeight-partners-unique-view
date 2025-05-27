@@ -6,6 +6,7 @@ import CategoriasList from './CategoriasList';
 import ParceirosList from './ParceirosList';
 import MateriaisList from './MateriaisList';
 import MaterialUpload from './MaterialUpload';
+import TagsList from '@/components/admin/TagsList';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -158,6 +159,7 @@ const RepositorioPage: React.FC = () => {
           <TabsList>
             <TabsTrigger value="view">Visualizar</TabsTrigger>
             {user?.papel === 'admin' && <TabsTrigger value="upload">Upload</TabsTrigger>}
+            {user?.papel === 'admin' && <TabsTrigger value="tags">Gerenciar Tags</TabsTrigger>}
           </TabsList>
         </div>
 
@@ -193,6 +195,12 @@ const RepositorioPage: React.FC = () => {
               tags={tags}
               onSuccess={handleUploadSuccess}
             />
+          </TabsContent>
+        )}
+
+        {user?.papel === 'admin' && (
+          <TabsContent value="tags" className="mt-0">
+            <TagsList />
           </TabsContent>
         )}
       </Tabs>
