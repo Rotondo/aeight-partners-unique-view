@@ -21,25 +21,37 @@ const MaterialUpload: React.FC<MaterialUploadProps> = ({
   const [selectedCategoria, setSelectedCategoria] = useState<string | null>(null);
   const [selectedParceiro, setSelectedParceiro] = useState<string | null>(null);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [nome, setNome] = useState<string>('');
   const [file, setFile] = useState<File | null>(null);
+  const [link, setLink] = useState<string>('');
+  const [validade, setValidade] = useState<string>('');
   const [isUploading, setIsUploading] = useState<boolean>(false);
 
-  // Ajuste aqui: escolha o bloco apropriado para o tipo do campo no banco!
-  // Se for uuid[] (array de uuid):
-  const getTagCategoriaValue = () => {
-    return selectedTags.length > 0 ? selectedTags : null;
+  const resetForm = () => {
+    setSelectedCategoria(null);
+    setSelectedParceiro(null);
+    setSelectedTags([]);
+    setNome('');
+    setFile(null);
+    setLink('');
+    setValidade('');
   };
 
-  // Se for uuid (um só valor):
-  // const getTagCategoriaValue = () => {
-  //   return selectedTags.length > 0 ? selectedTags[0] : null;
-  // };
-
   const handleUpload = async () => {
-    if (!selectedCategoria || !selectedParceiro || !file) {
+    // Validação: categoria, parceiro, nome e pelo menos arquivo ou link
+    if (!selectedCategoria || !selectedParceiro || !nome.trim() || (!file && !link.trim())) {
       toast({
         title: 'Erro',
-        description: 'Por favor, preencha todos os campos obrigatórios.',
+        description: 'Preencha todos os campos obrigatórios (categoria, parceiro, nome e arquivo ou link).',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (file && link.trim()) {
+      toast({
+        title: 'Atenção',
+        description: 'Envie apenas um arquivo ou um link, não ambos.',
         variant: 'destructive',
       });
       return;
@@ -48,23 +60,41 @@ const MaterialUpload: React.FC<MaterialUploadProps> = ({
     setIsUploading(true);
 
     try {
-      // Faz upload do arquivo para o bucket do Supabase
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('materiais')
-        .upload(`public/${file.name}`, file);
+      let tipo_arquivo = '';
+      let url_arquivo = '';
+      let arquivo_upload = '';
 
-      if (uploadError) throw uploadError;
+      if (file) {
+        tipo_arquivo = file.type || 'arquivo';
+        // Upload do arquivo para o Storage do Supabase
+        const uniqueName = `${Date.now()}_${file.name}`;
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('materiais')
+          .upload(`public/${uniqueName}`, file);
 
-      // Salva os dados do material no banco
-      const { error: insertError } = await supabase.from('repositorio_materiais').insert({
-        categoria_id: selectedCategoria,
-        empresa_id: selectedParceiro,
-        tag_categoria: getTagCategoriaValue(),
-        nome: file.name,
-        tipo_arquivo: file.type,
-        url_arquivo: uploadData?.path,
-        data_upload: new Date(),
-      });
+        if (uploadError) throw uploadError;
+        url_arquivo = uploadData?.path ?? '';
+        arquivo_upload = uploadData?.path ?? '';
+      } else if (link.trim()) {
+        tipo_arquivo = 'link';
+        url_arquivo = link.trim();
+        arquivo_upload = '';
+      }
+
+      const { error: insertError } = await supabase
+        .from('repositorio_materiais')
+        .insert({
+          categoria_id: selectedCategoria,
+          empresa_id: selectedParceiro,
+          tag_categoria: selectedTags.length > 0 ? selectedTags : null,
+          nome: nome.trim(),
+          tipo_arquivo,
+          url_arquivo,
+          arquivo_upload,
+          validade_contrato: validade || null,
+          data_upload: new Date().toISOString(),
+          usuario_upload: '', // Complete aqui se tiver usuário logado
+        });
 
       if (insertError) throw insertError;
 
@@ -74,10 +104,7 @@ const MaterialUpload: React.FC<MaterialUploadProps> = ({
         variant: 'success',
       });
 
-      setFile(null);
-      setSelectedCategoria(null);
-      setSelectedParceiro(null);
-      setSelectedTags([]);
+      resetForm();
       onSuccess();
     } catch (error) {
       console.error('Erro ao fazer upload:', error);
@@ -95,17 +122,18 @@ const MaterialUpload: React.FC<MaterialUploadProps> = ({
     <div className="p-4">
       <h2 className="text-xl font-bold mb-4">Upload de Material</h2>
 
+      {/* Categoria */}
       <div className="mb-4">
-        <label className="block mb-2 text-sm font-medium text-gray-700">Categoria</label>
+        <label className="block mb-2 text-sm font-medium text-gray-700">Categoria *</label>
         <select
           className="w-full px-4 py-2 border rounded-lg"
           value={selectedCategoria || ''}
-          onChange={(e) => setSelectedCategoria(e.target.value)}
+          onChange={e => setSelectedCategoria(e.target.value)}
         >
           <option value="" disabled>
             Selecione uma categoria
           </option>
-          {categorias.map((categoria) => (
+          {categorias.map(categoria => (
             <option key={categoria.id} value={categoria.id}>
               {categoria.nome}
             </option>
@@ -113,17 +141,18 @@ const MaterialUpload: React.FC<MaterialUploadProps> = ({
         </select>
       </div>
 
+      {/* Parceiro */}
       <div className="mb-4">
-        <label className="block mb-2 text-sm font-medium text-gray-700">Parceiro</label>
+        <label className="block mb-2 text-sm font-medium text-gray-700">Parceiro *</label>
         <select
           className="w-full px-4 py-2 border rounded-lg"
           value={selectedParceiro || ''}
-          onChange={(e) => setSelectedParceiro(e.target.value)}
+          onChange={e => setSelectedParceiro(e.target.value)}
         >
           <option value="" disabled>
             Selecione um parceiro
           </option>
-          {parceiros.map((parceiro) => (
+          {parceiros.map(parceiro => (
             <option key={parceiro.id} value={parceiro.id}>
               {parceiro.nome}
             </option>
@@ -131,17 +160,31 @@ const MaterialUpload: React.FC<MaterialUploadProps> = ({
         </select>
       </div>
 
+      {/* Nome personalizado */}
+      <div className="mb-4">
+        <label className="block mb-2 text-sm font-medium text-gray-700">Nome do Material *</label>
+        <input
+          type="text"
+          className="w-full px-4 py-2 border rounded-lg"
+          value={nome}
+          onChange={e => setNome(e.target.value)}
+          maxLength={100}
+          placeholder="Dê um nome ao material"
+        />
+      </div>
+
+      {/* Tags */}
       <div className="mb-4">
         <label className="block mb-2 text-sm font-medium text-gray-700">Tags</label>
         <select
           className="w-full px-4 py-2 border rounded-lg"
           multiple
           value={selectedTags}
-          onChange={(e) =>
-            setSelectedTags(Array.from(e.target.selectedOptions, (option) => option.value))
+          onChange={e =>
+            setSelectedTags(Array.from(e.target.selectedOptions, option => option.value))
           }
         >
-          {tags.map((tag) => (
+          {tags.map(tag => (
             <option key={tag.id} value={tag.id}>
               {tag.nome}
             </option>
@@ -149,12 +192,37 @@ const MaterialUpload: React.FC<MaterialUploadProps> = ({
         </select>
       </div>
 
+      {/* Validade do Contrato */}
+      <div className="mb-4">
+        <label className="block mb-2 text-sm font-medium text-gray-700">Validade do Contrato</label>
+        <input
+          type="date"
+          className="w-full px-4 py-2 border rounded-lg"
+          value={validade}
+          onChange={e => setValidade(e.target.value)}
+        />
+      </div>
+
+      {/* Link ou Arquivo */}
       <div className="mb-4">
         <label className="block mb-2 text-sm font-medium text-gray-700">Arquivo</label>
         <input
           type="file"
           className="w-full px-4 py-2 border rounded-lg"
-          onChange={(e) => setFile(e.target.files?.[0] || null)}
+          onChange={e => setFile(e.target.files?.[0] || null)}
+          disabled={!!link}
+        />
+      </div>
+
+      <div className="mb-4">
+        <label className="block mb-2 text-sm font-medium text-gray-700">Ou Link</label>
+        <input
+          type="url"
+          className="w-full px-4 py-2 border rounded-lg"
+          value={link}
+          onChange={e => setLink(e.target.value)}
+          placeholder="https://..."
+          disabled={!!file}
         />
       </div>
 
