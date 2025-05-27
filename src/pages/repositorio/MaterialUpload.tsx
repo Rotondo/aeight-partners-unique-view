@@ -38,7 +38,6 @@ const MaterialUpload: React.FC<MaterialUploadProps> = ({
   };
 
   const handleUpload = async () => {
-    // Validação: categoria, parceiro, nome e pelo menos arquivo ou link
     if (!selectedCategoria || !selectedParceiro || !nome.trim() || (!file && !link.trim())) {
       toast({
         title: 'Erro',
@@ -66,7 +65,6 @@ const MaterialUpload: React.FC<MaterialUploadProps> = ({
 
       if (file) {
         tipo_arquivo = file.type || 'arquivo';
-        // Upload do arquivo para o Storage do Supabase
         const uniqueName = `${Date.now()}_${file.name}`;
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from('materiais')
@@ -176,20 +174,24 @@ const MaterialUpload: React.FC<MaterialUploadProps> = ({
       {/* Tags */}
       <div className="mb-4">
         <label className="block mb-2 text-sm font-medium text-gray-700">Tags</label>
-        <select
-          className="w-full px-4 py-2 border rounded-lg"
-          multiple
-          value={selectedTags}
-          onChange={e =>
-            setSelectedTags(Array.from(e.target.selectedOptions, option => option.value))
-          }
-        >
-          {tags.map(tag => (
-            <option key={tag.id} value={tag.id}>
-              {tag.nome}
-            </option>
-          ))}
-        </select>
+        {tags.length === 0 ? (
+          <p className="text-gray-500">Nenhuma tag disponível. Verifique o gerenciamento de tags.</p>
+        ) : (
+          <select
+            className="w-full px-4 py-2 border rounded-lg"
+            multiple
+            value={selectedTags}
+            onChange={e =>
+              setSelectedTags(Array.from(e.target.selectedOptions, option => option.value))
+            }
+          >
+            {tags.map(tag => (
+              <option key={tag.id} value={tag.id}>
+                {tag.nome}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
 
       {/* Validade do Contrato */}
