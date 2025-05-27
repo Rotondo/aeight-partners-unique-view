@@ -1,4 +1,3 @@
-
 // Common types
 
 // Categoria (Category)
@@ -51,8 +50,38 @@ export interface Usuario {
   ativo: boolean;
 }
 
+// RepositorioMaterial (Partner Repository Material)
+export interface RepositorioMaterial {
+  id: string;
+  empresa_id: string;
+  categoria_id: string;
+  nome: string;
+  tipo_arquivo: string;
+  tag_categoria: string;
+  url_arquivo?: string;
+  arquivo_upload?: string;
+  validade_contrato?: string;
+  data_upload: string;
+  usuario_upload: string;
+}
+
+// RepositorioTag (Partner Repository Tag)
+export interface RepositorioTag {
+  id: string;
+  nome: string;
+  descricao?: string;
+  cor?: string;
+}
+
 // Oportunidade (Opportunity)
-export type StatusOportunidade = "em_contato" | "negociando" | "ganho" | "perdido" | "Contato" | "Apresentado" | "Sem contato";
+export type StatusOportunidade = 
+  | "em_contato" 
+  | "negociando" 
+  | "ganho" 
+  | "perdido" 
+  | "Contato" 
+  | "Apresentado" 
+  | "Sem contato";
 
 // Natureza da oportunidade (intra/extragrupo)
 export type TipoNatureza = "intragrupo" | "extragrupo";
