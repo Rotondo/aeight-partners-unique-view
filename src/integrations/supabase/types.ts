@@ -223,26 +223,65 @@ export type Database = {
       onepager: {
         Row: {
           arquivo_upload: string | null
+          big_numbers: string | null
+          cases_sucesso: string | null
           categoria_id: string
+          contato_email: string | null
+          contato_nome: string | null
+          contato_telefone: string | null
           data_upload: string
+          diferenciais: string | null
           empresa_id: string
+          icp: string | null
           id: string
+          nome: string | null
+          nota_quadrante: number | null
+          oferta: string | null
+          ponto_forte: string | null
+          ponto_fraco: string | null
+          url: string | null
           url_imagem: string | null
         }
         Insert: {
           arquivo_upload?: string | null
+          big_numbers?: string | null
+          cases_sucesso?: string | null
           categoria_id: string
+          contato_email?: string | null
+          contato_nome?: string | null
+          contato_telefone?: string | null
           data_upload?: string
+          diferenciais?: string | null
           empresa_id: string
+          icp?: string | null
           id?: string
+          nome?: string | null
+          nota_quadrante?: number | null
+          oferta?: string | null
+          ponto_forte?: string | null
+          ponto_fraco?: string | null
+          url?: string | null
           url_imagem?: string | null
         }
         Update: {
           arquivo_upload?: string | null
+          big_numbers?: string | null
+          cases_sucesso?: string | null
           categoria_id?: string
+          contato_email?: string | null
+          contato_nome?: string | null
+          contato_telefone?: string | null
           data_upload?: string
+          diferenciais?: string | null
           empresa_id?: string
+          icp?: string | null
           id?: string
+          nome?: string | null
+          nota_quadrante?: number | null
+          oferta?: string | null
+          ponto_forte?: string | null
+          ponto_fraco?: string | null
+          url?: string | null
           url_imagem?: string | null
         }
         Relationships: [
@@ -258,6 +297,42 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      onepager_clientes: {
+        Row: {
+          cliente_id: string
+          created_at: string
+          id: string
+          onepager_id: string
+        }
+        Insert: {
+          cliente_id: string
+          created_at?: string
+          id?: string
+          onepager_id: string
+        }
+        Update: {
+          cliente_id?: string
+          created_at?: string
+          id?: string
+          onepager_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onepager_clientes_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "onepager_clientes_onepager_id_fkey"
+            columns: ["onepager_id"]
+            isOneToOne: false
+            referencedRelation: "onepager"
             referencedColumns: ["id"]
           },
         ]
@@ -349,6 +424,84 @@ export type Database = {
           },
         ]
       }
+      repositorio_materiais: {
+        Row: {
+          arquivo_upload: string | null
+          categoria_id: string
+          data_upload: string
+          empresa_id: string
+          id: string
+          nome: string
+          tag_categoria: string[] | null
+          tipo_arquivo: string
+          url_arquivo: string | null
+          usuario_upload: string
+          validade_contrato: string | null
+        }
+        Insert: {
+          arquivo_upload?: string | null
+          categoria_id: string
+          data_upload?: string
+          empresa_id: string
+          id?: string
+          nome: string
+          tag_categoria?: string[] | null
+          tipo_arquivo: string
+          url_arquivo?: string | null
+          usuario_upload: string
+          validade_contrato?: string | null
+        }
+        Update: {
+          arquivo_upload?: string | null
+          categoria_id?: string
+          data_upload?: string
+          empresa_id?: string
+          id?: string
+          nome?: string
+          tag_categoria?: string[] | null
+          tipo_arquivo?: string
+          url_arquivo?: string | null
+          usuario_upload?: string
+          validade_contrato?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_categoria"
+            columns: ["categoria_id"]
+            isOneToOne: false
+            referencedRelation: "categorias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_empresa"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      repositorio_tags: {
+        Row: {
+          cor: string | null
+          descricao: string | null
+          id: string
+          nome: string
+        }
+        Insert: {
+          cor?: string | null
+          descricao?: string | null
+          id?: string
+          nome: string
+        }
+        Update: {
+          cor?: string | null
+          descricao?: string | null
+          id?: string
+          nome?: string
+        }
+        Relationships: []
+      }
       share_icp: {
         Row: {
           created_at: string
@@ -388,7 +541,7 @@ export type Database = {
         Row: {
           ativo: boolean
           created_at: string
-          email: string
+          email: string | null
           empresa_id: string | null
           id: string
           nome: string
@@ -397,7 +550,7 @@ export type Database = {
         Insert: {
           ativo?: boolean
           created_at?: string
-          email: string
+          email?: string | null
           empresa_id?: string | null
           id: string
           nome: string
@@ -406,7 +559,7 @@ export type Database = {
         Update: {
           ativo?: boolean
           created_at?: string
-          email?: string
+          email?: string | null
           empresa_id?: string | null
           id?: string
           nome?: string

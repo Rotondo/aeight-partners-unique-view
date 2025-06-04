@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
@@ -5,8 +6,9 @@ import { Categoria, Empresa, OnePager } from '@/types';
 import CategoriasList from '@/components/onepager/CategoriasList';
 import ParceirosList from '@/components/onepager/ParceirosList';
 import OnePagerViewer from '@/components/onepager/OnePagerViewer';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import OnePagerUpload from '@/components/onepager/OnePagerUpload';
+import OnePagerSearch from '@/components/onepager/OnePagerSearch';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/useAuth';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
@@ -27,7 +29,7 @@ const OnePagerPage: React.FC = () => {
   useEffect(() => {
     const fetchCategorias = async () => {
       try {
-        const { data, error } = await (supabase as any)
+        const { data, error } = await supabase
           .from('categorias')
           .select('*')
           .order('nome');
@@ -54,8 +56,7 @@ const OnePagerPage: React.FC = () => {
     };
 
     fetchCategorias();
-    // eslint-disable-next-line
-  }, []);
+  }, [toast]);
 
   // Carrega parceiros vinculados à categoria selecionada
   useEffect(() => {
@@ -69,7 +70,7 @@ const OnePagerPage: React.FC = () => {
       setLoading(true);
       try {
         // Busca IDs das empresas vinculadas à categoria
-        const { data, error } = await (supabase as any)
+        const { data, error } = await supabase
           .from('empresa_categoria')
           .select('empresa_id')
           .eq('categoria_id', selectedCategoria.id);
@@ -80,7 +81,7 @@ const OnePagerPage: React.FC = () => {
           const empresaIds = data.map((item: any) => item.empresa_id);
 
           // Busca dados das empresas parceiras
-          const { data: empresas, error: empresasError } = await (supabase as any)
+          const { data: empresas, error: empresasError } = await supabase
             .from('empresas')
             .select('*')
             .in('id', empresaIds)
@@ -115,8 +116,7 @@ const OnePagerPage: React.FC = () => {
     };
 
     fetchParceiros();
-    // eslint-disable-next-line
-  }, [selectedCategoria]);
+  }, [selectedCategoria, toast]);
 
   // Carrega OnePager para o parceiro selecionado e categoria selecionada
   useEffect(() => {
@@ -127,7 +127,7 @@ const OnePagerPage: React.FC = () => {
 
     const fetchOnePager = async () => {
       try {
-        const { data, error } = await (supabase as any)
+        const { data, error } = await supabase
           .from('onepager')
           .select('*')
           .eq('empresa_id', selectedParceiro.id)
@@ -148,13 +148,11 @@ const OnePagerPage: React.FC = () => {
     };
 
     fetchOnePager();
-    // eslint-disable-next-line
-  }, [selectedParceiro, selectedCategoria]);
+  }, [selectedParceiro, selectedCategoria, toast]);
 
   // Ao clicar em um parceiro, apenas seleciona (não abre modal!)
   const handleSelectParceiro = (parceiro: Empresa) => {
     setSelectedParceiro(parceiro);
-    // NÃO abre modal aqui!
   };
 
   // Ao clicar na imagem reduzida, abre o modal
@@ -169,6 +167,7 @@ const OnePagerPage: React.FC = () => {
           <h1 className="text-2xl font-bold">OnePager de Parceiros</h1>
           <TabsList>
             <TabsTrigger value="view">Visualizar</TabsTrigger>
+            <TabsTrigger value="search">Buscar</TabsTrigger>
             {user?.papel === 'admin' && (
               <TabsTrigger value="upload">Upload</TabsTrigger>
             )}
@@ -237,6 +236,11 @@ const OnePagerPage: React.FC = () => {
           </Dialog>
         </TabsContent>
 
+        {/* Aba Buscar */}
+        <TabsContent value="search" className="mt-0">
+          <OnePagerSearch categorias={categorias} />
+        </TabsContent>
+
         {/* Aba Upload (apenas admin) */}
         {user?.papel === 'admin' && (
           <TabsContent value="upload" className="mt-0">
@@ -246,7 +250,7 @@ const OnePagerPage: React.FC = () => {
                 // Refaz o carregamento caso faça upload de novo arquivo
                 if (selectedParceiro && selectedCategoria) {
                   const fetchOnePager = async () => {
-                    const { data } = await (supabase as any)
+                    const { data } = await supabase
                       .from('onepager')
                       .select('*')
                       .eq('empresa_id', selectedParceiro.id)
