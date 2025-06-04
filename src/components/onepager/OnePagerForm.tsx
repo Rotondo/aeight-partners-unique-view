@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -32,7 +31,9 @@ const formSchema = z.object({
   empresaId: z.string().uuid({ message: "Selecione um parceiro válido" }),
   categoriaId: z.string().uuid({ message: "Selecione uma categoria válida" }),
   nome: z.string().optional(),
-  url: z.string().url().optional().or(z.literal('')),
+  url: z.string().refine((val) => !val || z.string().url().safeParse(val).success, {
+    message: "URL deve estar em formato válido"
+  }).optional(),
   icp: z.string().optional(),
   oferta: z.string().optional(),
   diferenciais: z.string().optional(),
@@ -41,7 +42,9 @@ const formSchema = z.object({
   ponto_forte: z.string().optional(),
   ponto_fraco: z.string().optional(),
   contato_nome: z.string().optional(),
-  contato_email: z.string().email().optional().or(z.literal('')),
+  contato_email: z.string().refine((val) => !val || z.string().email().safeParse(val).success, {
+    message: "Email deve estar em formato válido"
+  }).optional(),
   contato_telefone: z.string().optional(),
   clienteIds: z.array(z.string().uuid()).optional(),
   arquivo: z.instanceof(FileList).optional(),
@@ -461,7 +464,7 @@ const OnePagerForm: React.FC<OnePagerFormProps> = ({
                   name="arquivo"
                   render={({ field: { onChange, value, ...field } }) => (
                     <FormItem>
-                      <FormLabel>Arquivo OnePager (PDF, PNG ou JPG)</FormLabel>
+                      <FormLabel>Arquivo OnePager (PDF, PNG ou JPG) - Opcional</FormLabel>
                       <FormControl>
                         <Input
                           type="file"

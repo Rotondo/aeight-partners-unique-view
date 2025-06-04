@@ -1,7 +1,16 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState } from 'react';
 import { Categoria, Empresa, RepositorioTag } from '@/types';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Upload, Loader2 } from 'lucide-react';
 
 interface MaterialUploadProps {
   categorias: Categoria[];
@@ -16,86 +25,54 @@ const MaterialUpload: React.FC<MaterialUploadProps> = ({
   tags,
   onSuccess,
 }) => {
+  const { user } = useAuth();
   const { toast } = useToast();
+  const [uploading, setUploading] = useState(false);
+  const [formData, setFormData] = useState({
+    nome: '',
+    empresa_id: '',
+    categoria_id: '',
+    tipo_arquivo: '',
+    validade_contrato: '',
+    tag_categoria: [] as string[],
+    arquivo: null as File | null,
+  });
 
-  const [selectedCategoria, setSelectedCategoria] = useState<string | null>(null);
-  const [selectedParceiro, setSelectedParceiro] = useState<string | null>(null);
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [nome, setNome] = useState<string>('');
-  const [file, setFile] = useState<File | null>(null);
-  const [link, setLink] = useState<string>('');
-  const [validade, setValidade] = useState<string>('');
-  const [isUploading, setIsUploading] = useState<boolean>(false);
-
-  useEffect(() => {
-    console.log('Tags recebidas:', tags); // Log para verificar o estado das tags
-  }, [tags]);
-
-  const resetForm = () => {
-    setSelectedCategoria(null);
-    setSelectedParceiro(null);
-    setSelectedTags([]);
-    setNome('');
-    setFile(null);
-    setLink('');
-    setValidade('');
-  };
-
-  const handleUpload = async () => {
-    if (!selectedCategoria || !selectedParceiro || !nome.trim() || (!file && !link.trim())) {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!formData.arquivo || !user) {
       toast({
         title: 'Erro',
-        description: 'Preencha todos os campos obrigatórios (categoria, parceiro, nome e arquivo ou link).',
+        description: 'Por favor, selecione um arquivo e verifique se está logado.',
         variant: 'destructive',
       });
       return;
     }
 
-    if (file && link.trim()) {
-      toast({
-        title: 'Atenção',
-        description: 'Envie apenas um arquivo ou um link, não ambos.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setIsUploading(true);
+    setUploading(true);
 
     try {
-      let tipo_arquivo = '';
-      let url_arquivo = '';
-      let arquivo_upload = '';
+      // Upload do arquivo
+      const fileName = `${Date.now()}_${formData.arquivo.name}`;
+      const { error: uploadError } = await supabase.storage
+        .from('repositorio')
+        .upload(fileName, formData.arquivo);
 
-      if (file) {
-        tipo_arquivo = file.type || 'arquivo';
-        const uniqueName = `${Date.now()}_${file.name}`;
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('materiais')
-          .upload(`public/${uniqueName}`, file);
+      if (uploadError) throw uploadError;
 
-        if (uploadError) throw uploadError;
-        url_arquivo = uploadData?.path ?? '';
-        arquivo_upload = uploadData?.path ?? '';
-      } else if (link.trim()) {
-        tipo_arquivo = 'link';
-        url_arquivo = link.trim();
-        arquivo_upload = '';
-      }
-
+      // Salvar dados no banco
       const { error: insertError } = await supabase
         .from('repositorio_materiais')
         .insert({
-          categoria_id: selectedCategoria,
-          empresa_id: selectedParceiro,
-          tag_categoria: selectedTags.length > 0 ? selectedTags : null,
-          nome: nome.trim(),
-          tipo_arquivo,
-          url_arquivo,
-          arquivo_upload,
-          validade_contrato: validade || null,
-          data_upload: new Date().toISOString(),
-          usuario_upload: '', // Complete aqui se tiver usuário logado
+          nome: formData.nome,
+          empresa_id: formData.empresa_id,
+          categoria_id: formData.categoria_id,
+          tipo_arquivo: formData.tipo_arquivo,
+          validade_contrato: formData.validade_contrato || null,
+          tag_categoria: formData.tag_categoria,
+          arquivo_upload: fileName,
+          usuario_upload: user.id,
         });
 
       if (insertError) throw insertError;
@@ -103,143 +80,177 @@ const MaterialUpload: React.FC<MaterialUploadProps> = ({
       toast({
         title: 'Sucesso',
         description: 'Material enviado com sucesso!',
-        variant: 'success',
+        variant: 'default',
       });
 
-      resetForm();
+      // Reset form
+      setFormData({
+        nome: '',
+        empresa_id: '',
+        categoria_id: '',
+        tipo_arquivo: '',
+        validade_contrato: '',
+        tag_categoria: [],
+        arquivo: null,
+      });
+
       onSuccess();
     } catch (error) {
-      console.error('Erro ao fazer upload:', error);
+      console.error('Error uploading material:', error);
       toast({
         title: 'Erro',
         description: 'Não foi possível enviar o material.',
         variant: 'destructive',
       });
     } finally {
-      setIsUploading(false);
+      setUploading(false);
     }
   };
 
+  const handleTagChange = (tagName: string, checked: boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      tag_categoria: checked
+        ? [...prev.tag_categoria, tagName]
+        : prev.tag_categoria.filter(t => t !== tagName)
+    }));
+  };
+
   return (
-    <div className="p-4">
-      <h2 className="text-xl font-bold mb-4">Upload de Material</h2>
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Upload className="h-5 w-5" />
+          Upload de Material
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <Label htmlFor="nome">Nome do Material</Label>
+            <Input
+              id="nome"
+              value={formData.nome}
+              onChange={(e) => setFormData(prev => ({ ...prev, nome: e.target.value }))}
+              required
+            />
+          </div>
 
-      {/* Categoria */}
-      <div className="mb-4">
-        <label className="block mb-2 text-sm font-medium text-gray-700">Categoria *</label>
-        <select
-          className="w-full px-4 py-2 border rounded-lg"
-          value={selectedCategoria || ''}
-          onChange={e => setSelectedCategoria(e.target.value)}
-        >
-          <option value="" disabled>
-            Selecione uma categoria
-          </option>
-          {categorias.map(categoria => (
-            <option key={categoria.id} value={categoria.id}>
-              {categoria.nome}
-            </option>
-          ))}
-        </select>
-      </div>
+          <div>
+            <Label htmlFor="categoria">Categoria</Label>
+            <Select
+              value={formData.categoria_id}
+              onValueChange={(value) => setFormData(prev => ({ ...prev, categoria_id: value }))}
+              required
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione uma categoria" />
+              </SelectTrigger>
+              <SelectContent>
+                {categorias.map((categoria) => (
+                  <SelectItem key={categoria.id} value={categoria.id}>
+                    {categoria.nome}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-      {/* Parceiro */}
-      <div className="mb-4">
-        <label className="block mb-2 text-sm font-medium text-gray-700">Parceiro *</label>
-        <select
-          className="w-full px-4 py-2 border rounded-lg"
-          value={selectedParceiro || ''}
-          onChange={e => setSelectedParceiro(e.target.value)}
-        >
-          <option value="" disabled>
-            Selecione um parceiro
-          </option>
-          {parceiros.map(parceiro => (
-            <option key={parceiro.id} value={parceiro.id}>
-              {parceiro.nome}
-            </option>
-          ))}
-        </select>
-      </div>
+          <div>
+            <Label htmlFor="parceiro">Parceiro</Label>
+            <Select
+              value={formData.empresa_id}
+              onValueChange={(value) => setFormData(prev => ({ ...prev, empresa_id: value }))}
+              required
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione um parceiro" />
+              </SelectTrigger>
+              <SelectContent>
+                {parceiros.map((parceiro) => (
+                  <SelectItem key={parceiro.id} value={parceiro.id}>
+                    {parceiro.nome}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-      {/* Nome personalizado */}
-      <div className="mb-4">
-        <label className="block mb-2 text-sm font-medium text-gray-700">Nome do Material *</label>
-        <input
-          type="text"
-          className="w-full px-4 py-2 border rounded-lg"
-          value={nome}
-          onChange={e => setNome(e.target.value)}
-          maxLength={100}
-          placeholder="Dê um nome ao material"
-        />
-      </div>
+          <div>
+            <Label htmlFor="tipo">Tipo de Arquivo</Label>
+            <Select
+              value={formData.tipo_arquivo}
+              onValueChange={(value) => setFormData(prev => ({ ...prev, tipo_arquivo: value }))}
+              required
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione o tipo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pdf">PDF</SelectItem>
+                <SelectItem value="image">Imagem</SelectItem>
+                <SelectItem value="document">Documento</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-      {/* Tags */}
-      <div className="mb-4">
-        <label className="block mb-2 text-sm font-medium text-gray-700">Tags</label>
-        {tags.length === 0 ? (
-          <p className="text-gray-500">Nenhuma tag disponível. Verifique o gerenciamento de tags.</p>
-        ) : (
-          <select
-            className="w-full px-4 py-2 border rounded-lg"
-            multiple
-            value={selectedTags}
-            onChange={e =>
-              setSelectedTags(Array.from(e.target.selectedOptions, option => option.value))
-            }
-          >
-            {tags.map(tag => (
-              <option key={tag.id} value={tag.id}>
-                {tag.nome}
-              </option>
-            ))}
-          </select>
-        )}
-      </div>
+          <div>
+            <Label htmlFor="validade">Validade do Contrato (Opcional)</Label>
+            <Input
+              id="validade"
+              type="date"
+              value={formData.validade_contrato}
+              onChange={(e) => setFormData(prev => ({ ...prev, validade_contrato: e.target.value }))}
+            />
+          </div>
 
-      {/* Validade do Contrato */}
-      <div className="mb-4">
-        <label className="block mb-2 text-sm font-medium text-gray-700">Validade do Contrato</label>
-        <input
-          type="date"
-          className="w-full px-4 py-2 border rounded-lg"
-          value={validade}
-          onChange={e => setValidade(e.target.value)}
-        />
-      </div>
+          <div>
+            <Label>Tags (Opcional)</Label>
+            <div className="grid grid-cols-2 gap-2 mt-2">
+              {tags.map((tag) => (
+                <div key={tag.id} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`tag-${tag.id}`}
+                    checked={formData.tag_categoria.includes(tag.nome)}
+                    onCheckedChange={(checked) => handleTagChange(tag.nome, checked as boolean)}
+                  />
+                  <Label htmlFor={`tag-${tag.id}`} className="text-sm">
+                    {tag.nome}
+                  </Label>
+                </div>
+              ))}
+            </div>
+          </div>
 
-      {/* Link ou Arquivo */}
-      <div className="mb-4">
-        <label className="block mb-2 text-sm font-medium text-gray-700">Arquivo</label>
-        <input
-          type="file"
-          className="w-full px-4 py-2 border rounded-lg"
-          onChange={e => setFile(e.target.files?.[0] || null)}
-          disabled={!!link}
-        />
-      </div>
+          <div>
+            <Label htmlFor="arquivo">Arquivo</Label>
+            <Input
+              id="arquivo"
+              type="file"
+              onChange={(e) => setFormData(prev => ({ 
+                ...prev, 
+                arquivo: e.target.files?.[0] || null 
+              }))}
+              required
+            />
+          </div>
 
-      <div className="mb-4">
-        <label className="block mb-2 text-sm font-medium text-gray-700">Ou Link</label>
-        <input
-          type="url"
-          className="w-full px-4 py-2 border rounded-lg"
-          value={link}
-          onChange={e => setLink(e.target.value)}
-          placeholder="https://..."
-          disabled={!!file}
-        />
-      </div>
-
-      <button
-        onClick={handleUpload}
-        disabled={isUploading}
-        className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition"
-      >
-        {isUploading ? 'Enviando...' : 'Enviar Material'}
-      </button>
-    </div>
+          <Button type="submit" disabled={uploading} className="w-full">
+            {uploading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Enviando...
+              </>
+            ) : (
+              <>
+                <Upload className="mr-2 h-4 w-4" />
+                Enviar Material
+              </>
+            )}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
   );
 };
 

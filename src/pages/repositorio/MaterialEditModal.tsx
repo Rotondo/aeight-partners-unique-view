@@ -1,201 +1,214 @@
-// src/pages/repositorio/MaterialEditModal.tsx
 
 import React, { useState, useEffect } from 'react';
-import { Modal, Button, Input, Select, DatePicker, Tag, message, Popconfirm } from 'antd';
-import { Categoria, Empresa, RepositorioMaterial, RepositorioTag } from '@/types';
+import { RepositorioMaterial, Categoria, Empresa, RepositorioTag } from '@/types';
 import { supabase } from '@/lib/supabase';
+import { useToast } from '@/hooks/use-toast';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Loader2 } from 'lucide-react';
 
 interface MaterialEditModalProps {
-  open: boolean;
-  onClose: () => void;
-  material: RepositorioMaterial | null;
+  material: RepositorioMaterial;
   categorias: Categoria[];
   parceiros: Empresa[];
   tags: RepositorioTag[];
-  onSave: () => void;
+  onClose: () => void;
+  onSuccess: () => void;
 }
 
 const MaterialEditModal: React.FC<MaterialEditModalProps> = ({
-  open,
-  onClose,
   material,
   categorias,
   parceiros,
   tags,
-  onSave,
+  onClose,
+  onSuccess,
 }) => {
-  const [nome, setNome] = useState('');
-  const [categoriaId, setCategoriaId] = useState('');
-  const [parceiroId, setParceiroId] = useState('');
-  const [validade, setValidade] = useState<string | null>(null);
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [link, setLink] = useState('');
-  const [isSaving, setIsSaving] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    nome: material.nome,
+    empresa_id: material.empresa_id,
+    categoria_id: material.categoria_id,
+    tipo_arquivo: material.tipo_arquivo,
+    validade_contrato: material.validade_contrato || '',
+    tag_categoria: Array.isArray(material.tag_categoria) ? material.tag_categoria : [],
+  });
 
-  // Preenche os campos ao abrir
-  useEffect(() => {
-    if (material) {
-      setNome(material.nome || '');
-      setCategoriaId(material.categoria_id || '');
-      setParceiroId(material.empresa_id || '');
-      setValidade(material.validade_contrato || '');
-      setSelectedTags(material.tag_categoria ? (Array.isArray(material.tag_categoria) ? material.tag_categoria : [material.tag_categoria]) : []);
-      setLink(material.tipo_arquivo === 'link' ? material.url_arquivo || '' : '');
-    }
-  }, [material]);
-
-  const handleSave = async () => {
-    if (!material) return;
-    setIsSaving(true);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
 
     try {
-      // Atualiza o registro no banco
       const { error } = await supabase
         .from('repositorio_materiais')
         .update({
-          nome: nome.trim(),
-          categoria_id: categoriaId,
-          empresa_id: parceiroId,
-          validade_contrato: validade || null,
-          tag_categoria: selectedTags,
-          url_arquivo: material.tipo_arquivo === 'link' ? link.trim() : material.url_arquivo,
+          nome: formData.nome,
+          empresa_id: formData.empresa_id,
+          categoria_id: formData.categoria_id,
+          tipo_arquivo: formData.tipo_arquivo,
+          validade_contrato: formData.validade_contrato || null,
+          tag_categoria: formData.tag_categoria,
         })
         .eq('id', material.id);
 
       if (error) throw error;
 
-      message.success('Material atualizado com sucesso!');
-      onSave();
-      onClose();
-    } catch (err: any) {
-      message.error('Erro ao salvar material: ' + err.message);
+      toast({
+        title: 'Sucesso',
+        description: 'Material atualizado com sucesso!',
+      });
+
+      onSuccess();
+    } catch (error) {
+      console.error('Error updating material:', error);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível atualizar o material.',
+        variant: 'destructive',
+      });
     } finally {
-      setIsSaving(false);
+      setLoading(false);
     }
   };
 
-  const handleDelete = async () => {
-    if (!material) return;
-    setIsDeleting(true);
-
-    try {
-      // Se houver arquivo, exclui do storage
-      if (material.tipo_arquivo !== 'link' && material.url_arquivo) {
-        const { error: storageError } = await supabase.storage
-          .from('materiais')
-          .remove([material.url_arquivo]);
-        if (storageError) throw storageError;
-      }
-
-      // Exclui do banco
-      const { error } = await supabase
-        .from('repositorio_materiais')
-        .delete()
-        .eq('id', material.id);
-
-      if (error) throw error;
-
-      message.success('Material excluído com sucesso!');
-      onSave();
-      onClose();
-    } catch (err: any) {
-      message.error('Erro ao excluir material: ' + err.message);
-    } finally {
-      setIsDeleting(false);
-    }
+  const handleTagChange = (tagName: string, checked: boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      tag_categoria: checked
+        ? [...prev.tag_categoria, tagName]
+        : prev.tag_categoria.filter(t => t !== tagName)
+    }));
   };
 
   return (
-    <Modal
-      visible={open}
-      title="Editar Material"
-      onCancel={onClose}
-      onOk={handleSave}
-      okText="Salvar"
-      confirmLoading={isSaving}
-      footer={[
-        <Popconfirm
-          key="delete"
-          title="Tem certeza que deseja excluir este material?"
-          onConfirm={handleDelete}
-          okText="Excluir"
-          cancelText="Cancelar"
-          disabled={isDeleting}
-        >
-          <Button danger loading={isDeleting}>
-            Excluir
-          </Button>
-        </Popconfirm>,
-        <Button key="cancel" onClick={onClose} disabled={isSaving || isDeleting}>
-          Cancelar
-        </Button>,
-        <Button key="save" type="primary" onClick={handleSave} loading={isSaving} disabled={isDeleting}>
-          Salvar
-        </Button>,
-      ]}
-    >
-      <label>Nome do Material</label>
-      <Input value={nome} onChange={(e) => setNome(e.target.value)} maxLength={100} />
+    <Dialog open={true} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Editar Material</DialogTitle>
+        </DialogHeader>
+        
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <Label htmlFor="nome">Nome</Label>
+            <Input
+              id="nome"
+              value={formData.nome}
+              onChange={(e) => setFormData(prev => ({ ...prev, nome: e.target.value }))}
+              required
+            />
+          </div>
 
-      <label style={{ marginTop: 12 }}>Categoria</label>
-      <Select
-        value={categoriaId}
-        onChange={setCategoriaId}
-        style={{ width: '100%' }}
-      >
-        {categorias.map((cat) => (
-          <Select.Option key={cat.id} value={cat.id}>
-            {cat.nome}
-          </Select.Option>
-        ))}
-      </Select>
+          <div>
+            <Label htmlFor="categoria">Categoria</Label>
+            <Select
+              value={formData.categoria_id}
+              onValueChange={(value) => setFormData(prev => ({ ...prev, categoria_id: value }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione uma categoria" />
+              </SelectTrigger>
+              <SelectContent>
+                {categorias.map((categoria) => (
+                  <SelectItem key={categoria.id} value={categoria.id}>
+                    {categoria.nome}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-      <label style={{ marginTop: 12 }}>Parceiro</label>
-      <Select
-        value={parceiroId}
-        onChange={setParceiroId}
-        style={{ width: '100%' }}
-      >
-        {parceiros.map((parc) => (
-          <Select.Option key={parc.id} value={parc.id}>
-            {parc.nome}
-          </Select.Option>
-        ))}
-      </Select>
+          <div>
+            <Label htmlFor="parceiro">Parceiro</Label>
+            <Select
+              value={formData.empresa_id}
+              onValueChange={(value) => setFormData(prev => ({ ...prev, empresa_id: value }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione um parceiro" />
+              </SelectTrigger>
+              <SelectContent>
+                {parceiros.map((parceiro) => (
+                  <SelectItem key={parceiro.id} value={parceiro.id}>
+                    {parceiro.nome}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-      <label style={{ marginTop: 12 }}>Tags</label>
-      <Select
-        mode="multiple"
-        value={selectedTags}
-        onChange={setSelectedTags}
-        style={{ width: '100%' }}
-        maxTagCount={4}
-        placeholder="Selecione tags"
-      >
-        {tags.map((tag) => (
-          <Select.Option key={tag.id} value={tag.id}>
-            {tag.nome}
-          </Select.Option>
-        ))}
-      </Select>
+          <div>
+            <Label htmlFor="tipo">Tipo de Arquivo</Label>
+            <Select
+              value={formData.tipo_arquivo}
+              onValueChange={(value) => setFormData(prev => ({ ...prev, tipo_arquivo: value }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione o tipo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pdf">PDF</SelectItem>
+                <SelectItem value="image">Imagem</SelectItem>
+                <SelectItem value="document">Documento</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-      <label style={{ marginTop: 12 }}>Validade do Contrato</label>
-      <DatePicker
-        value={validade ? validade : undefined}
-        onChange={(_, dateString) => setValidade(dateString)}
-        style={{ width: '100%' }}
-        format="YYYY-MM-DD"
-        allowClear
-      />
+          <div>
+            <Label htmlFor="validade">Validade do Contrato</Label>
+            <Input
+              id="validade"
+              type="date"
+              value={formData.validade_contrato}
+              onChange={(e) => setFormData(prev => ({ ...prev, validade_contrato: e.target.value }))}
+            />
+          </div>
 
-      {material?.tipo_arquivo === 'link' && (
-        <>
-          <label style={{ marginTop: 12 }}>Link</label>
-          <Input value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://..." />
-        </>
-      )}
-    </Modal>
+          <div>
+            <Label>Tags</Label>
+            <div className="grid grid-cols-2 gap-2 mt-2">
+              {tags.map((tag) => (
+                <div key={tag.id} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`tag-${tag.id}`}
+                    checked={formData.tag_categoria.includes(tag.nome)}
+                    onCheckedChange={(checked) => handleTagChange(tag.nome, checked as boolean)}
+                  />
+                  <Label htmlFor={`tag-${tag.id}`} className="text-sm">
+                    {tag.nome}
+                  </Label>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex gap-2 pt-4">
+            <Button type="submit" disabled={loading}>
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Salvando...
+                </>
+              ) : (
+                'Salvar Alterações'
+              )}
+            </Button>
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancelar
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 };
 

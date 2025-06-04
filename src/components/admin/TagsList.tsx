@@ -1,239 +1,265 @@
+
 import React, { useState, useEffect } from 'react';
+import { RepositorioTag } from '@/types';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
-import { RepositorioTag } from '@/types';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Plus, Edit, Trash2 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 
-interface TagsListProps {
-  onTagSelect?: (tag: RepositorioTag | null) => void;
-}
-
-const TagsList: React.FC<TagsListProps> = ({ onTagSelect }) => {
+const TagsList: React.FC = () => {
   const { toast } = useToast();
   const [tags, setTags] = useState<RepositorioTag[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [currentTag, setCurrentTag] = useState<RepositorioTag | null>(null);
-  const [isEditing, setIsEditing] = useState<boolean>(false);
-  const [isFormOpen, setIsFormOpen] = useState<boolean>(false);
+  const [loading, setLoading] = useState(true);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingTag, setEditingTag] = useState<RepositorioTag | null>(null);
+  const [formData, setFormData] = useState({
+    nome: '',
+    descricao: '',
+    cor: '#3B82F6',
+  });
 
-  // Função para carregar tags do Supabase
+  useEffect(() => {
+    fetchTags();
+  }, []);
+
   const fetchTags = async () => {
-    setIsLoading(true);
     try {
-      const { data, error } = await supabase.from('repositorio_tags').select('*').order('nome');
+      const { data, error } = await supabase
+        .from('repositorio_tags')
+        .select('*')
+        .order('nome');
+
       if (error) throw error;
+
       setTags(data || []);
     } catch (error) {
+      console.error('Error fetching tags:', error);
       toast({
         title: 'Erro',
         description: 'Não foi possível carregar as tags.',
         variant: 'destructive',
       });
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    fetchTags();
-  }, []);
-
-  const handleOpenForm = (tag?: RepositorioTag) => {
-    if (tag) {
-      setCurrentTag(tag);
-      setIsEditing(true);
-    } else {
-      setCurrentTag({ id: '', nome: '', descricao: '', cor: '#000000' });
-      setIsEditing(false);
-    }
-    setIsFormOpen(true);
-  };
-
-  const handleCloseForm = () => {
-    setIsFormOpen(false);
-    setCurrentTag(null);
-    setIsEditing(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!currentTag?.nome) {
-      toast({
-        title: 'Erro',
-        description: 'Nome da tag é obrigatório.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setIsLoading(true);
+    
     try {
-      if (isEditing && currentTag.id) {
+      if (editingTag) {
         const { error } = await supabase
           .from('repositorio_tags')
-          .update({ nome: currentTag.nome, descricao: currentTag.descricao, cor: currentTag.cor })
-          .eq('id', currentTag.id);
+          .update(formData)
+          .eq('id', editingTag.id);
+
         if (error) throw error;
+
         toast({
           title: 'Sucesso',
           description: 'Tag atualizada com sucesso!',
-          variant: 'success',
+          variant: 'default',
         });
       } else {
         const { error } = await supabase
           .from('repositorio_tags')
-          .insert({ nome: currentTag.nome, descricao: currentTag.descricao, cor: currentTag.cor });
+          .insert(formData);
+
         if (error) throw error;
+
         toast({
           title: 'Sucesso',
           description: 'Tag criada com sucesso!',
-          variant: 'success',
+          variant: 'default',
         });
       }
 
-      handleCloseForm();
-      fetchTags(); // Atualizar lista de tags após criação ou edição
+      setIsDialogOpen(false);
+      setEditingTag(null);
+      setFormData({ nome: '', descricao: '', cor: '#3B82F6' });
+      fetchTags();
     } catch (error) {
+      console.error('Error saving tag:', error);
       toast({
         title: 'Erro',
         description: 'Não foi possível salvar a tag.',
         variant: 'destructive',
       });
-    } finally {
-      setIsLoading(false);
     }
   };
 
-  const handleDelete = async (id: string) => {
-    setIsLoading(true);
+  const handleDelete = async (tag: RepositorioTag) => {
+    if (!confirm('Tem certeza que deseja excluir esta tag?')) return;
+
     try {
-      const { error } = await supabase.from('repositorio_tags').delete().eq('id', id);
+      const { error } = await supabase
+        .from('repositorio_tags')
+        .delete()
+        .eq('id', tag.id);
+
       if (error) throw error;
+
       toast({
         title: 'Sucesso',
         description: 'Tag excluída com sucesso!',
-        variant: 'success',
+        variant: 'default',
       });
-      fetchTags(); // Atualizar lista de tags após exclusão
+
+      fetchTags();
     } catch (error) {
+      console.error('Error deleting tag:', error);
       toast({
         title: 'Erro',
         description: 'Não foi possível excluir a tag.',
         variant: 'destructive',
       });
-    } finally {
-      setIsLoading(false);
     }
   };
 
+  const openEditDialog = (tag: RepositorioTag) => {
+    setEditingTag(tag);
+    setFormData({
+      nome: tag.nome,
+      descricao: tag.descricao || '',
+      cor: tag.cor || '#3B82F6',
+    });
+    setIsDialogOpen(true);
+  };
+
+  const openCreateDialog = () => {
+    setEditingTag(null);
+    setFormData({ nome: '', descricao: '', cor: '#3B82F6' });
+    setIsDialogOpen(true);
+  };
+
+  if (loading) {
+    return <div>Carregando tags...</div>;
+  }
+
   return (
-    <div className="p-4">
-      <h2 className="text-xl font-bold mb-4">Gerenciar Tags</h2>
-      <button
-        className="mb-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition"
-        onClick={() => handleOpenForm()}
-      >
-        Adicionar Nova Tag
-      </button>
-
-      {isFormOpen && (
-        <div className="mb-4">
-          <form onSubmit={handleSubmit}>
-            <div className="mb-2">
-              <label className="block text-sm font-medium text-gray-700">Nome</label>
-              <input
-                type="text"
-                value={currentTag?.nome || ''}
-                onChange={(e) => setCurrentTag({ ...currentTag, nome: e.target.value })}
-                className="w-full px-4 py-2 border rounded-lg"
-                placeholder="Nome da Tag"
-              />
-            </div>
-            <div className="mb-2">
-              <label className="block text-sm font-medium text-gray-700">Descrição</label>
-              <input
-                type="text"
-                value={currentTag?.descricao || ''}
-                onChange={(e) => setCurrentTag({ ...currentTag, descricao: e.target.value })}
-                className="w-full px-4 py-2 border rounded-lg"
-                placeholder="Descrição (opcional)"
-              />
-            </div>
-            <div className="mb-2">
-              <label className="block text-sm font-medium text-gray-700">Cor</label>
-              <input
-                type="color"
-                value={currentTag?.cor || '#000000'}
-                onChange={(e) => setCurrentTag({ ...currentTag, cor: e.target.value })}
-                className="w-full px-4 py-2 border rounded-lg"
-              />
-            </div>
-            <div className="flex justify-between">
-              <button
-                type="button"
-                className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition"
-                onClick={handleCloseForm}
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle>Tags do Repositório</CardTitle>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button onClick={openCreateDialog}>
+              <Plus className="mr-2 h-4 w-4" />
+              Nova Tag
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                {editingTag ? 'Editar Tag' : 'Nova Tag'}
+              </DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <Label htmlFor="nome">Nome</Label>
+                <Input
+                  id="nome"
+                  value={formData.nome}
+                  onChange={(e) =>
+                    setFormData({ ...formData, nome: e.target.value })
+                  }
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="descricao">Descrição</Label>
+                <Textarea
+                  id="descricao"
+                  value={formData.descricao}
+                  onChange={(e) =>
+                    setFormData({ ...formData, descricao: e.target.value })
+                  }
+                />
+              </div>
+              <div>
+                <Label htmlFor="cor">Cor</Label>
+                <Input
+                  id="cor"
+                  type="color"
+                  value={formData.cor}
+                  onChange={(e) =>
+                    setFormData({ ...formData, cor: e.target.value })
+                  }
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button type="submit">
+                  {editingTag ? 'Atualizar' : 'Criar'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsDialogOpen(false)}
+                >
+                  Cancelar
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </CardHeader>
+      <CardContent>
+        <div className="grid gap-4">
+          {tags.length === 0 ? (
+            <p className="text-muted-foreground">Nenhuma tag cadastrada.</p>
+          ) : (
+            tags.map((tag) => (
+              <div
+                key={tag.id}
+                className="flex items-center justify-between p-4 border rounded-lg"
               >
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition"
-              >
-                {isEditing ? 'Atualizar Tag' : 'Criar Tag'}
-              </button>
-            </div>
-          </form>
+                <div className="flex items-center gap-3">
+                  <Badge
+                    style={{ backgroundColor: tag.cor }}
+                    className="text-white"
+                  >
+                    {tag.nome}
+                  </Badge>
+                  {tag.descricao && (
+                    <span className="text-sm text-muted-foreground">
+                      {tag.descricao}
+                    </span>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => openEditDialog(tag)}
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleDelete(tag)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            ))
+          )}
         </div>
-      )}
-
-      <div className="overflow-auto bg-white rounded-lg shadow-md border">
-        {isLoading ? (
-          <p>Carregando...</p>
-        ) : tags.length === 0 ? (
-          <p>Nenhuma tag cadastrada.</p>
-        ) : (
-          <table className="table-auto w-full">
-            <thead>
-              <tr className="bg-gray-100">
-                <th className="px-4 py-2">Nome</th>
-                <th className="px-4 py-2">Descrição</th>
-                <th className="px-4 py-2">Cor</th>
-                <th className="px-4 py-2">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {tags.map((tag) => (
-                <tr key={tag.id}>
-                  <td className="border px-4 py-2">{tag.nome}</td>
-                  <td className="border px-4 py-2">{tag.descricao || '-'}</td>
-                  <td className="border px-4 py-2">
-                    <span
-                      className="inline-block w-4 h-4 rounded-full"
-                      style={{ backgroundColor: tag.cor || '#000000' }}
-                    ></span>
-                  </td>
-                  <td className="border px-4 py-2">
-                    <button
-                      className="text-blue-500 hover:underline mr-2"
-                      onClick={() => handleOpenForm(tag)}
-                    >
-                      Editar
-                    </button>
-                    <button
-                      className="text-red-500 hover:underline"
-                      onClick={() => handleDelete(tag.id)}
-                    >
-                      Excluir
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 };
 
