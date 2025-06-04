@@ -57,7 +57,7 @@ export interface RepositorioMaterial {
   categoria_id: string;
   nome: string;
   tipo_arquivo: string;
-  tag_categoria: string;
+  tag_categoria: string[]; // Changed from string to string[]
   url_arquivo?: string;
   arquivo_upload?: string;
   validade_contrato?: string;

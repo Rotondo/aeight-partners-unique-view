@@ -188,7 +188,7 @@ const MateriaisList: React.FC<MateriaisListProps> = ({
                         )}
                       </div>
 
-                      {material.tag_categoria && material.tag_categoria.length > 0 && (
+                      {material.tag_categoria && Array.isArray(material.tag_categoria) && material.tag_categoria.length > 0 && (
                         <div className="flex flex-wrap gap-2 mb-3">
                           {material.tag_categoria.map((tagName, index) => {
                             const tagInfo = getTagInfo(tagName);
