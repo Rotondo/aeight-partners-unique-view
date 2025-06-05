@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
@@ -16,6 +15,7 @@ const RepositorioPage: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [parceiros, setParceiros] = useState<Empresa[]>([]);
+  const [allParceiros, setAllParceiros] = useState<Empresa[]>([]);
   const [tags, setTags] = useState<RepositorioTag[]>([]);
   const [materiais, setMateriais] = useState<RepositorioMaterial[]>([]);
   const [selectedCategoria, setSelectedCategoria] = useState<Categoria | null>(null);
@@ -41,7 +41,7 @@ const RepositorioPage: React.FC = () => {
     try {
       const [categoriasResult, parceirosResult, tagsResult] = await Promise.all([
         supabase.from('categorias').select('*').order('nome'),
-        supabase.from('empresas').select('*').eq('tipo', 'parceiro').order('nome'),
+        supabase.from('empresas').select('*').eq('tipo', 'parceiro').eq('status', true).order('nome'),
         supabase.from('repositorio_tags').select('*').order('nome'),
       ]);
 
@@ -50,6 +50,7 @@ const RepositorioPage: React.FC = () => {
       if (tagsResult.error) throw tagsResult.error;
 
       setCategorias(categoriasResult.data || []);
+      setAllParceiros(parceirosResult.data || []);
       setParceiros(parceirosResult.data || []);
       setTags(tagsResult.data || []);
 
@@ -65,6 +66,65 @@ const RepositorioPage: React.FC = () => {
       setLoading(false);
     }
   };
+
+  // Filtrar parceiros quando categoria é selecionada
+  useEffect(() => {
+    const filterParceiros = async () => {
+      if (!selectedCategoria) {
+        setParceiros(allParceiros);
+        setSelectedParceiro(null);
+        return;
+      }
+
+      try {
+        console.log('Filtering parceiros for categoria:', selectedCategoria.id);
+        
+        // Buscar empresas vinculadas à categoria
+        const { data: empresaCategoriaData, error } = await supabase
+          .from('empresa_categoria')
+          .select('empresa_id')
+          .eq('categoria_id', selectedCategoria.id);
+
+        if (error) {
+          console.error('Error fetching empresa_categoria:', error);
+          throw error;
+        }
+
+        console.log('Empresa categoria data:', empresaCategoriaData);
+
+        if (empresaCategoriaData && empresaCategoriaData.length > 0) {
+          const empresaIds = empresaCategoriaData.map(item => item.empresa_id);
+          console.log('Empresa IDs for filtering:', empresaIds);
+          
+          // Filtrar parceiros que estão vinculados à categoria
+          const parceirosFiltrados = allParceiros.filter(parceiro => 
+            empresaIds.includes(parceiro.id)
+          );
+          
+          console.log('Filtered parceiros:', parceirosFiltrados);
+          setParceiros(parceirosFiltrados);
+          
+          // Reset seleção de parceiro se o atual não estiver na lista filtrada
+          if (selectedParceiro && !empresaIds.includes(selectedParceiro.id)) {
+            setSelectedParceiro(null);
+          }
+        } else {
+          console.log('No parceiros found for this categoria');
+          setParceiros([]);
+          setSelectedParceiro(null);
+        }
+      } catch (error) {
+        console.error('Error filtering parceiros:', error);
+        toast({
+          title: 'Erro',
+          description: 'Erro ao filtrar parceiros por categoria.',
+          variant: 'destructive',
+        });
+      }
+    };
+
+    filterParceiros();
+  }, [selectedCategoria, allParceiros, selectedParceiro]);
 
   const fetchMateriais = async () => {
     try {
@@ -164,7 +224,7 @@ const RepositorioPage: React.FC = () => {
               <MateriaisList
                 materiais={materiais}
                 categorias={categorias}
-                parceiros={parceiros}
+                parceiros={allParceiros}
                 tags={tags}
                 isLoading={loading}
                 onRefresh={fetchMateriais}

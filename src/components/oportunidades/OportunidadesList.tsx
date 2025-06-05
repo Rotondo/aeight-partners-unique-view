@@ -25,6 +25,7 @@ import { OportunidadeDetails } from "./OportunidadesDetails";
 import { useAuth } from "@/hooks/useAuth";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { OportunidadesExport } from "./OportunidadesExport";
+import { CreateClienteFromOportunidade } from "./CreateClienteFromOportunidade";
 import { StatusOportunidade } from "@/types";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -103,7 +104,7 @@ const StatusCell: React.FC<{
 };
 
 export const OportunidadesList: React.FC<OportunidadesListProps> = ({ onEdit }) => {
-  const { filteredOportunidades, isLoading, deleteOportunidade, oportunidades } = useOportunidades();
+  const { filteredOportunidades, isLoading, deleteOportunidade, oportunidades, refreshOportunidades } = useOportunidades();
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -279,7 +280,7 @@ export const OportunidadesList: React.FC<OportunidadesListProps> = ({ onEdit }) 
         </div>
       </div>
 
-      {/* Filtro global */}
+      {/* Filtro global e botões de ação */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
         <Input
           placeholder="Buscar por lead, empresa, status..."
@@ -287,14 +288,20 @@ export const OportunidadesList: React.FC<OportunidadesListProps> = ({ onEdit }) 
           onChange={e => setSearchGlobal(e.target.value)}
           className="max-w-xs"
         />
-        <Button
-          onClick={() => setIsExportOpen(true)}
-          variant="outline"
-          className="flex items-center gap-2"
-        >
-          <Download className="h-4 w-4" />
-          Exportar
-        </Button>
+        <div className="flex gap-2">
+          <CreateClienteFromOportunidade 
+            oportunidades={displayOportunidades}
+            onSuccess={refreshOportunidades}
+          />
+          <Button
+            onClick={() => setIsExportOpen(true)}
+            variant="outline"
+            className="flex items-center gap-2"
+          >
+            <Download className="h-4 w-4" />
+            Exportar
+          </Button>
+        </div>
       </div>
 
       {isLoading ? (

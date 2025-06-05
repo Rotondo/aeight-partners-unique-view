@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
@@ -21,6 +20,7 @@ const OnePagerPage: React.FC = () => {
   const [parceiros, setParceiros] = useState<Empresa[]>([]);
   const [selectedParceiro, setSelectedParceiro] = useState<Empresa | null>(null);
   const [onePager, setOnePager] = useState<OnePager | null>(null);
+  const [modalAberto, setModalAberto] = useState(false);
 
   // Novo: controla abertura do modal de visualização
   const [modalAberto, setModalAberto] = useState(false);
@@ -69,16 +69,24 @@ const OnePagerPage: React.FC = () => {
     const fetchParceiros = async () => {
       setLoading(true);
       try {
+        console.log('Fetching parceiros for categoria:', selectedCategoria.id);
+        
         // Busca IDs das empresas vinculadas à categoria
-        const { data, error } = await supabase
+        const { data: empresaCategoriaData, error: empresaCategoriaError } = await supabase
           .from('empresa_categoria')
           .select('empresa_id')
           .eq('categoria_id', selectedCategoria.id);
 
-        if (error) throw error;
+        if (empresaCategoriaError) {
+          console.error('Error fetching empresa_categoria:', empresaCategoriaError);
+          throw empresaCategoriaError;
+        }
 
-        if (data && data.length > 0) {
-          const empresaIds = data.map((item: any) => item.empresa_id);
+        console.log('Empresa categoria data:', empresaCategoriaData);
+
+        if (empresaCategoriaData && empresaCategoriaData.length > 0) {
+          const empresaIds = empresaCategoriaData.map((item: any) => item.empresa_id);
+          console.log('Empresa IDs:', empresaIds);
 
           // Busca dados das empresas parceiras
           const { data: empresas, error: empresasError } = await supabase
@@ -86,18 +94,22 @@ const OnePagerPage: React.FC = () => {
             .select('*')
             .in('id', empresaIds)
             .eq('tipo', 'parceiro')
+            .eq('status', true)
             .order('nome');
 
-          if (empresasError) throw empresasError;
+          if (empresasError) {
+            console.error('Error fetching empresas:', empresasError);
+            throw empresasError;
+          }
 
-          if (empresas) {
+          console.log('Empresas found:', empresas);
+
+          if (empresas && empresas.length > 0) {
             setParceiros(empresas as Empresa[]);
-            // Seleciona o primeiro parceiro por padrão
-            if (empresas.length > 0) {
-              setSelectedParceiro(empresas[0] as Empresa);
-            } else {
-              setSelectedParceiro(null);
-            }
+            setSelectedParceiro(empresas[0] as Empresa);
+          } else {
+            setParceiros([]);
+            setSelectedParceiro(null);
           }
         } else {
           setParceiros([]);
@@ -127,6 +139,11 @@ const OnePagerPage: React.FC = () => {
 
     const fetchOnePager = async () => {
       try {
+        console.log('Fetching OnePager for:', { 
+          empresa_id: selectedParceiro.id, 
+          categoria_id: selectedCategoria.id 
+        });
+
         const { data, error } = await supabase
           .from('onepager')
           .select('*')
@@ -134,9 +151,17 @@ const OnePagerPage: React.FC = () => {
           .eq('categoria_id', selectedCategoria.id)
           .maybeSingle();
 
-        if (error) throw error;
+        if (error) {
+          console.error('Error fetching onepager:', error);
+          throw error;
+        }
 
+        console.log('OnePager data found:', data);
         setOnePager(data as OnePager || null);
+        
+        if (!data) {
+          console.log('No OnePager found for this partner and category combination');
+        }
       } catch (error) {
         console.error('Error fetching onepager:', error);
         toast({
@@ -144,6 +169,7 @@ const OnePagerPage: React.FC = () => {
           description: 'Não foi possível carregar o OnePager.',
           variant: 'destructive',
         });
+        setOnePager(null);
       }
     };
 
@@ -197,18 +223,29 @@ const OnePagerPage: React.FC = () => {
             </div>
             {/* Direita - Versão reduzida do OnePager OU mensagem */}
             <div className="md:col-span-2 bg-card rounded-lg border shadow-sm flex items-center justify-center">
-              {selectedParceiro && onePager ? (
-                <div
-                  className="w-full max-w-3xl cursor-pointer hover:shadow-lg transition"
-                  onClick={handleOpenModal}
-                  title="Clique para ampliar"
-                >
-                  <OnePagerViewer
-                    onePager={onePager}
-                    parceiro={selectedParceiro}
-                    isLoading={loading}
-                  />
-                </div>
+              {selectedParceiro ? (
+                onePager ? (
+                  <div
+                    className="w-full max-w-3xl cursor-pointer hover:shadow-lg transition"
+                    onClick={handleOpenModal}
+                    title="Clique para ampliar"
+                  >
+                    <OnePagerViewer
+                      onePager={onePager}
+                      parceiro={selectedParceiro}
+                      isLoading={false}
+                    />
+                  </div>
+                ) : (
+                  <div className="text-center p-6">
+                    <span className="text-gray-400 text-lg">
+                      OnePager não encontrado para {selectedParceiro.nome} na categoria {selectedCategoria?.nome}
+                    </span>
+                    <p className="text-sm text-gray-500 mt-2">
+                      Verifique se existe um OnePager cadastrado para este parceiro nesta categoria específica.
+                    </p>
+                  </div>
+                )
               ) : (
                 <span className="text-gray-400 text-lg text-center w-full">
                   Selecione um parceiro para visualizar o One Pager
