@@ -1,20 +1,17 @@
+
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Empresa, TipoEmpresa } from "@/types";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Empresa, TipoEmpresa, OnePager } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, Eye } from "lucide-react";
+import OnePagerViewer from "@/components/onepager/OnePagerViewer";
 
-interface OnePager {
-  id: string;
-  empresa_id: string;
-  categoria_id: string;
-  url_imagem: string | null;
-  arquivo_upload: string | null;
-  data_upload: string;
+interface OnePagerWithRelations extends OnePager {
   empresa?: {
     nome: string;
   };
@@ -24,10 +21,12 @@ interface OnePager {
 }
 
 export const OnePagerList: React.FC = () => {
-  const [onepagers, setOnepagers] = useState<OnePager[]>([]);
+  const [onepagers, setOnepagers] = useState<OnePagerWithRelations[]>([]);
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [categorias, setCategorias] = useState<{id: string, nome: string}[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedOnePager, setSelectedOnePager] = useState<OnePager | null>(null);
+  const [selectedParceiro, setSelectedParceiro] = useState<Empresa | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -49,7 +48,7 @@ export const OnePagerList: React.FC = () => {
         .order("data_upload", { ascending: false });
 
       if (error) throw error;
-      setOnepagers(data as OnePager[]);
+      setOnepagers(data as OnePagerWithRelations[]);
     } catch (error) {
       console.error("Erro ao buscar one-pagers:", error);
       toast({
@@ -71,7 +70,6 @@ export const OnePagerList: React.FC = () => {
 
       if (error) throw error;
       
-      // Convert the raw data to match the Empresa type
       const typedData: Empresa[] = data.map(item => ({
         ...item,
         tipo: item.tipo as TipoEmpresa
@@ -115,6 +113,12 @@ export const OnePagerList: React.FC = () => {
     }
   };
 
+  const handleViewOnePager = (onepager: OnePagerWithRelations) => {
+    const parceiro = empresas.find(e => e.id === onepager.empresa_id);
+    setSelectedOnePager(onepager);
+    setSelectedParceiro(parceiro || null);
+  };
+
   return (
     <div className="space-y-4">
       <h2 className="text-xl font-semibold">One-Pagers</h2>
@@ -127,8 +131,7 @@ export const OnePagerList: React.FC = () => {
               <TableHead>Empresa</TableHead>
               <TableHead>Categoria</TableHead>
               <TableHead>Data Upload</TableHead>
-              <TableHead>Imagem</TableHead>
-              <TableHead>Arquivo</TableHead>
+              <TableHead>Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -137,18 +140,55 @@ export const OnePagerList: React.FC = () => {
                 <TableCell>{onepager.empresa?.nome}</TableCell>
                 <TableCell>{onepager.categoria?.nome}</TableCell>
                 <TableCell>{formatDataUpload(onepager.data_upload)}</TableCell>
-                <TableCell>
+                <TableCell className="space-x-2">
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleViewOnePager(onepager)}
+                      >
+                        <Eye className="h-4 w-4 mr-1" />
+                        Ver OnePager
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-4xl max-h-[80vh] overflow-auto">
+                      <DialogHeader>
+                        <DialogTitle>OnePager - {selectedParceiro?.nome}</DialogTitle>
+                      </DialogHeader>
+                      <OnePagerViewer
+                        onePager={selectedOnePager}
+                        parceiro={selectedParceiro}
+                        isLoading={false}
+                      />
+                    </DialogContent>
+                  </Dialog>
+                  
                   {onepager.url_imagem && (
-                    <a href={onepager.url_imagem} target="_blank" rel="noopener noreferrer">
-                      Ver Imagem <ExternalLink className="inline-block h-4 w-4 ml-1" />
-                    </a>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => window.open(onepager.url_imagem!, '_blank')}
+                    >
+                      <ExternalLink className="h-4 w-4 mr-1" />
+                      Link Direto
+                    </Button>
                   )}
-                </TableCell>
-                <TableCell>
+                  
                   {onepager.arquivo_upload && (
-                    <a href={onepager.arquivo_upload} target="_blank" rel="noopener noreferrer">
-                      Ver Arquivo <ExternalLink className="inline-block h-4 w-4 ml-1" />
-                    </a>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const { data } = supabase.storage
+                          .from('onepagers')
+                          .getPublicUrl(onepager.arquivo_upload!);
+                        window.open(data.publicUrl, '_blank');
+                      }}
+                    >
+                      <ExternalLink className="h-4 w-4 mr-1" />
+                      Arquivo
+                    </Button>
                   )}
                 </TableCell>
               </TableRow>

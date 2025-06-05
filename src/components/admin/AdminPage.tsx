@@ -7,6 +7,8 @@ import { ContatosList } from "@/components/admin/ContatosList";
 import { UsuariosList } from "@/components/admin/UsuariosList";
 import { IndicadoresList } from "@/components/admin/IndicadoresList";
 import { OnePagerList } from "@/components/admin/OnePagerList";
+import { ClientesList } from "@/components/admin/ClientesList";
+import { ApiWebhooksDocs } from "@/components/admin/ApiWebhooksDocs";
 import { useAuth } from "@/hooks/useAuth";
 
 export const AdminPage: React.FC = () => {
@@ -37,10 +39,12 @@ export const AdminPage: React.FC = () => {
         <TabsList className="w-full overflow-x-auto flex-wrap justify-start">
           <TabsTrigger value="categorias">Categorias</TabsTrigger>
           <TabsTrigger value="empresas">Empresas</TabsTrigger>
+          <TabsTrigger value="clientes">Clientes</TabsTrigger>
           <TabsTrigger value="contatos">Contatos</TabsTrigger>
           <TabsTrigger value="usuarios">Usuários</TabsTrigger>
           <TabsTrigger value="indicadores">Indicadores</TabsTrigger>
           <TabsTrigger value="onepagers">OnePagers</TabsTrigger>
+          <TabsTrigger value="api">API & Webhooks</TabsTrigger>
         </TabsList>
         
         <TabsContent value="categorias">
@@ -49,6 +53,10 @@ export const AdminPage: React.FC = () => {
         
         <TabsContent value="empresas">
           <EmpresasList />
+        </TabsContent>
+        
+        <TabsContent value="clientes">
+          <ClientesList />
         </TabsContent>
         
         <TabsContent value="contatos">
@@ -65,6 +73,10 @@ export const AdminPage: React.FC = () => {
         
         <TabsContent value="onepagers">
           <OnePagerList />
+        </TabsContent>
+        
+        <TabsContent value="api">
+          <ApiWebhooksDocs />
         </TabsContent>
       </Tabs>
     </div>
