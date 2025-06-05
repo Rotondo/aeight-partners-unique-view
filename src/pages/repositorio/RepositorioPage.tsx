@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
@@ -19,6 +20,18 @@ const RepositorioPage: React.FC = () => {
   const [materiais, setMateriais] = useState<RepositorioMaterial[]>([]);
   const [selectedCategoria, setSelectedCategoria] = useState<Categoria | null>(null);
   const [selectedParceiro, setSelectedParceiro] = useState<Empresa | null>(null);
+
+  // Helper function to normalize tag_categoria field
+  const normalizeMateriais = (data: any[]): RepositorioMaterial[] => {
+    return data.map(material => ({
+      ...material,
+      tag_categoria: Array.isArray(material.tag_categoria) 
+        ? material.tag_categoria 
+        : material.tag_categoria 
+          ? [material.tag_categoria] 
+          : []
+    }));
+  };
 
   useEffect(() => {
     fetchInitialData();
@@ -72,7 +85,7 @@ const RepositorioPage: React.FC = () => {
 
       if (error) throw error;
 
-      setMateriais(data || []);
+      setMateriais(normalizeMateriais(data || []));
     } catch (error) {
       console.error('Error fetching materiais:', error);
       toast({
@@ -102,7 +115,7 @@ const RepositorioPage: React.FC = () => {
 
       if (error) throw error;
 
-      setMateriais(data || []);
+      setMateriais(normalizeMateriais(data || []));
     } catch (error) {
       console.error('Error fetching materiais by filters:', error);
     }

@@ -75,6 +75,14 @@ const MateriaisList: React.FC<MateriaisListProps> = ({
     return <FileText className="h-5 w-5 text-gray-500" />;
   };
 
+  // Helper function to ensure tag_categoria is always an array
+  const getTagsArray = (tagCategoria: string[] | string | null | undefined): string[] => {
+    if (!tagCategoria) return [];
+    if (Array.isArray(tagCategoria)) return tagCategoria;
+    if (typeof tagCategoria === 'string') return [tagCategoria];
+    return [];
+  };
+
   if (isLoading) {
     return <div>Carregando materiais...</div>;
   }
@@ -156,77 +164,81 @@ const MateriaisList: React.FC<MateriaisListProps> = ({
             </CardContent>
           </Card>
         ) : (
-          filteredMateriais.map((material) => (
-            <Card key={material.id}>
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start gap-4 flex-1">
-                    <div className="flex-shrink-0">
-                      {renderFileIcon(material.tipo_arquivo)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-lg mb-2">{material.nome}</h3>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-muted-foreground mb-3">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">Categoria:</span>
-                          {getCategoriaName(material.categoria_id)}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">Parceiro:</span>
-                          {getParceiroName(material.empresa_id)}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4" />
-                          <span>Upload: {format(new Date(material.data_upload), 'dd/MM/yyyy', { locale: ptBR })}</span>
-                        </div>
-                        {material.validade_contrato && (
+          filteredMateriais.map((material) => {
+            const tagsArray = getTagsArray(material.tag_categoria);
+            
+            return (
+              <Card key={material.id}>
+                <CardContent className="p-6">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start gap-4 flex-1">
+                      <div className="flex-shrink-0">
+                        {renderFileIcon(material.tipo_arquivo)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-lg mb-2">{material.nome}</h3>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-muted-foreground mb-3">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">Categoria:</span>
+                            {getCategoriaName(material.categoria_id)}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">Parceiro:</span>
+                            {getParceiroName(material.empresa_id)}
+                          </div>
                           <div className="flex items-center gap-2">
                             <Calendar className="h-4 w-4" />
-                            <span>Validade: {format(new Date(material.validade_contrato), 'dd/MM/yyyy', { locale: ptBR })}</span>
+                            <span>Upload: {format(new Date(material.data_upload), 'dd/MM/yyyy', { locale: ptBR })}</span>
+                          </div>
+                          {material.validade_contrato && (
+                            <div className="flex items-center gap-2">
+                              <Calendar className="h-4 w-4" />
+                              <span>Validade: {format(new Date(material.validade_contrato), 'dd/MM/yyyy', { locale: ptBR })}</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {tagsArray.length > 0 && (
+                          <div className="flex flex-wrap gap-2 mb-3">
+                            {tagsArray.map((tagName, index) => {
+                              const tagInfo = getTagInfo(tagName);
+                              return (
+                                <Badge
+                                  key={index}
+                                  style={{ backgroundColor: tagInfo.cor }}
+                                  className="text-white text-xs"
+                                >
+                                  {tagInfo.nome}
+                                </Badge>
+                              );
+                            })}
                           </div>
                         )}
                       </div>
-
-                      {material.tag_categoria && Array.isArray(material.tag_categoria) && material.tag_categoria.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mb-3">
-                          {material.tag_categoria.map((tagName, index) => {
-                            const tagInfo = getTagInfo(tagName);
-                            return (
-                              <Badge
-                                key={index}
-                                style={{ backgroundColor: tagInfo.cor }}
-                                className="text-white text-xs"
-                              >
-                                {tagInfo.nome}
-                              </Badge>
-                            );
-                          })}
-                        </div>
-                      )}
+                    </div>
+                    
+                    <div className="flex gap-2 flex-shrink-0">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setEditingMaterial(material)}
+                      >
+                        Editar
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDownload(material)}
+                      >
+                        <Download className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
-                  
-                  <div className="flex gap-2 flex-shrink-0">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setEditingMaterial(material)}
-                    >
-                      Editar
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDownload(material)}
-                    >
-                      <Download className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))
+                </CardContent>
+              </Card>
+            );
+          })
         )}
       </div>
 
