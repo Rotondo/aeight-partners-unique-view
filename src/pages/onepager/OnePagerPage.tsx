@@ -1,200 +1,209 @@
-
 import React, { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
-import { OnePager, Categoria, Empresa } from '@/types';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useAuth } from '@/hooks/useAuth';
+import { Categoria, Empresa, OnePager } from '@/types';
 import CategoriasList from '@/components/onepager/CategoriasList';
 import ParceirosList from '@/components/onepager/ParceirosList';
-import { OnePagerUpload } from '@/components/onepager/OnePagerUpload';
-import { OnePagerViewer } from '@/components/onepager/OnePagerViewer';
-import { OnePagerSearch } from '@/components/onepager/OnePagerSearch';
+import OnePagerViewer from '@/components/onepager/OnePagerViewer';
+import OnePagerUpload from '@/components/onepager/OnePagerUpload';
+import OnePagerSearch from '@/components/onepager/OnePagerSearch';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useAuth } from '@/hooks/useAuth';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const OnePagerPage: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState<boolean>(true);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
-  const [parceiros, setParceiros] = useState<Empresa[]>([]);
-  const [allParceiros, setAllParceiros] = useState<Empresa[]>([]);
-  const [onePagers, setOnePagers] = useState<OnePager[]>([]);
   const [selectedCategoria, setSelectedCategoria] = useState<Categoria | null>(null);
+  const [parceiros, setParceiros] = useState<Empresa[]>([]);
   const [selectedParceiro, setSelectedParceiro] = useState<Empresa | null>(null);
-  const [selectedOnePager, setSelectedOnePager] = useState<OnePager | null>(null);
-  const [viewerOpen, setViewerOpen] = useState(false);
+  const [onePager, setOnePager] = useState<OnePager | null>(null);
+  const [modalAberto, setModalAberto] = useState(false);
 
+  // Novo: controla abertura do modal de visualização
+  const [modalAberto, setModalAberto] = useState(false);
+
+  // Carrega categorias ao abrir a página
   useEffect(() => {
-    fetchInitialData();
-  }, []);
-
-  const fetchInitialData = async () => {
-    try {
-      const [categoriasResult, parceirosResult] = await Promise.all([
-        supabase.from('categorias').select('*').order('nome'),
-        supabase.from('empresas').select('*').eq('tipo', 'parceiro').eq('status', true).order('nome'),
-      ]);
-
-      if (categoriasResult.error) throw categoriasResult.error;
-      if (parceirosResult.error) throw parceirosResult.error;
-
-      setCategorias(categoriasResult.data || []);
-      setAllParceiros(parceirosResult.data || []);
-      setParceiros(parceirosResult.data || []);
-
-      fetchOnePagers();
-    } catch (error) {
-      console.error('Error fetching initial data:', error);
-      toast({
-        title: 'Erro',
-        description: 'Não foi possível carregar os dados iniciais.',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Filtrar parceiros quando categoria é selecionada
-  useEffect(() => {
-    const filterParceiros = async () => {
-      if (!selectedCategoria) {
-        setParceiros(allParceiros);
-        setSelectedParceiro(null);
-        return;
-      }
-
+    const fetchCategorias = async () => {
       try {
-        console.log('Filtering parceiros for categoria:', selectedCategoria.id);
+        const { data, error } = await supabase
+          .from('categorias')
+          .select('*')
+          .order('nome');
+
+        if (error) throw error;
+
+        if (data) {
+          setCategorias(data as Categoria[]);
+          // Seleciona a primeira categoria por padrão
+          if (data.length > 0) {
+            setSelectedCategoria(data[0] as Categoria);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+        toast({
+          title: 'Erro',
+          description: 'Não foi possível carregar as categorias.',
+          variant: 'destructive',
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCategorias();
+  }, [toast]);
+
+  // Carrega parceiros vinculados à categoria selecionada
+  useEffect(() => {
+    if (!selectedCategoria) {
+      setParceiros([]);
+      setSelectedParceiro(null);
+      return;
+    }
+
+    const fetchParceiros = async () => {
+      setLoading(true);
+      try {
+        console.log('Fetching parceiros for categoria:', selectedCategoria.id);
         
-        // Buscar empresas vinculadas à categoria
-        const { data: empresaCategoriaData, error } = await supabase
+        // Busca IDs das empresas vinculadas à categoria
+        const { data: empresaCategoriaData, error: empresaCategoriaError } = await supabase
           .from('empresa_categoria')
           .select('empresa_id')
           .eq('categoria_id', selectedCategoria.id);
 
-        if (error) {
-          console.error('Error fetching empresa_categoria:', error);
-          throw error;
+        if (empresaCategoriaError) {
+          console.error('Error fetching empresa_categoria:', empresaCategoriaError);
+          throw empresaCategoriaError;
         }
 
         console.log('Empresa categoria data:', empresaCategoriaData);
 
         if (empresaCategoriaData && empresaCategoriaData.length > 0) {
-          const empresaIds = empresaCategoriaData.map(item => item.empresa_id);
-          console.log('Empresa IDs for filtering:', empresaIds);
-          
-          // Filtrar parceiros que estão vinculados à categoria
-          const parceirosFiltrados = allParceiros.filter(parceiro => 
-            empresaIds.includes(parceiro.id)
-          );
-          
-          console.log('Filtered parceiros:', parceirosFiltrados);
-          setParceiros(parceirosFiltrados);
-          
-          // Reset seleção de parceiro se o atual não estiver na lista filtrada
-          if (selectedParceiro && !empresaIds.includes(selectedParceiro.id)) {
+          const empresaIds = empresaCategoriaData.map((item: any) => item.empresa_id);
+          console.log('Empresa IDs:', empresaIds);
+
+          // Busca dados das empresas parceiras
+          const { data: empresas, error: empresasError } = await supabase
+            .from('empresas')
+            .select('*')
+            .in('id', empresaIds)
+            .eq('tipo', 'parceiro')
+            .eq('status', true)
+            .order('nome');
+
+          if (empresasError) {
+            console.error('Error fetching empresas:', empresasError);
+            throw empresasError;
+          }
+
+          console.log('Empresas found:', empresas);
+
+          if (empresas && empresas.length > 0) {
+            setParceiros(empresas as Empresa[]);
+            setSelectedParceiro(empresas[0] as Empresa);
+          } else {
+            setParceiros([]);
             setSelectedParceiro(null);
           }
         } else {
-          console.log('No parceiros found for this categoria');
           setParceiros([]);
           setSelectedParceiro(null);
         }
       } catch (error) {
-        console.error('Error filtering parceiros:', error);
+        console.error('Error fetching partners:', error);
         toast({
           title: 'Erro',
-          description: 'Erro ao filtrar parceiros por categoria.',
+          description: 'Não foi possível carregar os parceiros desta categoria.',
           variant: 'destructive',
         });
+      } finally {
+        setLoading(false);
       }
     };
 
-    filterParceiros();
-  }, [selectedCategoria, allParceiros, selectedParceiro]);
+    fetchParceiros();
+  }, [selectedCategoria, toast]);
 
-  const fetchOnePagers = async () => {
-    try {
-      let query = supabase
-        .from('onepager')
-        .select('*')
-        .order('data_upload', { ascending: false });
-
-      if (selectedCategoria) {
-        query = query.eq('categoria_id', selectedCategoria.id);
-      }
-
-      if (selectedParceiro) {
-        query = query.eq('empresa_id', selectedParceiro.id);
-      }
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-
-      setOnePagers(data || []);
-    } catch (error) {
-      console.error('Error fetching OnePagers:', error);
-      toast({
-        title: 'Erro',
-        description: 'Não foi possível carregar os OnePagers.',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const fetchOnePagersByFilters = async () => {
-    try {
-      let query = supabase
-        .from('onepager')
-        .select('*')
-        .order('data_upload', { ascending: false });
-
-      if (selectedCategoria) {
-        query = query.eq('categoria_id', selectedCategoria.id);
-      }
-
-      if (selectedParceiro) {
-        query = query.eq('empresa_id', selectedParceiro.id);
-      }
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-
-      setOnePagers(data || []);
-    } catch (error) {
-      console.error('Error fetching OnePagers by filters:', error);
-    }
-  };
-
+  // Carrega OnePager para o parceiro selecionado e categoria selecionada
   useEffect(() => {
-    if (!loading) {
-      fetchOnePagersByFilters();
+    if (!selectedParceiro || !selectedCategoria) {
+      setOnePager(null);
+      return;
     }
-  }, [selectedCategoria, selectedParceiro, loading]);
 
-  const handleViewOnePager = (onePager: OnePager) => {
-    setSelectedOnePager(onePager);
-    setViewerOpen(true);
+    const fetchOnePager = async () => {
+      try {
+        console.log('Fetching OnePager for:', { 
+          empresa_id: selectedParceiro.id, 
+          categoria_id: selectedCategoria.id 
+        });
+
+        const { data, error } = await supabase
+          .from('onepager')
+          .select('*')
+          .eq('empresa_id', selectedParceiro.id)
+          .eq('categoria_id', selectedCategoria.id)
+          .maybeSingle();
+
+        if (error) {
+          console.error('Error fetching onepager:', error);
+          throw error;
+        }
+
+        console.log('OnePager data found:', data);
+        setOnePager(data as OnePager || null);
+        
+        if (!data) {
+          console.log('No OnePager found for this partner and category combination');
+        }
+      } catch (error) {
+        console.error('Error fetching onepager:', error);
+        toast({
+          title: 'Erro',
+          description: 'Não foi possível carregar o OnePager.',
+          variant: 'destructive',
+        });
+        setOnePager(null);
+      }
+    };
+
+    fetchOnePager();
+  }, [selectedParceiro, selectedCategoria, toast]);
+
+  // Ao clicar em um parceiro, apenas seleciona (não abre modal!)
+  const handleSelectParceiro = (parceiro: Empresa) => {
+    setSelectedParceiro(parceiro);
+  };
+
+  // Ao clicar na imagem reduzida, abre o modal
+  const handleOpenModal = () => {
+    if (onePager) setModalAberto(true);
   };
 
   return (
     <div className="flex flex-col h-full">
-      <Tabs defaultValue="browse" className="w-full">
+      <Tabs defaultValue="view" className="w-full">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">OnePager</h1>
+          <h1 className="text-2xl font-bold">OnePager de Parceiros</h1>
           <TabsList>
-            <TabsTrigger value="browse">Navegar</TabsTrigger>
+            <TabsTrigger value="view">Visualizar</TabsTrigger>
+            <TabsTrigger value="search">Buscar</TabsTrigger>
             {user?.papel === 'admin' && (
               <TabsTrigger value="upload">Upload</TabsTrigger>
             )}
           </TabsList>
         </div>
 
-        <TabsContent value="browse" className="mt-0">
+        {/* Aba Visualizar */}
+        <TabsContent value="view" className="mt-0">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 h-[calc(100vh-220px)]">
+            {/* Menu lateral esquerdo - Categorias */}
             <div className="md:col-span-1 bg-card rounded-lg border shadow-sm overflow-auto">
               <CategoriasList
                 categorias={categorias}
@@ -203,53 +212,97 @@ const OnePagerPage: React.FC = () => {
                 isLoading={loading}
               />
             </div>
-
+            {/* Centro - Lista de Parceiros */}
             <div className="md:col-span-1 bg-card rounded-lg border shadow-sm overflow-auto">
               <ParceirosList
                 parceiros={parceiros}
                 selectedParceiro={selectedParceiro}
-                onSelectParceiro={setSelectedParceiro}
+                onSelectParceiro={handleSelectParceiro}
                 isLoading={loading}
               />
             </div>
-
-            <div className="md:col-span-2 bg-card rounded-lg border shadow-sm overflow-auto">
-              <OnePagerSearch
-                onePagers={onePagers}
-                categorias={categorias}
-                parceiros={allParceiros}
-                isLoading={loading}
-                onView={handleViewOnePager}
-                onRefresh={fetchOnePagers}
-              />
+            {/* Direita - Versão reduzida do OnePager OU mensagem */}
+            <div className="md:col-span-2 bg-card rounded-lg border shadow-sm flex items-center justify-center">
+              {selectedParceiro ? (
+                onePager ? (
+                  <div
+                    className="w-full max-w-3xl cursor-pointer hover:shadow-lg transition"
+                    onClick={handleOpenModal}
+                    title="Clique para ampliar"
+                  >
+                    <OnePagerViewer
+                      onePager={onePager}
+                      parceiro={selectedParceiro}
+                      isLoading={false}
+                    />
+                  </div>
+                ) : (
+                  <div className="text-center p-6">
+                    <span className="text-gray-400 text-lg">
+                      OnePager não encontrado para {selectedParceiro.nome} na categoria {selectedCategoria?.nome}
+                    </span>
+                    <p className="text-sm text-gray-500 mt-2">
+                      Verifique se existe um OnePager cadastrado para este parceiro nesta categoria específica.
+                    </p>
+                  </div>
+                )
+              ) : (
+                <span className="text-gray-400 text-lg text-center w-full">
+                  Selecione um parceiro para visualizar o One Pager
+                </span>
+              )}
             </div>
           </div>
+
+          {/* Modal One Pager */}
+          <Dialog open={modalAberto} onOpenChange={setModalAberto}>
+            <DialogContent className="max-w-5xl w-[90vw] h-[90vh] p-0">
+              <DialogHeader>
+                <DialogTitle>
+                  {selectedParceiro ? `OnePager: ${selectedParceiro.nome}` : "OnePager"}
+                </DialogTitle>
+              </DialogHeader>
+              <div className="flex-1 h-full overflow-auto">
+                <OnePagerViewer
+                  onePager={onePager}
+                  parceiro={selectedParceiro}
+                  isLoading={loading}
+                />
+              </div>
+            </DialogContent>
+          </Dialog>
         </TabsContent>
 
+        {/* Aba Buscar */}
+        <TabsContent value="search" className="mt-0">
+          <OnePagerSearch categorias={categorias} />
+        </TabsContent>
+
+        {/* Aba Upload (apenas admin) */}
         {user?.papel === 'admin' && (
           <TabsContent value="upload" className="mt-0">
             <OnePagerUpload
               categorias={categorias}
-              parceiros={parceiros}
               onSuccess={() => {
-                fetchOnePagers();
-                toast({
-                  title: 'Sucesso',
-                  description: 'OnePager enviado com sucesso!',
-                });
+                // Refaz o carregamento caso faça upload de novo arquivo
+                if (selectedParceiro && selectedCategoria) {
+                  const fetchOnePager = async () => {
+                    const { data } = await supabase
+                      .from('onepager')
+                      .select('*')
+                      .eq('empresa_id', selectedParceiro.id)
+                      .eq('categoria_id', selectedCategoria.id)
+                      .maybeSingle();
+
+                    setOnePager(data as OnePager || null);
+                  };
+                  fetchOnePager();
+                }
               }}
             />
           </TabsContent>
         )}
       </Tabs>
-
-      {selectedOnePager && (
-        <OnePagerViewer
-          onePager={selectedOnePager}
-          open={viewerOpen}
-          onOpenChange={setViewerOpen}
-        />
-      )}
     </div>
   );
 };
