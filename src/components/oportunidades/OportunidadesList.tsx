@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from "react";
 import { useOportunidades } from "./OportunidadesContext";
 import { Button } from "@/components/ui/button";
@@ -39,6 +40,7 @@ import {
 
 interface OportunidadesListProps {
   onEdit: (id: string) => void;
+  onView: (id: string) => void;
 }
 
 function getGrupoStatus(origemTipo?: string, destinoTipo?: string) {
@@ -103,8 +105,8 @@ const StatusCell: React.FC<{
   );
 };
 
-export const OportunidadesList: React.FC<OportunidadesListProps> = ({ onEdit }) => {
-  const { filteredOportunidades, isLoading, deleteOportunidade, oportunidades, refreshOportunidades } = useOportunidades();
+export const OportunidadesList: React.FC<OportunidadesListProps> = ({ onEdit, onView }) => {
+  const { filteredOportunidades, isLoading, deleteOportunidade, oportunidades, fetchOportunidades } = useOportunidades();
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -291,7 +293,7 @@ export const OportunidadesList: React.FC<OportunidadesListProps> = ({ onEdit }) 
         <div className="flex gap-2">
           <CreateClienteFromOportunidade 
             oportunidades={displayOportunidades}
-            onSuccess={refreshOportunidades}
+            onSuccess={fetchOportunidades}
           />
           <Button
             onClick={() => setIsExportOpen(true)}

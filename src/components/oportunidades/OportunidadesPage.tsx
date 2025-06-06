@@ -20,6 +20,11 @@ export const OportunidadesPage: React.FC = () => {
     setIsFormOpen(true);
   };
 
+  const handleView = (id: string) => {
+    // For now, view and edit use the same form
+    handleEdit(id);
+  };
+
   const handleClose = () => {
     setIsFormOpen(false);
     setSelectedOportunidadeId(null);
@@ -65,7 +70,7 @@ export const OportunidadesPage: React.FC = () => {
               <div className="space-y-4">
                 <OportunidadesFilter />
                 <div className="w-full overflow-hidden">
-                  <OportunidadesList onEdit={handleEdit} />
+                  <OportunidadesList onEdit={handleEdit} onView={handleView} />
                 </div>
               </div>
             </TabsContent>

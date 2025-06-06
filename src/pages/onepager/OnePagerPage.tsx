@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
@@ -20,9 +21,6 @@ const OnePagerPage: React.FC = () => {
   const [parceiros, setParceiros] = useState<Empresa[]>([]);
   const [selectedParceiro, setSelectedParceiro] = useState<Empresa | null>(null);
   const [onePager, setOnePager] = useState<OnePager | null>(null);
-  const [modalAberto, setModalAberto] = useState(false);
-
-  // Novo: controla abertura do modal de visualização
   const [modalAberto, setModalAberto] = useState(false);
 
   // Carrega categorias ao abrir a página
