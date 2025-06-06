@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useOportunidades } from "./OportunidadesContext";
 import { Button } from "@/components/ui/button";
@@ -103,7 +102,7 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({
   const isEditing = !!oportunidadeId;
 
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
-  const [empresasParceiras, setEmpresasParceiras] = useState<Empresa[]>([]);
+  const [empresasElegiveis, setEmpresasElegiveis] = useState<Empresa[]>([]);
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -162,9 +161,11 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({
         if (empresasError) throw empresasError;
         if (empresasData) {
           setEmpresas(empresasData);
-          // Filtrar apenas empresas parceiras para origem e destino
-          const parceiras = empresasData.filter(empresa => empresa.tipo === "parceiro");
-          setEmpresasParceiras(parceiras);
+          // Filtrar empresas elegíveis (parceiras e intragrupo) para origem e destino
+          const elegiveis = empresasData.filter(empresa => 
+            empresa.tipo === "parceiro" || empresa.tipo === "intragrupo"
+          );
+          setEmpresasElegiveis(elegiveis);
         }
       } catch (error) {
         toast({
@@ -371,7 +372,7 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="none">Nenhuma</SelectItem>
-              {empresasParceiras.map((empresa) => (
+              {empresasElegiveis.map((empresa) => (
                 <SelectItem key={empresa.id} value={empresa.id}>
                   {empresa.nome}
                 </SelectItem>
@@ -406,7 +407,7 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="none">Nenhuma</SelectItem>
-              {empresasParceiras.map((empresa) => (
+              {empresasElegiveis.map((empresa) => (
                 <SelectItem key={empresa.id} value={empresa.id}>
                   {empresa.nome}
                 </SelectItem>
