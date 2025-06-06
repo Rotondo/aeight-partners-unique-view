@@ -11,6 +11,7 @@ import OnePagerSearch from '@/components/onepager/OnePagerSearch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/useAuth';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { PrivateData } from '@/components/privacy/PrivateData';
 
 const OnePagerPage: React.FC = () => {
   const { user } = useAuth();
@@ -237,7 +238,14 @@ const OnePagerPage: React.FC = () => {
                 ) : (
                   <div className="text-center p-6">
                     <span className="text-gray-400 text-lg">
-                      OnePager não encontrado para {selectedParceiro.nome} na categoria {selectedCategoria?.nome}
+                      OnePager não encontrado para{' '}
+                      <PrivateData type="placeholder" placeholder="[Parceiro]">
+                        {selectedParceiro.nome}
+                      </PrivateData>
+                      {' '}na categoria{' '}
+                      <PrivateData type="placeholder" placeholder="[Categoria]">
+                        {selectedCategoria?.nome}
+                      </PrivateData>
                     </span>
                     <p className="text-sm text-gray-500 mt-2">
                       Verifique se existe um OnePager cadastrado para este parceiro nesta categoria específica.
@@ -257,7 +265,16 @@ const OnePagerPage: React.FC = () => {
             <DialogContent className="max-w-5xl w-[90vw] h-[90vh] p-0">
               <DialogHeader>
                 <DialogTitle>
-                  {selectedParceiro ? `OnePager: ${selectedParceiro.nome}` : "OnePager"}
+                  {selectedParceiro ? (
+                    <>
+                      OnePager:{' '}
+                      <PrivateData type="placeholder" placeholder="[Parceiro]">
+                        {selectedParceiro.nome}
+                      </PrivateData>
+                    </>
+                  ) : (
+                    "OnePager"
+                  )}
                 </DialogTitle>
               </DialogHeader>
               <div className="flex-1 h-full overflow-auto">

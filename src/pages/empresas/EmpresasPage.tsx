@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import {
@@ -31,6 +32,7 @@ import { Empresa, EmpresaTipoString } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { PrivateData } from "@/components/privacy/PrivateData";
 
 const EmpresasPage: React.FC = () => {
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
@@ -301,7 +303,11 @@ const EmpresasPage: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Total Empresas (Únicas)</p>
-                <h2 className="text-3xl font-bold">{totalEmpresas}</h2>
+                <h2 className="text-3xl font-bold">
+                  <PrivateData type="asterisk">
+                    {totalEmpresas}
+                  </PrivateData>
+                </h2>
               </div>
               <Building2 className="h-8 w-8 text-gray-400" />
             </div>
@@ -312,7 +318,11 @@ const EmpresasPage: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Intragrupo</p>
-                <h2 className="text-3xl font-bold">{totalIntragrupo}</h2>
+                <h2 className="text-3xl font-bold">
+                  <PrivateData type="asterisk">
+                    {totalIntragrupo}
+                  </PrivateData>
+                </h2>
               </div>
               <Building2 className="h-8 w-8 text-blue-400" />
             </div>
@@ -323,7 +333,11 @@ const EmpresasPage: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Parceiros</p>
-                <h2 className="text-3xl font-bold">{totalParceiros}</h2>
+                <h2 className="text-3xl font-bold">
+                  <PrivateData type="asterisk">
+                    {totalParceiros}
+                  </PrivateData>
+                </h2>
               </div>
               <Users className="h-8 w-8 text-green-400" />
             </div>
@@ -334,7 +348,11 @@ const EmpresasPage: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Clientes</p>
-                <h2 className="text-3xl font-bold">{totalClientes}</h2>
+                <h2 className="text-3xl font-bold">
+                  <PrivateData type="asterisk">
+                    {totalClientes}
+                  </PrivateData>
+                </h2>
               </div>
               <Users className="h-8 w-8 text-amber-400" />
             </div>
@@ -504,13 +522,19 @@ const EmpresasPage: React.FC = () => {
         <DialogContent className="max-w-xl w-[95vw]">
           <DialogHeader>
             <DialogTitle>
-              Detalhes da Empresa: {selectedEmpresa?.nome}
+              Detalhes da Empresa:{' '}
+              <PrivateData type="placeholder" placeholder="[Nome da Empresa]">
+                {selectedEmpresa?.nome}
+              </PrivateData>
             </DialogTitle>
           </DialogHeader>
           {selectedEmpresa && (
             <div className="space-y-2">
               <div>
-                <strong>Nome:</strong> {selectedEmpresa.nome}
+                <strong>Nome:</strong>{' '}
+                <PrivateData type="placeholder" placeholder="[Nome da Empresa]">
+                  {selectedEmpresa.nome}
+                </PrivateData>
               </div>
               <div>
                 <strong>Tipo:</strong> {getTipoLabel(selectedEmpresa.tipo)}
@@ -522,7 +546,10 @@ const EmpresasPage: React.FC = () => {
                 </Badge>
               </div>
               <div>
-                <strong>Oportunidades:</strong> {getOportunidadesCount(selectedEmpresa.id)}
+                <strong>Oportunidades:</strong>{' '}
+                <PrivateData type="asterisk">
+                  {getOportunidadesCount(selectedEmpresa.id)}
+                </PrivateData>
               </div>
               <div>
                 <strong>Descrição:</strong> {selectedEmpresa.descricao || "-"}
@@ -610,7 +637,11 @@ const EmpresasTable = ({
         ) : (
           empresas.map((empresa) => (
             <TableRow key={empresa.id}>
-              <TableCell className="font-medium">{empresa.nome}</TableCell>
+              <TableCell className="font-medium">
+                <PrivateData type="placeholder" placeholder="[Nome da Empresa]">
+                  {empresa.nome}
+                </PrivateData>
+              </TableCell>
               <TableCell>
                 <Badge className={getTipoBadgeColor(empresa.tipo)}>
                   {getTipoLabel(empresa.tipo)}
@@ -621,7 +652,11 @@ const EmpresasTable = ({
                   {empresa.status ? "Ativo" : "Inativo"}
                 </Badge>
               </TableCell>
-              <TableCell>{getOportunidadesCount(empresa.id)}</TableCell>
+              <TableCell>
+                <PrivateData type="asterisk">
+                  {getOportunidadesCount(empresa.id)}
+                </PrivateData>
+              </TableCell>
               <TableCell className="max-w-xs truncate">
                 {empresa.descricao || "-"}
               </TableCell>
