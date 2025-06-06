@@ -1,3 +1,4 @@
+
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import MainLayout from "@/components/layout/MainLayout";
@@ -9,6 +10,7 @@ import NotFoundPage from "@/pages/NotFoundPage";
 import LoginPage from "@/pages/auth/LoginPage";
 import LoadingScreen from "@/components/ui/LoadingScreen";
 import { AuthProvider } from "@/hooks/useAuth";
+import { PrivacyProvider } from "@/contexts/PrivacyContext";
 // import PrivateRoute from "@/components/auth/PrivateRoute";
 import OnePagerPage from "@/pages/onepager/OnePagerPage";
 import QuadrantePage from "@/pages/quadrante/QuadrantePage";
@@ -20,30 +22,32 @@ import RepositorioPage from "@/pages/repositorio/RepositorioPage"; // <-- Adicio
 const App: React.FC = () => (
   <Router>
     <AuthProvider>
-      <React.Suspense fallback={<LoadingScreen />}>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route
-            path="/"
-            element={
-              <MainLayout />
-            }
-          >
-            {/* Rotas internas agora abertas, sem proteção */}
-            <Route index element={<DashboardPage />} />
-            <Route path="oportunidades" element={<OportunidadesPage />} />
-            <Route path="oportunidades-dashboard" element={<OportunidadesDashboardPage />} />
-            <Route path="indicadores" element={<IndicadoresPage />} />
-            <Route path="empresas" element={<EmpresasPage />} />
-            <Route path="onepager/*" element={<OnePagerPage />} />
-            <Route path="repositorio" element={<RepositorioPage />} /> {/* <-- Corrigido */}
-            <Route path="quadrante" element={<QuadrantePage />} />
-            <Route path="admin" element={<Admin />} />
-            <Route path="*" element={<NotFoundPage />} />
-          </Route>
-        </Routes>
-        <Toaster />
-      </React.Suspense>
+      <PrivacyProvider>
+        <React.Suspense fallback={<LoadingScreen />}>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route
+              path="/"
+              element={
+                <MainLayout />
+              }
+            >
+              {/* Rotas internas agora abertas, sem proteção */}
+              <Route index element={<DashboardPage />} />
+              <Route path="oportunidades" element={<OportunidadesPage />} />
+              <Route path="oportunidades-dashboard" element={<OportunidadesDashboardPage />} />
+              <Route path="indicadores" element={<IndicadoresPage />} />
+              <Route path="empresas" element={<EmpresasPage />} />
+              <Route path="onepager/*" element={<OnePagerPage />} />
+              <Route path="repositorio" element={<RepositorioPage />} /> {/* <-- Corrigido */}
+              <Route path="quadrante" element={<QuadrantePage />} />
+              <Route path="admin" element={<Admin />} />
+              <Route path="*" element={<NotFoundPage />} />
+            </Route>
+          </Routes>
+          <Toaster />
+        </React.Suspense>
+      </PrivacyProvider>
     </AuthProvider>
   </Router>
 );

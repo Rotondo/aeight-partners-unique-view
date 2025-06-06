@@ -2,6 +2,8 @@
 import React from "react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useAuth } from "@/hooks/useAuth";
+import { DemoModeToggle } from "@/components/privacy/DemoModeToggle";
+import { DemoModeIndicator } from "@/components/privacy/DemoModeIndicator";
 
 const Header: React.FC = () => {
   const { user } = useAuth();
@@ -15,8 +17,11 @@ const Header: React.FC = () => {
             <SidebarTrigger />
           </div>
         </div>
-        <div className="flex-1" />
+        <div className="flex-1 flex justify-center">
+          <DemoModeIndicator />
+        </div>
         <div className="flex items-center gap-4">
+          <DemoModeToggle />
           {user && (
             <div className="text-sm text-muted-foreground hidden sm:block">
               Bem-vindo, {user.email}

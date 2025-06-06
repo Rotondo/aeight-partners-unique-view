@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from "react";
 import { useOportunidades } from "./OportunidadesContext";
 import { Button } from "@/components/ui/button";
@@ -37,6 +36,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { PrivateData } from "@/components/privacy/PrivateData";
 
 interface OportunidadesListProps {
   onEdit: (id: string) => void;
@@ -266,19 +266,27 @@ export const OportunidadesList: React.FC<OportunidadesListProps> = ({ onEdit, on
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-2">
         <div className="flex flex-col items-center bg-gray-50 rounded p-2">
           <span className="text-xs text-gray-500">Total</span>
-          <span className="font-bold text-xl">{total}</span>
+          <span className="font-bold text-xl">
+            <PrivateData type="asterisk">{total}</PrivateData>
+          </span>
         </div>
         <div className="flex flex-col items-center bg-gray-50 rounded p-2">
           <span className="text-xs text-gray-500">Em Aberto</span>
-          <span className="font-bold text-xl text-blue-600">{emAberto}</span>
+          <span className="font-bold text-xl text-blue-600">
+            <PrivateData type="asterisk">{emAberto}</PrivateData>
+          </span>
         </div>
         <div className="flex flex-col items-center bg-gray-50 rounded p-2">
           <span className="text-xs text-gray-500">Ganhas</span>
-          <span className="font-bold text-xl text-green-600">{ganhas}</span>
+          <span className="font-bold text-xl text-green-600">
+            <PrivateData type="asterisk">{ganhas}</PrivateData>
+          </span>
         </div>
         <div className="flex flex-col items-center bg-gray-50 rounded p-2">
           <span className="text-xs text-gray-500">Perdidas</span>
-          <span className="font-bold text-xl text-red-600">{perdidas}</span>
+          <span className="font-bold text-xl text-red-600">
+            <PrivateData type="asterisk">{perdidas}</PrivateData>
+          </span>
         </div>
       </div>
 
@@ -462,10 +470,22 @@ export const OportunidadesList: React.FC<OportunidadesListProps> = ({ onEdit, on
               {displayOportunidades.map((op) => (
                 <TableRow key={op.id}>
                   <TableCell>{formatDate(op.data_indicacao)}</TableCell>
-                  <TableCell>{op.empresa_origem?.nome || "-"}</TableCell>
-                  <TableCell>{op.empresa_destino?.nome || "-"}</TableCell>
+                  <TableCell>
+                    <PrivateData type="blur" placeholder="Empresa Origem">
+                      {op.empresa_origem?.nome || "-"}
+                    </PrivateData>
+                  </TableCell>
+                  <TableCell>
+                    <PrivateData type="blur" placeholder="Empresa Destino">
+                      {op.empresa_destino?.nome || "-"}
+                    </PrivateData>
+                  </TableCell>
                   <TableCell>{getTipoBadge(op)}</TableCell>
-                  <TableCell>{op.nome_lead || "-"}</TableCell>
+                  <TableCell>
+                    <PrivateData type="blur" placeholder="Nome da Oportunidade">
+                      {op.nome_lead || "-"}
+                    </PrivateData>
+                  </TableCell>
                   <TableCell>
                     <StatusCell oportunidade={op} />
                   </TableCell>
