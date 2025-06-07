@@ -32,9 +32,9 @@ export const OportunidadesList: React.FC<OportunidadesListProps> = ({
 }) => {
   const { filteredOportunidades, isLoading, deleteOportunidade } = useOportunidades();
   const [deleteConfirm, setDeleteConfirm] = useState<{
-    isOpen: boolean;
+    open: boolean;
     oportunidade: Oportunidade | null;
-  }>({ isOpen: false, oportunidade: null });
+  }>({ open: false, oportunidade: null });
 
   const getStatusColor = (status: StatusOportunidade) => {
     const colors = {
@@ -63,13 +63,13 @@ export const OportunidadesList: React.FC<OportunidadesListProps> = ({
   };
 
   const handleDeleteClick = (oportunidade: Oportunidade) => {
-    setDeleteConfirm({ isOpen: true, oportunidade });
+    setDeleteConfirm({ open: true, oportunidade });
   };
 
   const handleDeleteConfirm = async () => {
     if (deleteConfirm.oportunidade) {
       await deleteOportunidade(deleteConfirm.oportunidade.id);
-      setDeleteConfirm({ isOpen: false, oportunidade: null });
+      setDeleteConfirm({ open: false, oportunidade: null });
     }
   };
 
@@ -127,7 +127,7 @@ export const OportunidadesList: React.FC<OportunidadesListProps> = ({
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <CardTitle className="text-lg mb-2">
-                    <PrivateData type="name">
+                    <PrivateData type="blur">
                       {oportunidade.nome_lead}
                     </PrivateData>
                   </CardTitle>
@@ -147,7 +147,7 @@ export const OportunidadesList: React.FC<OportunidadesListProps> = ({
                   <Building className="h-4 w-4 text-gray-500" />
                   <span className="text-gray-600">De:</span>
                   <span className="font-medium">
-                    <PrivateData type="name">
+                    <PrivateData type="blur">
                       {oportunidade.empresa_origem?.nome || "N/A"}
                     </PrivateData>
                   </span>
@@ -157,7 +157,7 @@ export const OportunidadesList: React.FC<OportunidadesListProps> = ({
                   <Building className="h-4 w-4 text-gray-500" />
                   <span className="text-gray-600">Para:</span>
                   <span className="font-medium">
-                    <PrivateData type="name">
+                    <PrivateData type="blur">
                       {oportunidade.empresa_destino?.nome || "N/A"}
                     </PrivateData>
                   </span>
@@ -168,7 +168,7 @@ export const OportunidadesList: React.FC<OportunidadesListProps> = ({
                     <User className="h-4 w-4 text-gray-500" />
                     <span className="text-gray-600">Enviado por:</span>
                     <span className="font-medium">
-                      <PrivateData type="name">
+                      <PrivateData type="blur">
                         {oportunidade.usuario_envio.nome}
                       </PrivateData>
                     </span>
@@ -179,7 +179,7 @@ export const OportunidadesList: React.FC<OportunidadesListProps> = ({
                   <DollarSign className="h-4 w-4 text-gray-500" />
                   <span className="text-gray-600">Valor:</span>
                   <span className="font-medium">
-                    <PrivateData type="currency">
+                    <PrivateData type="blur">
                       {formatCurrency(oportunidade.valor)}
                     </PrivateData>
                   </span>
@@ -230,13 +230,11 @@ export const OportunidadesList: React.FC<OportunidadesListProps> = ({
       </div>
 
       <ConfirmDialog
-        isOpen={deleteConfirm.isOpen}
-        onClose={() => setDeleteConfirm({ isOpen: false, oportunidade: null })}
-        onConfirm={handleDeleteConfirm}
+        open={deleteConfirm.open}
+        onOpenChange={(open) => setDeleteConfirm({ open, oportunidade: null })}
         title="Excluir Oportunidade"
         description={`Tem certeza que deseja excluir a oportunidade "${deleteConfirm.oportunidade?.nome_lead}"? Esta ação não pode ser desfeita.`}
-        confirmText="Excluir"
-        cancelText="Cancelar"
+        onConfirm={handleDeleteConfirm}
       />
     </>
   );

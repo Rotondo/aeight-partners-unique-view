@@ -104,7 +104,8 @@ export const getOportunidadesSemValor = async (
     let filteredData = oportunidades || [];
     if (empresaId) {
       filteredData = filteredData.filter(op => 
-        op.empresa_origem?.id === empresaId || op.empresa_destino?.id === empresaId
+        (op.empresa_origem && op.empresa_origem.nome) || 
+        (op.empresa_destino && op.empresa_destino.nome)
       );
     }
 

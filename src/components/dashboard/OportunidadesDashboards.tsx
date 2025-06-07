@@ -39,7 +39,7 @@ export const OportunidadesDashboards: React.FC = () => {
                 <CardTitle>Oportunidades por Status</CardTitle>
               </CardHeader>
               <CardContent>
-                <OpportunitiesChart />
+                <OpportunitiesChart stats={stats} loading={statsLoading} />
               </CardContent>
             </Card>
             <Card>
