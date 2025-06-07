@@ -9,6 +9,45 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      atividades_oportunidade: {
+        Row: {
+          concluida: boolean
+          created_at: string
+          data_prevista: string
+          data_realizada: string | null
+          descricao: string | null
+          id: string
+          oportunidade_id: string
+          titulo: string
+          updated_at: string
+          usuario_responsavel_id: string | null
+        }
+        Insert: {
+          concluida?: boolean
+          created_at?: string
+          data_prevista: string
+          data_realizada?: string | null
+          descricao?: string | null
+          id?: string
+          oportunidade_id: string
+          titulo: string
+          updated_at?: string
+          usuario_responsavel_id?: string | null
+        }
+        Update: {
+          concluida?: boolean
+          created_at?: string
+          data_prevista?: string
+          data_realizada?: string | null
+          descricao?: string | null
+          id?: string
+          oportunidade_id?: string
+          titulo?: string
+          updated_at?: string
+          usuario_responsavel_id?: string | null
+        }
+        Relationships: []
+      }
       categorias: {
         Row: {
           created_at: string

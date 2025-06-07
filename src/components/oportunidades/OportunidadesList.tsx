@@ -1,553 +1,243 @@
-import React, { useState, useMemo } from "react";
-import { useOportunidades } from "./OportunidadesContext";
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Edit, Trash2, Download, Search, ArrowUp, ArrowDown } from "lucide-react";
+
+import React, { useState } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { OportunidadeDetails } from "./OportunidadesDetails";
-import { useAuth } from "@/hooks/useAuth";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { OportunidadesExport } from "./OportunidadesExport";
-import { CreateClienteFromOportunidade } from "./CreateClienteFromOportunidade";
-import { StatusOportunidade } from "@/types";
-import { Input } from "@/components/ui/input";
-import { useToast } from "@/hooks/use-toast";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { 
+  Edit, 
+  Trash2, 
+  Eye, 
+  Building, 
+  User, 
+  DollarSign,
+  Calendar,
+  FileText
+} from "lucide-react";
+import { Oportunidade, StatusOportunidade } from "@/types";
+import { useOportunidades } from "./OportunidadesContext";
+import { ActivityIndicator } from "./ActivityIndicator";
 import { PrivateData } from "@/components/privacy/PrivateData";
 
 interface OportunidadesListProps {
-  onEdit: (id: string) => void;
-  onView: (id: string) => void;
+  onEdit: (oportunidade: Oportunidade) => void;
+  onView: (oportunidade: Oportunidade) => void;
 }
 
-function getGrupoStatus(origemTipo?: string, destinoTipo?: string) {
-  if (origemTipo === "intragrupo" && destinoTipo === "intragrupo") return "intragrupo";
-  if (origemTipo && destinoTipo) return "extragrupo";
-  return undefined;
-}
+export const OportunidadesList: React.FC<OportunidadesListProps> = ({
+  onEdit,
+  onView,
+}) => {
+  const { filteredOportunidades, isLoading, deleteOportunidade } = useOportunidades();
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    isOpen: boolean;
+    oportunidade: Oportunidade | null;
+  }>({ isOpen: false, oportunidade: null });
 
-const statusOptions: StatusOportunidade[] = [
-  "em_contato",
-  "negociando",
-  "ganho",
-  "perdido",
-  "Contato",
-];
+  const getStatusColor = (status: StatusOportunidade) => {
+    const colors = {
+      "em_contato": "bg-blue-100 text-blue-800",
+      "negociando": "bg-yellow-100 text-yellow-800", 
+      "ganho": "bg-green-100 text-green-800",
+      "perdido": "bg-red-100 text-red-800",
+      "Contato": "bg-blue-100 text-blue-800",
+      "Apresentado": "bg-purple-100 text-purple-800",
+      "Sem contato": "bg-gray-100 text-gray-800",
+    };
+    return colors[status] || "bg-gray-100 text-gray-800";
+  };
 
-// Componente de célula para edição inline do status
-const StatusCell: React.FC<{
-  oportunidade: any;
-}> = ({ oportunidade }) => {
-  const { updateOportunidade } = useOportunidades();
-  const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
-  const [value, setValue] = useState<StatusOportunidade>(oportunidade.status);
+  const getStatusLabel = (status: StatusOportunidade) => {
+    const labels = {
+      "em_contato": "Em Contato",
+      "negociando": "Negociando",
+      "ganho": "Ganho", 
+      "perdido": "Perdido",
+      "Contato": "Contato",
+      "Apresentado": "Apresentado",
+      "Sem contato": "Sem Contato",
+    };
+    return labels[status] || status;
+  };
 
-  // Atualiza e salva status no backend
-  const handleStatusChange = async (status: StatusOportunidade) => {
-    setValue(status);
-    setLoading(true);
-    try {
-      // Se o status for "perdido", motivo_perda deve ser enviado, mas não obrigatório do usuário
-      const payload: any = { status };
-      if (status === "perdido") {
-        payload.motivo_perda = "";
-      }
-      await updateOportunidade(oportunidade.id, payload);
-      toast({ title: "Status atualizado!" });
-    } catch {
-      toast({ title: "Erro ao atualizar status", variant: "destructive" });
-    } finally {
-      setLoading(false);
+  const handleDeleteClick = (oportunidade: Oportunidade) => {
+    setDeleteConfirm({ isOpen: true, oportunidade });
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (deleteConfirm.oportunidade) {
+      await deleteOportunidade(deleteConfirm.oportunidade.id);
+      setDeleteConfirm({ isOpen: false, oportunidade: null });
     }
   };
 
-  return (
-    <Select
-      value={value}
-      onValueChange={handleStatusChange}
-      disabled={loading}
-    >
-      <SelectTrigger className={loading ? "opacity-70 pointer-events-none" : ""}>
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        {statusOptions.map(status => (
-          <SelectItem key={status} value={status}>
-            {status.replace("_", " ").replace(/^./, s => s.toUpperCase())}
-          </SelectItem>
+  const formatCurrency = (value: number | null | undefined) => {
+    if (!value) return "Não informado";
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    }).format(value);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {[...Array(6)].map((_, i) => (
+          <Card key={i} className="animate-pulse">
+            <CardHeader>
+              <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+              <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <div className="h-3 bg-gray-200 rounded"></div>
+                <div className="h-3 bg-gray-200 rounded w-2/3"></div>
+              </div>
+            </CardContent>
+          </Card>
         ))}
-      </SelectContent>
-    </Select>
-  );
-};
+      </div>
+    );
+  }
 
-export const OportunidadesList: React.FC<OportunidadesListProps> = ({ onEdit, onView }) => {
-  const { filteredOportunidades, isLoading, deleteOportunidade, oportunidades, fetchOportunidades } = useOportunidades();
-  const { user } = useAuth();
-  const { toast } = useToast();
-
-  const [selectedOportunidadeId, setSelectedOportunidadeId] = useState<string | null>(null);
-  const [isExportOpen, setIsExportOpen] = useState(false);
-
-  // Filtros por coluna
-  const [searchGlobal, setSearchGlobal] = useState("");
-  const [filters, setFilters] = useState({
-    data: "",
-    origem: "",
-    destino: "",
-    tipo: "",
-    nome_lead: "",
-    status: "",
-  });
-
-  // Ordenação
-  const [sortBy, setSortBy] = useState<string>("data_indicacao");
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
-
-  // KPIs
-  const total = oportunidades.length;
-  const ganhas = oportunidades.filter(op => op.status === 'ganho').length;
-  const perdidas = oportunidades.filter(op => op.status === 'perdido').length;
-  const emAberto = oportunidades.filter(
-    op => ['em_contato', 'negociando'].includes(op.status)
-  ).length;
-
-  // Aplica filtros por coluna e busca global
-  const displayOportunidades = useMemo(() => {
-    let ops = filteredOportunidades;
-
-    // Filtro global
-    if (searchGlobal.trim()) {
-      const s = searchGlobal.trim().toLowerCase();
-      ops = ops.filter(op =>
-        (op.nome_lead || "").toLowerCase().includes(s) ||
-        (op.empresa_origem?.nome || "").toLowerCase().includes(s) ||
-        (op.empresa_destino?.nome || "").toLowerCase().includes(s) ||
-        (op.status || "").toLowerCase().includes(s)
-      );
-    }
-
-    // Filtros por coluna
-    if (filters.data) {
-      ops = ops.filter(op => {
-        const d = formatDate(op.data_indicacao);
-        return d.includes(filters.data);
-      });
-    }
-    if (filters.origem) {
-      ops = ops.filter(op => (op.empresa_origem?.nome || "-").toLowerCase().includes(filters.origem.toLowerCase()));
-    }
-    if (filters.destino) {
-      ops = ops.filter(op => (op.empresa_destino?.nome || "-").toLowerCase().includes(filters.destino.toLowerCase()));
-    }
-    if (filters.tipo) {
-      const tipoFiltro = filters.tipo.toLowerCase();
-      ops = ops.filter(op => {
-        const tipo = getGrupoStatus(op.empresa_origem?.tipo, op.empresa_destino?.tipo);
-        if (tipo === "intragrupo") return "intra".includes(tipoFiltro);
-        if (tipo === "extragrupo") return "extra".includes(tipoFiltro);
-        return false;
-      });
-    }
-    if (filters.nome_lead) {
-      ops = ops.filter(op => (op.nome_lead || "-").toLowerCase().includes(filters.nome_lead.toLowerCase()));
-    }
-    if (filters.status) {
-      ops = ops.filter(op => (op.status || "-").toLowerCase().includes(filters.status.toLowerCase()));
-    }
-
-    // Ordenação
-    ops = ops.slice().sort((a, b) => {
-      let aVal: any, bVal: any;
-      switch (sortBy) {
-        case "data_indicacao":
-          aVal = a.data_indicacao ?? "";
-          bVal = b.data_indicacao ?? "";
-          break;
-        case "empresa_origem":
-          aVal = a.empresa_origem?.nome ?? "";
-          bVal = b.empresa_origem?.nome ?? "";
-          break;
-        case "empresa_destino":
-          aVal = a.empresa_destino?.nome ?? "";
-          bVal = b.empresa_destino?.nome ?? "";
-          break;
-        case "tipo":
-          aVal = getGrupoStatus(a.empresa_origem?.tipo, a.empresa_destino?.tipo) ?? "";
-          bVal = getGrupoStatus(b.empresa_origem?.tipo, b.empresa_destino?.tipo) ?? "";
-          break;
-        case "nome_lead":
-          aVal = a.nome_lead ?? "";
-          bVal = b.nome_lead ?? "";
-          break;
-        case "status":
-          aVal = a.status ?? "";
-          bVal = b.status ?? "";
-          break;
-        default:
-          aVal = "";
-          bVal = "";
-      }
-      if (aVal < bVal) return sortOrder === "asc" ? -1 : 1;
-      if (aVal > bVal) return sortOrder === "asc" ? 1 : -1;
-      return 0;
-    });
-
-    return ops;
-  }, [filteredOportunidades, searchGlobal, filters, sortBy, sortOrder]);
-
-  const getTipoBadge = (op: any) => {
-    const tipo = getGrupoStatus(op.empresa_origem?.tipo, op.empresa_destino?.tipo);
-    if (tipo === "intragrupo") return <Badge className="bg-green-100 text-green-700">Intra</Badge>;
-    if (tipo === "extragrupo") return <Badge className="bg-blue-100 text-blue-700">Extra</Badge>;
-    return <Badge className="bg-gray-100 text-gray-700">-</Badge>;
-  };
-
-  const formatDate = (dateString: string) => {
-    try {
-      return format(new Date(dateString), "dd/MM/yyyy", { locale: ptBR });
-    } catch (error) {
-      return "Data inválida";
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    try {
-      await deleteOportunidade(id);
-      toast({
-        title: "Oportunidade excluída",
-        description: "A oportunidade foi removida com sucesso.",
-      });
-    } catch {
-      toast({
-        title: "Erro ao excluir",
-        description: "Não foi possível excluir a oportunidade.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleSort = (col: string) => {
-    if (sortBy === col) {
-      setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
-    } else {
-      setSortBy(col);
-      setSortOrder("asc");
-    }
-  };
+  if (filteredOportunidades.length === 0) {
+    return (
+      <Card>
+        <CardContent className="flex flex-col items-center justify-center py-8">
+          <FileText className="h-12 w-12 text-gray-400 mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            Nenhuma oportunidade encontrada
+          </h3>
+          <p className="text-gray-500 text-center">
+            Não há oportunidades que correspondam aos filtros selecionados.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
-    <div className="space-y-4">
-      {/* KPIs acima da lista */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-2">
-        <div className="flex flex-col items-center bg-gray-50 rounded p-2">
-          <span className="text-xs text-gray-500">Total</span>
-          <span className="font-bold text-xl">
-            <PrivateData type="asterisk">{total}</PrivateData>
-          </span>
-        </div>
-        <div className="flex flex-col items-center bg-gray-50 rounded p-2">
-          <span className="text-xs text-gray-500">Em Aberto</span>
-          <span className="font-bold text-xl text-blue-600">
-            <PrivateData type="asterisk">{emAberto}</PrivateData>
-          </span>
-        </div>
-        <div className="flex flex-col items-center bg-gray-50 rounded p-2">
-          <span className="text-xs text-gray-500">Ganhas</span>
-          <span className="font-bold text-xl text-green-600">
-            <PrivateData type="asterisk">{ganhas}</PrivateData>
-          </span>
-        </div>
-        <div className="flex flex-col items-center bg-gray-50 rounded p-2">
-          <span className="text-xs text-gray-500">Perdidas</span>
-          <span className="font-bold text-xl text-red-600">
-            <PrivateData type="asterisk">{perdidas}</PrivateData>
-          </span>
-        </div>
+    <>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {filteredOportunidades.map((oportunidade) => (
+          <Card key={oportunidade.id} className="hover:shadow-md transition-shadow">
+            <CardHeader className="pb-3">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <CardTitle className="text-lg mb-2">
+                    <PrivateData type="name">
+                      {oportunidade.nome_lead}
+                    </PrivateData>
+                  </CardTitle>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge className={getStatusColor(oportunidade.status)}>
+                      {getStatusLabel(oportunidade.status)}
+                    </Badge>
+                    <ActivityIndicator oportunidadeId={oportunidade.id} />
+                  </div>
+                </div>
+              </div>
+            </CardHeader>
+            
+            <CardContent className="space-y-3">
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <Building className="h-4 w-4 text-gray-500" />
+                  <span className="text-gray-600">De:</span>
+                  <span className="font-medium">
+                    <PrivateData type="name">
+                      {oportunidade.empresa_origem?.nome || "N/A"}
+                    </PrivateData>
+                  </span>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <Building className="h-4 w-4 text-gray-500" />
+                  <span className="text-gray-600">Para:</span>
+                  <span className="font-medium">
+                    <PrivateData type="name">
+                      {oportunidade.empresa_destino?.nome || "N/A"}
+                    </PrivateData>
+                  </span>
+                </div>
+
+                {oportunidade.usuario_envio && (
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-gray-500" />
+                    <span className="text-gray-600">Enviado por:</span>
+                    <span className="font-medium">
+                      <PrivateData type="name">
+                        {oportunidade.usuario_envio.nome}
+                      </PrivateData>
+                    </span>
+                  </div>
+                )}
+
+                <div className="flex items-center gap-2">
+                  <DollarSign className="h-4 w-4 text-gray-500" />
+                  <span className="text-gray-600">Valor:</span>
+                  <span className="font-medium">
+                    <PrivateData type="currency">
+                      {formatCurrency(oportunidade.valor)}
+                    </PrivateData>
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-gray-500" />
+                  <span className="text-gray-600">Data:</span>
+                  <span className="font-medium">
+                    {format(new Date(oportunidade.data_indicacao), "dd/MM/yyyy", {
+                      locale: ptBR,
+                    })}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onView(oportunidade)}
+                  className="flex-1"
+                >
+                  <Eye className="h-4 w-4 mr-1" />
+                  Ver
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onEdit(oportunidade)}
+                  className="flex-1"
+                >
+                  <Edit className="h-4 w-4 mr-1" />
+                  Editar
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleDeleteClick(oportunidade)}
+                  className="text-destructive hover:text-destructive"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
-      {/* Filtro global e botões de ação */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
-        <Input
-          placeholder="Buscar por lead, empresa, status..."
-          value={searchGlobal}
-          onChange={e => setSearchGlobal(e.target.value)}
-          className="max-w-xs"
-        />
-        <div className="flex gap-2">
-          <CreateClienteFromOportunidade 
-            oportunidades={displayOportunidades}
-            onSuccess={fetchOportunidades}
-          />
-          <Button
-            onClick={() => setIsExportOpen(true)}
-            variant="outline"
-            className="flex items-center gap-2"
-          >
-            <Download className="h-4 w-4" />
-            Exportar
-          </Button>
-        </div>
-      </div>
-
-      {isLoading ? (
-        <div className="space-y-2">
-          {[1, 2, 3, 4, 5].map((i) => (
-            <Skeleton key={i} className="h-12 w-full" />
-          ))}
-        </div>
-      ) : displayOportunidades.length === 0 ? (
-        <div className="text-center py-8">
-          <p className="text-muted-foreground">
-            Nenhuma oportunidade encontrada com os filtros atuais.
-          </p>
-        </div>
-      ) : (
-        <div className="border rounded-md overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead
-                  className="cursor-pointer"
-                  onClick={() => handleSort("data_indicacao")}
-                >
-                  Data{" "}
-                  {sortBy === "data_indicacao" &&
-                    (sortOrder === "asc" ? (
-                      <ArrowUp className="inline w-3 h-3" />
-                    ) : (
-                      <ArrowDown className="inline w-3 h-3" />
-                    ))}
-                  <div>
-                    <Input
-                      placeholder="Filtrar"
-                      value={filters.data}
-                      onChange={e =>
-                        setFilters(f => ({ ...f, data: e.target.value }))
-                      }
-                      className="mt-1 text-xs"
-                    />
-                  </div>
-                </TableHead>
-                <TableHead
-                  className="cursor-pointer"
-                  onClick={() => handleSort("empresa_origem")}
-                >
-                  Origem{" "}
-                  {sortBy === "empresa_origem" &&
-                    (sortOrder === "asc" ? (
-                      <ArrowUp className="inline w-3 h-3" />
-                    ) : (
-                      <ArrowDown className="inline w-3 h-3" />
-                    ))}
-                  <div>
-                    <Input
-                      placeholder="Filtrar"
-                      value={filters.origem}
-                      onChange={e =>
-                        setFilters(f => ({ ...f, origem: e.target.value }))
-                      }
-                      className="mt-1 text-xs"
-                    />
-                  </div>
-                </TableHead>
-                <TableHead
-                  className="cursor-pointer"
-                  onClick={() => handleSort("empresa_destino")}
-                >
-                  Destino{" "}
-                  {sortBy === "empresa_destino" &&
-                    (sortOrder === "asc" ? (
-                      <ArrowUp className="inline w-3 h-3" />
-                    ) : (
-                      <ArrowDown className="inline w-3 h-3" />
-                    ))}
-                  <div>
-                    <Input
-                      placeholder="Filtrar"
-                      value={filters.destino}
-                      onChange={e =>
-                        setFilters(f => ({ ...f, destino: e.target.value }))
-                      }
-                      className="mt-1 text-xs"
-                    />
-                  </div>
-                </TableHead>
-                <TableHead
-                  className="cursor-pointer"
-                  onClick={() => handleSort("tipo")}
-                >
-                  Tipo{" "}
-                  {sortBy === "tipo" &&
-                    (sortOrder === "asc" ? (
-                      <ArrowUp className="inline w-3 h-3" />
-                    ) : (
-                      <ArrowDown className="inline w-3 h-3" />
-                    ))}
-                  <div>
-                    <Input
-                      placeholder="Filtrar"
-                      value={filters.tipo}
-                      onChange={e =>
-                        setFilters(f => ({ ...f, tipo: e.target.value }))
-                      }
-                      className="mt-1 text-xs"
-                    />
-                  </div>
-                </TableHead>
-                <TableHead
-                  className="cursor-pointer"
-                  onClick={() => handleSort("nome_lead")}
-                >
-                  Nome da Oportunidade{" "}
-                  {sortBy === "nome_lead" &&
-                    (sortOrder === "asc" ? (
-                      <ArrowUp className="inline w-3 h-3" />
-                    ) : (
-                      <ArrowDown className="inline w-3 h-3" />
-                    ))}
-                  <div>
-                    <Input
-                      placeholder="Filtrar"
-                      value={filters.nome_lead}
-                      onChange={e =>
-                        setFilters(f => ({ ...f, nome_lead: e.target.value }))
-                      }
-                      className="mt-1 text-xs"
-                    />
-                  </div>
-                </TableHead>
-                <TableHead
-                  className="cursor-pointer"
-                  onClick={() => handleSort("status")}
-                >
-                  Status{" "}
-                  {sortBy === "status" &&
-                    (sortOrder === "asc" ? (
-                      <ArrowUp className="inline w-3 h-3" />
-                    ) : (
-                      <ArrowDown className="inline w-3 h-3" />
-                    ))}
-                  <div>
-                    <Input
-                      placeholder="Filtrar"
-                      value={filters.status}
-                      onChange={e =>
-                        setFilters(f => ({ ...f, status: e.target.value }))
-                      }
-                      className="mt-1 text-xs"
-                    />
-                  </div>
-                </TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {displayOportunidades.map((op) => (
-                <TableRow key={op.id}>
-                  <TableCell>{formatDate(op.data_indicacao)}</TableCell>
-                  <TableCell>
-                    <PrivateData type="blur" placeholder="Empresa Origem">
-                      {op.empresa_origem?.nome || "-"}
-                    </PrivateData>
-                  </TableCell>
-                  <TableCell>
-                    <PrivateData type="blur" placeholder="Empresa Destino">
-                      {op.empresa_destino?.nome || "-"}
-                    </PrivateData>
-                  </TableCell>
-                  <TableCell>{getTipoBadge(op)}</TableCell>
-                  <TableCell>
-                    <PrivateData type="blur" placeholder="Nome da Oportunidade">
-                      {op.nome_lead || "-"}
-                    </PrivateData>
-                  </TableCell>
-                  <TableCell>
-                    <StatusCell oportunidade={op} />
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => setSelectedOportunidadeId(op.id)}
-                            aria-label="Ver detalhes"
-                          >
-                            <Search className="h-4 w-4" />
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-3xl">
-                          <DialogHeader>
-                            <DialogTitle>Detalhes da Oportunidade</DialogTitle>
-                          </DialogHeader>
-                          {selectedOportunidadeId && (
-                            <OportunidadeDetails id={selectedOportunidadeId} />
-                          )}
-                        </DialogContent>
-                      </Dialog>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => onEdit(op.id)}
-                        aria-label="Editar"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      {user?.papel === "admin" && (
-                        <ConfirmDialog
-                          title="Confirmar exclusão"
-                          description="Tem certeza que deseja excluir esta oportunidade? Esta ação não pode ser desfeita."
-                          onConfirm={() => handleDelete(op.id)}
-                        >
-                          <Button variant="destructive" size="icon" aria-label="Excluir">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </ConfirmDialog>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      )}
-
-      {/* Export Dialog */}
-      <Dialog open={isExportOpen} onOpenChange={setIsExportOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Exportar Dados</DialogTitle>
-          </DialogHeader>
-          <OportunidadesExport onClose={() => setIsExportOpen(false)} />
-        </DialogContent>
-      </Dialog>
-    </div>
+      <ConfirmDialog
+        isOpen={deleteConfirm.isOpen}
+        onClose={() => setDeleteConfirm({ isOpen: false, oportunidade: null })}
+        onConfirm={handleDeleteConfirm}
+        title="Excluir Oportunidade"
+        description={`Tem certeza que deseja excluir a oportunidade "${deleteConfirm.oportunidade?.nome_lead}"? Esta ação não pode ser desfeita.`}
+        confirmText="Excluir"
+        cancelText="Cancelar"
+      />
+    </>
   );
 };
