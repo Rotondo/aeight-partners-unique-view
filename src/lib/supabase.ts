@@ -1,32 +1,10 @@
-import { createClient } from '@supabase/supabase-js';
 import { toast } from '@/hooks/use-toast';
 import type { Database } from '@/integrations/supabase/types';
 
-// Valores devem vir do .env para segurança e flexibilidade
-// Usando fallbacks para evitar erros quando as variáveis não estão definidas
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://placeholder.supabase.co';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'placeholder-anon-key';
+// Re-export the properly configured Supabase client from integrations
+export { supabase } from '@/integrations/supabase/client';
 
-if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
-  console.error("Supabase URL or Anon Key is missing");
-  toast({
-    title: "Erro de configuração",
-    description: "As variáveis de ambiente do Supabase não estão configuradas corretamente.",
-    variant: "destructive"
-  });
-}
-
-// Configure o cliente Supabase com opções explícitas para autenticação
-export const supabase = createClient<Database>(
-  supabaseUrl,
-  supabaseAnonKey,
-  {
-    auth: {
-      autoRefreshToken: true,
-      persistSession: true,
-      storage: localStorage
-    }
-  }
-);
+// Type export for convenience
+export type { Database };
 
 console.log("Cliente Supabase inicializado");
