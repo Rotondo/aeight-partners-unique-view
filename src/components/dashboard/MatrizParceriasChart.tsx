@@ -5,15 +5,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 export const MatrizParceriasChart: React.FC = () => {
   const { filteredOportunidades } = useOportunidades();
 
-  // Conjunto de todas empresas do tipo "parceiro" (linhas)
-  const parceiros = React.useMemo(() => {
-    const set = new Set<string>();
-    filteredOportunidades.forEach((op) => {
-      if (op.empresa_origem?.tipo === "parceiro") set.add(op.empresa_origem.nome);
-    });
-    return Array.from(set).sort((a, b) => a.localeCompare(b, "pt-BR"));
-  }, [filteredOportunidades]);
-
   // Conjunto de todas empresas do tipo "intragrupo" (colunas)
   const intragrupos = React.useMemo(() => {
     const set = new Set<string>();
@@ -23,10 +14,25 @@ export const MatrizParceriasChart: React.FC = () => {
     return Array.from(set).sort((a, b) => a.localeCompare(b, "pt-BR"));
   }, [filteredOportunidades]);
 
+  // Conjunto de todos os parceiros (linhas) e cálculo dos totais por parceiro
+  const parceirosComTotais = React.useMemo(() => {
+    const parceirosMap = new Map<string, number>();
+    filteredOportunidades.forEach((op) => {
+      if (op.empresa_origem?.tipo === "parceiro" && op.empresa_destino?.tipo === "intragrupo") {
+        const nome = op.empresa_origem.nome;
+        parceirosMap.set(nome, (parceirosMap.get(nome) || 0) + 1);
+      }
+    });
+    // Retorna um array de nomes ordenado pelo total decrescente
+    return Array.from(parceirosMap.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(([nome]) => nome);
+  }, [filteredOportunidades]);
+
   // Monta matriz: [parceiro][intragrupo] = quantidade de indicações
   const matriz = React.useMemo(() => {
     const m: Record<string, Record<string, number>> = {};
-    parceiros.forEach((parceiro) => {
+    parceirosComTotais.forEach((parceiro) => {
       m[parceiro] = {};
       intragrupos.forEach((intra) => {
         m[parceiro][intra] = 0;
@@ -40,18 +46,18 @@ export const MatrizParceriasChart: React.FC = () => {
       }
     });
     return m;
-  }, [filteredOportunidades, parceiros, intragrupos]);
+  }, [filteredOportunidades, parceirosComTotais, intragrupos]);
 
   // Valor máximo para normalizar o heatmap
   const maxValue = React.useMemo(() => {
     let max = 0;
-    parceiros.forEach((parceiro) =>
+    parceirosComTotais.forEach((parceiro) =>
       intragrupos.forEach((intra) => {
         max = Math.max(max, matriz[parceiro]?.[intra] ?? 0);
       })
     );
     return max;
-  }, [parceiros, intragrupos, matriz]);
+  }, [parceirosComTotais, intragrupos, matriz]);
 
   // Gradiente de cor para cada célula
   function getCellColor(value: number) {
@@ -63,7 +69,7 @@ export const MatrizParceriasChart: React.FC = () => {
     return { backgroundColor: `rgb(${r},${g},${b})` };
   }
 
-  if (parceiros.length === 0 || intragrupos.length === 0) {
+  if (parceirosComTotais.length === 0 || intragrupos.length === 0) {
     return (
       <div className="h-[300px] flex items-center justify-center">
         <p className="text-muted-foreground">
@@ -98,7 +104,7 @@ export const MatrizParceriasChart: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {parceiros.map((parceiro) => (
+            {parceirosComTotais.map((parceiro) => (
               <tr key={parceiro}>
                 <td
                   className="border p-1 sticky left-0 z-10 bg-white font-bold"
