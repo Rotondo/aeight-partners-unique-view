@@ -60,7 +60,7 @@ export const MatrizIntragrupoChart: React.FC = () => {
 
   // Gera cor de fundo baseada na intensidade do valor
   function getCellColor(value: number) {
-    if (!value || maxValue === 0) return "bg-gray-100";
+    if (!value || maxValue === 0) return { backgroundColor: "#f3f4f6" }; // gray-100
     // Escala azul: de #e0f2fe (claro) a #2563eb (escuro)
     const percent = Math.min(value / maxValue, 1);
     const r = Math.round(224 - 112 * percent); // 224 -> 112
@@ -129,10 +129,10 @@ export const MatrizIntragrupoChart: React.FC = () => {
             ))}
           </tbody>
         </table>
-        <div className="mt-2 text-xs text-muted-foreground">
-          <span className="inline-block mr-2 align-middle" style={{ width: 18, height: 12, background: "#e0f2fe", border: "1px solid #cbd5e1" }} />
+        <div className="mt-2 text-xs text-muted-foreground flex items-center gap-2">
+          <span className="inline-block align-middle" style={{ width: 18, height: 12, backgroundColor: "#e0f2fe", border: "1px solid #cbd5e1" }} />
           Menos indicações
-          <span className="inline-block mx-2 align-middle" style={{ width: 18, height: 12, background: "#2563eb", border: "1px solid #1e40af" }} />
+          <span className="inline-block align-middle" style={{ width: 18, height: 12, backgroundColor: "#2563eb", border: "1px solid #1e40af" }} />
           Mais indicações
         </div>
       </div>
