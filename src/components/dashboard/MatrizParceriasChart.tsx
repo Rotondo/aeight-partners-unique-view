@@ -5,55 +5,57 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 export const MatrizParceriasChart: React.FC = () => {
   const { filteredOportunidades } = useOportunidades();
 
-  // Lista de todos os parceiros que aparecem como origem ou destino
-  const parceirosSet = React.useMemo(() => {
+  // Conjunto de todas empresas do tipo "parceiro" (linhas)
+  const parceiros = React.useMemo(() => {
     const set = new Set<string>();
     filteredOportunidades.forEach((op) => {
       if (op.empresa_origem?.tipo === "parceiro") set.add(op.empresa_origem.nome);
-      if (op.empresa_destino?.tipo === "parceiro") set.add(op.empresa_destino.nome);
     });
     return Array.from(set).sort((a, b) => a.localeCompare(b, "pt-BR"));
   }, [filteredOportunidades]);
 
-  // Matriz [origem][destino] = indicações
+  // Conjunto de todas empresas do tipo "intragrupo" (colunas)
+  const intragrupos = React.useMemo(() => {
+    const set = new Set<string>();
+    filteredOportunidades.forEach((op) => {
+      if (op.empresa_destino?.tipo === "intragrupo") set.add(op.empresa_destino.nome);
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b, "pt-BR"));
+  }, [filteredOportunidades]);
+
+  // Monta matriz: [parceiro][intragrupo] = quantidade de indicações
   const matriz = React.useMemo(() => {
     const m: Record<string, Record<string, number>> = {};
-    parceirosSet.forEach((origem) => {
-      m[origem] = {};
-      parceirosSet.forEach((destino) => {
-        m[origem][destino] = 0;
+    parceiros.forEach((parceiro) => {
+      m[parceiro] = {};
+      intragrupos.forEach((intra) => {
+        m[parceiro][intra] = 0;
       });
     });
     filteredOportunidades.forEach((op) => {
-      const origem = op.empresa_origem?.nome;
-      const destino = op.empresa_destino?.nome;
-      if (
-        op.empresa_origem?.tipo === "parceiro" &&
-        op.empresa_destino?.tipo === "parceiro" &&
-        origem &&
-        destino
-      ) {
-        m[origem][destino] += 1;
+      const origem = op.empresa_origem;
+      const destino = op.empresa_destino;
+      if (origem?.tipo === "parceiro" && destino?.tipo === "intragrupo") {
+        m[origem.nome][destino.nome] += 1;
       }
     });
     return m;
-  }, [filteredOportunidades, parceirosSet]);
+  }, [filteredOportunidades, parceiros, intragrupos]);
 
   // Valor máximo para normalizar o heatmap
   const maxValue = React.useMemo(() => {
     let max = 0;
-    parceirosSet.forEach((origem) =>
-      parceirosSet.forEach((destino) => {
-        max = Math.max(max, matriz[origem]?.[destino] ?? 0);
+    parceiros.forEach((parceiro) =>
+      intragrupos.forEach((intra) => {
+        max = Math.max(max, matriz[parceiro]?.[intra] ?? 0);
       })
     );
     return max;
-  }, [parceirosSet, matriz]);
+  }, [parceiros, intragrupos, matriz]);
 
   // Gradiente de cor para cada célula
   function getCellColor(value: number) {
-    if (!value || maxValue === 0) return { backgroundColor: "#f3f4f6" }; // gray-100 do tailwind
-    // De #e0f2fe (claro) a #2563eb (escuro)
+    if (!value || maxValue === 0) return { backgroundColor: "#f3f4f6" }; // cinza claro
     const percent = Math.min(value / maxValue, 1);
     const r = Math.round(224 - 112 * percent); // 224 -> 112
     const g = Math.round(242 - 114 * percent); // 242 -> 128
@@ -61,10 +63,12 @@ export const MatrizParceriasChart: React.FC = () => {
     return { backgroundColor: `rgb(${r},${g},${b})` };
   }
 
-  if (parceirosSet.length === 0) {
+  if (parceiros.length === 0 || intragrupos.length === 0) {
     return (
       <div className="h-[300px] flex items-center justify-center">
-        <p className="text-muted-foreground">Nenhum parceiro encontrado</p>
+        <p className="text-muted-foreground">
+          Nenhum parceiro ou empresa intragrupo encontrado
+        </p>
       </div>
     );
   }
@@ -79,9 +83,9 @@ export const MatrizParceriasChart: React.FC = () => {
                 className="border p-1 sticky left-0 z-10 bg-white font-bold text-left"
                 style={{ position: "sticky", left: 0, zIndex: 2, background: "#fff" }}
               >
-                Origem \ Destino
+                Parceiro \ Intragrupo
               </th>
-              {parceirosSet.map((destino) => (
+              {intragrupos.map((destino) => (
                 <th
                   key={destino}
                   className="border p-1 bg-slate-50 font-bold text-center"
@@ -94,20 +98,20 @@ export const MatrizParceriasChart: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {parceirosSet.map((origem) => (
-              <tr key={origem}>
+            {parceiros.map((parceiro) => (
+              <tr key={parceiro}>
                 <td
                   className="border p-1 sticky left-0 z-10 bg-white font-bold"
                   style={{ position: "sticky", left: 0, zIndex: 1, background: "#fff" }}
-                  title={origem}
+                  title={parceiro}
                 >
-                  {origem}
+                  {parceiro}
                 </td>
-                {parceirosSet.map((destino) => {
-                  const value = matriz[origem][destino];
+                {intragrupos.map((intra) => {
+                  const value = matriz[parceiro][intra];
                   return (
                     <td
-                      key={destino}
+                      key={intra}
                       className="border p-1 text-center select-none"
                       style={getCellColor(value)}
                     >
@@ -118,7 +122,7 @@ export const MatrizParceriasChart: React.FC = () => {
                           </span>
                         </TooltipTrigger>
                         <TooltipContent side="top">
-                          {origem} → {destino}: {value} indicação{value === 1 ? "" : "s"}
+                          {parceiro} → {intra}: {value} indicação{value === 1 ? "" : "s"}
                         </TooltipContent>
                       </Tooltip>
                     </td>
