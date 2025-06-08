@@ -1,19 +1,19 @@
 import React from "react";
 import { useOportunidades } from "@/components/oportunidades/OportunidadesContext";
-import { Tooltip as ReactTooltip } from "react-tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 /**
- * Componente de matriz intragrupo aprimorado:
- * - Tabela com heatmap visual (cor de fundo proporcional ao valor).
+ * Matriz intragrupo aprimorada:
+ * - Tabela com heatmap visual (cor proporcional ao valor).
+ * - Tooltips nativos shadcn/ui.
  * - Primeira coluna e linha fixas.
- * - Tooltips acessíveis em cada célula detalhando o fluxo.
- * - Zeros exibidos como "–" para reduzir ruído visual.
- * - Layout responsivo e rolagem horizontal suave.
+ * - Zeros exibidos como "–" para menos ruído.
+ * - Layout responsivo e rolagem horizontal.
  */
 export const MatrizIntragrupoChart: React.FC = () => {
   const { filteredOportunidades } = useOportunidades();
 
-  // Pega todas empresas intragrupo que aparecem como origem ou destino
+  // Todas empresas intragrupo que aparecem como origem ou destino
   const empresasSet = React.useMemo(() => {
     const set = new Set<string>();
     filteredOportunidades.forEach((op) => {
@@ -78,57 +78,64 @@ export const MatrizIntragrupoChart: React.FC = () => {
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="min-w-max border-collapse text-xs">
-        <thead>
-          <tr>
-            <th className="border p-1 sticky left-0 z-10 bg-white font-bold text-left">
-              Origem \ Destino
-            </th>
-            {empresasSet.map((destino) => (
-              <th
-                key={destino}
-                className="border p-1 bg-slate-50 font-bold text-center"
-                style={{ minWidth: 90, maxWidth: 180 }}
-                title={destino}
-              >
-                {destino}
+    <TooltipProvider>
+      <div className="overflow-x-auto">
+        <table className="min-w-max border-collapse text-xs">
+          <thead>
+            <tr>
+              <th className="border p-1 sticky left-0 z-10 bg-white font-bold text-left">
+                Origem \ Destino
               </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {empresasSet.map((origem) => (
-            <tr key={origem}>
-              <td className="border p-1 sticky left-0 z-10 bg-white font-bold" title={origem}>
-                {origem}
-              </td>
-              {empresasSet.map((destino) => {
-                const value = matriz[origem][destino];
-                const tooltipId = `cell-${origem}-${destino}`;
-                return (
-                  <td
-                    key={destino}
-                    className="border p-1 text-center"
-                    style={getCellColor(value)}
-                    data-tooltip-id={tooltipId}
-                    data-tooltip-content={`${origem} → ${destino}: ${value} indicação${value === 1 ? "" : "s"}`}
-                  >
-                    {value > 0 ? value : <span style={{ opacity: 0.4 }}>–</span>}
-                    <ReactTooltip id={tooltipId} place="top" effect="solid" />
-                  </td>
-                );
-              })}
+              {empresasSet.map((destino) => (
+                <th
+                  key={destino}
+                  className="border p-1 bg-slate-50 font-bold text-center"
+                  style={{ minWidth: 90, maxWidth: 180 }}
+                  title={destino}
+                >
+                  {destino}
+                </th>
+              ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
-      <div className="mt-2 text-xs text-muted-foreground">
-        <span className="inline-block mr-2 align-middle" style={{ width: 18, height: 12, background: "#e0f2fe", border: "1px solid #cbd5e1" }} />
-        Menos indicações
-        <span className="inline-block mx-2 align-middle" style={{ width: 18, height: 12, background: "#2563eb", border: "1px solid #1e40af" }} />
-        Mais indicações
+          </thead>
+          <tbody>
+            {empresasSet.map((origem) => (
+              <tr key={origem}>
+                <td className="border p-1 sticky left-0 z-10 bg-white font-bold" title={origem}>
+                  {origem}
+                </td>
+                {empresasSet.map((destino) => {
+                  const value = matriz[origem][destino];
+                  return (
+                    <td
+                      key={destino}
+                      className="border p-1 text-center"
+                      style={getCellColor(value)}
+                    >
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span tabIndex={0} style={{ cursor: value > 0 ? "pointer" : "default" }}>
+                            {value > 0 ? value : <span style={{ opacity: 0.4 }}>–</span>}
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">
+                          {origem} → {destino}: {value} indicação{value === 1 ? "" : "s"}
+                        </TooltipContent>
+                      </Tooltip>
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <div className="mt-2 text-xs text-muted-foreground">
+          <span className="inline-block mr-2 align-middle" style={{ width: 18, height: 12, background: "#e0f2fe", border: "1px solid #cbd5e1" }} />
+          Menos indicações
+          <span className="inline-block mx-2 align-middle" style={{ width: 18, height: 12, background: "#2563eb", border: "1px solid #1e40af" }} />
+          Mais indicações
+        </div>
       </div>
-    </div>
+    </TooltipProvider>
   );
 };
