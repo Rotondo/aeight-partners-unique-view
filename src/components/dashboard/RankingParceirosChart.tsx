@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { useOportunidades } from '@/components/oportunidades/OportunidadesContext';
 
 export const RankingParceirosChart: React.FC = () => {
@@ -34,6 +34,7 @@ export const RankingParceirosChart: React.FC = () => {
     }, {} as Record<string, any>);
 
     return Object.values(parceirosCount)
+      .filter((item: any) => item.total > 0)
       .sort((a: any, b: any) => b.total - a.total)
       .slice(0, 10);
   }, [filteredOportunidades]);
@@ -49,16 +50,23 @@ export const RankingParceirosChart: React.FC = () => {
   return (
     <div className="h-[300px]">
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={rankingData} layout="horizontal">
+        <BarChart data={rankingData} layout="horizontal" margin={{ left: 80, right: 20, top: 20, bottom: 20 }}>
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis type="number" />
           <YAxis 
             type="category" 
             dataKey="parceiro" 
-            width={100}
-            tick={{ fontSize: 12 }}
+            width={80}
+            tick={{ fontSize: 10 }}
+            interval={0}
           />
-          <Tooltip />
+          <Tooltip 
+            formatter={(value, name) => [
+              value, 
+              name === 'enviadas' ? 'Enviadas' : 'Recebidas'
+            ]}
+          />
+          <Legend />
           <Bar dataKey="enviadas" fill="#3b82f6" name="Enviadas" />
           <Bar dataKey="recebidas" fill="#10b981" name="Recebidas" />
         </BarChart>

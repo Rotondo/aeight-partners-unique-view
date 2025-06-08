@@ -12,6 +12,7 @@ import { QualidadeIndicacoesChart } from "./QualidadeIndicacoesChart";
 import { BalancoGrupoParceriasChart } from "./BalancoGrupoParceriasChart";
 import { RankingParceirosChart } from "./RankingParceirosChart";
 import { StatusDistributionChart } from "./StatusDistributionChart";
+import { PeriodIndicator } from "./PeriodIndicator";
 import { OportunidadesFilter } from "@/components/oportunidades/OportunidadesFilter";
 import { useOportunidades } from "@/components/oportunidades/OportunidadesContext";
 import { useDashboardStats } from "@/hooks/useDashboardStats";
@@ -24,6 +25,7 @@ export const OportunidadesDashboards: React.FC = () => {
     <div className="flex flex-col space-y-6">
       <div className="flex flex-col space-y-4">
         <OportunidadesFilter />
+        <PeriodIndicator />
         <DashboardStatsSection stats={stats} loading={statsLoading} />
       </div>
 

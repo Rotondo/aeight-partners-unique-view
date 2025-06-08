@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { useOportunidades } from '@/components/oportunidades/OportunidadesContext';
 
 export const MatrizIntragrupoChart: React.FC = () => {
@@ -25,18 +25,23 @@ export const MatrizIntragrupoChart: React.FC = () => {
           destino,
           total: 0,
           ganhas: 0,
-          perdidas: 0
+          perdidas: 0,
+          em_andamento: 0
         };
       }
       
       acc[key].total++;
       if (op.status === 'ganho') acc[key].ganhas++;
-      if (op.status === 'perdido') acc[key].perdidas++;
+      else if (op.status === 'perdido') acc[key].perdidas++;
+      else acc[key].em_andamento++;
       
       return acc;
     }, {} as Record<string, any>);
 
-    return Object.values(grouped).sort((a: any, b: any) => b.total - a.total).slice(0, 10);
+    return Object.values(grouped)
+      .filter((item: any) => item.total > 0)
+      .sort((a: any, b: any) => b.total - a.total)
+      .slice(0, 10);
   }, [filteredOportunidades]);
 
   if (matrizData.length === 0) {
@@ -50,21 +55,28 @@ export const MatrizIntragrupoChart: React.FC = () => {
   return (
     <div className="h-[300px]">
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={matrizData} layout="horizontal">
+        <BarChart data={matrizData} layout="horizontal" margin={{ left: 80, right: 20, top: 20, bottom: 20 }}>
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis type="number" />
           <YAxis 
             type="category" 
             dataKey="fluxo" 
-            width={120}
-            tick={{ fontSize: 12 }}
+            width={80}
+            tick={{ fontSize: 10 }}
+            interval={0}
           />
           <Tooltip 
-            formatter={(value, name) => [value, name === 'total' ? 'Total' : name === 'ganhas' ? 'Ganhas' : 'Perdidas']}
+            formatter={(value, name) => [
+              value, 
+              name === 'total' ? 'Total' : 
+              name === 'ganhas' ? 'Ganhas' : 
+              name === 'perdidas' ? 'Perdidas' : 'Em Andamento'
+            ]}
           />
-          <Bar dataKey="total" fill="#3b82f6" name="Total" />
-          <Bar dataKey="ganhas" fill="#10b981" name="Ganhas" />
-          <Bar dataKey="perdidas" fill="#ef4444" name="Perdidas" />
+          <Legend />
+          <Bar dataKey="ganhas" fill="#10b981" name="Ganhas" stackId="stack" />
+          <Bar dataKey="em_andamento" fill="#f59e0b" name="Em Andamento" stackId="stack" />
+          <Bar dataKey="perdidas" fill="#ef4444" name="Perdidas" stackId="stack" />
         </BarChart>
       </ResponsiveContainer>
     </div>
