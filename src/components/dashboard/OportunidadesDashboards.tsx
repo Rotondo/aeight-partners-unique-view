@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DashboardStatsSection } from "./DashboardStats";
 import { OpportunitiesChart } from "./OpportunitiesChart";
 import { ValuesFunnelAnalysis } from "./ValuesFunnelAnalysis";
+import { IntraExtraAnalysis } from "./IntraExtraAnalysis";
 import { MatrizIntragrupoChart } from "./MatrizIntragrupoChart";
 import { MatrizParceriasChart } from "./MatrizParceriasChart";
 import { QualidadeIndicacoesChart } from "./QualidadeIndicacoesChart";
@@ -27,9 +28,10 @@ export const OportunidadesDashboards: React.FC = () => {
       </div>
 
       <Tabs defaultValue="quantities" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="quantities">Análise de Quantidades</TabsTrigger>
           <TabsTrigger value="values">Análise de Valores</TabsTrigger>
+          <TabsTrigger value="intra-extra">Intra vs Extragrupo</TabsTrigger>
         </TabsList>
         
         <TabsContent value="quantities" className="space-y-6">
@@ -102,6 +104,10 @@ export const OportunidadesDashboards: React.FC = () => {
         
         <TabsContent value="values" className="space-y-6">
           <ValuesFunnelAnalysis />
+        </TabsContent>
+
+        <TabsContent value="intra-extra" className="space-y-6">
+          <IntraExtraAnalysis />
         </TabsContent>
       </Tabs>
     </div>
