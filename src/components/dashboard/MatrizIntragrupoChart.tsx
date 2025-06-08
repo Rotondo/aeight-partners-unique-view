@@ -1,123 +1,150 @@
-import React from 'react';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-} from 'recharts';
-import { useOportunidades } from '@/components/oportunidades/OportunidadesContext';
+import React from "react";
+import { useOportunidades } from "@/components/oportunidades/OportunidadesContext";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export const MatrizIntragrupoChart: React.FC = () => {
   const { filteredOportunidades } = useOportunidades();
 
-  const matrizData = React.useMemo(() => {
-    // Filtrar apenas oportunidades intragrupo
-    const intragrupoOportunidades = filteredOportunidades.filter(op =>
-      op.empresa_origem?.tipo === 'intragrupo' && op.empresa_destino?.tipo === 'intragrupo'
-    );
-
-    // Agrupar por empresa origem e destino
-    const grouped = intragrupoOportunidades.reduce((acc, op) => {
-      const origem = op.empresa_origem?.nome || 'Origem Desconhecida';
-      const destino = op.empresa_destino?.nome || 'Destino Desconhecida';
-      const key = `${origem} → ${destino}`;
-
-      if (!acc[key]) {
-        acc[key] = {
-          fluxo: key,
-          origem,
-          destino,
-          total: 0,
-          ganhas: 0,
-          perdidas: 0,
-          em_andamento: 0,
-        };
-      }
-
-      acc[key].total++;
-      if (op.status === 'ganho') acc[key].ganhas++;
-      else if (op.status === 'perdido') acc[key].perdidas++;
-      else acc[key].em_andamento++;
-
-      return acc;
-    }, {} as Record<string, any>);
-
-    return Object.values(grouped)
-      .filter((item: any) => item.total > 0)
-      .sort((a: any, b: any) => b.total - a.total)
-      .slice(0, 10);
+  // Todas empresas intragrupo presentes como origem ou destino
+  const empresasSet = React.useMemo(() => {
+    const set = new Set<string>();
+    filteredOportunidades.forEach((op) => {
+      if (op.empresa_origem?.tipo === "intragrupo") set.add(op.empresa_origem.nome);
+      if (op.empresa_destino?.tipo === "intragrupo") set.add(op.empresa_destino.nome);
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b, "pt-BR"));
   }, [filteredOportunidades]);
 
-  if (matrizData.length === 0) {
+  // Gera matriz: { [origem]: { [destino]: número de indicações } }
+  const matriz = React.useMemo(() => {
+    const m: Record<string, Record<string, number>> = {};
+    empresasSet.forEach((origem) => {
+      m[origem] = {};
+      empresasSet.forEach((destino) => {
+        m[origem][destino] = 0;
+      });
+    });
+    filteredOportunidades.forEach((op) => {
+      const origem = op.empresa_origem?.nome;
+      const destino = op.empresa_destino?.nome;
+      if (
+        op.empresa_origem?.tipo === "intragrupo" &&
+        op.empresa_destino?.tipo === "intragrupo" &&
+        origem &&
+        destino
+      ) {
+        m[origem][destino] += 1;
+      }
+    });
+    return m;
+  }, [filteredOportunidades, empresasSet]);
+
+  // Descobre o valor máximo para normalizar cor do heatmap
+  const maxValue = React.useMemo(() => {
+    let max = 0;
+    empresasSet.forEach((origem) =>
+      empresasSet.forEach((destino) => {
+        max = Math.max(max, matriz[origem]?.[destino] ?? 0);
+      })
+    );
+    return max;
+  }, [empresasSet, matriz]);
+
+  // Função para gerar cor de fundo baseada na intensidade do valor
+  function getCellColor(value: number) {
+    if (!value || maxValue === 0) return { backgroundColor: "#f3f4f6" }; // gray-100
+    // Escala azul: de #e0f2fe (claro) a #2563eb (escuro)
+    const percent = Math.min(value / maxValue, 1);
+    const r = Math.round(224 - 112 * percent); // 224 -> 112
+    const g = Math.round(242 - 114 * percent); // 242 -> 128
+    const b = Math.round(254 - 213 * percent); // 254 -> 41
+    return { backgroundColor: `rgb(${r},${g},${b})` };
+  }
+
+  if (empresasSet.length === 0) {
     return (
       <div className="h-[300px] flex items-center justify-center">
-        <p className="text-muted-foreground">Nenhuma oportunidade intragrupo encontrada</p>
+        <p className="text-muted-foreground">Nenhuma empresa intragrupo encontrada</p>
       </div>
     );
   }
 
   return (
-    <div className="h-[300px]">
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart
-          data={matrizData}
-          layout="horizontal"
-          margin={{ left: 80, right: 20, top: 20, bottom: 20 }}
-        >
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis type="number" />
-          <YAxis
-            type="category"
-            dataKey="fluxo"
-            width={80}
-            tick={{ fontSize: 10 }}
-            interval={0}
+    <TooltipProvider>
+      <div className="overflow-x-auto">
+        <table className="min-w-max border-collapse text-xs">
+          <thead>
+            <tr>
+              <th className="border p-1 sticky left-0 z-10 bg-white font-bold text-left" style={{ position: "sticky", left: 0, zIndex: 2, background: "#fff" }}>
+                Origem \ Destino
+              </th>
+              {empresasSet.map((destino) => (
+                <th
+                  key={destino}
+                  className="border p-1 bg-slate-50 font-bold text-center"
+                  style={{ minWidth: 90, maxWidth: 180 }}
+                  title={destino}
+                >
+                  {destino}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {empresasSet.map((origem) => (
+              <tr key={origem}>
+                <td className="border p-1 sticky left-0 z-10 bg-white font-bold" style={{ position: "sticky", left: 0, zIndex: 1, background: "#fff" }} title={origem}>
+                  {origem}
+                </td>
+                {empresasSet.map((destino) => {
+                  const value = matriz[origem][destino];
+                  // tooltip só para células com valor
+                  return (
+                    <td
+                      key={destino}
+                      className="border p-1 text-center select-none"
+                      style={getCellColor(value)}
+                    >
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span tabIndex={0} style={{ cursor: value > 0 ? "pointer" : "default" }}>
+                            {value > 0 ? value : <span style={{ opacity: 0.4 }}>–</span>}
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">
+                          {origem} → {destino}: {value} indicação{value === 1 ? "" : "s"}
+                        </TooltipContent>
+                      </Tooltip>
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <div className="mt-2 text-xs text-muted-foreground flex items-center gap-2">
+          <span
+            className="inline-block align-middle"
+            style={{
+              width: 18,
+              height: 12,
+              backgroundColor: "#e0f2fe",
+              border: "1px solid #cbd5e1",
+            }}
           />
-          <Tooltip
-            formatter={(value, name) => [
-              value,
-              name === 'total'
-                ? 'Total'
-                : name === 'ganhas'
-                ? 'Ganhas'
-                : name === 'perdidas'
-                ? 'Perdidas'
-                : 'Em Andamento',
-            ]}
+          Menos indicações
+          <span
+            className="inline-block align-middle"
+            style={{
+              width: 18,
+              height: 12,
+              backgroundColor: "#2563eb",
+              border: "1px solid #1e40af",
+            }}
           />
-          <Legend />
-          <Bar dataKey="ganhas" fill="#10b981" name="Ganhas" stackId="stack" />
-          <Bar dataKey="em_andamento" fill="#f59e0b" name="Em Andamento" stackId="stack" />
-          <Bar dataKey="perdidas" fill="#ef4444" name="Perdidas" stackId="stack" />
-        </BarChart>
-      </ResponsiveContainer>
-      {/* Legenda visual com style correto */}
-      <div className="mt-2 text-xs text-muted-foreground flex items-center gap-2">
-        <span
-          className="inline-block align-middle"
-          style={{
-            width: 18,
-            height: 12,
-            backgroundColor: '#e0f2fe',
-            border: '1px solid #cbd5e1',
-          }}
-        />
-        Menos indicações
-        <span
-          className="inline-block align-middle"
-          style={{
-            width: 18,
-            height: 12,
-            backgroundColor: '#2563eb',
-            border: '1px solid #1e40af',
-          }}
-        />
-        Mais indicações
+          Mais indicações
+        </div>
       </div>
-    </div>
+    </TooltipProvider>
   );
 };
