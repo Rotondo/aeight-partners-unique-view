@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { CalendarIcon } from 'lucide-react';
@@ -8,6 +7,9 @@ export const PeriodIndicator: React.FC = () => {
   const { filters } = useOportunidades();
 
   const getPeriodText = () => {
+    if (!filters) {
+      return 'Todos os períodos';
+    }
     if (filters.dataInicio && filters.dataFim) {
       const inicio = new Date(filters.dataInicio).toLocaleDateString('pt-BR');
       const fim = new Date(filters.dataFim).toLocaleDateString('pt-BR');
