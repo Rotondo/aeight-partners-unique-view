@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { RepositorioMaterial, Categoria, Empresa, RepositorioTag } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -48,6 +47,7 @@ const MateriaisList: React.FC<MateriaisListProps> = ({
     try {
       // Implementar download do arquivo
       console.log('Download material:', material);
+      // ...
     } catch (error) {
       console.error('Error downloading material:', error);
     }
@@ -83,6 +83,25 @@ const MateriaisList: React.FC<MateriaisListProps> = ({
     return [];
   };
 
+  // Função para lidar com valores que podem ser objeto
+  function safeRenderValue(value: any) {
+    if (value === null || value === undefined) return '-';
+    if (typeof value === 'object') {
+      // Caso o valor seja o objeto do erro (ex: {em_contato, negociando, ganho, perdido, total, outros})
+      // Mostra como lista legível
+      return (
+        <div style={{ fontSize: 11, background: 'rgba(0,0,0,0.03)', padding: 2, borderRadius: 4 }}>
+          {Object.entries(value).map(([key, val]) => (
+            <div key={key}>
+              <span style={{ fontWeight: 600 }}>{key}:</span> {String(val)}
+            </div>
+          ))}
+        </div>
+      );
+    }
+    return String(value);
+  }
+
   if (isLoading) {
     return <div>Carregando materiais...</div>;
   }
@@ -103,17 +122,17 @@ const MateriaisList: React.FC<MateriaisListProps> = ({
               <Input
                 placeholder="Buscar por nome..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={e => setSearchTerm(e.target.value)}
               />
             </div>
             <div>
               <Select value={selectedCategoria} onValueChange={setSelectedCategoria}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Todas as categorias" />
+                  <SelectValue placeholder="Categoria" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas as categorias</SelectItem>
-                  {categorias.map((categoria) => (
+                  {categorias.map(categoria => (
                     <SelectItem key={categoria.id} value={categoria.id}>
                       {categoria.nome}
                     </SelectItem>
@@ -124,11 +143,11 @@ const MateriaisList: React.FC<MateriaisListProps> = ({
             <div>
               <Select value={selectedParceiro} onValueChange={setSelectedParceiro}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Todos os parceiros" />
+                  <SelectValue placeholder="Parceiro" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos os parceiros</SelectItem>
-                  {parceiros.map((parceiro) => (
+                  {parceiros.map(parceiro => (
                     <SelectItem key={parceiro.id} value={parceiro.id}>
                       {parceiro.nome}
                     </SelectItem>
@@ -139,7 +158,7 @@ const MateriaisList: React.FC<MateriaisListProps> = ({
             <div>
               <Select value={selectedTipo} onValueChange={setSelectedTipo}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Todos os tipos" />
+                  <SelectValue placeholder="Tipo de Arquivo" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos os tipos</SelectItem>
@@ -156,17 +175,11 @@ const MateriaisList: React.FC<MateriaisListProps> = ({
       {/* Lista de Materiais */}
       <div className="grid gap-4">
         {filteredMateriais.length === 0 ? (
-          <Card>
-            <CardContent className="p-6 text-center">
-              <p className="text-muted-foreground">
-                Nenhum material encontrado com os filtros aplicados.
-              </p>
-            </CardContent>
-          </Card>
+          <div className="text-center text-muted-foreground p-8">Nenhum material encontrado.</div>
         ) : (
           filteredMateriais.map((material) => {
             const tagsArray = getTagsArray(material.tag_categoria);
-            
+
             return (
               <Card key={material.id}>
                 <CardContent className="p-6">
@@ -177,7 +190,7 @@ const MateriaisList: React.FC<MateriaisListProps> = ({
                       </div>
                       <div className="flex-1 min-w-0">
                         <h3 className="font-semibold text-lg mb-2">{material.nome}</h3>
-                        
+
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-muted-foreground mb-3">
                           <div className="flex items-center gap-2">
                             <span className="font-medium">Categoria:</span>
@@ -186,6 +199,10 @@ const MateriaisList: React.FC<MateriaisListProps> = ({
                           <div className="flex items-center gap-2">
                             <span className="font-medium">Parceiro:</span>
                             {getParceiroName(material.empresa_id)}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">Tipo:</span>
+                            {material.tipo_arquivo}
                           </div>
                           <div className="flex items-center gap-2">
                             <Calendar className="h-4 w-4" />
@@ -215,9 +232,20 @@ const MateriaisList: React.FC<MateriaisListProps> = ({
                             })}
                           </div>
                         )}
+
+                        {/* Exemplo de campo que pode ser objeto (ex: status de oportunidades) */}
+                        {material.status &&
+                          typeof material.status === 'object' &&
+                          Object.keys(material.status).length > 0 && (
+                            <div className="mb-3">
+                              <span className="font-medium text-xs text-muted-foreground">Status:</span>
+                              {safeRenderValue(material.status)}
+                            </div>
+                          )
+                        }
                       </div>
                     </div>
-                    
+
                     <div className="flex gap-2 flex-shrink-0">
                       <Button
                         variant="outline"
