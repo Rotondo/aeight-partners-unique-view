@@ -2,26 +2,28 @@ import React from "react";
 import { DashboardCard } from "@/components/dashboard/DashboardCard";
 import { BarChart as ReBarChart } from "recharts";
 
-// Aceita números simples ou um objeto agrupado (e exibe um alerta)
+// Aceita números simples ou objeto agrupado e mostra alerta:
 interface DashboardKpisProps {
-  stats: {
-    total: number;
-    ganhas: number;
-    perdidas: number;
-    andamento: number;
-    intra: number;
-    extra: number;
-    enviadas: number;
-    recebidas: number;
-    saldo: number;
-  } | {
-    em_contato: number;
-    negociando: number;
-    ganho: number;
-    perdido: number;
-    outros?: Record<string, number>;
-    total: number;
-  };
+  stats:
+    | {
+        total: number;
+        ganhas: number;
+        perdidas: number;
+        andamento: number;
+        intra: number;
+        extra: number;
+        enviadas: number;
+        recebidas: number;
+        saldo: number;
+      }
+    | {
+        em_contato: number;
+        negociando: number;
+        ganho: number;
+        perdido: number;
+        outros?: Record<string, number>;
+        total: number;
+      };
   loading?: boolean;
 }
 
@@ -45,33 +47,13 @@ function isStatusGrouped(obj: any): obj is {
 }
 
 export const DashboardKpis: React.FC<DashboardKpisProps> = ({ stats, loading }) => {
-  // Se vier um objeto agrupado por status, exibe um alerta para o dev e um fallback visual
   if (isStatusGrouped(stats)) {
+    // Erro de uso: objeto agrupado foi passado
     return (
       <div className="p-4 border border-red-500 bg-red-50 rounded text-red-700">
-        <strong>ERRO DE USO:</strong> O componente <code>DashboardKpis</code> recebeu um objeto agrupado por status, em vez do esperado (números simples).<br />
-        Ajuste a chamada para passar:
-        <pre className="bg-white border rounded p-2 mt-2 overflow-x-auto">
-{`<DashboardKpis
-  stats={{
-    total: stats.total.total,
-    ganhas: stats.total.ganho,
-    perdidas: stats.total.perdido,
-    andamento: stats.total.em_contato + stats.total.negociando,
-    intra: stats.intra.total,
-    extra: stats.extra.total,
-    enviadas: stats.enviadas,
-    recebidas: stats.recebidas,
-    saldo: stats.saldo,
-  }}
-  loading={loading}
-/>
-`}
-        </pre>
-        <div className="mt-4">
-          <strong>Status agrupado recebido:</strong>
-          <pre className="bg-gray-100 border rounded p-2 overflow-x-auto">{JSON.stringify(stats, null, 2)}</pre>
-        </div>
+        <strong>ERRO DE USO:</strong> O componente <code>DashboardKpis</code> recebeu objeto agrupado por status.<br />
+        Ajuste para passar apenas números simples.<br /><br />
+        <pre className="bg-white border rounded p-2 mt-2 overflow-x-auto">{JSON.stringify(stats, null, 2)}</pre>
       </div>
     );
   }
