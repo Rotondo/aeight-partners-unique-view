@@ -19,10 +19,10 @@ export interface DashboardStats {
   saldo: number;
 }
 
+// ATENÇÃO: só são status oficiais os abaixo, e só eles entram nos gráficos principais
 const STATUS_LIST = ["em_contato", "negociando", "ganho", "perdido"];
 
 function normalizeStatus(status: any): string {
-  // Remove acentuação e padroniza para minúsculo
   if (typeof status !== "string") return "";
   return status
     .normalize("NFD")
@@ -38,7 +38,7 @@ function countByStatus(arr: Oportunidade[]): DashboardStatsByStatus {
     counts[status] = (counts[status] || 0) + 1;
   });
 
-  // Garante que todos os status conhecidos apareçam, mesmo que zero
+  // Garante todos os status conhecidos, mesmo que zero
   const res: DashboardStatsByStatus = {
     em_contato: counts["em_contato"] || 0,
     negociando: counts["negociando"] || 0,
@@ -47,7 +47,7 @@ function countByStatus(arr: Oportunidade[]): DashboardStatsByStatus {
     total: arr.length,
   };
 
-  // Adiciona outros status não reconhecidos (diagnóstico)
+  // Adiciona status desconhecidos (diagnóstico)
   const outros: Record<string, number> = {};
   Object.keys(counts).forEach(k => {
     if (!STATUS_LIST.includes(k)) outros[k] = counts[k];
@@ -62,7 +62,6 @@ function countByStatus(arr: Oportunidade[]): DashboardStatsByStatus {
 export function useDashboardStats(oportunidadesFiltradas?: Oportunidade[] | null): DashboardStats {
   const oportunidades = Array.isArray(oportunidadesFiltradas) ? oportunidadesFiltradas : [];
 
-  // INTRA e EXTRA
   const intraOps = oportunidades.filter(
     op => typeof op.tipo_relacao === "string" && normalizeStatus(op.tipo_relacao) === "intra"
   );
@@ -82,7 +81,7 @@ export function useDashboardStats(oportunidadesFiltradas?: Oportunidade[] | null
   ).length;
   const saldo = enviadas - recebidas;
 
-  // Log status não reconhecidos para diagnóstico
+  // Diagnóstico: loga status desconhecidos
   if (typeof window !== "undefined") {
     if (totalStats.outros && Object.keys(totalStats.outros).length) {
       console.warn("[useDashboardStats] Status inesperados encontrados:", totalStats.outros);
