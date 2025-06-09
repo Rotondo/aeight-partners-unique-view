@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -19,7 +18,7 @@ import { useDashboardStats } from "@/hooks/useDashboardStats";
 
 export const OportunidadesDashboards: React.FC = () => {
   const { filteredOportunidades, isLoading } = useOportunidades();
-  const { stats, loading: statsLoading } = useDashboardStats();
+  const { stats, loading: statsLoading } = useDashboardStats(filteredOportunidades);
 
   return (
     <div className="flex flex-col space-y-6">
