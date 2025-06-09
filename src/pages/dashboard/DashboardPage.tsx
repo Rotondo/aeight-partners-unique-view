@@ -13,6 +13,7 @@ import { IndicacoesRecebidasTable } from "@/components/dashboard/IndicacoesReceb
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Empresa, Oportunidade } from "@/types";
 import { useToast } from "@/hooks/use-toast";
+import useDashboardStats from "@/hooks/useDashboardStats";
 
 function getQuarter(date: Date) {
   return Math.floor(date.getMonth() / 3) + 1;
@@ -115,39 +116,19 @@ const DashboardPage: React.FC = () => {
     return filtradas;
   }, [oportunidades, statusFiltro, tipoFiltro, empresaFiltro, empresaFiltroType, searchTerm]);
 
-  const stats = useMemo(() => {
-    const total = oportunidadesFiltradas.length;
-    const ganhas = oportunidadesFiltradas.filter((op) => op.status === "ganho").length;
-    const perdidas = oportunidadesFiltradas.filter((op) => op.status === "perdido").length;
-    const andamento = total - ganhas - perdidas;
-    const intra = oportunidadesFiltradas.filter((op) => op.tipo_relacao === "intra").length;
-    const extra = oportunidadesFiltradas.filter((op) => op.tipo_relacao === "extra").length;
-    const enviadas = oportunidadesFiltradas.filter(
-      (op) =>
-        op.tipo_relacao === "extra" &&
-        op.empresa_origem?.tipo === "intragrupo" &&
-        op.empresa_destino?.tipo === "parceiro"
-    ).length;
-    const recebidas = oportunidadesFiltradas.filter(
-      (op) =>
-        op.tipo_relacao === "extra" &&
-        op.empresa_origem?.tipo === "parceiro" &&
-        op.empresa_destino?.tipo === "intragrupo"
-    ).length;
-    const saldo = enviadas - recebidas;
-
-    return {
-      total,
-      ganhas,
-      perdidas,
-      andamento,
-      intra,
-      extra,
-      enviadas,
-      recebidas,
-      saldo,
-    };
-  }, [oportunidadesFiltradas]);
+  // Use o hook robusto e achate o objeto para os KPIs
+  const statsRaw = useDashboardStats(oportunidadesFiltradas);
+  const stats = {
+    total: statsRaw.total.total,
+    ganhas: statsRaw.total.ganho,
+    perdidas: statsRaw.total.perdido,
+    andamento: statsRaw.total.em_contato + statsRaw.total.negociando,
+    intra: statsRaw.intra.total,
+    extra: statsRaw.extra.total,
+    enviadas: statsRaw.enviadas,
+    recebidas: statsRaw.recebidas,
+    saldo: statsRaw.saldo,
+  };
 
   const chartData = useMemo(() => {
     function groupByQuarter(data: Oportunidade[], tipo: "intra" | "extra" | "all") {
