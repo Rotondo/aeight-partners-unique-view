@@ -11,36 +11,48 @@ import {
 } from "recharts";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
-// Aceita tanto array quanto objeto agrupado e converte para o formato correto
-type IntraExtraBarChartData =
-  | { tipo: string; enviadas: number; recebidas: number }[]
-  | {
-      intra?: { enviadas: number; recebidas: number };
-      extra?: { enviadas: number; recebidas: number };
-    };
-
-function toBarChartArray(data: IntraExtraBarChartData): { tipo: string; enviadas: number; recebidas: number }[] {
+// Permite tanto array quanto objeto agrupado (protege contra erro fatal)
+function normalizeChartData(chartData: any, periodo: "mes" | "quarter") {
   // Se já for array, retorna
-  if (Array.isArray(data)) return data;
+  if (Array.isArray(chartData)) return chartData;
 
-  // Se for objeto agrupado, converte para array
-  const arr: { tipo: string; enviadas: number; recebidas: number }[] = [];
-  if (data.intra) {
-    arr.push({ tipo: "Intra Grupo", enviadas: data.intra.enviadas ?? 0, recebidas: data.intra.recebidas ?? 0 });
+  // Se for objeto agrupado por status, transforma em array apropriado para o gráfico
+  if (
+    chartData &&
+    typeof chartData === "object" &&
+    "em_contato" in chartData &&
+    "negociando" in chartData &&
+    "ganho" in chartData &&
+    "perdido" in chartData &&
+    "total" in chartData
+  ) {
+    // Exemplo: converte para [{name: status, value: ...}, ...]
+    return [
+      { [periodo === "mes" ? "mes" : "quarter"]: "Em Contato", enviadas: chartData.em_contato || 0 },
+      { [periodo === "mes" ? "mes" : "quarter"]: "Negociando", enviadas: chartData.negociando || 0 },
+      { [periodo === "mes" ? "mes" : "quarter"]: "Ganho", enviadas: chartData.ganho || 0 },
+      { [periodo === "mes" ? "mes" : "quarter"]: "Perdido", enviadas: chartData.perdido || 0 },
+      // Se quiser adicionar outros status personalizados:
+      ...(chartData.outros
+        ? Object.entries(chartData.outros).map(([k, v]) => ({
+            [periodo === "mes" ? "mes" : "quarter"]: k,
+            enviadas: v as number,
+          }))
+        : []),
+    ];
   }
-  if (data.extra) {
-    arr.push({ tipo: "Extra Grupo", enviadas: data.extra.enviadas ?? 0, recebidas: data.extra.recebidas ?? 0 });
-  }
-  return arr;
+
+  // Caso não seja nenhum dos formatos esperados, retorna array vazio para evitar crash
+  return [];
 }
 
 interface OportunidadesChartProps {
-  chartData: IntraExtraBarChartData;
+  chartData: any[] | object;
   periodo: "mes" | "quarter";
 }
 
 export const OportunidadesChart: React.FC<OportunidadesChartProps> = ({ chartData, periodo }) => {
-  const data = React.useMemo(() => toBarChartArray(chartData), [chartData]);
+  const data = React.useMemo(() => normalizeChartData(chartData, periodo), [chartData, periodo]);
 
   return (
     <Card>
@@ -53,7 +65,7 @@ export const OportunidadesChart: React.FC<OportunidadesChartProps> = ({ chartDat
         <ResponsiveContainer width="100%" height="100%">
           <ReBarChart data={data}>
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="tipo" />
+            <XAxis dataKey={periodo === "mes" ? "mes" : "quarter"} />
             <YAxis />
             <Tooltip />
             <Legend />
