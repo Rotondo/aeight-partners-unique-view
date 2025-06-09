@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -53,16 +53,15 @@ const DashboardPage: React.FC = () => {
   const [tipoFiltro, setTipoFiltro] = useState<"all" | "intra" | "extra">("all");
   const [periodo, setPeriodo] = useState<"mes" | "quarter">("mes");
   const [statusFiltro, setStatusFiltro] = useState<"all" | "ganho" | "perdido" | "andamento">("all");
-  const [empresaFiltro, setEmpresaFiltro] = useState<string>("all");
   const [empresaFiltroType, setEmpresaFiltroType] = useState<"remetente" | "destinatario" | "all">("all");
+  const [empresaFiltro, setEmpresaFiltro] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
-  const [stats, setStats] = useState<any>({});
   const [saldoEmpresas, setSaldoEmpresas] = useState<any[]>([]);
   const [chartData, setChartData] = useState<any[]>([]);
   const [statusChartData, setStatusChartData] = useState<any[]>([]);
   const [editRowId, setEditRowId] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<Partial<Oportunidade>>({});
-  const [opportunidadesList, setOpportunidadesList] = useState<Oportunidade[]>([]);
+  const [opportunidadesList, setOportunidadesList] = useState<Oportunidade[]>([]);
   const [ordemLista, setOrdemLista] = useState<{ col: string; asc: boolean }>({ col: "data_indicacao", asc: false });
   const [matrizIntra, setMatrizIntra] = useState<any[]>([]);
   const [matrizParceiros, setMatrizParceiros] = useState<any[]>([]);
@@ -102,7 +101,6 @@ const DashboardPage: React.FC = () => {
 
       setOportunidades(oportunidadesEnriquecidas);
       setEmpresas(empresasData);
-      processStats(oportunidadesEnriquecidas, empresasData);
       processSaldoEmpresas(oportunidadesEnriquecidas, empresasData);
       processChart(oportunidadesEnriquecidas);
       processStatusChart(oportunidadesEnriquecidas);
@@ -118,6 +116,68 @@ const DashboardPage: React.FC = () => {
       setLoading(false);
     }
   }
+
+  // Função de filtragem principal (usada para todos os blocos dependentes de filtro)
+  const oportunidadesFiltradas = useMemo(() => {
+    let filtradas = oportunidades;
+    if (statusFiltro !== "all") {
+      filtradas = filtradas.filter((op) => {
+        if (statusFiltro === "andamento") return op.status !== "ganho" && op.status !== "perdido";
+        return op.status === statusFiltro;
+      });
+    }
+    if (tipoFiltro !== "all") {
+      filtradas = filtradas.filter((op) => op.tipo_relacao === tipoFiltro);
+    }
+    if (empresaFiltro !== "all" && empresaFiltroType !== "all") {
+      filtradas = filtradas.filter((op) =>
+        empresaFiltroType === "remetente"
+          ? op.empresa_origem_id === empresaFiltro
+          : op.empresa_destino_id === empresaFiltro
+      );
+    }
+    if (searchTerm) {
+      filtradas = filtradas.filter((op) =>
+        (op.empresa_origem?.nome || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (op.empresa_destino?.nome || "").toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    return filtradas;
+  }, [oportunidades, statusFiltro, tipoFiltro, empresaFiltro, empresaFiltroType, searchTerm]);
+
+  // KPIs filtrados
+  const stats = useMemo(() => {
+    const total = oportunidadesFiltradas.length;
+    const ganhas = oportunidadesFiltradas.filter((op) => op.status === "ganho").length;
+    const perdidas = oportunidadesFiltradas.filter((op) => op.status === "perdido").length;
+    const andamento = oportunidadesFiltradas.filter((op) => op.status !== "ganho" && op.status !== "perdido").length;
+    const intra = oportunidadesFiltradas.filter((op) => op.tipo_relacao === "intra").length;
+    const extra = oportunidadesFiltradas.filter((op) => op.tipo_relacao === "extra").length;
+    const enviadas = oportunidadesFiltradas.filter(
+      (op) =>
+        op.tipo_relacao === "extra" &&
+        op.empresa_origem?.tipo === "intragrupo" &&
+        op.empresa_destino?.tipo === "parceiro"
+    ).length;
+    const recebidas = oportunidadesFiltradas.filter(
+      (op) =>
+        op.tipo_relacao === "extra" &&
+        op.empresa_origem?.tipo === "parceiro" &&
+        op.empresa_destino?.tipo === "intragrupo"
+    ).length;
+    const saldo = enviadas - recebidas;
+    return {
+      total,
+      ganhas,
+      perdidas,
+      andamento,
+      intra,
+      extra,
+      enviadas,
+      recebidas,
+      saldo,
+    };
+  }, [oportunidadesFiltradas]);
 
   function groupByQuarter(data: Oportunidade[], tipo: "intra" | "extra" | "all") {
     const result: Record<string, { enviadas: number; recebidas: number; dateObj: Date }> = {};
@@ -168,49 +228,6 @@ const DashboardPage: React.FC = () => {
       .sort((a, b) => a.dateObj.getTime() - b.dateObj.getTime());
   }
 
-  function processStats(oportunidades: Oportunidade[], empresas: Empresa[]) {
-    // 1. Total de Oportunidades
-    const total = oportunidades.length;
-    // 2. Ganhos
-    const ganhas = oportunidades.filter((op) => op.status === "ganho").length;
-    // 3. Perdidos
-    const perdidas = oportunidades.filter((op) => op.status === "perdido").length;
-    // 4. Em Andamento
-    const andamento = oportunidades.filter((op) => op.status !== "ganho" && op.status !== "perdido").length;
-    // 5. Intra Grupo
-    const intra = oportunidades.filter((op) => op.tipo_relacao === "intra").length;
-    // 6. Extra Grupo
-    const extra = oportunidades.filter((op) => op.tipo_relacao === "extra").length;
-    // 7. Enviadas: oportunidades enviadas para parceiros extragrupo
-    const enviadas = oportunidades.filter(
-      (op) =>
-        op.tipo_relacao === "extra" &&
-        op.empresa_origem?.tipo === "intragrupo" &&
-        op.empresa_destino?.tipo === "parceiro"
-    ).length;
-    // 8. Recebidas: oportunidades recebidas de parceiros extragrupo
-    const recebidas = oportunidades.filter(
-      (op) =>
-        op.tipo_relacao === "extra" &&
-        op.empresa_origem?.tipo === "parceiro" &&
-        op.empresa_destino?.tipo === "intragrupo"
-    ).length;
-    // 9. Saldo Envio-Recebimento: diferença entre enviadas e recebidas (extragrupo)
-    const saldo = enviadas - recebidas;
-
-    setStats({
-      total,
-      ganhas,
-      perdidas,
-      andamento,
-      intra,
-      extra,
-      enviadas,
-      recebidas,
-      saldo,
-    });
-  }
-
   function processSaldoEmpresas(oportunidades: Oportunidade[], empresas: Empresa[]) {
     const saldos = empresas
       .filter((e) => e.status)
@@ -230,29 +247,7 @@ const DashboardPage: React.FC = () => {
   }
 
   function processChart(oportunidades: Oportunidade[]) {
-    let filtradas = oportunidades;
-    if (statusFiltro !== "all") {
-      filtradas = filtradas.filter((op) => {
-        if (statusFiltro === "andamento") return op.status !== "ganho" && op.status !== "perdido";
-        return op.status === statusFiltro;
-      });
-    }
-    if (tipoFiltro !== "all") {
-      filtradas = filtradas.filter((op) => op.tipo_relacao === tipoFiltro);
-    }
-    if (empresaFiltro !== "all" && empresaFiltroType !== "all") {
-      filtradas = filtradas.filter((op) =>
-        empresaFiltroType === "remetente"
-          ? op.empresa_origem_id === empresaFiltro
-          : op.empresa_destino_id === empresaFiltro
-      );
-    }
-    if (searchTerm) {
-      filtradas = filtradas.filter((op) =>
-        (op.empresa_origem?.nome || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (op.empresa_destino?.nome || "").toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
+    let filtradas = oportunidadesFiltradas;
     const data =
       periodo === "mes"
         ? groupByMonth(filtradas, tipoFiltro)
@@ -261,10 +256,7 @@ const DashboardPage: React.FC = () => {
   }
 
   function processStatusChart(oportunidades: Oportunidade[]) {
-    let filtradas = oportunidades;
-    if (tipoFiltro !== "all") {
-      filtradas = filtradas.filter((op) => op.tipo_relacao === tipoFiltro);
-    }
+    let filtradas = oportunidadesFiltradas;
     const statusCount: Record<string, number> = {};
     filtradas.forEach((op) => {
       const s = op.status || "indefinido";
@@ -377,7 +369,7 @@ const DashboardPage: React.FC = () => {
       asc: prev.col === col ? !prev.asc : true,
     }));
   }
-  const listaOrdenada = [...opportunidadesList].sort((a, b) => {
+  const listaOrdenada = [...opportunidadesFiltradas].sort((a, b) => {
     let vA: any = (a as any)[ordemLista.col];
     let vB: any = (b as any)[ordemLista.col];
     if (typeof vA === "string") vA = vA.toLowerCase();
@@ -394,26 +386,44 @@ const DashboardPage: React.FC = () => {
     return value;
   }
 
+  // Filtro para empresas de destino apenas do tipo intragrupo
+  const empresasDestinoIntra = useMemo(
+    () => empresas.filter((e) => e.tipo === "intragrupo"),
+    [empresas]
+  );
+
+  // Indicações recebidas por empresa de destino selecionada
+  const indicacoesRecebidas = useMemo(() => {
+    if (
+      empresaFiltroType === "destinatario" &&
+      empresaFiltro !== "all" &&
+      empresasDestinoIntra.some((e) => e.id === empresaFiltro)
+    ) {
+      return oportunidadesFiltradas.filter((op) => op.empresa_destino_id === empresaFiltro);
+    }
+    return [];
+  }, [empresaFiltro, empresaFiltroType, oportunidadesFiltradas, empresasDestinoIntra]);
+
   return (
     <div className="space-y-8">
       <h1 className="text-2xl font-bold">Dashboard de Oportunidades</h1>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <DashboardCard title="Total de Oportunidades" value={loading ? "..." : stats.total} icon={<ReBarChart className="h-4 w-4 text-primary" />} color="bg-primary/10" description="Todas as oportunidades" />
+        <DashboardCard title="Total de Oportunidades" value={loading ? "..." : stats.total} icon={<ReBarChart className="h-4 w-4 text-primary" />} color="bg-primary/10" description="Todas as oportunidades conforme filtros" />
         <DashboardCard title="Ganhos" value={loading ? "..." : stats.ganhas} icon={<ReBarChart className="h-4 w-4 text-green-500" />} color="bg-green-500/10" description="Oportunidades ganhas" />
         <DashboardCard title="Perdidos" value={loading ? "..." : stats.perdidas} icon={<ReBarChart className="h-4 w-4 text-destructive" />} color="bg-destructive/10" description="Oportunidades perdidas" />
         <DashboardCard title="Em Andamento" value={loading ? "..." : stats.andamento} icon={<ReBarChart className="h-4 w-4 text-amber-500" />} color="bg-amber-500/10" description="Em negociação" />
         <DashboardCard title="Intra Grupo" value={loading ? "..." : stats.intra} icon={<ReBarChart className="h-4 w-4 text-blue-500" />} color="bg-blue-500/10" description="Trocas dentro do grupo" />
         <DashboardCard title="Extra Grupo" value={loading ? "..." : stats.extra} icon={<ReBarChart className="h-4 w-4 text-purple-600" />} color="bg-purple-600/10" description="Trocas com terceiros" />
-        <DashboardCard title="Enviadas" value={loading ? "..." : stats.enviadas} icon={<ReBarChart className="h-4 w-4 text-cyan-500" />} color="bg-cyan-500/10" description="Oportunidades enviadas para parceiros extragrupo" />
-        <DashboardCard title="Recebidas" value={loading ? "..." : stats.recebidas} icon={<ReBarChart className="h-4 w-4 text-rose-500" />} color="bg-rose-500/10" description="Oportunidades recebidas de parceiros extragrupo" />
-        <DashboardCard title="Saldo Envio-Recebimento" value={loading ? "..." : stats.saldo} icon={<ReBarChart className="h-4 w-4 text-gray-600" />} color="bg-gray-600/10" description="Saldo entre envio e recebimento (apenas Extra Grupo)" />
+        <DashboardCard title="Enviadas" value={loading ? "..." : stats.enviadas} icon={<ReBarChart className="h-4 w-4 text-cyan-500" />} color="bg-cyan-500/10" description="Oportunidades enviadas para parceiros" />
+        <DashboardCard title="Recebidas" value={loading ? "..." : stats.recebidas} icon={<ReBarChart className="h-4 w-4 text-rose-500" />} color="bg-rose-500/10" description="Oportunidades recebidas de parceiros" />
+        <DashboardCard title="Saldo Envio-Recebimento" value={loading ? "..." : stats.saldo} icon={<ReBarChart className="h-4 w-4 text-gray-600" />} color="bg-gray-600/10" description="Saldo entre envio e recebimento extragrupo" />
       </div>
       <Card>
         <CardHeader>
           <CardTitle>Filtros do Gráfico</CardTitle>
           <CardDescription>Refine os dados exibidos no gráfico</CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-col md:flex-row gap-4">
+        <CardContent className="flex flex-col md:flex-row gap-4 flex-wrap">
           <Select value={tipoFiltro} onValueChange={(v) => setTipoFiltro(v as any)}>
             <SelectTrigger className="w-[150px]">
               <SelectValue placeholder="Tipo" />
@@ -444,28 +454,45 @@ const DashboardPage: React.FC = () => {
               <SelectItem value="quarter">Quarter (trimestre)</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={empresaFiltroType} onValueChange={(v) => setEmpresaFiltroType(v as any)}>
+          <Select value={empresaFiltroType} onValueChange={(v) => {
+            setEmpresaFiltroType(v as any);
+            if (v === "destinatario" && empresaFiltro !== "all" && !empresasDestinoIntra.some(e => e.id === empresaFiltro)) {
+              setEmpresaFiltro("all");
+            }
+          }}>
             <SelectTrigger className="w-[170px]">
               <SelectValue placeholder="Tipo de Empresa" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todas</SelectItem>
               <SelectItem value="remetente">Origem</SelectItem>
-              <SelectItem value="destinatario">Destino</SelectItem>
+              <SelectItem value="destinatario">Destino (apenas intragrupo)</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={empresaFiltro} onValueChange={(v) => setEmpresaFiltro(v)}>
+          <Select
+            value={empresaFiltro}
+            onValueChange={(v) => setEmpresaFiltro(v)}
+          >
             <SelectTrigger className="w-[240px]">
               <SelectValue placeholder="Empresa" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todas</SelectItem>
-              {empresas.map((e) => (
-                <SelectItem key={e.id} value={e.id}>{e.nome}</SelectItem>
-              ))}
+              {empresaFiltroType === "destinatario"
+                ? empresasDestinoIntra.map((e) => (
+                    <SelectItem key={e.id} value={e.id}>{e.nome}</SelectItem>
+                  ))
+                : empresas.map((e) => (
+                    <SelectItem key={e.id} value={e.id}>{e.nome}</SelectItem>
+                  ))}
             </SelectContent>
           </Select>
-          <Input placeholder="Buscar empresa..." value={searchTerm} className="w-[200px]" onChange={(e) => setSearchTerm(e.target.value)} />
+          <Input
+            placeholder="Buscar empresa..."
+            value={searchTerm}
+            className="w-[200px]"
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
         </CardContent>
       </Card>
       {/* Gráfico funcional */}
@@ -518,7 +545,7 @@ const DashboardPage: React.FC = () => {
               <thead>
                 <tr>
                   <th className="border p-1">Origem \ Destino</th>
-                  {empresas.filter(e => e.tipo === "intragrupo").map(dest => (
+                  {empresasDestinoIntra.map(dest => (
                     <th className="border p-1" key={dest.id}>{dest.nome}</th>
                   ))}
                 </tr>
@@ -527,7 +554,7 @@ const DashboardPage: React.FC = () => {
                 {matrizIntra.map((row, idx) => (
                   <tr key={row.origem + idx}>
                     <td className="border p-1 font-bold">{row.origem}</td>
-                    {empresas.filter(e => e.tipo === "intragrupo").map(dest => (
+                    {empresasDestinoIntra.map(dest => (
                       <td className="border p-1 text-center" key={dest.id}>{renderCellValue(row[dest.nome])}</td>
                     ))}
                   </tr>
@@ -549,7 +576,7 @@ const DashboardPage: React.FC = () => {
               <thead>
                 <tr>
                   <th className="border p-1">Parceiro \ Intra</th>
-                  {empresas.filter(e => e.tipo === "intragrupo").map(intra => (
+                  {empresasDestinoIntra.map(intra => (
                     <th className="border p-1" key={intra.id}>{intra.nome}</th>
                   ))}
                 </tr>
@@ -558,7 +585,7 @@ const DashboardPage: React.FC = () => {
                 {matrizParceiros.map((row, idx) => (
                   <tr key={row.parceiro + idx}>
                     <td className="border p-1 font-bold">{row.parceiro}</td>
-                    {empresas.filter(e => e.tipo === "intragrupo").map(intra => (
+                    {empresasDestinoIntra.map(intra => (
                       <td className="border p-1 text-center" key={intra.id}>{renderCellValue(row[intra.nome])}</td>
                     ))}
                   </tr>
@@ -568,6 +595,49 @@ const DashboardPage: React.FC = () => {
           </div>
         </CardContent>
       </Card>
+      {/* Relação de indicações recebidas pela empresa destino intragrupo */}
+      {empresaFiltroType === "destinatario" && empresaFiltro !== "all" && (
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              Indicações Recebidas — {empresasDestinoIntra.find(e => e.id === empresaFiltro)?.nome || ""}
+            </CardTitle>
+            <CardDescription>Veja quem indicou oportunidades para esta empresa e o tipo da indicação</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-xs border">
+                <thead>
+                  <tr>
+                    <th className="border p-1">Data</th>
+                    <th className="border p-1">Nome do Lead</th>
+                    <th className="border p-1">Tipo</th>
+                    <th className="border p-1">Quem indicou</th>
+                    <th className="border p-1">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {indicacoesRecebidas.length === 0 ? (
+                    <tr>
+                      <td className="border p-2 text-center" colSpan={5}>Nenhuma indicação recebida</td>
+                    </tr>
+                  ) : (
+                    indicacoesRecebidas.map((op, idx) => (
+                      <tr key={op.id + idx}>
+                        <td className="border p-1">{formatDate(op.data_indicacao)}</td>
+                        <td className="border p-1">{op.nome_lead || "-"}</td>
+                        <td className="border p-1">{op.tipo_relacao === "intra" ? "Intra" : "Extra"}</td>
+                        <td className="border p-1">{op.empresa_origem?.nome || "-"}</td>
+                        <td className="border p-1">{op.status}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
       {/* Lista detalhada editável */}
       <Card>
         <CardHeader>
@@ -600,54 +670,4 @@ const DashboardPage: React.FC = () => {
                           <SelectTrigger className="w-[90px]"><SelectValue /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="em_contato">Em Contato</SelectItem>
-                            <SelectItem value="negociando">Negociando</SelectItem>
-                            <SelectItem value="ganho">Ganho</SelectItem>
-                            <SelectItem value="perdido">Perdido</SelectItem>
-                            <SelectItem value="Contato">Contato</SelectItem>
-                            <SelectItem value="Apresentado">Apresentado</SelectItem>
-                            <SelectItem value="Sem contato">Sem contato</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      ) : op.status}
-                    </td>
-                    <td className="border p-1">
-                      {editRowId === op.id ? (
-                        <Input type="number" className="w-[80px]" value={editValues.valor ?? ""} onChange={e => setEditValues(ev => ({ ...ev, valor: Number(e.target.value) }))} />
-                      ) : (op.valor ?? "-")}
-                    </td>
-                    <td className="border p-1">
-                      {editRowId === op.id ? (
-                        <Input value={editValues.nome_lead ?? ""} onChange={e => setEditValues(ev => ({ ...ev, nome_lead: e.target.value }))} className="w-[110px]" />
-                      ) : (op.nome_lead ?? "-")}
-                    </td>
-                    <td className="border p-1">
-                      {op.tipo_relacao}
-                    </td>
-                    <td className="border p-1">{formatDate(op.data_indicacao)}</td>
-                    <td className="border p-1">{op.data_fechamento ? formatDate(op.data_fechamento) : "-"}</td>
-                    <td className="border p-1">
-                      {editRowId === op.id ? (
-                        <>
-                          <Button size="icon" variant="default" title="Salvar" onClick={() => handleSaveEdit(op.id)}><Check className="h-4 w-4" /></Button>
-                          <Button size="icon" variant="ghost" title="Cancelar" onClick={handleCancelEdit}><Cancel className="h-4 w-4" /></Button>
-                        </>
-                      ) : (
-                        <Button size="icon" variant="ghost" title="Editar" onClick={() => handleEdit(op)}><Edit className="h-4 w-4" /></Button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <QuickAccess />
-        <AboutPlatform />
-      </div>
-    </div>
-  );
-};
-
-export default DashboardPage;
+                            <Select
