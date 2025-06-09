@@ -1,9 +1,19 @@
-import * as React from "react"
+import * as React from "react";
+import { cn } from "@/lib/utils";
 
-import { cn } from "@/lib/utils"
-
+/**
+ * Input base reutilizável.
+ * Exige que o dev forneça pelo menos `id` ou `name` para acessibilidade/autofill.
+ */
 const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
-  ({ className, type, ...props }, ref) => {
+  ({ className, type, id, name, ...props }, ref) => {
+    // Em desenvolvimento, avisa se não há id nem name
+    if (process.env.NODE_ENV !== "production" && !id && !name) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        "[Input] Recomenda-se fornecer pelo menos um 'id' ou 'name' para campos de formulário para garantir acessibilidade e autofill."
+      );
+    }
     return (
       <input
         type={type}
@@ -12,11 +22,13 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
           className
         )}
         ref={ref}
+        id={id}
+        name={name}
         {...props}
       />
-    )
+    );
   }
-)
-Input.displayName = "Input"
+);
+Input.displayName = "Input";
 
-export { Input }
+export { Input };
