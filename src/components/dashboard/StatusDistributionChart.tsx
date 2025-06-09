@@ -3,25 +3,26 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recha
 import { useOportunidades } from '@/components/oportunidades/OportunidadesContext';
 import { useDashboardStats } from '@/hooks/useDashboardStats';
 
+// Labels e cores oficiais
 const STATUS_LABELS: Record<string, string> = {
   em_contato: 'Em Contato',
   negociando: 'Negociando',
   ganho: 'Ganho',
   perdido: 'Perdido',
 };
-
 const STATUS_COLORS: Record<string, string> = {
   em_contato: '#3b82f6',
   negociando: '#f59e0b',
   ganho: '#10b981',
   perdido: '#ef4444',
 };
+const OTHER_STATUS_COLOR = '#6b7280';
 
 export const StatusDistributionChart: React.FC = () => {
   const { filteredOportunidades } = useOportunidades();
   const stats = useDashboardStats(filteredOportunidades);
 
-  // Monta o array para o gráfico, sempre incluindo todos os status conhecidos
+  // Sempre inclui todos os status conhecidos (mesmo se zero). Se houver "outros", inclui também para diagnóstico.
   const statusData = React.useMemo(() => {
     const data = [
       {
@@ -50,19 +51,19 @@ export const StatusDistributionChart: React.FC = () => {
       },
     ];
 
-    // Adiciona status inesperados (outros), se houver
+    // Adiciona status inesperados (aparece em cinza)
     if (stats.total.outros) {
       Object.entries(stats.total.outros).forEach(([status, count]) => {
         data.push({
           key: status,
           name: status,
           value: count,
-          color: '#6b7280',
+          color: OTHER_STATUS_COLOR,
         });
       });
     }
 
-    // Filtra status zerados para não poluir o gráfico
+    // Só mostra status com valor > 0 (evita rótulos "zeros" no gráfico)
     return data.filter(d => d.value > 0);
   }, [stats.total]);
 
