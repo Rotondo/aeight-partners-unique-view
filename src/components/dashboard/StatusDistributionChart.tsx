@@ -1,7 +1,6 @@
 import React from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { useOportunidades } from '@/components/oportunidades/OportunidadesContext';
-import { useDashboardStats } from '@/hooks/useDashboardStats';
 
 // Labels e cores oficiais
 const STATUS_LABELS: Record<string, string> = {
@@ -20,52 +19,47 @@ const OTHER_STATUS_COLOR = '#6b7280';
 
 export const StatusDistributionChart: React.FC = () => {
   const { filteredOportunidades } = useOportunidades();
-  const stats = useDashboardStats(filteredOportunidades);
 
-  // Sempre inclui todos os status conhecidos (mesmo se zero). Se houver "outros", inclui também para diagnóstico.
+  // Calcula a contagem de cada status
+  const statusCount = React.useMemo(() => {
+    const count: Record<string, number> = {};
+    filteredOportunidades.forEach((op) => {
+      const status = op.status || 'indefinido';
+      count[status] = (count[status] || 0) + 1;
+    });
+    return count;
+  }, [filteredOportunidades]);
+
+  // Monta array para o gráfico, separando conhecidos e "outros"
   const statusData = React.useMemo(() => {
-    const data = [
-      {
-        key: 'em_contato',
-        name: STATUS_LABELS['em_contato'],
-        value: stats.total.em_contato,
-        color: STATUS_COLORS['em_contato'],
-      },
-      {
-        key: 'negociando',
-        name: STATUS_LABELS['negociando'],
-        value: stats.total.negociando,
-        color: STATUS_COLORS['negociando'],
-      },
-      {
-        key: 'ganho',
-        name: STATUS_LABELS['ganho'],
-        value: stats.total.ganho,
-        color: STATUS_COLORS['ganho'],
-      },
-      {
-        key: 'perdido',
-        name: STATUS_LABELS['perdido'],
-        value: stats.total.perdido,
-        color: STATUS_COLORS['perdido'],
-      },
-    ];
+    const data: { key: string; name: string; value: number; color: string }[] = [];
 
-    // Adiciona status inesperados (aparece em cinza)
-    if (stats.total.outros) {
-      Object.entries(stats.total.outros).forEach(([status, count]) => {
+    // Status conhecidos
+    Object.keys(STATUS_LABELS).forEach((status) => {
+      if (statusCount[status] > 0) {
+        data.push({
+          key: status,
+          name: STATUS_LABELS[status],
+          value: statusCount[status],
+          color: STATUS_COLORS[status],
+        });
+      }
+    });
+
+    // Status não mapeados (outros)
+    Object.keys(statusCount).forEach((status) => {
+      if (!(status in STATUS_LABELS) && statusCount[status] > 0) {
         data.push({
           key: status,
           name: status,
-          value: count,
+          value: statusCount[status],
           color: OTHER_STATUS_COLOR,
         });
-      });
-    }
+      }
+    });
 
-    // Só mostra status com valor > 0 (evita rótulos "zeros" no gráfico)
-    return data.filter(d => d.value > 0);
-  }, [stats.total]);
+    return data;
+  }, [statusCount]);
 
   if (statusData.length === 0) {
     return (
