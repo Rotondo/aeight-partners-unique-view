@@ -9,7 +9,7 @@ interface DashboardStatsProps {
   loading: boolean;
 }
 
-// Função para adaptar qualquer formato de stats para o formato esperado pelos cards
+// Função robusta para extrair KPIs do objeto retornado pelo hook useDashboardStats
 function resolveStats(stats: DashboardStatsType | null) {
   if (!stats || typeof stats !== 'object') {
     return {
@@ -19,6 +19,7 @@ function resolveStats(stats: DashboardStatsType | null) {
       oportunidadesEmAndamento: 0,
     };
   }
+
   // Novo formato do hook useDashboardStats
   if ('total' in stats && typeof stats.total === 'object') {
     const t = stats.total as any;
@@ -31,6 +32,7 @@ function resolveStats(stats: DashboardStatsType | null) {
         (typeof t.negociando === 'number' ? t.negociando : 0)
     };
   }
+
   // Formato antigo, campos simples
   return {
     totalOportunidades: (stats as any)?.totalOportunidades || 0,
