@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DashboardStatsSection } from "./DashboardStats";
@@ -18,14 +18,32 @@ import { useDashboardStats } from "@/hooks/useDashboardStats";
 
 export const OportunidadesDashboards: React.FC = () => {
   const { filteredOportunidades, isLoading } = useOportunidades();
-  const { stats, loading: statsLoading } = useDashboardStats(filteredOportunidades);
+  const stats = useDashboardStats(filteredOportunidades);
+
+  // Loading ou sem dados ainda
+  if (isLoading || !filteredOportunidades) {
+    return (
+      <div className="flex flex-1 items-center justify-center min-h-[250px]">
+        <span className="text-muted-foreground text-lg">Carregando oportunidades...</span>
+      </div>
+    );
+  }
+
+  // Nenhuma oportunidade encontrada
+  if (Array.isArray(filteredOportunidades) && filteredOportunidades.length === 0) {
+    return (
+      <div className="flex flex-1 items-center justify-center min-h-[250px]">
+        <span className="text-muted-foreground text-lg">Nenhuma oportunidade encontrada.</span>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col space-y-6">
       <div className="flex flex-col space-y-4">
         <OportunidadesFilter />
         <PeriodIndicator />
-        <DashboardStatsSection stats={stats} loading={statsLoading} />
+        <DashboardStatsSection stats={stats} loading={isLoading} />
       </div>
 
       <Tabs defaultValue="quantities" className="w-full">
@@ -42,7 +60,7 @@ export const OportunidadesDashboards: React.FC = () => {
                 <CardTitle>Oportunidades por Status</CardTitle>
               </CardHeader>
               <CardContent>
-                <OpportunitiesChart stats={stats} loading={statsLoading} />
+                <OpportunitiesChart stats={stats} loading={isLoading} />
               </CardContent>
             </Card>
             <Card>
