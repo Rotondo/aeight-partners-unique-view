@@ -76,7 +76,7 @@ const menuItems = [
   },
 ];
 
-export function AppSidebar() {
+export const AppSidebar: React.FC = () => {
   const location = useLocation();
 
   return (
@@ -105,4 +105,4 @@ export function AppSidebar() {
       </SidebarContent>
     </Sidebar>
   );
-}
+};

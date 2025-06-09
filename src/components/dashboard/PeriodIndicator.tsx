@@ -1,15 +1,11 @@
+
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { CalendarIcon } from 'lucide-react';
 import { useOportunidades } from '@/components/oportunidades/OportunidadesContext';
 
-interface Filters {
-  dataInicio?: string;
-  dataFim?: string;
-}
-
 export const PeriodIndicator: React.FC = () => {
-  const { filters }: { filters?: Filters } = useOportunidades();
+  const { filters } = useOportunidades();
 
   const getPeriodText = () => {
     if (!filters) {
