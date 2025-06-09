@@ -4,98 +4,123 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { useOportunidades } from '@/components/oportunidades/OportunidadesContext';
 import { PrivateData } from '@/components/privacy/PrivateData';
 
-// Gera uma lista dos status únicos presentes no conjunto de oportunidades
+// Lista de status padrão na ordem desejada
+const STATUS_ORDER = ["ganho", "perdido", "em_contato", "negociando", "contato", "apresentado", "sem_contato"];
+
+const STATUS_LABELS: Record<string, string> = {
+  ganho: "Ganha",
+  perdido: "Perdida",
+  em_contato: "Em Contato",
+  negociando: "Negociando",
+  contato: "Contato",
+  apresentado: "Apresentado",
+  sem_contato: "Sem Contato"
+};
+
+const STATUS_COLORS: Record<string, string> = {
+  ganho: "#22c55e",
+  perdido: "#ef4444",
+  em_contato: "#3b82f6",
+  negociando: "#fbbf24",
+  contato: "#6366f1",
+  apresentado: "#8b5cf6",
+  sem_contato: "#64748b"
+};
+
+const DYNAMIC_COLORS = [
+  "#2563eb", "#14b8a6", "#a21caf", "#eab308", "#f472b6", "#0ea5e9", "#facc15", "#10b981"
+];
+
+// Descobre todos os status únicos presentes nos dados, mantendo a ordem dos padrões primeiro
 function getAllStatuses(oportunidades: any[]): string[] {
-  const statusSet = new Set<string>();
-  oportunidades.forEach(op => {
-    if (op.status && typeof op.status === "string") statusSet.add(op.status);
-  });
-  return Array.from(statusSet);
+  const uniqueStatuses = Array.from(new Set(oportunidades.map(op => op.status).filter(Boolean)));
+  const ordered = STATUS_ORDER.filter(status => uniqueStatuses.includes(status));
+  const extras = uniqueStatuses.filter(status => !STATUS_ORDER.includes(status));
+  return [...ordered, ...extras];
 }
 
 export const IntraExtraAnalysis: React.FC = () => {
   const { filteredOportunidades } = useOportunidades();
 
-  // Descobrir todos os status para garantir que todos aparecem no gráfico
+  // Descobrir todos os status para garantir que todos aparecem no gráfico, ordem fixa
   const allStatuses = React.useMemo(
     () => getAllStatuses(filteredOportunidades),
     [filteredOportunidades]
   );
 
-  // Mapeia oportunidades por grupo e status
-  const analysisData = React.useMemo(() => {
-    const statsByGroup = (tipo: 'intragrupo' | 'extragrupo') => {
-      // Filtra oportunidades do grupo
-      const groupOportunidades = filteredOportunidades.filter(op =>
+  // Monta os dados de contagem para cada grupo
+  const groupStats = React.useMemo(() => {
+    function statsFor(tipo: "intragrupo" | "extragrupo") {
+      const ops = filteredOportunidades.filter(op =>
         tipo === "intragrupo"
           ? op.empresa_origem?.tipo === 'intragrupo' && op.empresa_destino?.tipo === 'intragrupo'
           : !(op.empresa_origem?.tipo === 'intragrupo' && op.empresa_destino?.tipo === 'intragrupo')
       );
-
-      // Conta por status
-      const counts: Record<string, number> = {};
+      const statusCounts: Record<string, number> = {};
       allStatuses.forEach(status => {
-        counts[status] = groupOportunidades.filter(op => op.status === status).length;
+        statusCounts[status] = ops.filter(op => op.status === status).length;
       });
-
-      // Total
-      counts.total = groupOportunidades.length;
-
-      return counts;
-    };
-
-    const intra = statsByGroup("intragrupo");
-    const extra = statsByGroup("extragrupo");
-
+      return {
+        statusCounts,
+        total: ops.length
+      };
+    }
     return {
-      quantidades: [
-        { name: "Intragrupo", ...intra },
-        { name: "Extragrupo", ...extra }
-      ],
-      valores: [
-        {
-          name: "Intragrupo",
-          valor: filteredOportunidades
-            .filter(op => op.empresa_origem?.tipo === 'intragrupo' && op.empresa_destino?.tipo === 'intragrupo')
-            .reduce((sum, op) => sum + (op.valor || 0), 0)
-        },
-        {
-          name: "Extragrupo",
-          valor: filteredOportunidades
-            .filter(op => !(op.empresa_origem?.tipo === 'intragrupo' && op.empresa_destino?.tipo === 'intragrupo'))
-            .reduce((sum, op) => sum + (op.valor || 0), 0)
-        }
-      ],
-      conversao: [
-        {
-          name: "Intragrupo",
-          taxa: intra.ganho && intra.total ? (intra.ganho / intra.total) * 100 : 0
-        },
-        {
-          name: "Extragrupo",
-          taxa: extra.ganho && extra.total ? (extra.ganho / extra.total) * 100 : 0
-        }
-      ]
+      intra: statsFor("intragrupo"),
+      extra: statsFor("extragrupo")
     };
   }, [filteredOportunidades, allStatuses]);
 
-  // Paleta de cores para barras (padrão + dinâmico)
-  const STATUS_COLORS: Record<string, string> = {
-    ganho: "#22c55e",
-    perdido: "#ef4444",
-    em_contato: "#3b82f6",
-    negociando: "#fbbf24",
-    contato: "#6366f1",
-    apresentado: "#8b5cf6",
-    "sem_contato": "#64748b",
-    // fallback: outras cores automáticas
-  };
-  const dynamicColors = ["#2563eb", "#14b8a6", "#eab308", "#a21caf", "#f472b6", "#0ea5e9", "#facc15", "#10b981"];
+  // Dados para o gráfico de barras
+  const quantidadesData = [
+    {
+      name: "Intragrupo",
+      ...groupStats.intra.statusCounts
+    },
+    {
+      name: "Extragrupo",
+      ...groupStats.extra.statusCounts
+    }
+  ];
 
-  // Para pie chart
+  // Pie chart
   const pieData = [
-    { name: 'Intragrupo', value: analysisData.quantidades[0]?.total || 0, color: '#3b82f6' },
-    { name: 'Extragrupo', value: analysisData.quantidades[1]?.total || 0, color: '#10b981' }
+    { name: 'Intragrupo', value: groupStats.intra.total, color: '#3b82f6' },
+    { name: 'Extragrupo', value: groupStats.extra.total, color: '#10b981' }
+  ];
+
+  // Valores
+  const valoresData = [
+    {
+      name: "Intragrupo",
+      valor: filteredOportunidades
+        .filter(op => op.empresa_origem?.tipo === 'intragrupo' && op.empresa_destino?.tipo === 'intragrupo')
+        .reduce((sum, op) => sum + (op.valor || 0), 0)
+    },
+    {
+      name: "Extragrupo",
+      valor: filteredOportunidades
+        .filter(op => !(op.empresa_origem?.tipo === 'intragrupo' && op.empresa_destino?.tipo === 'intragrupo'))
+        .reduce((sum, op) => sum + (op.valor || 0), 0)
+    }
+  ];
+
+  // Conversao
+  function taxaConversao(stats: { statusCounts: Record<string, number>, total: number }) {
+    // Considera "ganho" como conversão
+    return stats.total > 0 && stats.statusCounts.ganho
+      ? (stats.statusCounts.ganho / stats.total) * 100
+      : 0;
+  }
+  const conversaoData = [
+    {
+      name: "Intragrupo",
+      taxa: taxaConversao(groupStats.intra)
+    },
+    {
+      name: "Extragrupo",
+      taxa: taxaConversao(groupStats.extra)
+    }
   ];
 
   const formatCurrency = (value: number) => {
@@ -112,21 +137,24 @@ export const IntraExtraAnalysis: React.FC = () => {
           <CardTitle>Quantidades: Intragrupo vs Extragrupo</CardTitle>
         </CardHeader>
         <CardContent>
+          <div className="flex justify-between mb-2 text-sm font-bold text-muted-foreground">
+            <span>Total Intragrupo: {groupStats.intra.total}</span>
+            <span>Total Extragrupo: {groupStats.extra.total}</span>
+          </div>
           <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={analysisData.quantidades}>
+              <BarChart data={quantidadesData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" />
-                <YAxis />
+                <YAxis allowDecimals={false} />
                 <Tooltip />
                 <Legend />
-                {/* Gera uma barra para cada status encontrado */}
                 {allStatuses.map((status, idx) => (
                   <Bar
                     key={status}
                     dataKey={status}
-                    name={status.charAt(0).toUpperCase() + status.slice(1)}
-                    fill={STATUS_COLORS[status] || dynamicColors[idx % dynamicColors.length]}
+                    name={STATUS_LABELS[status] || status.charAt(0).toUpperCase() + status.slice(1)}
+                    fill={STATUS_COLORS[status] || DYNAMIC_COLORS[idx % DYNAMIC_COLORS.length]}
                     stackId="a"
                   />
                 ))}
@@ -170,9 +198,17 @@ export const IntraExtraAnalysis: React.FC = () => {
           <CardTitle>Valores: Intragrupo vs Extragrupo</CardTitle>
         </CardHeader>
         <CardContent>
+          <div className="flex justify-between mb-2 text-sm font-bold text-muted-foreground">
+            <span>
+              Valor Total Intragrupo: <PrivateData type="currency">{formatCurrency(valoresData[0].valor)}</PrivateData>
+            </span>
+            <span>
+              Valor Total Extragrupo: <PrivateData type="currency">{formatCurrency(valoresData[1].valor)}</PrivateData>
+            </span>
+          </div>
           <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={analysisData.valores}>
+              <BarChart data={valoresData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" />
                 <YAxis 
@@ -198,7 +234,7 @@ export const IntraExtraAnalysis: React.FC = () => {
         <CardContent>
           <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={analysisData.conversao}>
+              <BarChart data={conversaoData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" />
                 <YAxis label={{ value: 'Taxa (%)', angle: -90, position: 'insideLeft' }} />
