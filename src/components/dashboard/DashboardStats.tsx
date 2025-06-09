@@ -9,19 +9,17 @@ interface DashboardStatsProps {
   loading: boolean;
 }
 
-// Extrai e normaliza valores do objeto retornado pelo hook useDashboardStats
+// Função para adaptar qualquer formato de stats para o formato esperado pelos cards
 function resolveStats(stats: DashboardStatsType | null) {
-  // Caso o hook não tenha carregado ainda
   if (!stats || typeof stats !== 'object') {
     return {
       totalOportunidades: 0,
       oportunidadesGanhas: 0,
       oportunidadesPerdidas: 0,
-      oportunidadesEmAndamento: 0
+      oportunidadesEmAndamento: 0,
     };
   }
-
-  // Se vier do useDashboardStats, stats.total é um objeto com os campos desejados
+  // Novo formato do hook useDashboardStats
   if ('total' in stats && typeof stats.total === 'object') {
     const t = stats.total as any;
     return {
@@ -33,13 +31,12 @@ function resolveStats(stats: DashboardStatsType | null) {
         (typeof t.negociando === 'number' ? t.negociando : 0)
     };
   }
-
-  // Fallback para formato antigo
+  // Formato antigo, campos simples
   return {
     totalOportunidades: (stats as any)?.totalOportunidades || 0,
     oportunidadesGanhas: (stats as any)?.oportunidadesGanhas || 0,
     oportunidadesPerdidas: (stats as any)?.oportunidadesPerdidas || 0,
-    oportunidadesEmAndamento: (stats as any)?.oportunidadesEmAndamento || 0
+    oportunidadesEmAndamento: (stats as any)?.oportunidadesEmAndamento || 0,
   };
 }
 
