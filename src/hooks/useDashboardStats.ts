@@ -1,72 +1,79 @@
 import { useMemo } from "react";
 import { Oportunidade } from "@/types";
 
-export interface DashboardStats {
+interface IntraExtraStats {
   total: number;
   ganhas: number;
   perdidas: number;
   emAndamento: number;
-  intra: number;
-  extra: number;
-  enviadas: number;
-  recebidas: number;
-  saldo: number;
+  valorTotal: number;
 }
 
-export function useDashboardStats(oportunidadesFiltradas?: Oportunidade[] | null): DashboardStats {
-  // Garante array válido
-  const oportunidades: Oportunidade[] = Array.isArray(oportunidadesFiltradas)
-    ? oportunidadesFiltradas
-    : [];
+interface IntraExtraAnalysis {
+  quantidades: Array<{
+    name: string;
+    total: number;
+    ganhas: number;
+    perdidas: number;
+    emAndamento: number;
+    valorTotal: number;
+  }>;
+  valores: Array<{
+    name: string;
+    valor: number;
+  }>;
+  conversao: Array<{
+    name: string;
+    taxa: number;
+  }>;
+}
 
-  // Para depuração: remova após confirmar funcionamento
-  if (typeof window !== "undefined") {
-    console.log("DashboardStats oportunidades recebidas:", oportunidades);
-  }
+export function useIntraExtraAnalysis(oportunidadesFiltradas?: Oportunidade[] | null): IntraExtraAnalysis {
+  // Garante array válido e seguro
+  const oportunidades: Oportunidade[] = Array.isArray(oportunidadesFiltradas) ? oportunidadesFiltradas : [];
 
   return useMemo(() => {
-    const total = oportunidades.length;
+    // Função para calcular os stats robustamente
+    const getStats = (arr: Oportunidade[]): IntraExtraStats => {
+      const total = arr.length;
+      const ganhas = arr.filter(op => typeof op.status === "string" && op.status.toLowerCase() === "ganho").length;
+      const perdidas = arr.filter(op => typeof op.status === "string" && op.status.toLowerCase() === "perdido").length;
+      // "Em Andamento" por exclusão: qualquer status não "ganho" e não "perdido"
+      const emAndamento = total - ganhas - perdidas;
+      const valorTotal = arr.reduce((sum, op) => sum + (op.valor || 0), 0);
+      return { total, ganhas, perdidas, emAndamento, valorTotal };
+    };
 
-    // Filtros defensivos, aceitam status em minúsculo/maiúsculo
-    const ganhas = oportunidades.filter(
-      op => typeof op.status === "string" && op.status.toLowerCase() === "ganho"
-    ).length;
-
-    const perdidas = oportunidades.filter(
-      op => typeof op.status === "string" && op.status.toLowerCase() === "perdido"
-    ).length;
-
-    // Todo o restante entra em andamento
-    const emAndamento = total - ganhas - perdidas;
-
-    const intra = oportunidades.filter(
+    // Filtra intragrupo e extragrupo de forma defensiva
+    const intragrupo = oportunidades.filter(
       op => typeof op.tipo_relacao === "string" && op.tipo_relacao.toLowerCase() === "intra"
-    ).length;
-
-    const extra = oportunidades.filter(
+    );
+    const extragrupo = oportunidades.filter(
       op => typeof op.tipo_relacao === "string" && op.tipo_relacao.toLowerCase() === "extra"
-    ).length;
+    );
 
-    const enviadas = oportunidades.filter(
-      op => typeof op.tipo_movimentacao === "string" && op.tipo_movimentacao.toLowerCase() === "enviada"
-    ).length;
-
-    const recebidas = oportunidades.filter(
-      op => typeof op.tipo_movimentacao === "string" && op.tipo_movimentacao.toLowerCase() === "recebida"
-    ).length;
-
-    const saldo = enviadas - recebidas;
+    const intraStats = getStats(intragrupo);
+    const extraStats = getStats(extragrupo);
 
     return {
-      total,
-      ganhas,
-      perdidas,
-      emAndamento,
-      intra,
-      extra,
-      enviadas,
-      recebidas,
-      saldo,
+      quantidades: [
+        { name: "Intragrupo", ...intraStats },
+        { name: "Extragrupo", ...extraStats }
+      ],
+      valores: [
+        { name: "Intragrupo", valor: intraStats.valorTotal },
+        { name: "Extragrupo", valor: extraStats.valorTotal }
+      ],
+      conversao: [
+        {
+          name: "Intragrupo",
+          taxa: intraStats.total > 0 ? (intraStats.ganhas / intraStats.total) * 100 : 0
+        },
+        {
+          name: "Extragrupo",
+          taxa: extraStats.total > 0 ? (extraStats.ganhas / extraStats.total) * 100 : 0
+        }
+      ]
     };
   }, [oportunidades]);
 }
