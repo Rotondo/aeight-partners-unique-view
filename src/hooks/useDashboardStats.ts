@@ -18,7 +18,7 @@ export function useDashboardStats(oportunidadesFiltradas: Oportunidade[]): Dashb
     const total = oportunidadesFiltradas.length;
     const ganhas = oportunidadesFiltradas.filter(op => op.status === "ganho").length;
     const perdidas = oportunidadesFiltradas.filter(op => op.status === "perdido").length;
-    // "Em andamento": todos que não são "ganho" nem "perdido"
+    // "Em andamento" agora conta todos que não sejam "ganho" nem "perdido"
     const emAndamento = oportunidadesFiltradas.filter(
       op => op.status !== "ganho" && op.status !== "perdido"
     ).length;
