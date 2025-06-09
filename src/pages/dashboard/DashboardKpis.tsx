@@ -1,8 +1,6 @@
 import React from "react";
 import { DashboardCard } from "@/components/dashboard/DashboardCard";
-import {
-  BarChart as ReBarChart
-} from "recharts";
+import { BarChart as ReBarChart } from "recharts";
 
 interface DashboardKpisProps {
   stats: {
@@ -16,12 +14,12 @@ interface DashboardKpisProps {
     recebidas: number;
     saldo: number;
   };
-  loading: boolean;
+  loading?: boolean;
 }
 
 export const DashboardKpis: React.FC<DashboardKpisProps> = ({ stats, loading }) => (
   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-    <DashboardCard title="Total de Oportunidades" value={loading ? "..." : stats.total} icon={<ReBarChart className="h-4 w-4 text-primary" />} color="bg-primary/10" description="Todas as oportunidades conforme filtros" />
+    <DashboardCard title="Total de Oportunidades" value={loading ? "..." : stats.total} icon={<ReBarChart className="h-4 w-4 text-primary" />} color="bg-primary/10" description="Todas as oportunidades" />
     <DashboardCard title="Ganhos" value={loading ? "..." : stats.ganhas} icon={<ReBarChart className="h-4 w-4 text-green-500" />} color="bg-green-500/10" description="Oportunidades ganhas" />
     <DashboardCard title="Perdidos" value={loading ? "..." : stats.perdidas} icon={<ReBarChart className="h-4 w-4 text-destructive" />} color="bg-destructive/10" description="Oportunidades perdidas" />
     <DashboardCard title="Em Andamento" value={loading ? "..." : stats.andamento} icon={<ReBarChart className="h-4 w-4 text-amber-500" />} color="bg-amber-500/10" description="Em negociação" />
