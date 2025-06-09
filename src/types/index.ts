@@ -184,6 +184,70 @@ export interface HistoricoOportunidade {
   usuario_id: string;
 }
 
+// ====== WISHLIST TYPES ======
+
+// EmpresaCliente - Relacionamento empresa proprietária ↔ empresa cliente
+export interface EmpresaCliente {
+  id: string;
+  empresa_proprietaria_id: string;
+  empresa_cliente_id: string;
+  data_relacionamento: string;
+  status: boolean;
+  observacoes?: string;
+  created_at: string;
+  updated_at: string;
+  // Relações para UI
+  empresa_proprietaria?: Empresa;
+  empresa_cliente?: Empresa;
+}
+
+// WishlistItem - Itens de interesse/desejo entre empresas
+export type WishlistStatus = "pendente" | "em_andamento" | "aprovado" | "rejeitado" | "convertido";
+
+export interface WishlistItem {
+  id: string;
+  empresa_interessada_id: string;
+  empresa_desejada_id: string;
+  empresa_proprietaria_id: string;
+  motivo?: string;
+  prioridade: number; // 1 a 5
+  status: WishlistStatus;
+  data_solicitacao: string;
+  data_resposta?: string;
+  observacoes?: string;
+  created_at: string;
+  updated_at: string;
+  // Relações para UI
+  empresa_interessada?: Empresa;
+  empresa_desejada?: Empresa;
+  empresa_proprietaria?: Empresa;
+  apresentacoes?: WishlistApresentacao[];
+}
+
+// WishlistApresentacao - Histórico de apresentações facilitadas
+export type TipoApresentacao = "email" | "reuniao" | "evento" | "digital" | "outro";
+export type StatusApresentacao = "agendada" | "realizada" | "cancelada";
+
+export interface WishlistApresentacao {
+  id: string;
+  wishlist_item_id: string;
+  empresa_facilitadora_id: string;
+  data_apresentacao: string;
+  tipo_apresentacao: TipoApresentacao;
+  status_apresentacao: StatusApresentacao;
+  feedback?: string;
+  converteu_oportunidade: boolean;
+  oportunidade_id?: string;
+  created_at: string;
+  updated_at: string;
+  // Relações para UI
+  wishlist_item?: WishlistItem;
+  empresa_facilitadora?: Empresa;
+  oportunidade?: Oportunidade;
+}
+
+// ====== END WISHLIST TYPES ======
+
 // Context types
 export interface AuthContextType {
   user: Usuario | null;
@@ -226,6 +290,7 @@ export interface OportunidadesFilterParams {
   empresaDestinoId?: string;
   status?: StatusOportunidade;
   usuarioId?: string;
+  searchTerm?: string; // Adicionar campo de busca por texto
 }
 
 // Dashboard Types
@@ -255,4 +320,15 @@ export interface RankingData {
 export interface StatusData {
   status: string;
   total: number;
+}
+
+// Wishlist Dashboard Types
+export interface WishlistStats {
+  totalSolicitacoes: number;
+  solicitacoesPendentes: number;
+  solicitacoesAprovadas: number;
+  apresentacoesRealizadas: number;
+  conversaoOportunidades: number;
+  empresasMaisDesejadas: { nome: string; total: number }[];
+  facilitacoesPorParceiro: { parceiro: string; total: number }[];
 }

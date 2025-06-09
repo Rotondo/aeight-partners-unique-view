@@ -5,18 +5,10 @@ import { useOportunidades } from '@/components/oportunidades/OportunidadesContex
 import { format, parseISO, startOfMonth, endOfMonth, eachMonthOfInterval, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
-interface OpportunitiesChartProps {
-  stats: any;
-  loading: boolean;
-}
-
-export const OpportunitiesChart: React.FC<OpportunitiesChartProps> = ({ 
-  stats, 
-  loading 
-}) => {
+export const ConversionRatesChart: React.FC = () => {
   const { filteredOportunidades } = useOportunidades();
 
-  const monthlyData = React.useMemo(() => {
+  const conversionData = React.useMemo(() => {
     const now = new Date();
     const sixMonthsAgo = subMonths(now, 5);
     const months = eachMonthOfInterval({ start: sixMonthsAgo, end: now });
@@ -37,20 +29,25 @@ export const OpportunitiesChart: React.FC<OpportunitiesChartProps> = ({
         op.status === 'em_contato' || op.status === 'negociando'
       ).length;
 
+      const taxaConversao = total > 0 ? ((ganhas / total) * 100) : 0;
+      const taxaPerda = total > 0 ? ((perdidas / total) * 100) : 0;
+
       return {
         mes: format(month, 'MMM/yy', { locale: ptBR }),
         total,
         ganhas,
         perdidas,
-        emAndamento
+        emAndamento,
+        taxaConversao: Number(taxaConversao.toFixed(1)),
+        taxaPerda: Number(taxaPerda.toFixed(1))
       };
     });
   }, [filteredOportunidades]);
 
-  if (loading) {
+  if (conversionData.every(data => data.total === 0)) {
     return (
       <div className="h-[300px] flex items-center justify-center">
-        <p className="text-muted-foreground">Carregando dados...</p>
+        <p className="text-muted-foreground">Nenhuma oportunidade encontrada nos últimos 6 meses</p>
       </div>
     );
   }
@@ -58,16 +55,28 @@ export const OpportunitiesChart: React.FC<OpportunitiesChartProps> = ({
   return (
     <div className="h-[300px]">
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={monthlyData}>
+        <BarChart data={conversionData}>
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis dataKey="mes" />
-          <YAxis />
-          <Tooltip />
+          <YAxis label={{ value: 'Taxa (%)', angle: -90, position: 'insideLeft' }} />
+          <Tooltip 
+            formatter={(value, name) => [
+              `${value}%`, 
+              name === 'taxaConversao' ? 'Taxa de Conversão' : 'Taxa de Perda'
+            ]}
+            labelFormatter={(label) => `Mês: ${label}`}
+          />
           <Legend />
-          <Bar dataKey="total" fill="#8b5cf6" name="Total" />
-          <Bar dataKey="ganhas" fill="#10b981" name="Ganhas" />
-          <Bar dataKey="perdidas" fill="#ef4444" name="Perdidas" />
-          <Bar dataKey="emAndamento" fill="#f59e0b" name="Em Andamento" />
+          <Bar 
+            dataKey="taxaConversao" 
+            name="Taxa de Conversão" 
+            fill="#10b981" 
+          />
+          <Bar 
+            dataKey="taxaPerda" 
+            name="Taxa de Perda" 
+            fill="#ef4444" 
+          />
         </BarChart>
       </ResponsiveContainer>
     </div>

@@ -11,13 +11,13 @@ import LoginPage from "@/pages/auth/LoginPage";
 import LoadingScreen from "@/components/ui/LoadingScreen";
 import { AuthProvider } from "@/hooks/useAuth";
 import { PrivacyProvider } from "@/contexts/PrivacyContext";
-// import PrivateRoute from "@/components/auth/PrivateRoute";
 import OnePagerPage from "@/pages/onepager/OnePagerPage";
 import QuadrantePage from "@/pages/quadrante/QuadrantePage";
 import Admin from "@/pages/admin";
 import { Toaster } from "@/components/ui/toaster";
 import OportunidadesDashboardPage from "@/pages/oportunidades-dashboard";
-import RepositorioPage from "@/pages/repositorio/RepositorioPage"; // <-- Adicionado
+import RepositorioPage from "@/pages/repositorio/RepositorioPage";
+import WishlistPage from "@/pages/wishlist/WishlistPage";
 
 const App: React.FC = () => (
   <Router>
@@ -39,7 +39,8 @@ const App: React.FC = () => (
               <Route path="indicadores" element={<IndicadoresPage />} />
               <Route path="empresas" element={<EmpresasPage />} />
               <Route path="onepager/*" element={<OnePagerPage />} />
-              <Route path="repositorio" element={<RepositorioPage />} /> {/* <-- Corrigido */}
+              <Route path="repositorio" element={<RepositorioPage />} />
+              <Route path="wishlist/*" element={<WishlistPage />} />
               <Route path="quadrante" element={<QuadrantePage />} />
               <Route path="admin" element={<Admin />} />
               <Route path="*" element={<NotFoundPage />} />
