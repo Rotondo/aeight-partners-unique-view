@@ -6,15 +6,28 @@ export interface DashboardStats {
   ganhas: number;
   perdidas: number;
   emAndamento: number;
-  intra: number;
-  extra: number;
+  intra: {
+    total: number;
+    ganhas: number;
+    perdidas: number;
+    emAndamento: number;
+  };
+  extra: {
+    total: number;
+    ganhas: number;
+    perdidas: number;
+    emAndamento: number;
+  };
   enviadas: number;
   recebidas: number;
   saldo: number;
 }
 
+function statusLower(s: any): string {
+  return (typeof s === "string" ? s : "").trim().toLowerCase();
+}
+
 export function useDashboardStats(oportunidadesFiltradas?: Oportunidade[] | null): DashboardStats {
-  // Garante array válido
   const oportunidades: Oportunidade[] = Array.isArray(oportunidadesFiltradas) ? oportunidadesFiltradas : [];
 
   // LOG: Array recebido
@@ -25,37 +38,60 @@ export function useDashboardStats(oportunidadesFiltradas?: Oportunidade[] | null
   return useMemo(() => {
     const total = oportunidades.length;
 
-    const ganhas = oportunidades.filter(
-      op => typeof op.status === "string" && op.status.toLowerCase() === "ganho"
-    ).length;
+    // Totais globais por status
+    const ganhas = oportunidades.filter(op => statusLower(op.status) === "ganho").length;
+    const perdidas = oportunidades.filter(op => statusLower(op.status) === "perdido").length;
+    const emAndamento = oportunidades.filter(op => {
+      const status = statusLower(op.status);
+      return status !== "ganho" && status !== "perdido";
+    }).length;
 
-    const perdidas = oportunidades.filter(
-      op => typeof op.status === "string" && op.status.toLowerCase() === "perdido"
-    ).length;
-
-    // Todo o restante entra em andamento
-    const emAndamento = total - ganhas - perdidas;
-
-    const intra = oportunidades.filter(
+    // INTRA
+    const oportunidadesIntra = oportunidades.filter(
       op => typeof op.tipo_relacao === "string" && op.tipo_relacao.toLowerCase() === "intra"
-    ).length;
+    );
+    let intraGanhas = 0, intraPerdidas = 0, intraEmAndamento = 0;
+    oportunidadesIntra.forEach(op => {
+      const status = statusLower(op.status);
+      if (status === "ganho") intraGanhas++;
+      else if (status === "perdido") intraPerdidas++;
+      else intraEmAndamento++;
+    });
+    const intra = {
+      total: oportunidadesIntra.length,
+      ganhas: intraGanhas,
+      perdidas: intraPerdidas,
+      emAndamento: intraEmAndamento,
+    };
 
-    const extra = oportunidades.filter(
+    // EXTRA
+    const oportunidadesExtra = oportunidades.filter(
       op => typeof op.tipo_relacao === "string" && op.tipo_relacao.toLowerCase() === "extra"
-    ).length;
+    );
+    let extraGanhas = 0, extraPerdidas = 0, extraEmAndamento = 0;
+    oportunidadesExtra.forEach(op => {
+      const status = statusLower(op.status);
+      if (status === "ganho") extraGanhas++;
+      else if (status === "perdido") extraPerdidas++;
+      else extraEmAndamento++;
+    });
+    const extra = {
+      total: oportunidadesExtra.length,
+      ganhas: extraGanhas,
+      perdidas: extraPerdidas,
+      emAndamento: extraEmAndamento,
+    };
 
     const enviadas = oportunidades.filter(
       op => typeof op.tipo_movimentacao === "string" && op.tipo_movimentacao.toLowerCase() === "enviada"
     ).length;
-
     const recebidas = oportunidades.filter(
       op => typeof op.tipo_movimentacao === "string" && op.tipo_movimentacao.toLowerCase() === "recebida"
     ).length;
-
     const saldo = enviadas - recebidas;
 
-    // LOG: Cálculo de cada valor
     if (typeof window !== "undefined") {
+      // LOG detalhado
       console.log("[useDashboardStats] Calculado: ", {
         total,
         ganhas,
@@ -68,18 +104,17 @@ export function useDashboardStats(oportunidadesFiltradas?: Oportunidade[] | null
         saldo,
       });
 
-      // Logs detalhados de cada filtro
-      console.log("[useDashboardStats] IDs Ganhas:", oportunidades.filter(
-        op => typeof op.status === "string" && op.status.toLowerCase() === "ganho"
-      ).map(op => op.id));
-
-      console.log("[useDashboardStats] IDs Perdidas:", oportunidades.filter(
-        op => typeof op.status === "string" && op.status.toLowerCase() === "perdido"
-      ).map(op => op.id));
-
-      console.log("[useDashboardStats] IDs Em Andamento:", oportunidades.filter(
-        op => typeof op.status !== "string" || (op.status.toLowerCase() !== "ganho" && op.status.toLowerCase() !== "perdido")
-      ).map(op => op.id));
+      // Sanity check: intra/extra status soma deve bater com o total de cada
+      if (intra.total !== intra.ganhas + intra.perdidas + intra.emAndamento) {
+        console.warn(`[useDashboardStats] Soma dos status intra não bate: ${intra.total} != ${intra.ganhas} + ${intra.perdidas} + ${intra.emAndamento}`);
+      }
+      if (extra.total !== extra.ganhas + extra.perdidas + extra.emAndamento) {
+        console.warn(`[useDashboardStats] Soma dos status extra não bate: ${extra.total} != ${extra.ganhas} + ${extra.perdidas} + ${extra.emAndamento}`);
+      }
+      // Sanity check: intra + extra deve ser igual ao total geral
+      if (intra.total + extra.total !== total) {
+        console.warn(`[useDashboardStats] Soma intra + extra não bate com total: ${intra.total} + ${extra.total} != ${total}`);
+      }
     }
 
     return {
@@ -96,5 +131,4 @@ export function useDashboardStats(oportunidadesFiltradas?: Oportunidade[] | null
   }, [oportunidades]);
 }
 
-// Export default caso algum import use default
 export default useDashboardStats;
