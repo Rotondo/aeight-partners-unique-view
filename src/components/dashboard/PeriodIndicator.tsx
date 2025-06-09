@@ -5,23 +5,23 @@ import { CalendarIcon } from 'lucide-react';
 import { useOportunidades } from '@/components/oportunidades/OportunidadesContext';
 
 export const PeriodIndicator: React.FC = () => {
-  const { filters } = useOportunidades();
+  const { filterParams } = useOportunidades();
 
   const getPeriodText = () => {
-    if (!filters) {
+    if (!filterParams) {
       return 'Todos os períodos';
     }
-    if (filters.dataInicio && filters.dataFim) {
-      const inicio = new Date(filters.dataInicio).toLocaleDateString('pt-BR');
-      const fim = new Date(filters.dataFim).toLocaleDateString('pt-BR');
+    if (filterParams.dataInicio && filterParams.dataFim) {
+      const inicio = new Date(filterParams.dataInicio).toLocaleDateString('pt-BR');
+      const fim = new Date(filterParams.dataFim).toLocaleDateString('pt-BR');
       return `${inicio} - ${fim}`;
     }
-    if (filters.dataInicio) {
-      const inicio = new Date(filters.dataInicio).toLocaleDateString('pt-BR');
+    if (filterParams.dataInicio) {
+      const inicio = new Date(filterParams.dataInicio).toLocaleDateString('pt-BR');
       return `A partir de ${inicio}`;
     }
-    if (filters.dataFim) {
-      const fim = new Date(filters.dataFim).toLocaleDateString('pt-BR');
+    if (filterParams.dataFim) {
+      const fim = new Date(filterParams.dataFim).toLocaleDateString('pt-BR');
       return `Até ${fim}`;
     }
     return 'Todos os períodos';

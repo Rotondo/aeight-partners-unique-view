@@ -1,4 +1,3 @@
-
 // Common types
 
 // Categoria (Category)
@@ -291,6 +290,7 @@ export interface OportunidadesFilterParams {
   empresaDestinoId?: string;
   status?: StatusOportunidade;
   usuarioId?: string;
+  searchTerm?: string; // Adicionar campo de busca por texto
 }
 
 // Dashboard Types

@@ -156,6 +156,16 @@ export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ child
   const applyFilters = (data: Oportunidade[], params: OportunidadesFilterParams) => {
     let filtered = [...data];
 
+    // Filtro por texto (busca no nome do lead)
+    if (params.searchTerm) {
+      const searchLower = params.searchTerm.toLowerCase();
+      filtered = filtered.filter(op => 
+        op.nome_lead.toLowerCase().includes(searchLower) ||
+        op.empresa_origem?.nome.toLowerCase().includes(searchLower) ||
+        op.empresa_destino?.nome.toLowerCase().includes(searchLower)
+      );
+    }
+
     if (params.dataInicio && params.dataFim) {
       const dataInicio = new Date(params.dataInicio);
       const dataFim = new Date(params.dataFim);

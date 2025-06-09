@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { EmpresaCliente, WishlistItem, WishlistApresentacao, WishlistStats, WishlistStatus, StatusApresentacao, TipoApresentacao } from "@/types";
@@ -133,11 +132,15 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       if (error) throw error;
       
-      // Garantir que os tipos estão corretos
+      // Garantir que os tipos estão corretos e corrigir o tipo do status do wishlist_item
       const typedData = (data || []).map(item => ({
         ...item,
         tipo_apresentacao: item.tipo_apresentacao as TipoApresentacao,
-        status_apresentacao: item.status_apresentacao as StatusApresentacao
+        status_apresentacao: item.status_apresentacao as StatusApresentacao,
+        wishlist_item: item.wishlist_item ? {
+          ...item.wishlist_item,
+          status: item.wishlist_item.status as WishlistStatus
+        } : null
       }));
       
       setApresentacoes(typedData);
