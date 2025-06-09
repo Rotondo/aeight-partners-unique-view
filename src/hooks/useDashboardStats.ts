@@ -1,34 +1,38 @@
 import { useMemo } from "react";
 import { Oportunidade } from "@/types";
 
-// Hook para calcular KPIs a partir das oportunidades já filtradas
-export function useDashboardStats(oportunidadesFiltradas: Oportunidade[]) {
+export interface DashboardStats {
+  total: number;
+  ganhas: number;
+  perdidas: number;
+  emAndamento: number;
+  intra: number;
+  extra: number;
+  enviadas: number;
+  recebidas: number;
+  saldo: number;
+}
+
+export function useDashboardStats(oportunidadesFiltradas: Oportunidade[]): DashboardStats {
   return useMemo(() => {
     const total = oportunidadesFiltradas.length;
     const ganhas = oportunidadesFiltradas.filter(op => op.status === "ganho").length;
     const perdidas = oportunidadesFiltradas.filter(op => op.status === "perdido").length;
-    const andamento = oportunidadesFiltradas.filter(op => op.status !== "ganho" && op.status !== "perdido").length;
+    // "Em andamento": todos que não são "ganho" nem "perdido"
+    const emAndamento = oportunidadesFiltradas.filter(
+      op => op.status !== "ganho" && op.status !== "perdido"
+    ).length;
     const intra = oportunidadesFiltradas.filter(op => op.tipo_relacao === "intra").length;
     const extra = oportunidadesFiltradas.filter(op => op.tipo_relacao === "extra").length;
-    const enviadas = oportunidadesFiltradas.filter(
-      op =>
-        op.tipo_relacao === "extra" &&
-        op.empresa_origem?.tipo === "intragrupo" &&
-        op.empresa_destino?.tipo === "parceiro"
-    ).length;
-    const recebidas = oportunidadesFiltradas.filter(
-      op =>
-        op.tipo_relacao === "extra" &&
-        op.empresa_origem?.tipo === "parceiro" &&
-        op.empresa_destino?.tipo === "intragrupo"
-    ).length;
+    const enviadas = oportunidadesFiltradas.filter(op => op.tipo_movimentacao === "enviada").length;
+    const recebidas = oportunidadesFiltradas.filter(op => op.tipo_movimentacao === "recebida").length;
     const saldo = enviadas - recebidas;
 
     return {
       total,
       ganhas,
       perdidas,
-      andamento,
+      emAndamento,
       intra,
       extra,
       enviadas,
