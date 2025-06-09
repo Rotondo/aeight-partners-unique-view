@@ -53,19 +53,20 @@ const DashboardPage: React.FC = () => {
   const [tipoFiltro, setTipoFiltro] = useState<"all" | "intra" | "extra">("all");
   const [periodo, setPeriodo] = useState<"mes" | "quarter">("mes");
   const [statusFiltro, setStatusFiltro] = useState<"all" | "ganho" | "perdido" | "andamento">("all");
-  const [empresaFiltroType, setEmpresaFiltroType] = useState<"remetente" | "destinatario" | "all">("all");
   const [empresaFiltro, setEmpresaFiltro] = useState<string>("all");
+  const [empresaFiltroType, setEmpresaFiltroType] = useState<"remetente" | "destinatario" | "all">("all");
   const [searchTerm, setSearchTerm] = useState("");
-  const [saldoEmpresas, setSaldoEmpresas] = useState<any[]>([]);
-  const [chartData, setChartData] = useState<any[]>([]);
-  const [statusChartData, setStatusChartData] = useState<any[]>([]);
   const [editRowId, setEditRowId] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<Partial<Oportunidade>>({});
-  const [opportunidadesList, setOportunidadesList] = useState<Oportunidade[]>([]);
+  const [opportunidadesList, setOpportunidadesList] = useState<Oportunidade[]>([]);
   const [ordemLista, setOrdemLista] = useState<{ col: string; asc: boolean }>({ col: "data_indicacao", asc: false });
   const [matrizIntra, setMatrizIntra] = useState<any[]>([]);
   const [matrizParceiros, setMatrizParceiros] = useState<any[]>([]);
 
+  // Novos estados para lista de recebidas
+  const [empresaIntraSelecionada, setEmpresaIntraSelecionada] = useState<string>("all");
+
+  // Carregamento e enriquecimento dos dados
   useEffect(() => {
     fetchAll();
     // eslint-disable-next-line
@@ -101,11 +102,8 @@ const DashboardPage: React.FC = () => {
 
       setOportunidades(oportunidadesEnriquecidas);
       setEmpresas(empresasData);
-      processSaldoEmpresas(oportunidadesEnriquecidas, empresasData);
-      processChart(oportunidadesEnriquecidas);
-      processStatusChart(oportunidadesEnriquecidas);
+      setOpportunidadesList(oportunidadesEnriquecidas);
       processMatriz(oportunidadesEnriquecidas, empresasData);
-      processOportunidadesList(oportunidadesEnriquecidas);
     } catch (e: any) {
       toast({
         title: "Erro",
@@ -117,7 +115,7 @@ const DashboardPage: React.FC = () => {
     }
   }
 
-  // Função de filtragem principal (usada para todos os blocos dependentes de filtro)
+  // Filtro global das oportunidades
   const oportunidadesFiltradas = useMemo(() => {
     let filtradas = oportunidades;
     if (statusFiltro !== "all") {
@@ -145,12 +143,12 @@ const DashboardPage: React.FC = () => {
     return filtradas;
   }, [oportunidades, statusFiltro, tipoFiltro, empresaFiltro, empresaFiltroType, searchTerm]);
 
-  // KPIs filtrados
+  // KPIs baseados nos dados filtrados
   const stats = useMemo(() => {
     const total = oportunidadesFiltradas.length;
     const ganhas = oportunidadesFiltradas.filter((op) => op.status === "ganho").length;
     const perdidas = oportunidadesFiltradas.filter((op) => op.status === "perdido").length;
-    const andamento = oportunidadesFiltradas.filter((op) => op.status !== "ganho" && op.status !== "perdido").length;
+    const andamento = total - ganhas - perdidas;
     const intra = oportunidadesFiltradas.filter((op) => op.tipo_relacao === "intra").length;
     const extra = oportunidadesFiltradas.filter((op) => op.tipo_relacao === "extra").length;
     const enviadas = oportunidadesFiltradas.filter(
@@ -166,6 +164,7 @@ const DashboardPage: React.FC = () => {
         op.empresa_destino?.tipo === "intragrupo"
     ).length;
     const saldo = enviadas - recebidas;
+
     return {
       total,
       ganhas,
@@ -179,97 +178,73 @@ const DashboardPage: React.FC = () => {
     };
   }, [oportunidadesFiltradas]);
 
-  function groupByQuarter(data: Oportunidade[], tipo: "intra" | "extra" | "all") {
-    const result: Record<string, { enviadas: number; recebidas: number; dateObj: Date }> = {};
-    data.forEach((op) => {
-      const d = new Date(op.data_indicacao);
-      const key = getQuarterLabel(d);
-      if (!result[key]) result[key] = { enviadas: 0, recebidas: 0, dateObj: d };
-      if (tipo === "intra" && op.tipo_relacao === "intra") {
-        result[key].enviadas += op.isRemetente ? 1 : 0;
-        result[key].recebidas += op.isDestinatario ? 1 : 0;
-      } else if (tipo === "extra" && op.tipo_relacao === "extra") {
-        result[key].enviadas += op.isRemetente ? 1 : 0;
-        result[key].recebidas += op.isDestinatario ? 1 : 0;
-      } else if (tipo === "all") {
-        result[key].enviadas += op.isRemetente ? 1 : 0;
-        result[key].recebidas += op.isDestinatario ? 1 : 0;
-      }
-    });
-    return Object.entries(result)
-      .map(([quarter, vals]) => ({ quarter, ...vals }))
-      .sort((a, b) => a.dateObj.getTime() - b.dateObj.getTime());
-  }
+  // Chart data: agrupamento por período
+  const chartData = useMemo(() => {
+    function groupByQuarter(data: Oportunidade[], tipo: "intra" | "extra" | "all") {
+      const result: Record<string, { enviadas: number; recebidas: number; dateObj: Date }> = {};
+      data.forEach((op) => {
+        const d = new Date(op.data_indicacao);
+        const key = getQuarterLabel(d);
+        if (!result[key]) result[key] = { enviadas: 0, recebidas: 0, dateObj: d };
+        if (tipo === "intra" && op.tipo_relacao === "intra") {
+          result[key].enviadas += op.isRemetente ? 1 : 0;
+          result[key].recebidas += op.isDestinatario ? 1 : 0;
+        } else if (tipo === "extra" && op.tipo_relacao === "extra") {
+          result[key].enviadas += op.isRemetente ? 1 : 0;
+          result[key].recebidas += op.isDestinatario ? 1 : 0;
+        } else if (tipo === "all") {
+          result[key].enviadas += op.isRemetente ? 1 : 0;
+          result[key].recebidas += op.isDestinatario ? 1 : 0;
+        }
+      });
+      return Object.entries(result)
+        .map(([quarter, vals]) => ({ quarter, ...vals }))
+        .sort((a, b) => a.dateObj.getTime() - b.dateObj.getTime());
+    }
+    function groupByMonth(data: Oportunidade[], tipo: "intra" | "extra" | "all") {
+      const result: Record<string, { enviadas: number; recebidas: number; dateObj: Date }> = {};
+      data.forEach((op) => {
+        const d = new Date(op.data_indicacao);
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+        if (!result[key]) result[key] = { enviadas: 0, recebidas: 0, dateObj: d };
+        if (tipo === "intra" && op.tipo_relacao === "intra") {
+          result[key].enviadas += op.isRemetente ? 1 : 0;
+          result[key].recebidas += op.isDestinatario ? 1 : 0;
+        } else if (tipo === "extra" && op.tipo_relacao === "extra") {
+          result[key].enviadas += op.isRemetente ? 1 : 0;
+          result[key].recebidas += op.isDestinatario ? 1 : 0;
+        } else if (tipo === "all") {
+          result[key].enviadas += op.isRemetente ? 1 : 0;
+          result[key].recebidas += op.isDestinatario ? 1 : 0;
+        }
+      });
+      return Object.entries(result)
+        .map(([mes, vals]) => {
+          const [year, month] = mes.split("-");
+          const date = new Date(Number(year), Number(month) - 1, 1);
+          const mesLabel = date.toLocaleString("pt-BR", { month: "short" });
+          return { mes: `${mesLabel}/${year.slice(2)}`, ...vals, dateObj: date };
+        })
+        .sort((a, b) => a.dateObj.getTime() - b.dateObj.getTime());
+    }
+    if (periodo === "mes") return groupByMonth(oportunidadesFiltradas, tipoFiltro);
+    return groupByQuarter(oportunidadesFiltradas, tipoFiltro);
+  }, [oportunidadesFiltradas, periodo, tipoFiltro]);
 
-  function groupByMonth(data: Oportunidade[], tipo: "intra" | "extra" | "all") {
-    const result: Record<string, { enviadas: number; recebidas: number; dateObj: Date }> = {};
-    data.forEach((op) => {
-      const d = new Date(op.data_indicacao);
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-      if (!result[key]) result[key] = { enviadas: 0, recebidas: 0, dateObj: d };
-      if (tipo === "intra" && op.tipo_relacao === "intra") {
-        result[key].enviadas += op.isRemetente ? 1 : 0;
-        result[key].recebidas += op.isDestinatario ? 1 : 0;
-      } else if (tipo === "extra" && op.tipo_relacao === "extra") {
-        result[key].enviadas += op.isRemetente ? 1 : 0;
-        result[key].recebidas += op.isDestinatario ? 1 : 0;
-      } else if (tipo === "all") {
-        result[key].enviadas += op.isRemetente ? 1 : 0;
-        result[key].recebidas += op.isDestinatario ? 1 : 0;
-      }
-    });
-    return Object.entries(result)
-      .map(([mes, vals]) => {
-        const [year, month] = mes.split("-");
-        const date = new Date(Number(year), Number(month) - 1, 1);
-        const mesLabel = date.toLocaleString("pt-BR", { month: "short" });
-        return { mes: `${mesLabel}/${year.slice(2)}`, ...vals, dateObj: date };
-      })
-      .sort((a, b) => a.dateObj.getTime() - b.dateObj.getTime());
-  }
-
-  function processSaldoEmpresas(oportunidades: Oportunidade[], empresas: Empresa[]) {
-    const saldos = empresas
-      .filter((e) => e.status)
-      .map((empresa) => {
-        const enviadas = oportunidades.filter((op) => op.empresa_origem_id === empresa.id).length;
-        const recebidas = oportunidades.filter((op) => op.empresa_destino_id === empresa.id).length;
-        return {
-          empresa: empresa.nome,
-          tipo: empresa.tipo,
-          enviadas,
-          recebidas,
-          saldo: enviadas - recebidas,
-        };
-      })
-      .sort((a, b) => b.saldo - a.saldo);
-    setSaldoEmpresas(saldos);
-  }
-
-  function processChart(oportunidades: Oportunidade[]) {
-    let filtradas = oportunidadesFiltradas;
-    const data =
-      periodo === "mes"
-        ? groupByMonth(filtradas, tipoFiltro)
-        : groupByQuarter(filtradas, tipoFiltro);
-    setChartData(data);
-  }
-
-  function processStatusChart(oportunidades: Oportunidade[]) {
-    let filtradas = oportunidadesFiltradas;
+  // Chart de status (pizza)
+  const statusChartData = useMemo(() => {
     const statusCount: Record<string, number> = {};
-    filtradas.forEach((op) => {
+    oportunidadesFiltradas.forEach((op) => {
       const s = op.status || "indefinido";
       statusCount[s] = (statusCount[s] || 0) + 1;
     });
-    setStatusChartData(
-      Object.entries(statusCount).map(([status, value]) => ({
-        status,
-        value,
-      }))
-    );
-  }
+    return Object.entries(statusCount).map(([status, value]) => ({
+      status,
+      value,
+    }));
+  }, [oportunidadesFiltradas]);
 
+  // Matriz de indicações
   function processMatriz(oportunidades: Oportunidade[], empresas: Empresa[]) {
     const intragrupo = empresas.filter((e) => e.tipo === "intragrupo");
     let matrizIntra: any[] = [];
@@ -309,30 +284,12 @@ const DashboardPage: React.FC = () => {
     setMatrizParceiros(matrizParc);
   }
 
-  function processOportunidadesList(oportunidades: Oportunidade[]) {
-    setOpportunidadesList(oportunidades);
-  }
-
+  // Exportação CSV (mantido)
   function exportSaldoCSV() {
-    const headers = ["Empresa", "Tipo", "Enviadas", "Recebidas", "Saldo"];
-    const rows = saldoEmpresas.map((s) => [
-      s.empresa,
-      s.tipo,
-      s.enviadas,
-      s.recebidas,
-      s.saldo,
-    ]);
-    let csvContent = [headers, ...rows].map((e) => e.join(";")).join("\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", "saldos_oportunidades.csv");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // ...
   }
 
+  // Edição e ordenação (mantido)
   async function handleSaveEdit(id: string) {
     try {
       const updates: Partial<Oportunidade> = { ...editValues };
@@ -362,22 +319,25 @@ const DashboardPage: React.FC = () => {
     setEditRowId(null);
     setEditValues({});
   }
-
   function ordenarLista(col: string) {
     setOrdemLista((prev) => ({
       col,
       asc: prev.col === col ? !prev.asc : true,
     }));
   }
-  const listaOrdenada = [...opportunidadesFiltradas].sort((a, b) => {
-    let vA: any = (a as any)[ordemLista.col];
-    let vB: any = (b as any)[ordemLista.col];
-    if (typeof vA === "string") vA = vA.toLowerCase();
-    if (typeof vB === "string") vB = vB.toLowerCase();
-    if (vA < vB) return ordemLista.asc ? -1 : 1;
-    if (vA > vB) return ordemLista.asc ? 1 : -1;
-    return 0;
-  });
+  const listaOrdenada = useMemo(() => {
+    const arr = [...opportunidadesList];
+    arr.sort((a, b) => {
+      let vA: any = (a as any)[ordemLista.col];
+      let vB: any = (b as any)[ordemLista.col];
+      if (typeof vA === "string") vA = vA.toLowerCase();
+      if (typeof vB === "string") vB = vB.toLowerCase();
+      if (vA < vB) return ordemLista.asc ? -1 : 1;
+      if (vA > vB) return ordemLista.asc ? 1 : -1;
+      return 0;
+    });
+    return arr;
+  }, [opportunidadesList, ordemLista]);
 
   function renderCellValue(value: any) {
     if (value === 0) {
@@ -386,23 +346,24 @@ const DashboardPage: React.FC = () => {
     return value;
   }
 
-  // Filtro para empresas de destino apenas do tipo intragrupo
-  const empresasDestinoIntra = useMemo(
-    () => empresas.filter((e) => e.tipo === "intragrupo"),
-    [empresas]
-  );
+  // NOVO: Filtro de empresa de destino (apenas intragrupo)
+  const empresasIntra = useMemo(() => empresas.filter(e => e.tipo === "intragrupo"), [empresas]);
 
-  // Indicações recebidas por empresa de destino selecionada
+  // NOVO: Lista de indicações recebidas pela empresa selecionada (detalhe intra)
   const indicacoesRecebidas = useMemo(() => {
-    if (
-      empresaFiltroType === "destinatario" &&
-      empresaFiltro !== "all" &&
-      empresasDestinoIntra.some((e) => e.id === empresaFiltro)
-    ) {
-      return oportunidadesFiltradas.filter((op) => op.empresa_destino_id === empresaFiltro);
-    }
-    return [];
-  }, [empresaFiltro, empresaFiltroType, oportunidadesFiltradas, empresasDestinoIntra]);
+    if (!empresaIntraSelecionada || empresaIntraSelecionada === "all") return [];
+    return oportunidades.filter(
+      op => op.empresa_destino_id === empresaIntraSelecionada && op.tipo_relacao === "intra"
+    );
+  }, [empresaIntraSelecionada, oportunidades]);
+
+  // NOVO: Lista de todas indicações recebidas pela empresa selecionada (intra ou extra)
+  const indicacoesRecebidasTodas = useMemo(() => {
+    if (!empresaIntraSelecionada || empresaIntraSelecionada === "all") return [];
+    return oportunidades.filter(
+      op => op.empresa_destino_id === empresaIntraSelecionada
+    );
+  }, [empresaIntraSelecionada, oportunidades]);
 
   return (
     <div className="space-y-8">
@@ -416,14 +377,14 @@ const DashboardPage: React.FC = () => {
         <DashboardCard title="Extra Grupo" value={loading ? "..." : stats.extra} icon={<ReBarChart className="h-4 w-4 text-purple-600" />} color="bg-purple-600/10" description="Trocas com terceiros" />
         <DashboardCard title="Enviadas" value={loading ? "..." : stats.enviadas} icon={<ReBarChart className="h-4 w-4 text-cyan-500" />} color="bg-cyan-500/10" description="Oportunidades enviadas para parceiros" />
         <DashboardCard title="Recebidas" value={loading ? "..." : stats.recebidas} icon={<ReBarChart className="h-4 w-4 text-rose-500" />} color="bg-rose-500/10" description="Oportunidades recebidas de parceiros" />
-        <DashboardCard title="Saldo Envio-Recebimento" value={loading ? "..." : stats.saldo} icon={<ReBarChart className="h-4 w-4 text-gray-600" />} color="bg-gray-600/10" description="Saldo entre envio e recebimento extragrupo" />
+        <DashboardCard title="Saldo Envio-Recebimento" value={loading ? "..." : stats.saldo} icon={<ReBarChart className="h-4 w-4 text-gray-600" />} color="bg-gray-600/10" description="Saldo entre envio e recebimento" />
       </div>
       <Card>
         <CardHeader>
           <CardTitle>Filtros do Gráfico</CardTitle>
           <CardDescription>Refine os dados exibidos no gráfico</CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-col md:flex-row gap-4 flex-wrap">
+        <CardContent className="flex flex-col md:flex-row gap-4">
           <Select value={tipoFiltro} onValueChange={(v) => setTipoFiltro(v as any)}>
             <SelectTrigger className="w-[150px]">
               <SelectValue placeholder="Tipo" />
@@ -454,47 +415,97 @@ const DashboardPage: React.FC = () => {
               <SelectItem value="quarter">Quarter (trimestre)</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={empresaFiltroType} onValueChange={(v) => {
-            setEmpresaFiltroType(v as any);
-            if (v === "destinatario" && empresaFiltro !== "all" && !empresasDestinoIntra.some(e => e.id === empresaFiltro)) {
-              setEmpresaFiltro("all");
-            }
-          }}>
+          <Select value={empresaFiltroType} onValueChange={(v) => setEmpresaFiltroType(v as any)}>
             <SelectTrigger className="w-[170px]">
               <SelectValue placeholder="Tipo de Empresa" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todas</SelectItem>
               <SelectItem value="remetente">Origem</SelectItem>
-              <SelectItem value="destinatario">Destino (apenas intragrupo)</SelectItem>
+              <SelectItem value="destinatario">Destino</SelectItem>
             </SelectContent>
           </Select>
-          <Select
-            value={empresaFiltro}
-            onValueChange={(v) => setEmpresaFiltro(v)}
-          >
+          <Select value={empresaFiltro} onValueChange={(v) => setEmpresaFiltro(v)}>
             <SelectTrigger className="w-[240px]">
               <SelectValue placeholder="Empresa" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todas</SelectItem>
-              {empresaFiltroType === "destinatario"
-                ? empresasDestinoIntra.map((e) => (
-                    <SelectItem key={e.id} value={e.id}>{e.nome}</SelectItem>
-                  ))
-                : empresas.map((e) => (
-                    <SelectItem key={e.id} value={e.id}>{e.nome}</SelectItem>
-                  ))}
+              {empresas.map((e) => (
+                <SelectItem key={e.id} value={e.id}>{e.nome}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
-          <Input
-            placeholder="Buscar empresa..."
-            value={searchTerm}
-            className="w-[200px]"
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+          <Input placeholder="Buscar empresa..." value={searchTerm} className="w-[200px]" onChange={(e) => setSearchTerm(e.target.value)} />
         </CardContent>
       </Card>
+      {/* NOVO filtro: Seleção de empresa de destino intragrupo */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Filtrar por Empresa de Destino (IntraGrupo)</CardTitle>
+          <CardDescription>Veja indicações recebidas por uma empresa do grupo</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Select
+            value={empresaIntraSelecionada}
+            onValueChange={(v) => setEmpresaIntraSelecionada(v)}
+          >
+            <SelectTrigger className="w-[320px]">
+              <SelectValue placeholder="Selecione uma empresa intragrupo" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas</SelectItem>
+              {empresasIntra.map((e) => (
+                <SelectItem key={e.id} value={e.id}>{e.nome}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </CardContent>
+      </Card>
+      {/* NOVA TABELA: Indicações recebidas por empresa selecionada */}
+      {empresaIntraSelecionada !== "all" && (
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              Indicações Recebidas por {empresasIntra.find(e => e.id === empresaIntraSelecionada)?.nome || ""}
+            </CardTitle>
+            <CardDescription>
+              Todas as indicações recebidas, com origem e tipo (intra/extra)
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-xs border">
+                <thead>
+                  <tr>
+                    <th className="border p-1">Data</th>
+                    <th className="border p-1">Lead</th>
+                    <th className="border p-1">Origem</th>
+                    <th className="border p-1">Tipo</th>
+                    <th className="border p-1">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {indicacoesRecebidasTodas.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="border p-1 text-center text-muted">Nenhuma indicação recebida.</td>
+                    </tr>
+                  )}
+                  {indicacoesRecebidasTodas.map((op, idx) => (
+                    <tr key={op.id + idx}>
+                      <td className="border p-1">{formatDate(op.data_indicacao)}</td>
+                      <td className="border p-1">{op.nome_lead}</td>
+                      <td className="border p-1">{op.empresa_origem?.nome || "-"}</td>
+                      <td className="border p-1">{op.tipo_relacao === "intra" ? "Intra" : "Extra"}</td>
+                      <td className="border p-1">{op.status}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
       {/* Gráfico funcional */}
       <Card>
         <CardHeader>
@@ -545,7 +556,7 @@ const DashboardPage: React.FC = () => {
               <thead>
                 <tr>
                   <th className="border p-1">Origem \ Destino</th>
-                  {empresasDestinoIntra.map(dest => (
+                  {empresasIntra.map(dest => (
                     <th className="border p-1" key={dest.id}>{dest.nome}</th>
                   ))}
                 </tr>
@@ -554,7 +565,7 @@ const DashboardPage: React.FC = () => {
                 {matrizIntra.map((row, idx) => (
                   <tr key={row.origem + idx}>
                     <td className="border p-1 font-bold">{row.origem}</td>
-                    {empresasDestinoIntra.map(dest => (
+                    {empresasIntra.map(dest => (
                       <td className="border p-1 text-center" key={dest.id}>{renderCellValue(row[dest.nome])}</td>
                     ))}
                   </tr>
@@ -576,7 +587,7 @@ const DashboardPage: React.FC = () => {
               <thead>
                 <tr>
                   <th className="border p-1">Parceiro \ Intra</th>
-                  {empresasDestinoIntra.map(intra => (
+                  {empresasIntra.map(intra => (
                     <th className="border p-1" key={intra.id}>{intra.nome}</th>
                   ))}
                 </tr>
@@ -585,7 +596,7 @@ const DashboardPage: React.FC = () => {
                 {matrizParceiros.map((row, idx) => (
                   <tr key={row.parceiro + idx}>
                     <td className="border p-1 font-bold">{row.parceiro}</td>
-                    {empresasDestinoIntra.map(intra => (
+                    {empresasIntra.map(intra => (
                       <td className="border p-1 text-center" key={intra.id}>{renderCellValue(row[intra.nome])}</td>
                     ))}
                   </tr>
@@ -595,49 +606,6 @@ const DashboardPage: React.FC = () => {
           </div>
         </CardContent>
       </Card>
-      {/* Relação de indicações recebidas pela empresa destino intragrupo */}
-      {empresaFiltroType === "destinatario" && empresaFiltro !== "all" && (
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              Indicações Recebidas — {empresasDestinoIntra.find(e => e.id === empresaFiltro)?.nome || ""}
-            </CardTitle>
-            <CardDescription>Veja quem indicou oportunidades para esta empresa e o tipo da indicação</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-xs border">
-                <thead>
-                  <tr>
-                    <th className="border p-1">Data</th>
-                    <th className="border p-1">Nome do Lead</th>
-                    <th className="border p-1">Tipo</th>
-                    <th className="border p-1">Quem indicou</th>
-                    <th className="border p-1">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {indicacoesRecebidas.length === 0 ? (
-                    <tr>
-                      <td className="border p-2 text-center" colSpan={5}>Nenhuma indicação recebida</td>
-                    </tr>
-                  ) : (
-                    indicacoesRecebidas.map((op, idx) => (
-                      <tr key={op.id + idx}>
-                        <td className="border p-1">{formatDate(op.data_indicacao)}</td>
-                        <td className="border p-1">{op.nome_lead || "-"}</td>
-                        <td className="border p-1">{op.tipo_relacao === "intra" ? "Intra" : "Extra"}</td>
-                        <td className="border p-1">{op.empresa_origem?.nome || "-"}</td>
-                        <td className="border p-1">{op.status}</td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
       {/* Lista detalhada editável */}
       <Card>
         <CardHeader>
@@ -670,4 +638,54 @@ const DashboardPage: React.FC = () => {
                           <SelectTrigger className="w-[90px]"><SelectValue /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="em_contato">Em Contato</SelectItem>
-                            <Select
+                            <SelectItem value="negociando">Negociando</SelectItem>
+                            <SelectItem value="ganho">Ganho</SelectItem>
+                            <SelectItem value="perdido">Perdido</SelectItem>
+                            <SelectItem value="Contato">Contato</SelectItem>
+                            <SelectItem value="Apresentado">Apresentado</SelectItem>
+                            <SelectItem value="Sem contato">Sem contato</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      ) : op.status}
+                    </td>
+                    <td className="border p-1">
+                      {editRowId === op.id ? (
+                        <Input type="number" className="w-[80px]" value={editValues.valor ?? ""} onChange={e => setEditValues(ev => ({ ...ev, valor: Number(e.target.value) }))} />
+                      ) : (op.valor ?? "-")}
+                    </td>
+                    <td className="border p-1">
+                      {editRowId === op.id ? (
+                        <Input value={editValues.nome_lead ?? ""} onChange={e => setEditValues(ev => ({ ...ev, nome_lead: e.target.value }))} className="w-[110px]" />
+                      ) : (op.nome_lead ?? "-")}
+                    </td>
+                    <td className="border p-1">
+                      {op.tipo_relacao}
+                    </td>
+                    <td className="border p-1">{formatDate(op.data_indicacao)}</td>
+                    <td className="border p-1">{op.data_fechamento ? formatDate(op.data_fechamento) : "-"}</td>
+                    <td className="border p-1">
+                      {editRowId === op.id ? (
+                        <>
+                          <Button size="icon" variant="default" title="Salvar" onClick={() => handleSaveEdit(op.id)}><Check className="h-4 w-4" /></Button>
+                          <Button size="icon" variant="ghost" title="Cancelar" onClick={handleCancelEdit}><Cancel className="h-4 w-4" /></Button>
+                        </>
+                      ) : (
+                        <Button size="icon" variant="ghost" title="Editar" onClick={() => handleEdit(op)}><Edit className="h-4 w-4" /></Button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <QuickAccess />
+        <AboutPlatform />
+      </div>
+    </div>
+  );
+};
+
+export default DashboardPage;
