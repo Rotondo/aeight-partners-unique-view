@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import {
@@ -340,6 +339,24 @@ const IndicadoresPage: React.FC = () => {
     { value: "GG", label: "Grande Porte (GG)" },
   ];
 
+  // Função para garantir que nenhum objeto seja renderizado como React child
+  function safeRenderCell(value: any) {
+    if (value === null || value === undefined) return "-";
+    if (typeof value === "object") {
+      // Se for um objeto simples, exibir JSON formatado
+      try {
+        return (
+          <pre style={{ fontSize: 11, margin: 0, background: "rgba(0,0,0,0.03)", padding: 2 }}>
+            {JSON.stringify(value, null, 1)}
+          </pre>
+        );
+      } catch {
+        return "[objeto]";
+      }
+    }
+    return String(value);
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row gap-3 md:gap-0 md:justify-between items-center">
@@ -596,11 +613,11 @@ const IndicadoresPage: React.FC = () => {
                                 />
                               )
                             ) : (
-                              indicador[field] ?? "-"
+                              safeRenderCell(indicador[field])
                             )}
                           </TableCell>
                         ))}
-                        <TableCell>{indicador.oportunidadesIndicadas ?? 0}</TableCell>
+                        <TableCell>{safeRenderCell(indicador.oportunidadesIndicadas ?? 0)}</TableCell>
                         <TableCell>
                           {indicador.share_of_wallet !== undefined
                             ? indicador.share_of_wallet.toFixed(2) + "%"
