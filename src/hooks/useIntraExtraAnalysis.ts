@@ -28,18 +28,29 @@ interface IntraExtraAnalysis {
   }>;
 }
 
-export function useIntraExtraAnalysis(oportunidadesFiltradas: Oportunidade[]): IntraExtraAnalysis {
-  return useMemo(() => {
-    const intragrupo = oportunidadesFiltradas.filter(op => op.tipo_relacao === "intra");
-    const extragrupo = oportunidadesFiltradas.filter(op => op.tipo_relacao === "extra");
+export function useIntraExtraAnalysis(oportunidadesFiltradas?: Oportunidade[] | null): IntraExtraAnalysis {
+  // Garante array válido e seguro
+  const oportunidades: Oportunidade[] = Array.isArray(oportunidadesFiltradas) ? oportunidadesFiltradas : [];
 
-    const getStats = (arr: Oportunidade[]): IntraExtraStats => ({
-      total: arr.length,
-      ganhas: arr.filter(op => op.status === "ganho").length,
-      perdidas: arr.filter(op => op.status === "perdido").length,
-      emAndamento: arr.filter(op => op.status !== "ganho" && op.status !== "perdido").length,
-      valorTotal: arr.reduce((sum, op) => sum + (op.valor || 0), 0)
-    });
+  return useMemo(() => {
+    // Função para calcular os stats robustamente
+    const getStats = (arr: Oportunidade[]): IntraExtraStats => {
+      const total = arr.length;
+      const ganhas = arr.filter(op => typeof op.status === "string" && op.status.toLowerCase() === "ganho").length;
+      const perdidas = arr.filter(op => typeof op.status === "string" && op.status.toLowerCase() === "perdido").length;
+      // "Em Andamento" por exclusão: qualquer status não "ganho" e não "perdido"
+      const emAndamento = total - ganhas - perdidas;
+      const valorTotal = arr.reduce((sum, op) => sum + (op.valor || 0), 0);
+      return { total, ganhas, perdidas, emAndamento, valorTotal };
+    };
+
+    // Filtra intragrupo e extragrupo de forma defensiva
+    const intragrupo = oportunidades.filter(
+      op => typeof op.tipo_relacao === "string" && op.tipo_relacao.toLowerCase() === "intra"
+    );
+    const extragrupo = oportunidades.filter(
+      op => typeof op.tipo_relacao === "string" && op.tipo_relacao.toLowerCase() === "extra"
+    );
 
     const intraStats = getStats(intragrupo);
     const extraStats = getStats(extragrupo);
@@ -64,5 +75,5 @@ export function useIntraExtraAnalysis(oportunidadesFiltradas: Oportunidade[]): I
         }
       ]
     };
-  }, [oportunidadesFiltradas]);
+  }, [oportunidades]);
 }
