@@ -1,29 +1,50 @@
-
 import React, { useState } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { 
-  Edit, 
-  Trash2, 
-  Eye, 
-  Building, 
-  User, 
-  DollarSign,
-  Calendar,
-  FileText
+import {
+  Edit,
+  Trash2,
+  Eye,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import { Oportunidade, StatusOportunidade } from "@/types";
 import { useOportunidades } from "./OportunidadesContext";
 import { ActivityIndicator } from "./ActivityIndicator";
 import { PrivateData } from "@/components/privacy/PrivateData";
 
+// Tipos de ordenação suportados
+type ColKey =
+  | "nome_lead"
+  | "empresa_origem"
+  | "empresa_destino"
+  | "tipo_relacao"
+  | "status"
+  | "data_indicacao"
+  | "usuario_responsavel";
+
+// Mapeamento para renderização das colunas
+const columns: { key: ColKey; label: string }[] = [
+  { key: "nome_lead", label: "Nome da Oportunidade" },
+  { key: "empresa_origem", label: "Origem" },
+  { key: "empresa_destino", label: "Destino" },
+  { key: "tipo_relacao", label: "Tipo" },
+  { key: "status", label: "Status" },
+  { key: "data_indicacao", label: "Data" },
+  { key: "usuario_responsavel", label: "Executivo Responsável" },
+];
+
 interface OportunidadesListProps {
   onEdit: (oportunidade: Oportunidade) => void;
   onView: (oportunidade: Oportunidade) => void;
+}
+
+interface SortState {
+  col: ColKey;
+  asc: boolean;
 }
 
 export const OportunidadesList: React.FC<OportunidadesListProps> = ({
@@ -36,10 +57,57 @@ export const OportunidadesList: React.FC<OportunidadesListProps> = ({
     oportunidade: Oportunidade | null;
   }>({ open: false, oportunidade: null });
 
+  const [sort, setSort] = useState<SortState>({ col: "data_indicacao", asc: false });
+
+  // Função para alteração de ordenação ao clicar no cabeçalho
+  const handleSort = (col: ColKey) => {
+    setSort((old) =>
+      old.col === col ? { col, asc: !old.asc } : { col, asc: true }
+    );
+  };
+
+  // Função para pegar valor da coluna para ordenação
+  const getSortValue = (op: Oportunidade, col: ColKey): string | number => {
+    switch (col) {
+      case "nome_lead":
+        return op.nome_lead || "";
+      case "empresa_origem":
+        return op.empresa_origem?.nome || "";
+      case "empresa_destino":
+        return op.empresa_destino?.nome || "";
+      case "tipo_relacao":
+        return (op as any).tipo_relacao === "intra" ? "Intra" : "Extra";
+      case "status":
+        return getStatusLabel(op.status);
+      case "data_indicacao":
+        return op.data_indicacao || "";
+      case "usuario_responsavel":
+        // Considera o usuário responsável como o de recebimento
+        return op.usuario_recebe?.nome || "";
+      default:
+        return "";
+    }
+  };
+
+  // Ordena a lista conforme coluna selecionada
+  const sortedOportunidades = [...filteredOportunidades].sort((a, b) => {
+    const va = getSortValue(a, sort.col);
+    const vb = getSortValue(b, sort.col);
+    if (typeof va === "string" && typeof vb === "string") {
+      return sort.asc
+        ? va.localeCompare(vb, "pt-BR")
+        : vb.localeCompare(va, "pt-BR");
+    }
+    if (typeof va === "number" && typeof vb === "number") {
+      return sort.asc ? va - vb : vb - va;
+    }
+    return 0;
+  });
+
   const getStatusColor = (status: StatusOportunidade) => {
     const colors = {
       "em_contato": "bg-blue-100 text-blue-800",
-      "negociando": "bg-yellow-100 text-yellow-800", 
+      "negociando": "bg-yellow-100 text-yellow-800",
       "ganho": "bg-green-100 text-green-800",
       "perdido": "bg-red-100 text-red-800",
       "Contato": "bg-blue-100 text-blue-800",
@@ -53,13 +121,21 @@ export const OportunidadesList: React.FC<OportunidadesListProps> = ({
     const labels = {
       "em_contato": "Em Contato",
       "negociando": "Negociando",
-      "ganho": "Ganho", 
+      "ganho": "Ganho",
       "perdido": "Perdido",
       "Contato": "Contato",
       "Apresentado": "Apresentado",
       "Sem contato": "Sem Contato",
     };
     return labels[status] || status;
+  };
+
+  const formatCurrency = (value: number | null | undefined) => {
+    if (!value) return "Não informado";
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(value);
   };
 
   const handleDeleteClick = (oportunidade: Oportunidade) => {
@@ -73,160 +149,155 @@ export const OportunidadesList: React.FC<OportunidadesListProps> = ({
     }
   };
 
-  const formatCurrency = (value: number | null | undefined) => {
-    if (!value) return "Não informado";
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(value);
-  };
-
   if (isLoading) {
     return (
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {[...Array(6)].map((_, i) => (
-          <Card key={i} className="animate-pulse">
-            <CardHeader>
-              <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-              <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <div className="h-3 bg-gray-200 rounded"></div>
-                <div className="h-3 bg-gray-200 rounded w-2/3"></div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+      <div className="w-full overflow-x-auto">
+        <table className="min-w-full animate-pulse">
+          <thead>
+            <tr>
+              {columns.map((col) => (
+                <th key={col.key} className="p-3 bg-gray-100" />
+              ))}
+              <th className="p-3 bg-gray-100" />
+            </tr>
+          </thead>
+          <tbody>
+            {[...Array(6)].map((_, i) => (
+              <tr key={i} className="border-b">
+                {columns.map((col, idx) => (
+                  <td key={idx} className="p-3">
+                    <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                  </td>
+                ))}
+                <td className="p-3">
+                  <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     );
   }
 
   if (filteredOportunidades.length === 0) {
     return (
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center py-8">
-          <FileText className="h-12 w-12 text-gray-400 mb-4" />
+      <div className="w-full overflow-x-auto">
+        <div className="flex flex-col items-center justify-center py-8">
+          <svg width="48" height="48" fill="none" className="mb-4 text-gray-400">
+            <rect width="48" height="48" rx="8" fill="#e5e7eb" />
+          </svg>
           <h3 className="text-lg font-medium text-gray-900 mb-2">
             Nenhuma oportunidade encontrada
           </h3>
           <p className="text-gray-500 text-center">
             Não há oportunidades que correspondam aos filtros selecionados.
           </p>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     );
   }
 
   return (
     <>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {filteredOportunidades.map((oportunidade) => (
-          <Card key={oportunidade.id} className="hover:shadow-md transition-shadow">
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <CardTitle className="text-lg mb-2">
-                    <PrivateData type="blur">
-                      {oportunidade.nome_lead}
-                    </PrivateData>
-                  </CardTitle>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <Badge className={getStatusColor(oportunidade.status)}>
-                      {getStatusLabel(oportunidade.status)}
-                    </Badge>
-                    <ActivityIndicator oportunidadeId={oportunidade.id} />
+      <div className="w-full overflow-x-auto">
+        <table className="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-md bg-white text-sm">
+          <thead>
+            <tr>
+              {columns.map((col) => (
+                <th
+                  key={col.key}
+                  className="p-3 text-left font-semibold bg-gray-50 cursor-pointer select-none whitespace-nowrap"
+                  onClick={() => handleSort(col.key)}
+                >
+                  <div className="flex items-center gap-1">
+                    {col.label}
+                    {sort.col === col.key && (
+                      sort.asc ? (
+                        <ArrowUp className="h-4 w-4 inline" />
+                      ) : (
+                        <ArrowDown className="h-4 w-4 inline" />
+                      )
+                    )}
                   </div>
-                </div>
-              </div>
-            </CardHeader>
-            
-            <CardContent className="space-y-3">
-              <div className="space-y-2 text-sm">
-                <div className="flex items-center gap-2">
-                  <Building className="h-4 w-4 text-gray-500" />
-                  <span className="text-gray-600">De:</span>
-                  <span className="font-medium">
-                    <PrivateData type="blur">
-                      {oportunidade.empresa_origem?.nome || "N/A"}
-                    </PrivateData>
-                  </span>
-                </div>
-                
-                <div className="flex items-center gap-2">
-                  <Building className="h-4 w-4 text-gray-500" />
-                  <span className="text-gray-600">Para:</span>
-                  <span className="font-medium">
-                    <PrivateData type="blur">
-                      {oportunidade.empresa_destino?.nome || "N/A"}
-                    </PrivateData>
-                  </span>
-                </div>
-
-                {oportunidade.usuario_envio && (
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-gray-500" />
-                    <span className="text-gray-600">Enviado por:</span>
-                    <span className="font-medium">
-                      <PrivateData type="blur">
-                        {oportunidade.usuario_envio.nome}
-                      </PrivateData>
-                    </span>
-                  </div>
-                )}
-
-                <div className="flex items-center gap-2">
-                  <DollarSign className="h-4 w-4 text-gray-500" />
-                  <span className="text-gray-600">Valor:</span>
-                  <span className="font-medium">
-                    <PrivateData type="blur">
-                      {formatCurrency(oportunidade.valor)}
-                    </PrivateData>
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-gray-500" />
-                  <span className="text-gray-600">Data:</span>
-                  <span className="font-medium">
-                    {format(new Date(oportunidade.data_indicacao), "dd/MM/yyyy", {
-                      locale: ptBR,
-                    })}
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex gap-2 pt-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onView(oportunidade)}
-                  className="flex-1"
-                >
-                  <Eye className="h-4 w-4 mr-1" />
-                  Ver
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onEdit(oportunidade)}
-                  className="flex-1"
-                >
-                  <Edit className="h-4 w-4 mr-1" />
-                  Editar
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleDeleteClick(oportunidade)}
-                  className="text-destructive hover:text-destructive"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+                </th>
+              ))}
+              <th className="p-3 bg-gray-50" />
+            </tr>
+          </thead>
+          <tbody>
+            {sortedOportunidades.map((op) => (
+              <tr key={op.id} className="hover:bg-gray-50 border-b border-gray-100">
+                {/* Nome da oportunidade */}
+                <td className="p-3 font-medium max-w-xs whitespace-nowrap">
+                  <PrivateData type="blur">{op.nome_lead}</PrivateData>
+                </td>
+                {/* Origem */}
+                <td className="p-3 max-w-xs whitespace-nowrap">
+                  <PrivateData type="blur">{op.empresa_origem?.nome || "N/A"}</PrivateData>
+                </td>
+                {/* Destino */}
+                <td className="p-3 max-w-xs whitespace-nowrap">
+                  <PrivateData type="blur">{op.empresa_destino?.nome || "N/A"}</PrivateData>
+                </td>
+                {/* Tipo: Intra / Extra */}
+                <td className="p-3 whitespace-nowrap">
+                  {(op as any).tipo_relacao === "intra" ? (
+                    <Badge className="bg-blue-200 text-blue-900">Intra</Badge>
+                  ) : (
+                    <Badge className="bg-amber-100 text-amber-800">Extra</Badge>
+                  )}
+                </td>
+                {/* Status */}
+                <td className="p-3 whitespace-nowrap">
+                  <Badge className={getStatusColor(op.status)}>
+                    {getStatusLabel(op.status)}
+                  </Badge>
+                  <ActivityIndicator oportunidadeId={op.id} />
+                </td>
+                {/* Data */}
+                <td className="p-3 whitespace-nowrap">
+                  {op.data_indicacao
+                    ? format(new Date(op.data_indicacao), "dd/MM/yyyy", { locale: ptBR })
+                    : "-"}
+                </td>
+                {/* Executivo responsável (usuário_recebe) */}
+                <td className="p-3 max-w-xs whitespace-nowrap">
+                  <PrivateData type="blur">{op.usuario_recebe?.nome || "-"}</PrivateData>
+                </td>
+                {/* Ações */}
+                <td className="p-3 whitespace-nowrap flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onView(op)}
+                    className="flex items-center"
+                  >
+                    <Eye className="h-4 w-4 mr-1" />
+                    Ver
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onEdit(op)}
+                    className="flex items-center"
+                  >
+                    <Edit className="h-4 w-4 mr-1" />
+                    Editar
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleDeleteClick(op)}
+                    className="text-destructive hover:text-destructive flex items-center"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
 
       <ConfirmDialog
