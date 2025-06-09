@@ -85,23 +85,24 @@ const MateriaisList: React.FC<MateriaisListProps> = ({
 
   /**
    * Garante que NENHUM objeto será renderizado como React child.
-   * - Se for objeto, renderiza em formato de lista amigável.
-   * - Se for string, número, etc, apenas apresenta como texto.
+   * Se for objeto, renderiza em formato de lista amigável.
+   * Se for string, número, etc, apenas apresenta como texto.
    */
   function safeRenderValue(value: any) {
     if (value === null || value === undefined) return '-';
     if (React.isValidElement(value)) return value;
     if (typeof value === 'object') {
       // Caso o valor seja o objeto do erro (ex: {em_contato, negociando, ganho, perdido, total, outros})
-      // Mostra como lista legível
+      // Mostra como lista legível, mas nunca retorna diretamente o próprio objeto
+      if (Object.keys(value).length === 0) return '-';
       return (
-        <div style={{ fontSize: 11, background: 'rgba(0,0,0,0.03)', padding: 4, borderRadius: 4 }}>
+        <ul style={{ fontSize: 11, background: 'rgba(0,0,0,0.03)', padding: 4, borderRadius: 4, listStyle: 'none', margin: 0 }}>
           {Object.entries(value).map(([key, val]) => (
-            <div key={key}>
-              <span style={{ fontWeight: 600 }}>{key}:</span> {String(val)}
-            </div>
+            <li key={key}>
+              <span style={{ fontWeight: 600 }}>{key}:</span> {typeof val === 'object' ? JSON.stringify(val) : String(val)}
+            </li>
           ))}
-        </div>
+        </ul>
       );
     }
     return String(value);
