@@ -13,29 +13,48 @@ export interface DashboardStats {
   saldo: number;
 }
 
-export function useDashboardStats(oportunidadesFiltradas?: Oportunidade[]): DashboardStats {
+export function useDashboardStats(oportunidadesFiltradas?: Oportunidade[] | null): DashboardStats {
   // Garante array válido
-  const oportunidades: Oportunidade[] = Array.isArray(oportunidadesFiltradas) ? oportunidadesFiltradas : [];
+  const oportunidades: Oportunidade[] = Array.isArray(oportunidadesFiltradas)
+    ? oportunidadesFiltradas
+    : [];
+
+  // Para depuração: remova após confirmar funcionamento
+  if (typeof window !== "undefined") {
+    console.log("DashboardStats oportunidades recebidas:", oportunidades);
+  }
 
   return useMemo(() => {
     const total = oportunidades.length;
 
-    // Filtros robustos, aceitam status em minúsculo/maiúsculo e nulos
-    const ganhas = oportunidades.filter(op =>
-      typeof op.status === "string" && op.status.toLowerCase() === "ganho"
+    // Filtros defensivos, aceitam status em minúsculo/maiúsculo
+    const ganhas = oportunidades.filter(
+      op => typeof op.status === "string" && op.status.toLowerCase() === "ganho"
     ).length;
 
-    const perdidas = oportunidades.filter(op =>
-      typeof op.status === "string" && op.status.toLowerCase() === "perdido"
+    const perdidas = oportunidades.filter(
+      op => typeof op.status === "string" && op.status.toLowerCase() === "perdido"
     ).length;
 
     // Todo o restante entra em andamento
     const emAndamento = total - ganhas - perdidas;
 
-    const intra = oportunidades.filter(op => op.tipo_relacao === "intra").length;
-    const extra = oportunidades.filter(op => op.tipo_relacao === "extra").length;
-    const enviadas = oportunidades.filter(op => op.tipo_movimentacao === "enviada").length;
-    const recebidas = oportunidades.filter(op => op.tipo_movimentacao === "recebida").length;
+    const intra = oportunidades.filter(
+      op => typeof op.tipo_relacao === "string" && op.tipo_relacao.toLowerCase() === "intra"
+    ).length;
+
+    const extra = oportunidades.filter(
+      op => typeof op.tipo_relacao === "string" && op.tipo_relacao.toLowerCase() === "extra"
+    ).length;
+
+    const enviadas = oportunidades.filter(
+      op => typeof op.tipo_movimentacao === "string" && op.tipo_movimentacao.toLowerCase() === "enviada"
+    ).length;
+
+    const recebidas = oportunidades.filter(
+      op => typeof op.tipo_movimentacao === "string" && op.tipo_movimentacao.toLowerCase() === "recebida"
+    ).length;
+
     const saldo = enviadas - recebidas;
 
     return {
