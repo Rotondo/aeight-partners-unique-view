@@ -1,79 +1,100 @@
 import { useMemo } from "react";
 import { Oportunidade } from "@/types";
 
-interface IntraExtraStats {
+export interface DashboardStats {
   total: number;
   ganhas: number;
   perdidas: number;
   emAndamento: number;
-  valorTotal: number;
+  intra: number;
+  extra: number;
+  enviadas: number;
+  recebidas: number;
+  saldo: number;
 }
 
-interface IntraExtraAnalysis {
-  quantidades: Array<{
-    name: string;
-    total: number;
-    ganhas: number;
-    perdidas: number;
-    emAndamento: number;
-    valorTotal: number;
-  }>;
-  valores: Array<{
-    name: string;
-    valor: number;
-  }>;
-  conversao: Array<{
-    name: string;
-    taxa: number;
-  }>;
-}
-
-export function useIntraExtraAnalysis(oportunidadesFiltradas?: Oportunidade[] | null): IntraExtraAnalysis {
-  // Garante array válido e seguro
+export function useDashboardStats(oportunidadesFiltradas?: Oportunidade[] | null): DashboardStats {
+  // Garante array válido
   const oportunidades: Oportunidade[] = Array.isArray(oportunidadesFiltradas) ? oportunidadesFiltradas : [];
 
+  // LOG: Array recebido
+  if (typeof window !== "undefined") {
+    console.log("[useDashboardStats] Oportunidades recebidas:", oportunidades);
+  }
+
   return useMemo(() => {
-    // Função para calcular os stats robustamente
-    const getStats = (arr: Oportunidade[]): IntraExtraStats => {
-      const total = arr.length;
-      const ganhas = arr.filter(op => typeof op.status === "string" && op.status.toLowerCase() === "ganho").length;
-      const perdidas = arr.filter(op => typeof op.status === "string" && op.status.toLowerCase() === "perdido").length;
-      // "Em Andamento" por exclusão: qualquer status não "ganho" e não "perdido"
-      const emAndamento = total - ganhas - perdidas;
-      const valorTotal = arr.reduce((sum, op) => sum + (op.valor || 0), 0);
-      return { total, ganhas, perdidas, emAndamento, valorTotal };
-    };
+    const total = oportunidades.length;
 
-    // Filtra intragrupo e extragrupo de forma defensiva
-    const intragrupo = oportunidades.filter(
+    const ganhas = oportunidades.filter(
+      op => typeof op.status === "string" && op.status.toLowerCase() === "ganho"
+    ).length;
+
+    const perdidas = oportunidades.filter(
+      op => typeof op.status === "string" && op.status.toLowerCase() === "perdido"
+    ).length;
+
+    // Todo o restante entra em andamento
+    const emAndamento = total - ganhas - perdidas;
+
+    const intra = oportunidades.filter(
       op => typeof op.tipo_relacao === "string" && op.tipo_relacao.toLowerCase() === "intra"
-    );
-    const extragrupo = oportunidades.filter(
-      op => typeof op.tipo_relacao === "string" && op.tipo_relacao.toLowerCase() === "extra"
-    );
+    ).length;
 
-    const intraStats = getStats(intragrupo);
-    const extraStats = getStats(extragrupo);
+    const extra = oportunidades.filter(
+      op => typeof op.tipo_relacao === "string" && op.tipo_relacao.toLowerCase() === "extra"
+    ).length;
+
+    const enviadas = oportunidades.filter(
+      op => typeof op.tipo_movimentacao === "string" && op.tipo_movimentacao.toLowerCase() === "enviada"
+    ).length;
+
+    const recebidas = oportunidades.filter(
+      op => typeof op.tipo_movimentacao === "string" && op.tipo_movimentacao.toLowerCase() === "recebida"
+    ).length;
+
+    const saldo = enviadas - recebidas;
+
+    // LOG: Cálculo de cada valor
+    if (typeof window !== "undefined") {
+      console.log("[useDashboardStats] Calculado: ", {
+        total,
+        ganhas,
+        perdidas,
+        emAndamento,
+        intra,
+        extra,
+        enviadas,
+        recebidas,
+        saldo,
+      });
+
+      // Logs detalhados de cada filtro
+      console.log("[useDashboardStats] IDs Ganhas:", oportunidades.filter(
+        op => typeof op.status === "string" && op.status.toLowerCase() === "ganho"
+      ).map(op => op.id));
+
+      console.log("[useDashboardStats] IDs Perdidas:", oportunidades.filter(
+        op => typeof op.status === "string" && op.status.toLowerCase() === "perdido"
+      ).map(op => op.id));
+
+      console.log("[useDashboardStats] IDs Em Andamento:", oportunidades.filter(
+        op => typeof op.status !== "string" || (op.status.toLowerCase() !== "ganho" && op.status.toLowerCase() !== "perdido")
+      ).map(op => op.id));
+    }
 
     return {
-      quantidades: [
-        { name: "Intragrupo", ...intraStats },
-        { name: "Extragrupo", ...extraStats }
-      ],
-      valores: [
-        { name: "Intragrupo", valor: intraStats.valorTotal },
-        { name: "Extragrupo", valor: extraStats.valorTotal }
-      ],
-      conversao: [
-        {
-          name: "Intragrupo",
-          taxa: intraStats.total > 0 ? (intraStats.ganhas / intraStats.total) * 100 : 0
-        },
-        {
-          name: "Extragrupo",
-          taxa: extraStats.total > 0 ? (extraStats.ganhas / extraStats.total) * 100 : 0
-        }
-      ]
+      total,
+      ganhas,
+      perdidas,
+      emAndamento,
+      intra,
+      extra,
+      enviadas,
+      recebidas,
+      saldo,
     };
   }, [oportunidades]);
 }
+
+// Export default caso algum import use default
+export default useDashboardStats;
