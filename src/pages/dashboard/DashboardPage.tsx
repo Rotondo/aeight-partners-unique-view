@@ -11,11 +11,8 @@ import { MatrizParceiros } from "@/components/dashboard/MatrizParceiros";
 import { OportunidadesTable } from "@/components/dashboard/OportunidadesTable";
 import { IndicacoesRecebidasTable } from "@/components/dashboard/IndicacoesRecebidasTable";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { Empresa, Oportunidade, StatusOportunidade } from "@/types";
+import { Empresa, Oportunidade } from "@/types";
 import { useToast } from "@/hooks/use-toast";
-import { Button } from "@/components/ui/button";
-import { Edit, Check, X as Cancel } from "lucide-react";
-import { Input } from "@/components/ui/input";
 
 function getQuarter(date: Date) {
   return Math.floor(date.getMonth() / 3) + 1;
