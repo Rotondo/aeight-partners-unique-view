@@ -69,7 +69,7 @@ const MateriaisList: React.FC<MateriaisListProps> = ({
   };
 
   const renderFileIcon = (tipoArquivo: string) => {
-    if (tipoArquivo.toLowerCase().includes('pdf')) {
+    if (tipoArquivo && tipoArquivo.toLowerCase().includes('pdf')) {
       return <FileText className="h-5 w-5 text-red-500" />;
     }
     return <FileText className="h-5 w-5 text-gray-500" />;
@@ -83,14 +83,19 @@ const MateriaisList: React.FC<MateriaisListProps> = ({
     return [];
   };
 
-  // Função para lidar com valores que podem ser objeto
+  /**
+   * Garante que NENHUM objeto será renderizado como React child.
+   * - Se for objeto, renderiza em formato de lista amigável.
+   * - Se for string, número, etc, apenas apresenta como texto.
+   */
   function safeRenderValue(value: any) {
     if (value === null || value === undefined) return '-';
+    if (React.isValidElement(value)) return value;
     if (typeof value === 'object') {
       // Caso o valor seja o objeto do erro (ex: {em_contato, negociando, ganho, perdido, total, outros})
       // Mostra como lista legível
       return (
-        <div style={{ fontSize: 11, background: 'rgba(0,0,0,0.03)', padding: 2, borderRadius: 4 }}>
+        <div style={{ fontSize: 11, background: 'rgba(0,0,0,0.03)', padding: 4, borderRadius: 4 }}>
           {Object.entries(value).map(([key, val]) => (
             <div key={key}>
               <span style={{ fontWeight: 600 }}>{key}:</span> {String(val)}
@@ -194,24 +199,28 @@ const MateriaisList: React.FC<MateriaisListProps> = ({
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-muted-foreground mb-3">
                           <div className="flex items-center gap-2">
                             <span className="font-medium">Categoria:</span>
-                            {getCategoriaName(material.categoria_id)}
+                            {safeRenderValue(getCategoriaName(material.categoria_id))}
                           </div>
                           <div className="flex items-center gap-2">
                             <span className="font-medium">Parceiro:</span>
-                            {getParceiroName(material.empresa_id)}
+                            {safeRenderValue(getParceiroName(material.empresa_id))}
                           </div>
                           <div className="flex items-center gap-2">
                             <span className="font-medium">Tipo:</span>
-                            {material.tipo_arquivo}
+                            {safeRenderValue(material.tipo_arquivo)}
                           </div>
                           <div className="flex items-center gap-2">
                             <Calendar className="h-4 w-4" />
-                            <span>Upload: {format(new Date(material.data_upload), 'dd/MM/yyyy', { locale: ptBR })}</span>
+                            <span>
+                              Upload: {safeRenderValue(format(new Date(material.data_upload), 'dd/MM/yyyy', { locale: ptBR }))}
+                            </span>
                           </div>
                           {material.validade_contrato && (
                             <div className="flex items-center gap-2">
                               <Calendar className="h-4 w-4" />
-                              <span>Validade: {format(new Date(material.validade_contrato), 'dd/MM/yyyy', { locale: ptBR })}</span>
+                              <span>
+                                Validade: {safeRenderValue(format(new Date(material.validade_contrato), 'dd/MM/yyyy', { locale: ptBR }))}
+                              </span>
                             </div>
                           )}
                         </div>
