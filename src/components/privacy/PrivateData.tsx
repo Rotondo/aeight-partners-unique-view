@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 
 interface PrivateDataProps {
   children: ReactNode;
-  type?: 'blur' | 'asterisk' | 'placeholder' | 'hide' | 'name' | 'currency';
+  type?: 'blur' | 'asterisk' | 'placeholder' | 'hide';
   placeholder?: string;
   className?: string;
 }
@@ -39,10 +39,6 @@ export const PrivateData: React.FC<PrivateDataProps> = ({
         return <span className={cn("text-muted-foreground", className)}>{placeholder || "Dados ocultos"}</span>;
       case 'hide':
         return <span className={className}>---</span>;
-      case 'name':
-        return <span className={className}>Nome Oculto</span>;
-      case 'currency':
-        return <span className={className}>R$ ***,**</span>;
       default:
         return <>{children}</>;
     }

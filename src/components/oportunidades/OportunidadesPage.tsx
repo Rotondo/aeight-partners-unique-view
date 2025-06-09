@@ -3,27 +3,26 @@ import React, { useState } from "react";
 import { OportunidadesProvider } from "@/components/oportunidades/OportunidadesContext";
 import { OportunidadesList } from "@/components/oportunidades/OportunidadesList";
 import { OportunidadesFilter } from "@/components/oportunidades/OportunidadesFilter";
-import { OportunidadesForm } from "@/components/oportunidades/OportunidadesForm";
+import { OportunidadesForm } from "@/components/oportunidades/OportunidadesForm"; // Corrigido: import named
 import { OportunidadesStats } from "@/components/oportunidades/OportunidadesStats";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
-import { Oportunidade } from "@/types";
 
 export const OportunidadesPage: React.FC = () => {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedOportunidadeId, setSelectedOportunidadeId] = useState<string | null>(null);
   const { user } = useAuth();
 
-  const handleEdit = (oportunidade: Oportunidade) => {
-    setSelectedOportunidadeId(oportunidade.id);
+  const handleEdit = (id: string) => {
+    setSelectedOportunidadeId(id);
     setIsFormOpen(true);
   };
 
-  const handleView = (oportunidade: Oportunidade) => {
+  const handleView = (id: string) => {
     // For now, view and edit use the same form
-    handleEdit(oportunidade);
+    handleEdit(id);
   };
 
   const handleClose = () => {

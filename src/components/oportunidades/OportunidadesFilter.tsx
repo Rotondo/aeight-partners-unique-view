@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useOportunidades } from "./OportunidadesContext";
 import { Button } from "@/components/ui/button";
@@ -53,18 +52,6 @@ export const OportunidadesFilter: React.FC = () => {
     status: filterParams.status,
     usuarioId: filterParams.usuarioId,
   });
-
-  // Aplicar busca por texto em tempo real
-  useEffect(() => {
-    const delayedSearch = setTimeout(() => {
-      setFilterParams({
-        ...filterParams,
-        searchTerm: searchTerm || undefined
-      });
-    }, 300); // Debounce de 300ms
-
-    return () => clearTimeout(delayedSearch);
-  }, [searchTerm]);
 
   useEffect(() => {
     async function fetchFilterData() {
@@ -123,7 +110,6 @@ export const OportunidadesFilter: React.FC = () => {
     const resetFilterParams: OportunidadesFilterParams = {};
     setTempFilters(resetFilterParams);
     setFilterParams(resetFilterParams);
-    setSearchTerm("");
     setIsFilterOpen(false);
   };
 
@@ -142,7 +128,7 @@ export const OportunidadesFilter: React.FC = () => {
         <div className="relative flex-1">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
           <Input
-            placeholder="Buscar oportunidades por nome do lead..."
+            placeholder="Buscar oportunidades..."
             className="pl-9"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -372,20 +358,6 @@ export const OportunidadesFilter: React.FC = () => {
       {/* Active filters display */}
       {hasActiveFilters() && (
         <div className="flex flex-wrap gap-2 pt-2">
-          {searchTerm && (
-            <Badge variant="outline" className="flex items-center gap-1">
-              Busca: {searchTerm}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-4 w-4 ml-1 p-0"
-                onClick={() => setSearchTerm("")}
-              >
-                <X className="h-3 w-3" />
-              </Button>
-            </Badge>
-          )}
-
           {filterParams.dataInicio && (
             <Badge variant="outline" className="flex items-center gap-1">
               Início: {formatDateStr(filterParams.dataInicio)}

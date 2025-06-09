@@ -14,8 +14,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { StatusDistributionChart } from "@/components/dashboard/StatusDistributionChart";
-import { ConversionRatesChart } from "@/components/dashboard/ConversionRatesChart";
 
 function getGrupoStatus(empresa_origem_tipo: string, empresa_destino_tipo: string) {
   if (empresa_origem_tipo === "intragrupo" && empresa_destino_tipo === "intragrupo") return "intragrupo";
@@ -41,10 +39,11 @@ export const OportunidadesStats: React.FC = () => {
   const [selectedTab, setSelectedTab] = useState("mensal");
 
   const [periodo, setPeriodo] = useState("mes");
-  const [quarterSelected, setQuarterSelected] = useState('Q1');
+  const [quarterSelected, setQuarterSelected] = useState('Q1'); // Mudança: single quarter
   const [quarterYear, setQuarterYear] = useState<number>(new Date().getFullYear());
-  const [grupoStatus, setGrupoStatus] = useState("all");
+  const [grupoStatus, setGrupoStatus] = useState("all"); // all, intra, extra
 
+  // Para Dialog de em aberto detalhado
   const [modalAberto, setModalAberto] = useState<{ faixa: string, oportunidades: any[] } | null>(null);
   const [openDialog, setOpenDialog] = useState(false);
 
@@ -74,6 +73,7 @@ export const OportunidadesStats: React.FC = () => {
     });
   }, [oportunidades, periodo, quarterSelected, quarterYear, grupoStatus]);
 
+  // KPIs
   const total = oportunidades.length;
   const emAberto = oportunidades.filter(
     op => ['em_contato', 'negociando'].includes(op.status)
@@ -81,6 +81,7 @@ export const OportunidadesStats: React.FC = () => {
   const ganhas = oportunidades.filter(op => op.status === 'ganho');
   const perdidas = oportunidades.filter(op => op.status === 'perdido');
 
+  // Em aberto por faixa de tempo
   const hoje = new Date();
   const emAbertoFaixa = {
     "há 30 dias": emAberto.filter(op => {
@@ -118,7 +119,8 @@ export const OportunidadesStats: React.FC = () => {
     return resultado;
   }, [oportunidadesFiltradas]);
 
-  function renderDialogAberto() {
+  // Dialog content for em aberto
+  const renderDialogAberto = () => {
     if (!modalAberto) return null;
     return (
       <Dialog open={openDialog} onOpenChange={setOpenDialog}>
@@ -227,6 +229,7 @@ export const OportunidadesStats: React.FC = () => {
           <TabsTrigger value="taxas">Taxas de Conversão</TabsTrigger>
         </TabsList>
 
+        {/* Gráfico Volume Mensal com filtros avançados */}
         <TabsContent value="mensal">
           <Card>
             <CardHeader>
@@ -317,13 +320,13 @@ export const OportunidadesStats: React.FC = () => {
         <TabsContent value="status">
           <Card>
             <CardHeader>
-              <CardTitle>Distribuição por Status</CardTitle>
+              <CardTitle>Status das Oportunidades</CardTitle>
               <CardDescription>
-                Distribuição das oportunidades por status atual
+                Distribuição dos status das oportunidades
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-2">
-              <StatusDistributionChart />
+              <div className="text-center text-muted-foreground">Gráfico de status pode ser adicionado aqui.</div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -333,11 +336,11 @@ export const OportunidadesStats: React.FC = () => {
             <CardHeader>
               <CardTitle>Taxas de Conversão</CardTitle>
               <CardDescription>
-                Taxa de conversão e perda por mês nos últimos 6 meses
+                Converta mais oportunidades acompanhando as taxas.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <ConversionRatesChart />
+              <div className="text-center text-muted-foreground">Gráfico de taxas de conversão pode ser adicionado aqui.</div>
             </CardContent>
           </Card>
         </TabsContent>
