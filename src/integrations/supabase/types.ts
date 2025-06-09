@@ -137,6 +137,54 @@ export type Database = {
           },
         ]
       }
+      empresa_clientes: {
+        Row: {
+          created_at: string
+          data_relacionamento: string
+          empresa_cliente_id: string
+          empresa_proprietaria_id: string
+          id: string
+          observacoes: string | null
+          status: boolean
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          data_relacionamento?: string
+          empresa_cliente_id: string
+          empresa_proprietaria_id: string
+          id?: string
+          observacoes?: string | null
+          status?: boolean
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          data_relacionamento?: string
+          empresa_cliente_id?: string
+          empresa_proprietaria_id?: string
+          id?: string
+          observacoes?: string | null
+          status?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "empresa_clientes_empresa_cliente_id_fkey"
+            columns: ["empresa_cliente_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "empresa_clientes_empresa_proprietaria_id_fkey"
+            columns: ["empresa_proprietaria_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       empresas: {
         Row: {
           created_at: string
@@ -608,6 +656,137 @@ export type Database = {
           {
             foreignKeyName: "usuarios_empresa_id_fkey"
             columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wishlist_apresentacoes: {
+        Row: {
+          converteu_oportunidade: boolean | null
+          created_at: string
+          data_apresentacao: string
+          empresa_facilitadora_id: string
+          feedback: string | null
+          id: string
+          oportunidade_id: string | null
+          status_apresentacao: string | null
+          tipo_apresentacao: string | null
+          updated_at: string
+          wishlist_item_id: string
+        }
+        Insert: {
+          converteu_oportunidade?: boolean | null
+          created_at?: string
+          data_apresentacao?: string
+          empresa_facilitadora_id: string
+          feedback?: string | null
+          id?: string
+          oportunidade_id?: string | null
+          status_apresentacao?: string | null
+          tipo_apresentacao?: string | null
+          updated_at?: string
+          wishlist_item_id: string
+        }
+        Update: {
+          converteu_oportunidade?: boolean | null
+          created_at?: string
+          data_apresentacao?: string
+          empresa_facilitadora_id?: string
+          feedback?: string | null
+          id?: string
+          oportunidade_id?: string | null
+          status_apresentacao?: string | null
+          tipo_apresentacao?: string | null
+          updated_at?: string
+          wishlist_item_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wishlist_apresentacoes_empresa_facilitadora_id_fkey"
+            columns: ["empresa_facilitadora_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wishlist_apresentacoes_oportunidade_id_fkey"
+            columns: ["oportunidade_id"]
+            isOneToOne: false
+            referencedRelation: "oportunidades"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wishlist_apresentacoes_wishlist_item_id_fkey"
+            columns: ["wishlist_item_id"]
+            isOneToOne: false
+            referencedRelation: "wishlist_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wishlist_items: {
+        Row: {
+          created_at: string
+          data_resposta: string | null
+          data_solicitacao: string
+          empresa_desejada_id: string
+          empresa_interessada_id: string
+          empresa_proprietaria_id: string
+          id: string
+          motivo: string | null
+          observacoes: string | null
+          prioridade: number | null
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          data_resposta?: string | null
+          data_solicitacao?: string
+          empresa_desejada_id: string
+          empresa_interessada_id: string
+          empresa_proprietaria_id: string
+          id?: string
+          motivo?: string | null
+          observacoes?: string | null
+          prioridade?: number | null
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          data_resposta?: string | null
+          data_solicitacao?: string
+          empresa_desejada_id?: string
+          empresa_interessada_id?: string
+          empresa_proprietaria_id?: string
+          id?: string
+          motivo?: string | null
+          observacoes?: string | null
+          prioridade?: number | null
+          status?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wishlist_items_empresa_desejada_id_fkey"
+            columns: ["empresa_desejada_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wishlist_items_empresa_interessada_id_fkey"
+            columns: ["empresa_interessada_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wishlist_items_empresa_proprietaria_id_fkey"
+            columns: ["empresa_proprietaria_id"]
             isOneToOne: false
             referencedRelation: "empresas"
             referencedColumns: ["id"]
