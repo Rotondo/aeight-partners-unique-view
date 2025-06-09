@@ -9,7 +9,7 @@ interface DashboardStatsProps {
   loading: boolean;
 }
 
-// Função robusta para extrair KPIs do objeto retornado pelo hook useDashboardStats
+// Função para extrair os números do objeto retornado pelo hook (compatível com ambos formatos)
 function resolveStats(stats: DashboardStatsType | null) {
   if (!stats || typeof stats !== 'object') {
     return {
@@ -19,9 +19,8 @@ function resolveStats(stats: DashboardStatsType | null) {
       oportunidadesEmAndamento: 0,
     };
   }
-
   // Novo formato do hook useDashboardStats
-  if ('total' in stats && typeof stats.total === 'object') {
+  if ('total' in stats && typeof stats.total === 'object' && stats.total !== null) {
     const t = stats.total as any;
     return {
       totalOportunidades: typeof t.total === 'number' ? t.total : 0,
@@ -32,8 +31,7 @@ function resolveStats(stats: DashboardStatsType | null) {
         (typeof t.negociando === 'number' ? t.negociando : 0)
     };
   }
-
-  // Formato antigo, campos simples
+  // Formato antigo
   return {
     totalOportunidades: (stats as any)?.totalOportunidades || 0,
     oportunidadesGanhas: (stats as any)?.oportunidadesGanhas || 0,
@@ -46,6 +44,7 @@ export const DashboardStatsSection: React.FC<DashboardStatsProps> = ({
   stats,
   loading
 }) => {
+  // Extração correta dos valores numéricos dos KPIs
   const {
     totalOportunidades,
     oportunidadesGanhas,
