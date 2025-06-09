@@ -14,15 +14,24 @@ export interface DashboardStats {
 }
 
 export function useDashboardStats(oportunidadesFiltradas?: Oportunidade[]): DashboardStats {
-  // Garante que oportunidadesFiltradas seja sempre um array
+  // Garante array válido
   const oportunidades: Oportunidade[] = Array.isArray(oportunidadesFiltradas) ? oportunidadesFiltradas : [];
 
   return useMemo(() => {
     const total = oportunidades.length;
-    const ganhas = oportunidades.filter(op => op.status === "ganho").length;
-    const perdidas = oportunidades.filter(op => op.status === "perdido").length;
-    // "Em andamento" = todo o restante
+
+    // Filtros robustos, aceitam status em minúsculo/maiúsculo e nulos
+    const ganhas = oportunidades.filter(op =>
+      typeof op.status === "string" && op.status.toLowerCase() === "ganho"
+    ).length;
+
+    const perdidas = oportunidades.filter(op =>
+      typeof op.status === "string" && op.status.toLowerCase() === "perdido"
+    ).length;
+
+    // Todo o restante entra em andamento
     const emAndamento = total - ganhas - perdidas;
+
     const intra = oportunidades.filter(op => op.tipo_relacao === "intra").length;
     const extra = oportunidades.filter(op => op.tipo_relacao === "extra").length;
     const enviadas = oportunidades.filter(op => op.tipo_movimentacao === "enviada").length;
