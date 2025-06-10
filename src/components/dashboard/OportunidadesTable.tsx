@@ -60,7 +60,15 @@ export const OportunidadesTable: React.FC<OportunidadesTableProps> = ({
                   <td className="border p-1">{op.empresa_destino?.nome || "-"}</td>
                   <td className="border p-1">
                     {editRowId === op.id ? (
-                      <Select value={editValues.status || ""} onValueChange={v => setEditValues(e => ({ ...e, status: v as StatusOportunidade }))}>
+                      <Select
+                        value={editValues.status || ""}
+                        onValueChange={v =>
+                          setEditValues({
+                            ...editValues,
+                            status: v as StatusOportunidade,
+                          })
+                        }
+                      >
                         <SelectTrigger className="w-[90px]"><SelectValue /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="em_contato">Em Contato</SelectItem>
@@ -76,12 +84,31 @@ export const OportunidadesTable: React.FC<OportunidadesTableProps> = ({
                   </td>
                   <td className="border p-1">
                     {editRowId === op.id ? (
-                      <Input type="number" className="w-[80px]" value={editValues.valor ?? ""} onChange={e => setEditValues(ev => ({ ...ev, valor: Number(e.target.value) }))} />
+                      <Input
+                        type="number"
+                        className="w-[80px]"
+                        value={editValues.valor ?? ""}
+                        onChange={e =>
+                          setEditValues({
+                            ...editValues,
+                            valor: Number(e.target.value),
+                          })
+                        }
+                      />
                     ) : (op.valor ?? "-")}
                   </td>
                   <td className="border p-1">
                     {editRowId === op.id ? (
-                      <Input value={editValues.nome_lead ?? ""} onChange={e => setEditValues(ev => ({ ...ev, nome_lead: e.target.value }))} className="w-[110px]" />
+                      <Input
+                        value={editValues.nome_lead ?? ""}
+                        onChange={e =>
+                          setEditValues({
+                            ...editValues,
+                            nome_lead: e.target.value,
+                          })
+                        }
+                        className="w-[110px]"
+                      />
                     ) : (op.nome_lead ?? "-")}
                   </td>
                   <td className="border p-1">{op.tipo_relacao}</td>
