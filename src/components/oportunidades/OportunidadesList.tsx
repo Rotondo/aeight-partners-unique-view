@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -128,14 +129,6 @@ export const OportunidadesList: React.FC<OportunidadesListProps> = ({
       "Sem contato": "Sem Contato",
     };
     return labels[status] || status;
-  };
-
-  const formatCurrency = (value: number | null | undefined) => {
-    if (!value) return "Não informado";
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
   };
 
   const handleDeleteClick = (oportunidade: Oportunidade) => {

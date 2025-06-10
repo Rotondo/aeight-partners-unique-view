@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -18,15 +19,16 @@ import { useDashboardStats } from "@/hooks/useDashboardStats";
 
 export const OportunidadesDashboards: React.FC = () => {
   const { filteredOportunidades, isLoading } = useOportunidades();
-  const rawStats = useDashboardStats(filteredOportunidades);
+  const stats = useDashboardStats(filteredOportunidades);
 
-  // Mapeamento para o que DashboardStatsSection espera
-  const stats = rawStats && {
-    totalOportunidades: rawStats.total,
-    oportunidadesGanhas: rawStats.ganhas,
-    oportunidadesPerdidas: rawStats.perdidas,
-    oportunidadesEmAndamento: rawStats.emAndamento,
-  };
+  // Log para diagnóstico
+  if (typeof window !== "undefined" && filteredOportunidades) {
+    console.log("[OportunidadesDashboards] Dados carregados:", {
+      totalOportunidades: filteredOportunidades.length,
+      isLoading,
+      statsCalculadas: !!stats
+    });
+  }
 
   if (isLoading || !filteredOportunidades) {
     return (
@@ -66,7 +68,7 @@ export const OportunidadesDashboards: React.FC = () => {
                 <CardTitle>Oportunidades por Status</CardTitle>
               </CardHeader>
               <CardContent>
-                <OpportunitiesChart stats={rawStats} loading={isLoading} />
+                <OpportunitiesChart stats={stats} loading={isLoading} />
               </CardContent>
             </Card>
             <Card>

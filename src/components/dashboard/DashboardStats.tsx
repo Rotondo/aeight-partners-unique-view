@@ -1,56 +1,34 @@
+
 import React from 'react';
 import { AreaChart, Zap } from 'lucide-react';
 import { DashboardCard } from './DashboardCard';
-import { DashboardStats as DashboardStatsType } from '@/types';
+import { DashboardStats } from '@/hooks/useDashboardStats';
 import { PrivateData } from '@/components/privacy/PrivateData';
 
 interface DashboardStatsProps {
-  stats: DashboardStatsType | null;
+  stats: DashboardStats | null;
   loading: boolean;
-}
-
-// Função para extrair os números do objeto retornado pelo hook (compatível com ambos formatos)
-function resolveStats(stats: DashboardStatsType | null) {
-  if (!stats || typeof stats !== 'object') {
-    return {
-      totalOportunidades: 0,
-      oportunidadesGanhas: 0,
-      oportunidadesPerdidas: 0,
-      oportunidadesEmAndamento: 0,
-    };
-  }
-  // Novo formato do hook useDashboardStats
-  if ('total' in stats && typeof stats.total === 'object' && stats.total !== null) {
-    const t = stats.total as any;
-    return {
-      totalOportunidades: typeof t.total === 'number' ? t.total : 0,
-      oportunidadesGanhas: typeof t.ganho === 'number' ? t.ganho : 0,
-      oportunidadesPerdidas: typeof t.perdido === 'number' ? t.perdido : 0,
-      oportunidadesEmAndamento:
-        (typeof t.em_contato === 'number' ? t.em_contato : 0) +
-        (typeof t.negociando === 'number' ? t.negociando : 0)
-    };
-  }
-  // Formato antigo
-  return {
-    totalOportunidades: (stats as any)?.totalOportunidades || 0,
-    oportunidadesGanhas: (stats as any)?.oportunidadesGanhas || 0,
-    oportunidadesPerdidas: (stats as any)?.oportunidadesPerdidas || 0,
-    oportunidadesEmAndamento: (stats as any)?.oportunidadesEmAndamento || 0,
-  };
 }
 
 export const DashboardStatsSection: React.FC<DashboardStatsProps> = ({
   stats,
   loading
 }) => {
-  // Extração correta dos valores numéricos dos KPIs
-  const {
-    totalOportunidades,
-    oportunidadesGanhas,
-    oportunidadesPerdidas,
-    oportunidadesEmAndamento
-  } = resolveStats(stats);
+  // Extração dos valores com fallback seguro
+  const totalOportunidades = stats?.total?.total || 0;
+  const oportunidadesGanhas = stats?.total?.ganho || 0;
+  const oportunidadesPerdidas = stats?.total?.perdido || 0;
+  const oportunidadesEmAndamento = (stats?.total?.em_contato || 0) + (stats?.total?.negociando || 0);
+
+  // Log para diagnóstico
+  if (typeof window !== "undefined" && stats) {
+    console.log("[DashboardStatsSection] Valores renderizados:", {
+      total: totalOportunidades,
+      ganhas: oportunidadesGanhas,
+      perdidas: oportunidadesPerdidas,
+      emAndamento: oportunidadesEmAndamento
+    });
+  }
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
