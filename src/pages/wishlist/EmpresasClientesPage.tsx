@@ -3,13 +3,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useWishlist } from "@/contexts/WishlistContext";
 import { Plus, Search, Building2, Calendar, Loader2, Edit2, ArrowRight } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { supabase } from "@/lib/supabase";
+// MultiSelect
+import { MultiSelect } from "@/components/ui/multiselect";
 
 type EmpresaOption = {
   id: string;
@@ -23,8 +24,8 @@ const EmpresasClientesPage: React.FC = () => {
     loading: loadingEmpresasClientes,
     fetchEmpresasClientes,
     addEmpresaCliente,
-    updateEmpresaCliente, // NOVO: para atualizar relacionamento
-    solicitarApresentacao // NOVO: para criar apresentação
+    updateEmpresaCliente,
+    solicitarApresentacao,
   } = useWishlist();
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -44,7 +45,7 @@ const EmpresasClientesPage: React.FC = () => {
   const [empresas, setEmpresas] = useState<EmpresaOption[]>([]);
   const [empresasClientesOptions, setEmpresasClientesOptions] = useState<EmpresaOption[]>([]);
   const [empresasParceiros, setEmpresasParceiros] = useState<EmpresaOption[]>([]);
-  const [empresaProprietaria, setEmpresaProprietaria] = useState<string>("");
+  const [parceirosSelecionados, setParceirosSelecionados] = useState<string[]>([]);
   const [empresaCliente, setEmpresaCliente] = useState<string>("");
   const [observacoes, setObservacoes] = useState("");
   const [criandoNovoCliente, setCriandoNovoCliente] = useState(false);
@@ -122,7 +123,7 @@ const EmpresasClientesPage: React.FC = () => {
   };
 
   const resetModal = () => {
-    setEmpresaProprietaria("");
+    setParceirosSelecionados([]);
     setEmpresaCliente("");
     setObservacoes("");
     setNovoClienteNome("");
@@ -130,37 +131,42 @@ const EmpresasClientesPage: React.FC = () => {
     setModalType("novo");
   };
 
+  // Retorna IDs de todos os parceiros já vinculados ao cliente selecionado
+  const parceirosJaVinculadosAoCliente = (clienteId: string) =>
+    empresasClientes
+      .filter((v) => v.empresa_cliente_id === clienteId)
+      .map((v) => v.empresa_proprietaria_id);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setModalLoading(true);
+
     if (modalType === "editar" && editRelacionamentoId) {
-      // Atualizar relacionamento existente
+      // Editar relacionamento individual
       await updateEmpresaCliente(editRelacionamentoId, {
-        empresa_proprietaria_id: empresaProprietaria,
+        empresa_proprietaria_id: parceirosSelecionados[0],
         empresa_cliente_id: empresaCliente,
         observacoes,
       });
     } else {
-      // Criar novo relacionamento
-      await addEmpresaCliente({
-        empresa_proprietaria_id: empresaProprietaria,
-        empresa_cliente_id: empresaCliente,
-        status: true,
-        data_relacionamento: new Date().toISOString(),
-        observacoes,
-      });
+      // Criar múltiplos vínculos: para cada parceiro selecionado, cria um vínculo com o cliente escolhido
+      const jaVinculados = parceirosJaVinculadosAoCliente(empresaCliente);
+      const novosParceiros = parceirosSelecionados.filter(id => !jaVinculados.includes(id));
+      await Promise.all(novosParceiros.map(parceiroId =>
+        addEmpresaCliente({
+          empresa_proprietaria_id: parceiroId,
+          empresa_cliente_id: empresaCliente,
+          status: true,
+          data_relacionamento: new Date().toISOString(),
+          observacoes,
+        })
+      ));
     }
     setModalLoading(false);
     setModalOpen(false);
     resetModal();
     fetchEmpresasClientes();
   };
-
-  // Permitir múltiplos vínculos: mostra clientes não vinculados ao MESMO proprietário
-  const vinculosPorProprietario = (proprietarioId: string) =>
-    empresasClientes.filter(
-      (v) => v.empresa_proprietaria_id === proprietarioId
-    ).map((v) => v.empresa_cliente_id);
 
   const filteredClientesVinculados = empresasClientes.filter(cliente =>
     cliente.empresa_cliente?.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -175,11 +181,10 @@ const EmpresasClientesPage: React.FC = () => {
       cliente.nome.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-  // Handlers dos botões
   const handleEditar = (relacionamento: any) => {
     setModalType("editar");
     setEditRelacionamentoId(relacionamento.id);
-    setEmpresaProprietaria(relacionamento.empresa_proprietaria_id);
+    setParceirosSelecionados([relacionamento.empresa_proprietaria_id]);
     setEmpresaCliente(relacionamento.empresa_cliente_id);
     setObservacoes(relacionamento.observacoes || "");
     setModalOpen(true);
@@ -190,14 +195,14 @@ const EmpresasClientesPage: React.FC = () => {
     setModalApresentacaoOpen(true);
   };
 
-  // Filtrar clientes para o select: só excluir clientes já vinculados ao mesmo proprietário
-  const clientesDisponiveis = empresaProprietaria
-    ? empresasClientesAll.filter(
-        (cliente) =>
-          !vinculosPorProprietario(empresaProprietaria).includes(cliente.id) ||
-          cliente.id === empresaCliente // Sempre permitir edição manter selecionado
+  // Para o multi-select: filtrar parceiros já vinculados ao cliente selecionado
+  const parceirosDisponiveis = empresaCliente
+    ? empresasParceiros.filter(
+        (parceiro) =>
+          !parceirosJaVinculadosAoCliente(empresaCliente).includes(parceiro.id) ||
+          parceirosSelecionados.includes(parceiro.id) // Permitir manter selecionados no modo edição
       )
-    : empresasClientesAll;
+    : empresasParceiros;
 
   // Handler para solicitar apresentação (exemplo simplificado)
   const handleSubmitApresentacao = async (e: React.FormEvent) => {
@@ -251,30 +256,31 @@ const EmpresasClientesPage: React.FC = () => {
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block font-medium mb-1">Parceiro / Proprietário</label>
-                <Select value={empresaProprietaria} onValueChange={setEmpresaProprietaria} disabled={modalType === "editar"}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o parceiro proprietário" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {empresasParceiros.map((e) => (
-                      <SelectItem key={e.id} value={e.id}>{e.nome}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <label className="block font-medium mb-1">Parceiro(s) / Proprietário(s)</label>
+                <MultiSelect
+                  options={parceirosDisponiveis.map(p => ({ value: p.id, label: p.nome }))}
+                  values={parceirosSelecionados}
+                  onChange={setParceirosSelecionados}
+                  disabled={modalType === "editar"}
+                  placeholder="Selecione um ou mais parceiros proprietários"
+                />
               </div>
               <div>
                 <label className="block font-medium mb-1">Cliente</label>
-                <Select value={empresaCliente} onValueChange={setEmpresaCliente} disabled={modalType === "editar"}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione cliente" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {clientesDisponiveis.map((e) => (
-                      <SelectItem key={e.id} value={e.id}>{e.nome}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Input
+                  as="select"
+                  value={empresaCliente}
+                  onChange={e => setEmpresaCliente(e.target.value)}
+                  disabled={modalType === "editar"}
+                  className="w-full"
+                >
+                  <option value="" disabled>
+                    Selecione cliente
+                  </option>
+                  {empresasClientesOptions.map((e) => (
+                    <option key={e.id} value={e.id}>{e.nome}</option>
+                  ))}
+                </Input>
                 <div className="flex mt-2 gap-2">
                   <Input
                     placeholder="Novo cliente"
@@ -313,10 +319,14 @@ const EmpresasClientesPage: React.FC = () => {
               <div className="flex justify-end">
                 <Button
                   type="submit"
-                  disabled={modalLoading || !empresaProprietaria || !empresaCliente}
+                  disabled={
+                    modalLoading ||
+                    parceirosSelecionados.length === 0 ||
+                    !empresaCliente
+                  }
                 >
                   {modalLoading && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
-                  {modalType === "editar" ? "Salvar Alterações" : "Criar Relacionamento"}
+                  {modalType === "editar" ? "Salvar Alterações" : "Criar Relacionamento(s)"}
                 </Button>
               </div>
             </form>
