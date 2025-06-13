@@ -140,28 +140,26 @@ const MateriaisList: React.FC<MateriaisListProps> = ({
       }
 
       // 1. Remove do Storage
-      const { error: storageError } = await supabase.storage
+      const { data: storageData, error: storageError } = await supabase.storage
         .from(BUCKET_NAME)
         .remove([filePath]);
+      console.log('Storage remove:', { filePath, storageData, storageError });
 
       if (storageError) {
         alert('Erro ao excluir o arquivo do Storage:\n' + storageError.message);
-        // eslint-disable-next-line no-console
-        console.error('Erro ao excluir do Storage:', storageError);
         setDeletingMaterialId(null);
         return;
       }
 
       // 2. Remove registro do banco
-      const { error: dbError } = await supabase
+      const { data: dbData, error: dbError } = await supabase
         .from('repositorio_materiais')
         .delete()
         .eq('id', material.id);
+      console.log('DB remove:', { id: material.id, dbData, dbError });
 
       if (dbError) {
         alert('Arquivo excluído do Storage, mas houve erro ao excluir o registro do banco:\n' + dbError.message);
-        // eslint-disable-next-line no-console
-        console.error('Erro ao excluir do banco:', dbError);
       } else {
         alert('Arquivo excluído com sucesso!');
         onRefresh();
