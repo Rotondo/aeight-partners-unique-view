@@ -55,12 +55,16 @@ const QuadrantePage: React.FC = () => {
   const [quadrantPoints, setQuadrantPoints] = useState<QuadrantPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedParceiro, setSelectedParceiro] = useState<IndicadoresParceiro | null>(null);
+  const [activeTab, setActiveTab] = useState<"edit" | "new">("edit");
 
-  // Carrega empresas e indicadores do supabase
+  // Carrega empresas (apenas parceiros) e indicadores do supabase
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
-      const { data: empresasData } = await supabase.from("empresas").select("*");
+      const { data: empresasData } = await supabase
+        .from("empresas")
+        .select("*")
+        .eq("tipo", "parceiro");
       setEmpresas(empresasData || []);
       const { data: indicadoresData } = await supabase
         .from("indicadores_parceiro")
@@ -92,12 +96,14 @@ const QuadrantePage: React.FC = () => {
   const handlePointClick = (pointId: string) => {
     const parceiro = indicadores.find((p) => (p.id || p.empresa_id) === pointId);
     setSelectedParceiro(parceiro || null);
+    setActiveTab("edit");
   };
 
   // Sincroniza seleção de parceiro via formulário
   const handleParceiroSelect = (empresa_id: string) => {
     const parceiro = indicadores.find((p) => p.empresa_id === empresa_id);
     setSelectedParceiro(parceiro || null);
+    setActiveTab("edit");
   };
 
   // Salva indicador (edição/criação) e atualiza quadrante em tempo real
@@ -105,6 +111,7 @@ const QuadrantePage: React.FC = () => {
     try {
       let updatedIndicadores;
       if (indicador.id) {
+        // Edição
         const { data, error } = await supabase
           .from("indicadores_parceiro")
           .update(indicador)
@@ -116,6 +123,8 @@ const QuadrantePage: React.FC = () => {
         );
         setIndicadores(updatedIndicadores);
       } else {
+        // Criação (Novo)
+        const now = new Date().toISOString();
         const newIndicador = {
           empresa_id: indicador.empresa_id!,
           potencial_leads: indicador.potencial_leads || 0,
@@ -123,8 +132,8 @@ const QuadrantePage: React.FC = () => {
           alinhamento: indicador.alinhamento || 0,
           potencial_investimento: indicador.potencial_investimento || 0,
           tamanho: indicador.tamanho || "M",
-          data_avaliacao: indicador.data_avaliacao || new Date().toISOString(),
-          ...indicador
+          base_clientes: indicador.base_clientes || 0,
+          data_avaliacao: now,
         };
 
         const { data, error } = await supabase
@@ -132,8 +141,9 @@ const QuadrantePage: React.FC = () => {
           .insert([newIndicador])
           .select();
         if (error) throw error;
+
         // Após inserir, re-filtra para manter só o mais recente de cada empresa
-        const novaLista = [newIndicador, ...indicadores].sort(
+        const novaLista = [data?.[0] ?? newIndicador, ...indicadores].sort(
           (a, b) =>
             new Date(b.data_avaliacao || "").getTime() -
             new Date(a.data_avaliacao || "").getTime()
@@ -151,6 +161,7 @@ const QuadrantePage: React.FC = () => {
         description: "Indicadores do parceiro salvos com sucesso!",
       });
       setSelectedParceiro(null);
+      setActiveTab("edit");
     } catch (error) {
       console.error("Error saving indicators:", error);
       toast({
@@ -197,7 +208,7 @@ const QuadrantePage: React.FC = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="edit">
+            <Tabs value={activeTab} onValueChange={v => setActiveTab(v as "edit" | "new")}>
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="edit">Editar</TabsTrigger>
                 {user?.papel === "admin" && (
