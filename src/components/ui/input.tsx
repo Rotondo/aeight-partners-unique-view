@@ -6,10 +6,11 @@ export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> 
 /**
  * Input base reutilizável.
  * Protege globalmente para NUNCA passar undefined/null como value controlado.
+ * Filtra `children` para evitar erro de void element.
  * Log detalhado em dev sobre value inválido.
  */
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ value, ...props }, ref) => {
+  ({ value, children, ...props }, ref) => {
     // Garante valor seguro para inputs controlados
     const safeValue =
       props.type === "number"
@@ -18,6 +19,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
 
     logControlledField("Input", value, props);
 
+    // Nunca passe children para <input />
     return (
       <input
         ref={ref}
