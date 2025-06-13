@@ -103,6 +103,12 @@ const MaterialPreviewModal: React.FC<MaterialPreviewModalProps> = ({
     );
   };
 
+  // Debug: mostrar caminho do arquivo e url gerada
+  useEffect(() => {
+    // eslint-disable-next-line no-console
+    console.log('MaterialPreviewModal:', { arquivo_upload, sanitized: sanitizePath(arquivo_upload), publicUrl });
+  }, [arquivo_upload, publicUrl]);
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-3xl" aria-describedby="material-preview-desc">
