@@ -170,8 +170,8 @@ const EmpresasClientesPage: React.FC = () => {
   };
 
   const filteredClientesVinculados = empresasClientes.filter(cliente =>
-    cliente.empresa_cliente?.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    cliente.empresa_proprietaria?.nome.toLowerCase().includes(searchTerm.toLowerCase())
+    (cliente.nome_cliente || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (cliente.nome_proprietaria || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   // Clientes não vinculados: todos do tipo cliente que não estão em nenhum vínculo
@@ -181,6 +181,41 @@ const EmpresasClientesPage: React.FC = () => {
       !clientesVinculadosIds.has(cliente.id) &&
       cliente.nome.toLowerCase().includes(searchTerm.toLowerCase())
     );
+
+  // Adiciona dinamicamente o cliente selecionado ao array de opções, se necessário
+  useEffect(() => {
+    if (!modalOpen) return;
+    // Quando for editar, garanta que o cliente selecionado está em empresasClientesOptions
+    if (modalType === "editar" && empresaCliente) {
+      // Busque nome_cliente na linha correspondente
+      const relacionamento = empresasClientes.find(
+        (rel) => rel.empresa_cliente_id === empresaCliente
+      );
+      if (relacionamento && relacionamento.nome_cliente) {
+        const jaExiste = empresasClientesOptions.some((e) => e.id === empresaCliente);
+        if (!jaExiste) {
+          setEmpresasClientesOptions((prev) => [
+            ...prev,
+            { id: empresaCliente, nome: relacionamento.nome_cliente, tipo: "cliente" }
+          ]);
+        }
+      }
+    }
+    // Quando for "novo" e abrir via "Vincular", também garanta a presença do cliente
+    if (modalType === "novo" && empresaCliente) {
+      const cliente = empresasClientesAll.find((c) => c.id === empresaCliente);
+      if (cliente) {
+        const jaExiste = empresasClientesOptions.some((e) => e.id === empresaCliente);
+        if (!jaExiste) {
+          setEmpresasClientesOptions((prev) => [
+            ...prev,
+            { id: cliente.id, nome: cliente.nome, tipo: cliente.tipo }
+          ]);
+        }
+      }
+    }
+    // eslint-disable-next-line
+  }, [modalOpen, modalType, empresaCliente, empresasClientes, empresasClientesAll, empresasClientesOptions]);
 
   const handleEditar = (relacionamento: any) => {
     setModalType("editar");
@@ -342,10 +377,10 @@ const EmpresasClientesPage: React.FC = () => {
             <form onSubmit={handleSubmitApresentacao} className="space-y-4">
               <div>
                 <div className="font-medium mb-2">
-                  Cliente: <span className="font-normal">{apresentacaoCliente?.empresa_cliente?.nome}</span>
+                  Cliente: <span className="font-normal">{apresentacaoCliente?.nome_cliente}</span>
                 </div>
                 <div className="font-medium mb-2">
-                  Proprietário: <span className="font-normal">{apresentacaoCliente?.empresa_proprietaria?.nome}</span>
+                  Proprietário: <span className="font-normal">{apresentacaoCliente?.nome_proprietaria}</span>
                 </div>
                 <Input
                   placeholder="Observações para a apresentação"
@@ -417,8 +452,8 @@ const EmpresasClientesPage: React.FC = () => {
           <tbody>
             {filteredClientesVinculados.map((cliente) => (
               <tr key={cliente.id} className="border-b hover:bg-muted/50 transition">
-                <td className="px-3 py-2 font-medium whitespace-nowrap">{cliente.empresa_cliente?.nome}</td>
-                <td className="px-3 py-2">{cliente.empresa_proprietaria?.nome}</td>
+                <td className="px-3 py-2 font-medium whitespace-nowrap">{cliente.nome_cliente}</td>
+                <td className="px-3 py-2">{cliente.nome_proprietaria}</td>
                 <td className="px-3 py-2">
                   <Badge variant={cliente.status ? "default" : "secondary"}>
                     {cliente.status ? "Ativo" : "Inativo"}
