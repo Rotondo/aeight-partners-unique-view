@@ -1,3 +1,5 @@
+// editar arquivo src/pages/wishlist/WishlistItemsPage.tsx
+
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,7 +11,7 @@ import { useWishlist } from "@/contexts/WishlistContext";
 import { Plus, Search, Heart, Calendar, Star, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { WishlistStatus } from "@/types";
+import { WishlistStatus, WishlistItem } from "@/types";
 import { supabase } from "@/lib/supabase";
 
 // Tipo auxiliar para empresas
@@ -20,13 +22,21 @@ type EmpresaOption = {
 };
 
 const WishlistItemsPage: React.FC = () => {
-  const { wishlistItems, loading: loadingItems, fetchWishlistItems, addWishlistItem } = useWishlist();
+  const {
+    wishlistItems,
+    loading: loadingItems,
+    fetchWishlistItems,
+    addWishlistItem,
+    updateWishlistItem,
+  } = useWishlist();
+
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<WishlistStatus | "all">("all");
 
   // Modal state
   const [modalOpen, setModalOpen] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
+  const [editingItem, setEditingItem] = useState<WishlistItem | null>(null);
 
   // Form state
   const [empresas, setEmpresas] = useState<EmpresaOption[]>([]);
@@ -57,6 +67,20 @@ const WishlistItemsPage: React.FC = () => {
     };
     if (modalOpen) fetchEmpresas();
   }, [modalOpen]);
+
+  // Preencher formulário ao editar
+  useEffect(() => {
+    if (editingItem) {
+      setEmpresaInteressada(editingItem.empresa_interessada_id ?? "");
+      setEmpresaDesejada(editingItem.empresa_desejada_id ?? "");
+      setEmpresaProprietaria(editingItem.empresa_proprietaria_id ?? "");
+      setPrioridade(editingItem.prioridade ?? 3);
+      setMotivo(editingItem.motivo ?? "");
+      setObservacoes(editingItem.observacoes ?? "");
+    } else {
+      resetModal();
+    }
+  }, [editingItem, modalOpen]);
 
   // Handler: criar novo cliente rapidamente
   const handleCriarNovoCliente = async () => {
@@ -98,27 +122,39 @@ const WishlistItemsPage: React.FC = () => {
     setMotivo("");
     setObservacoes("");
     setNovoClienteNome("");
+    setEditingItem(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setModalLoading(true);
-    // Validação mínima
     if (!empresaInteressada || !empresaDesejada || !empresaProprietaria) {
       setModalLoading(false);
       return;
     }
-    // Monta objeto para o contexto
-    await addWishlistItem({
-      empresa_interessada_id: empresaInteressada,
-      empresa_desejada_id: empresaDesejada,
-      empresa_proprietaria_id: empresaProprietaria,
-      prioridade,
-      motivo,
-      observacoes,
-      status: "pendente",
-      data_solicitacao: new Date().toISOString(),
-    });
+    if (editingItem) {
+      // Editar existente
+      await updateWishlistItem(editingItem.id, {
+        empresa_interessada_id: empresaInteressada,
+        empresa_desejada_id: empresaDesejada,
+        empresa_proprietaria_id: empresaProprietaria,
+        prioridade,
+        motivo,
+        observacoes,
+      });
+    } else {
+      // Criar novo
+      await addWishlistItem({
+        empresa_interessada_id: empresaInteressada,
+        empresa_desejada_id: empresaDesejada,
+        empresa_proprietaria_id: empresaProprietaria,
+        prioridade,
+        motivo,
+        observacoes,
+        status: "pendente",
+        data_solicitacao: new Date().toISOString(),
+      });
+    }
     setModalLoading(false);
     setModalOpen(false);
     resetModal();
@@ -127,9 +163,9 @@ const WishlistItemsPage: React.FC = () => {
 
   const filteredItems = wishlistItems.filter(item => {
     const matchesSearch =
-      item.empresa_interessada?.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.empresa_desejada?.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.empresa_proprietaria?.nome.toLowerCase().includes(searchTerm.toLowerCase());
+      (item.empresa_interessada?.nome || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (item.empresa_desejada?.nome || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (item.empresa_proprietaria?.nome || "").toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesStatus = statusFilter === "all" || item.status === statusFilter;
 
@@ -200,14 +236,28 @@ const WishlistItemsPage: React.FC = () => {
             Gerencie solicitações de interesse e apresentações
           </p>
         </div>
-        <Dialog open={modalOpen} onOpenChange={o => { setModalOpen(o); if (!o) resetModal(); }}>
-          <Button onClick={() => setModalOpen(true)}>
+        <Dialog
+          open={modalOpen}
+          onOpenChange={o => {
+            setModalOpen(o);
+            if (!o) resetModal();
+          }}
+        >
+          <Button
+            onClick={() => {
+              setEditingItem(null);
+              setModalOpen(true);
+            }}
+            data-testid="button-nova-solicitacao"
+          >
             <Plus className="mr-2 h-4 w-4" />
             Nova Solicitação
           </Button>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Nova Solicitação de Wishlist</DialogTitle>
+              <DialogTitle>
+                {editingItem ? "Editar Solicitação de Wishlist" : "Nova Solicitação de Wishlist"}
+              </DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
@@ -315,10 +365,15 @@ const WishlistItemsPage: React.FC = () => {
               <div className="flex justify-end">
                 <Button
                   type="submit"
-                  disabled={modalLoading || !empresaInteressada || !empresaDesejada || !empresaProprietaria}
+                  disabled={
+                    modalLoading ||
+                    !empresaInteressada ||
+                    !empresaDesejada ||
+                    !empresaProprietaria
+                  }
                 >
                   {modalLoading && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
-                  Criar Solicitação
+                  {editingItem ? "Salvar Alterações" : "Criar Solicitação"}
                 </Button>
               </div>
             </form>
@@ -463,7 +518,14 @@ const WishlistItemsPage: React.FC = () => {
                       Facilitar Apresentação
                     </Button>
                   )}
-                  <Button variant="outline" size="sm">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setEditingItem(item);
+                      setModalOpen(true);
+                    }}
+                  >
                     Editar
                   </Button>
                 </div>
@@ -482,7 +544,7 @@ const WishlistItemsPage: React.FC = () => {
                   ? "Tente ajustar os filtros de busca"
                   : "Adicione o primeiro item à wishlist"}
               </p>
-              <Button onClick={() => setModalOpen(true)}>
+              <Button onClick={() => { setEditingItem(null); setModalOpen(true); }}>
                 <Plus className="mr-2 h-4 w-4" />
                 Nova Solicitação
               </Button>
