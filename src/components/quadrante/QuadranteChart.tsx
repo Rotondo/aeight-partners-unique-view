@@ -1,3 +1,4 @@
+// (Mantém igual ao original, sem alteração necessária para o bug reportado)
 import React, { useRef, useEffect } from "react";
 import * as d3 from "d3";
 import { QuadrantPoint } from "@/types";
@@ -192,13 +193,9 @@ const QuadranteChart: React.FC<QuadranteChartProps> = ({
       const widthLabel = d.nome.length * 7.2 + 14;
       const heightLabel = 18;
 
-      // Ajuste para não sair pela direita
       if (x + widthLabel > width) x = xScale(d.x) - widthLabel - labelPadding;
-      // Ajuste para não sair pela esquerda
       if (x < 0) x = 2;
-      // Ajuste para não sair por cima
       if (y - heightLabel < 0) y = yScale(d.y) + heightLabel;
-      // Ajuste para não sair por baixo
       if (y > height) y = height - 4;
 
       return {
@@ -210,7 +207,6 @@ const QuadranteChart: React.FC<QuadranteChartProps> = ({
       };
     });
 
-    // Detecta colisão de labels
     const overlapping = new Set<number>();
     for (let i = 0; i < labelData.length; i++) {
       const a = labelData[i];
@@ -228,7 +224,6 @@ const QuadranteChart: React.FC<QuadranteChartProps> = ({
       }
     }
 
-    // ----- DETERMINA SE TEM ALGUM SELECIONADO -----
     const hasSelection = !!selectedId;
 
     chart
@@ -257,7 +252,6 @@ const QuadranteChart: React.FC<QuadranteChartProps> = ({
       .text((d, i) => (!overlapping.has(i) ? d.nome : ""))
       .style("user-select", "none");
 
-    // Grupo dos pontos do quadrante
     const pointsGroup = chart.append("g").attr("class", "points-group");
 
     pointsGroup
