@@ -1,8 +1,13 @@
 import * as React from "react";
+import { logControlledField } from "@/lib/logControlledField";
 
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {}
 
-// Protege globalmente para NUNCA passar undefined/null como value controlado
+/**
+ * Input base reutilizável.
+ * Protege globalmente para NUNCA passar undefined/null como value controlado.
+ * Log detalhado em dev sobre value inválido.
+ */
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
   ({ value, ...props }, ref) => {
     // Garante valor seguro para inputs controlados
@@ -11,20 +16,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
         ? value === undefined || value === null || value === "" ? "" : value
         : value === undefined || value === null ? "" : value;
 
-    // Loga em dev se algum valor perigoso chegar (para debugging global)
-    if (
-      process.env.NODE_ENV === "development" &&
-      props.hasOwnProperty("value") &&
-      (value === undefined || value === null)
-    ) {
-      // eslint-disable-next-line no-console
-      console.warn(
-        "[Input] value recebido como",
-        value,
-        "em",
-        props.name || props.id || "<sem nome>"
-      );
-    }
+    logControlledField("Input", value, props);
 
     return (
       <input
