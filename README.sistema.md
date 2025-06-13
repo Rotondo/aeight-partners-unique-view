@@ -33,7 +33,8 @@ Este documento cobre **exaustivamente** tudo relacionado a arquitetura, operaç�
    - [Fluxo de desenvolvimento e boas práticas](#fluxo-de-desenvolvimento-e-boas-práticas)
 7. [Troubleshooting & FAQ Avançado](#troubleshooting--faq-avançado)
 8. [Roadmap Técnico & Integrações Futuras](#roadmap-técnico--integrações-futuras)
-9. [Referências Cruzadas](#referências-cruzadas)
+9. [Wishlist & Networking](#wishlist--networking)
+10. [Referências Cruzadas](#referências-cruzadas)
 
 ---
 
@@ -88,6 +89,7 @@ src/
   pages/
   types/
   contexts/
+  wishlist/
 ```
 **Detalhe dos domínios e exemplos em cada pasta**:
 - `components/admin/`: gestão de empresas, usuários, categorias.
@@ -96,6 +98,7 @@ src/
 - `components/oportunidades/`: CRUD, contexto, detalhes, histórico, atividades.
 - `components/onepager/`: upload, preview, formulário.
 - `components/ui/`: botões, tabelas, dialogs, gráficos, inputs base.
+- `components/wishlist/`: dashboards, cards, fluxos de networking.
 
 #### Estrutura de types
 
@@ -133,11 +136,18 @@ src/
 4. Preview/renderização via modal/componentes dedicados
 5. Exclusão com duplo check (frontend + backend/policy, logs)
 
+**Exemplo — Wishlist & Networking:**
+
+1. Usuário acessa `/wishlist` e visualiza dashboard, cards de status.
+2. Cria solicitações de wishlist (empresa interessada → proprietária → desejada).
+3. Proprietária aprova/rejeita, pode facilitar apresentação.
+4. Fluxo auditado, histórico de apresentações, conversão em oportunidade.
+
 ### Componentização e guidelines
 
 - Componentes **pequenos (<150 linhas)**, focados e reutilizáveis
 - **Props fortemente tipados**
-- Hooks customizados para lógica de negócio e integração (`useAuth`, `useDashboardStats`, `useToast`)
+- Hooks customizados para lógica de negócio e integração (`useAuth`, `useDashboardStats`, `useToast`, `useWishlist`)
 - **Composição**: layouts via `MainLayout.tsx`, navegação via `Sidebar.tsx`
 - **Testes unitários** para componentes críticos
 
@@ -150,6 +160,7 @@ src/
 - **Problemas comuns:**
   - Falha de login? Verifique `.env`, políticas Supabase e cross-origin.
   - Erro de policy? Veja logs Supabase e seção [Policies] no outro macrotema.
+  - Falha em wishlist/networking? Cheque permissão do usuário na empresa, policies de wishlist.
 
 ---
 
@@ -171,6 +182,18 @@ FOR SELECT
 USING (usuario_envio_id = auth.uid() OR usuario_recebe_id = auth.uid());
 ```
 
+**Exemplo — Política RLS para wishlist:**
+
+```sql
+CREATE POLICY "Read own wishlist items"
+ON public.wishlist_items
+FOR SELECT
+USING (
+  empresa_interessada_id = auth.uid_empresa()
+  OR empresa_proprietaria_id = auth.uid_empresa()
+);
+```
+
 **Edge Function — Auditoria de exclusão de material:**
 ```sql
 CREATE OR REPLACE FUNCTION log_exclusao_material()
@@ -189,7 +212,7 @@ Mais exemplos em [README.dados.md].
 - Supabase Client inicializado em `integrations/supabase/client.ts`
 - Hooks customizados para fetch, mutação e subscrição (React Query)
 - Autenticação persistida via Context/API do Supabase
-- Todas as requisições respeitam policies de banco/storage
+- Todas as requisições respeitam policies de banco/storage/wishlist
 
 **Fluxo seguro:**
 1. Frontend solicita operação
@@ -208,6 +231,7 @@ const { data, error } = await supabase
   .select('*')
   .eq('usuario_envio_id', user.id);
 ```
+- **Wishlist:** Hooks para fetch, criação, atualização, deleção, aprovação, conversão e histórico de apresentações.
 
 ---
 
@@ -326,6 +350,7 @@ export const Example: React.FC<ExampleProps> = ({ title, onAction }) => {
 - **Problemas de deploy?** Cheque logs Vercel, variáveis de ambiente, build.
 - **Problemas de autenticação?** Revise configuração de Auth no Supabase e integração frontend.
 - **Como auditar operações críticas?** Veja triggers/auditoria em [README.dados.md].
+- **Wishlist não carrega ou não salva?** Cheque se o usuário pertence à empresa proprietária/interessada, policies RLS, ou permissões específicas.
 
 ---
 
@@ -338,19 +363,69 @@ export const Example: React.FC<ExampleProps> = ({ title, onAction }) => {
 - [ ] Testes E2E (Cypress/Playwright)
 - [ ] Integração SSO corporativo
 - [ ] Monitoramento fullstack (Sentry/DataDog)
+- [ ] Expansão dos fluxos de wishlist/networking
+- [ ] Logs de auditoria detalhados na wishlist/apresentações
 
 ---
 
-## 9. Referências Cruzadas
+## 9. Wishlist & Networking
 
-- **Banco, estruturas, policies, storage, auditoria**: [README.dados.md](./README.dados.md)
-- **Onboarding, visão geral, FAQ índice:** [README.md](./README.md)
-- **Padrão de código e exemplos:** Este arquivo (seção 6)
-- **Troubleshooting de banco/storage:** [README.dados.md](./README.dados.md)
+### Visão Geral
+
+Funcionalidade para **gestão estratégica de interesses, solicitações e apresentações entre empresas** do ecossistema, acelerando o networking e a geração de oportunidades.
+
+### Fluxos Principais
+
+1. **Relacionamento empresa proprietária ↔ empresa cliente**
+   - Tabela `empresa_cliente` armazena vínculos, status e histórico.
+   - CRUD via UI dedicada para empresas/clientes.
+
+2. **Solicitação de Wishlist (WishlistItem)**
+   - Empresa interessada solicita conexão com outra empresa (desejada), mediada por empresa proprietária.
+   - Campos: prioridade, motivo, status, datas, observações.
+   - Criação guiada com busca/filtro e criação rápida de cliente.
+   - Status controlado: `pendente`, `em_andamento`, `aprovado`, `rejeitado`, `convertido`.
+
+3. **Gestão de Apresentações (WishlistApresentacao)**
+   - Facilitação de apresentações (email, reunião, evento, digital, outro).
+   - Registro de feedback, status, vinculação de oportunidade.
+
+4. **Aprovação/Rejeição**
+   - Apenas empresa_proprietaria pode aprovar/rejeitar solicitações.
+   - Auditoria de todas ações críticas.
+
+5. **Conversão em Oportunidade**
+   - Apresentação pode ser convertida em oportunidade diretamente.
+
+### UI/UX
+
+- Navegação dedicada (`/wishlist`), dashboard com cards e estatísticas.
+- Filtros dinâmicos, badges de status, modais de criação/edição.
+- Feedback visual para cada operação (sucesso, erro, loading).
+- Integração total com contexto global e hooks customizados.
+
+### Integração Técnica
+
+- Contexto global `WishlistContext` para centralizar estado e lógica.
+- Hooks para fetch, criação, atualização, deleção e estatísticas.
+- Permissões controladas por policies Supabase e checagem frontend.
+- Auditoria automática via triggers e logs.
+
+### Exemplo de Fluxo
+
+1. Usuário acessa `/wishlist`, visualiza dashboard com cards de status.
+2. Cria novo item de wishlist via modal, selecionando empresas e prioridade.
+3. Empresa proprietária recebe notificação e aprova/rejeita.
+4. Se aprovado, apresentação é registrada e pode ser convertida em oportunidade.
+
+### Referência cruzada:  
+- [Modelagem de dados e políticas detalhadas da Wishlist](./README.dados.md#wishlist--networking)
 
 ---
 
-> **Importante:**  
-> Todo novo fluxo, política, ajuste de arquitetura ou integração deve ser imediatamente documentado aqui e/ou no [README.dados.md], mantendo a rastreabilidade e a qualidade para qualquer nova manutenção ou evolução do sistema.
+## 10. Referências Cruzadas
+
+- [README.md](./README.md) — Visão geral, onboarding, FAQ e sumário executivo.
+- [README.dados.md](./README.dados.md) — Modelagem de dados, enums, RLS, auditoria.
 
 ---
