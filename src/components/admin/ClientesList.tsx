@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
@@ -11,6 +10,9 @@ import { useToast } from "@/hooks/use-toast";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Plus, Edit, Search } from "lucide-react";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+
+type TipoEmpresa = "cliente" | "parceiro" | "intragrupo";
 
 export const ClientesList: React.FC = () => {
   const [clientes, setClientes] = useState<Empresa[]>([]);
@@ -21,8 +23,12 @@ export const ClientesList: React.FC = () => {
   const [formData, setFormData] = useState({
     nome: "",
     descricao: "",
+    tipo: "cliente" as TipoEmpresa,
   });
   const { toast } = useToast();
+
+  // Novo filtro: tipo
+  const [tipoFiltro, setTipoFiltro] = useState<TipoEmpresa | "all">("all");
 
   useEffect(() => {
     fetchClientes();
@@ -31,25 +37,30 @@ export const ClientesList: React.FC = () => {
   const fetchClientes = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("empresas")
-        .select("*")
-        .eq("tipo", "cliente")
-        .order("nome");
-
+      let query = supabase.from("empresas").select("*").order("nome");
+      if (tipoFiltro !== "all") {
+        query = query.eq("tipo", tipoFiltro);
+      }
+      const { data, error } = await query;
       if (error) throw error;
       setClientes(data || []);
     } catch (error) {
       console.error("Erro ao buscar clientes:", error);
       toast({
         title: "Erro",
-        description: "Não foi possível carregar os clientes.",
+        description: "Não foi possível carregar as empresas.",
         variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
   };
+
+  // Refetch quando tipoFiltro muda
+  useEffect(() => {
+    fetchClientes();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tipoFiltro]);
 
   const filteredClientes = clientes.filter(cliente =>
     cliente.nome.toLowerCase().includes(searchTerm.toLowerCase())
@@ -63,13 +74,14 @@ export const ClientesList: React.FC = () => {
           .update({
             nome: formData.nome,
             descricao: formData.descricao,
+            tipo: formData.tipo,
           })
           .eq("id", editingCliente.id);
 
         if (error) throw error;
         toast({
           title: "Sucesso",
-          description: "Cliente atualizado com sucesso!",
+          description: "Empresa atualizada com sucesso!",
         });
       } else {
         const { error } = await supabase
@@ -77,26 +89,26 @@ export const ClientesList: React.FC = () => {
           .insert({
             nome: formData.nome,
             descricao: formData.descricao,
-            tipo: "cliente",
+            tipo: formData.tipo,
             status: true,
           });
 
         if (error) throw error;
         toast({
           title: "Sucesso",
-          description: "Cliente criado com sucesso!",
+          description: "Empresa criada com sucesso!",
         });
       }
 
       setIsDialogOpen(false);
       setEditingCliente(null);
-      setFormData({ nome: "", descricao: "" });
+      setFormData({ nome: "", descricao: "", tipo: "cliente" });
       fetchClientes();
     } catch (error) {
-      console.error("Erro ao salvar cliente:", error);
+      console.error("Erro ao salvar empresa:", error);
       toast({
         title: "Erro",
-        description: "Não foi possível salvar o cliente.",
+        description: "Não foi possível salvar a empresa.",
         variant: "destructive",
       });
     }
@@ -107,13 +119,14 @@ export const ClientesList: React.FC = () => {
     setFormData({
       nome: cliente.nome,
       descricao: cliente.descricao || "",
+      tipo: (cliente.tipo as TipoEmpresa) || "cliente",
     });
     setIsDialogOpen(true);
   };
 
   const handleNewCliente = () => {
     setEditingCliente(null);
-    setFormData({ nome: "", descricao: "" });
+    setFormData({ nome: "", descricao: "", tipo: "cliente" });
     setIsDialogOpen(true);
   };
 
@@ -128,18 +141,18 @@ export const ClientesList: React.FC = () => {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold">Clientes</h2>
+        <h2 className="text-xl font-semibold">Empresas</h2>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button onClick={handleNewCliente}>
               <Plus className="h-4 w-4 mr-2" />
-              Novo Cliente
+              Nova Empresa
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>
-                {editingCliente ? "Editar Cliente" : "Novo Cliente"}
+                {editingCliente ? "Editar Empresa" : "Nova Empresa"}
               </DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
@@ -149,7 +162,7 @@ export const ClientesList: React.FC = () => {
                   id="nome"
                   value={formData.nome}
                   onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                  placeholder="Nome do cliente"
+                  placeholder="Nome da empresa"
                 />
               </div>
               <div>
@@ -158,8 +171,24 @@ export const ClientesList: React.FC = () => {
                   id="descricao"
                   value={formData.descricao}
                   onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
-                  placeholder="Descrição do cliente"
+                  placeholder="Descrição da empresa"
                 />
+              </div>
+              <div>
+                <Label htmlFor="tipo">Tipo</Label>
+                <Select
+                  value={formData.tipo}
+                  onValueChange={(tipo) => setFormData({ ...formData, tipo: tipo as TipoEmpresa })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Tipo de empresa" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cliente">Cliente (base Aeight ou parceiro)</SelectItem>
+                    <SelectItem value="parceiro">Parceiro</SelectItem>
+                    <SelectItem value="intragrupo">Empresa intragrupo</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="flex justify-end space-x-2">
                 <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
@@ -177,11 +206,22 @@ export const ClientesList: React.FC = () => {
       <div className="flex items-center space-x-2">
         <Search className="h-4 w-4" />
         <Input
-          placeholder="Buscar clientes..."
+          placeholder="Buscar empresas..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="max-w-sm"
         />
+        <Select value={tipoFiltro} onValueChange={(tipo) => setTipoFiltro(tipo as TipoEmpresa | "all")}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Filtrar por tipo" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos os tipos</SelectItem>
+            <SelectItem value="cliente">Cliente</SelectItem>
+            <SelectItem value="parceiro">Parceiro</SelectItem>
+            <SelectItem value="intragrupo">Empresa intragrupo</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {loading ? (
@@ -192,6 +232,7 @@ export const ClientesList: React.FC = () => {
             <TableRow>
               <TableHead>Nome</TableHead>
               <TableHead>Descrição</TableHead>
+              <TableHead>Tipo</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Data Criação</TableHead>
               <TableHead>Ações</TableHead>
@@ -202,6 +243,15 @@ export const ClientesList: React.FC = () => {
               <TableRow key={cliente.id}>
                 <TableCell className="font-medium">{cliente.nome}</TableCell>
                 <TableCell>{cliente.descricao || "-"}</TableCell>
+                <TableCell>
+                  {cliente.tipo === "cliente"
+                    ? "Cliente"
+                    : cliente.tipo === "parceiro"
+                    ? "Parceiro"
+                    : cliente.tipo === "intragrupo"
+                    ? "Empresa intragrupo"
+                    : cliente.tipo}
+                </TableCell>
                 <TableCell>
                   <span className={`px-2 py-1 rounded-full text-xs ${
                     cliente.status 
@@ -231,7 +281,7 @@ export const ClientesList: React.FC = () => {
       
       {filteredClientes.length === 0 && !loading && (
         <div className="text-center p-8 text-muted-foreground">
-          {searchTerm ? "Nenhum cliente encontrado." : "Nenhum cliente cadastrado."}
+          {searchTerm ? "Nenhuma empresa encontrada." : "Nenhuma empresa cadastrada."}
         </div>
       )}
     </div>
