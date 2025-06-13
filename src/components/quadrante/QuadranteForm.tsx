@@ -1,9 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { supabase } from "@/lib/supabase";
-import { useToast } from "@/hooks/use-toast";
 import { Empresa, IndicadoresParceiro, TamanhoEmpresa } from "@/types";
 import {
   Form,
@@ -25,8 +23,8 @@ import {
 } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { Save } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
-// Validation schema ajustado para 0-5
 const formSchema = z.object({
   empresa_id: z.string().min(1, "Selecione um parceiro"),
   potencial_leads: z.coerce.number().min(0).max(5),
@@ -44,6 +42,7 @@ interface QuadranteFormProps {
   onSave: (indicador: Partial<IndicadoresParceiro>) => void;
   readOnly?: boolean;
   onParceiroSelect?: (empresa_id: string) => void;
+  empresas: Empresa[];
 }
 
 const QuadranteForm: React.FC<QuadranteFormProps> = ({
@@ -51,29 +50,16 @@ const QuadranteForm: React.FC<QuadranteFormProps> = ({
   onSave,
   readOnly = false,
   onParceiroSelect,
+  empresas,
 }) => {
   const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
-  const [parceiros, setParceiros] = useState<Empresa[]>([]);
+  const [loading, setLoading] = React.useState(false);
 
-  // Carrega empresas (apenas parceiros)
-  useEffect(() => {
-    const fetchEmpresas = async () => {
-      const { data } = await supabase
-        .from("empresas")
-        .select("*")
-        .eq("tipo", "parceiro");
-      setParceiros(data || []);
-    };
-    fetchEmpresas();
-  }, []);
+  // Só exibe empresas do tipo parceiro na lista
+  const parceirosOrdenados = empresas
+    .filter((empresa) => empresa.tipo === "parceiro")
+    .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
 
-  // Ordena parceiros alfabeticamente
-  const parceirosOrdenados = [...parceiros].sort((a, b) =>
-    a.nome.localeCompare(b.nome, "pt-BR")
-  );
-
-  // Configure form
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
