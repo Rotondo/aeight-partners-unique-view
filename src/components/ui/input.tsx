@@ -2,9 +2,10 @@ import * as React from "react";
 
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {}
 
+// Protege globalmente para NUNCA passar undefined/null como value controlado
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
   ({ value, ...props }, ref) => {
-    // Protege o input para nunca receber undefined/null como value controlado
+    // Garante valor seguro para inputs controlados
     const safeValue =
       props.type === "number"
         ? value === undefined || value === null || value === "" ? "" : value
