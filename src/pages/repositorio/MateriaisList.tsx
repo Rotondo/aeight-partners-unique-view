@@ -11,6 +11,15 @@ import { ptBR } from 'date-fns/locale';
 import MaterialEditModal from './MaterialEditModal';
 import MaterialPreviewModal from './MaterialPreviewModal';
 
+// Função para converter HEX Postgres BYTEA (\x3137...) para string
+function hexToUtf8String(hex: string): string {
+  if (!hex) return '';
+  const cleaned = hex.startsWith('\\x') ? hex.slice(2) : hex;
+  const hexClean = cleaned.startsWith('x') ? cleaned.slice(1) : cleaned;
+  const bytes = hexClean.match(/.{1,2}/g)?.map(byte => parseInt(byte, 16)) ?? [];
+  return String.fromCharCode(...bytes);
+}
+
 interface MateriaisListProps {
   materiais: RepositorioMaterial[];
   categorias: Categoria[];
@@ -35,13 +44,11 @@ const MateriaisList: React.FC<MateriaisListProps> = ({
   const [editingMaterial, setEditingMaterial] = useState<RepositorioMaterial | null>(null);
   const [previewMaterial, setPreviewMaterial] = useState<RepositorioMaterial | null>(null);
 
-  // Filtrar materiais
   const filteredMateriais = materiais.filter((material) => {
     const matchesSearch = material.nome.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategoria = selectedCategoria === 'all' || material.categoria_id === selectedCategoria;
     const matchesParceiro = selectedParceiro === 'all' || material.empresa_id === selectedParceiro;
     const matchesTipo = selectedTipo === 'all' || material.tipo_arquivo === selectedTipo;
-
     return matchesSearch && matchesCategoria && matchesParceiro && matchesTipo;
   });
 
@@ -76,7 +83,6 @@ const MateriaisList: React.FC<MateriaisListProps> = ({
     return <FileText className="h-5 w-5 text-gray-500" />;
   };
 
-  // Helper function to ensure tag_categoria is always an array
   const getTagsArray = (tagCategoria: string[] | string | null | undefined): string[] => {
     if (!tagCategoria) return [];
     if (Array.isArray(tagCategoria)) return tagCategoria;
@@ -84,11 +90,6 @@ const MateriaisList: React.FC<MateriaisListProps> = ({
     return [];
   };
 
-  /**
-   * Garante que NENHUM objeto será renderizado como React child.
-   * Se for objeto, renderiza em formato de lista amigável.
-   * Se for string, número, etc, apenas apresenta como texto.
-   */
   function safeRenderValue(value: any) {
     if (value === null || value === undefined) return '-';
     if (React.isValidElement(value)) return value;
@@ -107,12 +108,9 @@ const MateriaisList: React.FC<MateriaisListProps> = ({
     return String(value);
   }
 
-  // Para debug: logar previewMaterial ao abrir modal
   const handlePreview = (material: RepositorioMaterial) => {
-    // Garanta que está passando o campo correto para o modal
-    // Se você recebe arquivo_upload_str, troque abaixo para arquivo_upload_str
-    // Exemplo: arquivo_upload={material.arquivo_upload_str || ''}
     setPreviewMaterial(material);
+    // Debug para ver o campo recebido:
     // eslint-disable-next-line no-console
     console.log('Pré-visualizar material:', material);
   };
@@ -317,13 +315,9 @@ const MateriaisList: React.FC<MateriaisListProps> = ({
           open={!!previewMaterial}
           onClose={() => setPreviewMaterial(null)}
           nome={previewMaterial.nome}
-          // Se o campo correto for arquivo_upload_str, troque aqui!
           arquivo_upload={
-            // @ts-ignore
-            previewMaterial.arquivo_upload_str
-              // @ts-ignore
-              ? previewMaterial.arquivo_upload_str
-              // @ts-ignore
+            previewMaterial.arquivo_upload && previewMaterial.arquivo_upload.startsWith('\\x')
+              ? hexToUtf8String(previewMaterial.arquivo_upload)
               : previewMaterial.arquivo_upload || ''
           }
           tipo_arquivo={previewMaterial.tipo_arquivo}
