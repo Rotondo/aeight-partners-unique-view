@@ -5,11 +5,12 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Download, Search, FileText, Calendar, Eye } from 'lucide-react';
+import { Download, Search, FileText, Calendar, Eye, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import MaterialEditModal from './MaterialEditModal';
 import MaterialPreviewModal from './MaterialPreviewModal';
+import { supabase } from '@/lib/supabase';
 
 // Função para converter HEX Postgres BYTEA (\x3137...) para string
 function hexToUtf8String(hex: string): string {
@@ -29,6 +30,8 @@ interface MateriaisListProps {
   onRefresh: () => void;
 }
 
+const BUCKET_NAME = 'materiais';
+
 const MateriaisList: React.FC<MateriaisListProps> = ({
   materiais,
   categorias,
@@ -43,6 +46,7 @@ const MateriaisList: React.FC<MateriaisListProps> = ({
   const [selectedTipo, setSelectedTipo] = useState<string>('all');
   const [editingMaterial, setEditingMaterial] = useState<RepositorioMaterial | null>(null);
   const [previewMaterial, setPreviewMaterial] = useState<RepositorioMaterial | null>(null);
+  const [deletingMaterialId, setDeletingMaterialId] = useState<string | null>(null);
 
   const filteredMateriais = materiais.filter((material) => {
     const matchesSearch = material.nome.toLowerCase().includes(searchTerm.toLowerCase());
@@ -110,9 +114,45 @@ const MateriaisList: React.FC<MateriaisListProps> = ({
 
   const handlePreview = (material: RepositorioMaterial) => {
     setPreviewMaterial(material);
-    // Debug para ver o campo recebido:
     // eslint-disable-next-line no-console
     console.log('Pré-visualizar material:', material);
+  };
+
+  // Exclusão de arquivo
+  const handleDelete = async (material: RepositorioMaterial) => {
+    if (deletingMaterialId) return; // previne múltiplos cliques
+
+    if (!window.confirm(`Tem certeza que deseja excluir o material "${material.nome}"? Essa ação não pode ser desfeita.`)) {
+      return;
+    }
+    setDeletingMaterialId(material.id);
+    try {
+      // Caminho do arquivo no bucket
+      const filePath =
+        material.arquivo_upload && material.arquivo_upload.startsWith('\\x')
+          ? hexToUtf8String(material.arquivo_upload)
+          : material.arquivo_upload || '';
+
+      if (!filePath) {
+        alert('Arquivo não encontrado para exclusão.');
+        setDeletingMaterialId(null);
+        return;
+      }
+
+      const { error } = await supabase.storage
+        .from(BUCKET_NAME)
+        .remove([filePath]);
+
+      if (error) {
+        alert('Erro ao excluir o arquivo: ' + error.message);
+      } else {
+        onRefresh();
+      }
+    } catch (error: any) {
+      alert('Erro ao excluir o arquivo: ' + error.message);
+    } finally {
+      setDeletingMaterialId(null);
+    }
   };
 
   if (isLoading) {
@@ -284,6 +324,20 @@ const MateriaisList: React.FC<MateriaisListProps> = ({
                         onClick={() => handleDownload(material)}
                       >
                         <Download className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleDelete(material)}
+                        disabled={deletingMaterialId === material.id}
+                        title="Excluir material"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        {deletingMaterialId === material.id ? (
+                          <span className="ml-1">Excluindo...</span>
+                        ) : (
+                          <span className="ml-1">Excluir</span>
+                        )}
                       </Button>
                     </div>
                   </div>
