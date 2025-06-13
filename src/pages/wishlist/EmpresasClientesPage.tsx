@@ -73,7 +73,7 @@ const EmpresasClientesPage: React.FC = () => {
     fetchEmpresas();
   }, []);
 
-  // Atualiza empresas para select ao abrir modal (mantendo lógica original)
+  // Atualiza empresas para select ao abrir modal
   useEffect(() => {
     if (!modalOpen) return;
     const fetchEmpresas = async () => {
@@ -169,40 +169,33 @@ const EmpresasClientesPage: React.FC = () => {
     fetchEmpresasClientes();
   };
 
-  // --- CORREÇÃO CRÍTICA ---
-  // Garante que ao abrir o modal, o cliente selecionado esteja no array de opções com o nome correto
+  // Garante que o cliente do relacionamento está em empresasClientesOptions ao abrir o modal
   useEffect(() => {
-    if (!modalOpen) return;
-    if (empresaCliente) {
-      // Tente encontrar o nome do cliente nos dados da tabela (usando nome_cliente se disponível)
-      let nome: string | undefined = undefined;
-      // Para edição (cliente já vinculado)
+    if (!modalOpen || !empresaCliente) return;
+    const existe = empresasClientesOptions.some((c) => c.id === empresaCliente);
+    if (!existe) {
+      // Tenta encontrar nome_cliente na lista de relacionamentos (clientes vinculados)
+      let nome = "";
       if (modalType === "editar") {
-        const relacionamento = empresasClientes.find(
-          (rel) => rel.empresa_cliente_id === empresaCliente
-        );
+        const relacionamento = empresasClientes.find((rel) => rel.empresa_cliente_id === empresaCliente);
         if (relacionamento && relacionamento.nome_cliente) {
           nome = relacionamento.nome_cliente;
         }
       }
-      // Para novo vínculo (cliente não vinculado)
-      if (modalType === "novo") {
+      // Tenta encontrar nome na lista de clientes não vinculados
+      if (!nome) {
         const cliente = empresasClientesAll.find((c) => c.id === empresaCliente);
-        if (cliente) {
-          nome = cliente.nome;
-        }
+        if (cliente) nome = cliente.nome;
       }
       if (nome) {
-        const jaExiste = empresasClientesOptions.some((e) => e.id === empresaCliente);
-        if (!jaExiste) {
-          setEmpresasClientesOptions((prev) => [
-            ...prev,
-            { id: empresaCliente, nome, tipo: "cliente" }
-          ]);
-        }
+        setEmpresasClientesOptions((prev) => [
+          ...prev,
+          { id: empresaCliente, nome, tipo: "cliente" },
+        ]);
       }
     }
-  }, [modalOpen, modalType, empresaCliente, empresasClientes, empresasClientesAll, empresasClientesOptions]);
+  // eslint-disable-next-line
+  }, [modalOpen, empresaCliente, empresasClientesOptions, empresasClientes, empresasClientesAll, modalType]);
 
   const handleEditar = (relacionamento: any) => {
     setModalType("editar");
@@ -437,6 +430,7 @@ const EmpresasClientesPage: React.FC = () => {
             </tr>
           </thead>
           <tbody>
+            {/* Clientes VINCULADOS */}
             {empresasClientes
               .filter(cliente =>
                 (cliente.nome_cliente || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
