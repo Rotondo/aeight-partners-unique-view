@@ -7,15 +7,14 @@ interface MaterialPreviewModalProps {
   open: boolean;
   onClose: () => void;
   nome: string;
-  arquivo_upload: string | undefined | null;
+  arquivo_upload?: string | null;
   tipo_arquivo: string;
 }
 
 const BUCKET_NAME = 'materiais';
 
 function sanitizePath(path: string | undefined | null): string | null {
-  if (!path) return null;
-  // Remove barras iniciais e espaços
+  if (!path || typeof path !== 'string') return null;
   return path.replace(/^\/+/, '').trim();
 }
 
@@ -55,7 +54,10 @@ const MaterialPreviewModal: React.FC<MaterialPreviewModalProps> = ({
   const renderPreview = () => {
     if (!publicUrl) return <div className="text-center text-gray-500">Arquivo não encontrado.</div>;
 
-    if (tipo_arquivo === 'pdf' || (arquivo_upload && arquivo_upload.toLowerCase().endsWith('.pdf'))) {
+    if (
+      tipo_arquivo === 'pdf' ||
+      (arquivo_upload && arquivo_upload.toLowerCase().endsWith('.pdf'))
+    ) {
       return (
         <iframe
           title={nome}
