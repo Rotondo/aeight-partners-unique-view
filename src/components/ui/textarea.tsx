@@ -9,9 +9,10 @@ export interface TextareaProps
  * Textarea base reutilizável.
  * Exige que o dev forneça pelo menos `id` ou `name` para acessibilidade/autofill.
  * Protege para value controlado nunca ser undefined/null e loga em dev.
+ * NUNCA repassa children para <textarea>.
  */
 const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
-  ({ className, id, name, value, ...props }, ref) => {
+  ({ className, id, name, value, children, ...props }, ref) => {
     // Em desenvolvimento, avisa se não há id nem name
     if (process.env.NODE_ENV !== "production" && !id && !name) {
       // eslint-disable-next-line no-console
