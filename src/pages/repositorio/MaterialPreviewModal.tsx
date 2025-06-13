@@ -7,11 +7,17 @@ interface MaterialPreviewModalProps {
   open: boolean;
   onClose: () => void;
   nome: string;
-  arquivo_upload: string;
+  arquivo_upload: string | undefined | null;
   tipo_arquivo: string;
 }
 
 const BUCKET_NAME = 'materiais';
+
+function sanitizePath(path: string | undefined | null): string | null {
+  if (!path) return null;
+  // Remove barras iniciais e espaços
+  return path.replace(/^\/+/, '').trim();
+}
 
 const MaterialPreviewModal: React.FC<MaterialPreviewModalProps> = ({
   open,
@@ -24,12 +30,18 @@ const MaterialPreviewModal: React.FC<MaterialPreviewModalProps> = ({
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (open && arquivo_upload) {
+    if (!open) {
+      setPublicUrl(null);
+      return;
+    }
+
+    const sanitizedPath = sanitizePath(arquivo_upload);
+
+    if (sanitizedPath) {
       setLoading(true);
-      // Tenta gerar URL assinada por 1 hora (caso bucket privado)
       supabase.storage
         .from(BUCKET_NAME)
-        .createSignedUrl(arquivo_upload, 3600)
+        .createSignedUrl(sanitizedPath, 3600)
         .then(({ data, error }) => {
           if (data?.signedUrl) setPublicUrl(data.signedUrl);
           else setPublicUrl(null);
@@ -43,7 +55,7 @@ const MaterialPreviewModal: React.FC<MaterialPreviewModalProps> = ({
   const renderPreview = () => {
     if (!publicUrl) return <div className="text-center text-gray-500">Arquivo não encontrado.</div>;
 
-    if (tipo_arquivo === 'pdf' || arquivo_upload.toLowerCase().endsWith('.pdf')) {
+    if (tipo_arquivo === 'pdf' || (arquivo_upload && arquivo_upload.toLowerCase().endsWith('.pdf'))) {
       return (
         <iframe
           title={nome}
@@ -57,7 +69,7 @@ const MaterialPreviewModal: React.FC<MaterialPreviewModalProps> = ({
 
     if (
       tipo_arquivo === 'image' ||
-      /\.(jpg|jpeg|png|gif|bmp|svg)$/i.test(arquivo_upload)
+      (arquivo_upload && /\.(jpg|jpeg|png|gif|bmp|svg)$/i.test(arquivo_upload))
     ) {
       return (
         <img
@@ -74,11 +86,9 @@ const MaterialPreviewModal: React.FC<MaterialPreviewModalProps> = ({
       );
     }
 
-    // Para outros tipos, tenta embed ou mostra mensagem
     return (
       <div className="text-center text-gray-500">
-        Não é possível pré-visualizar este tipo de arquivo.
-        <br />
+        Não é possível pré-visualizar este tipo de arquivo.<br />
         <a
           href={publicUrl}
           target="_blank"
