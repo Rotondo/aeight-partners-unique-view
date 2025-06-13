@@ -93,8 +93,6 @@ const MateriaisList: React.FC<MateriaisListProps> = ({
     if (value === null || value === undefined) return '-';
     if (React.isValidElement(value)) return value;
     if (typeof value === 'object') {
-      // Caso o valor seja o objeto do erro (ex: {em_contato, negociando, ganho, perdido, total, outros})
-      // Mostra como lista legível, mas nunca retorna diretamente o próprio objeto
       if (Object.keys(value).length === 0) return '-';
       return (
         <ul style={{ fontSize: 11, background: 'rgba(0,0,0,0.03)', padding: 4, borderRadius: 4, listStyle: 'none', margin: 0 }}>
@@ -244,7 +242,6 @@ const MateriaisList: React.FC<MateriaisListProps> = ({
                           </div>
                         )}
 
-                        {/* Exemplo de campo que pode ser objeto (ex: status de oportunidades) */}
                         {material.status &&
                           typeof material.status === 'object' &&
                           Object.keys(material.status).length > 0 && (
