@@ -10,6 +10,7 @@ export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> 
  * Log detalhado em dev sobre value inválido.
  */
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
+  // Remove children para garantir que <input /> nunca os receba (void element)
   ({ value, children, ...props }, ref) => {
     // Garante valor seguro para inputs controlados
     const safeValue =
