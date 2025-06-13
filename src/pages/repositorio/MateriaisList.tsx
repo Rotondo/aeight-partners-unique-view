@@ -5,10 +5,11 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Download, Search, FileText, Calendar, User } from 'lucide-react';
+import { Download, Search, FileText, Calendar, Eye } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import MaterialEditModal from './MaterialEditModal';
+import MaterialPreviewModal from './MaterialPreviewModal';
 
 interface MateriaisListProps {
   materiais: RepositorioMaterial[];
@@ -32,6 +33,7 @@ const MateriaisList: React.FC<MateriaisListProps> = ({
   const [selectedParceiro, setSelectedParceiro] = useState<string>('all');
   const [selectedTipo, setSelectedTipo] = useState<string>('all');
   const [editingMaterial, setEditingMaterial] = useState<RepositorioMaterial | null>(null);
+  const [previewMaterial, setPreviewMaterial] = useState<RepositorioMaterial | null>(null);
 
   // Filtrar materiais
   const filteredMateriais = materiais.filter((material) => {
@@ -46,7 +48,6 @@ const MateriaisList: React.FC<MateriaisListProps> = ({
   const handleDownload = async (material: RepositorioMaterial) => {
     try {
       // Implementar download do arquivo
-      console.log('Download material:', material);
       // ...
     } catch (error) {
       console.error('Error downloading material:', error);
@@ -267,6 +268,14 @@ const MateriaisList: React.FC<MateriaisListProps> = ({
                       <Button
                         variant="outline"
                         size="sm"
+                        onClick={() => setPreviewMaterial(material)}
+                      >
+                        <Eye className="h-4 w-4" />
+                        <span className="ml-1">Visualizar</span>
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
                         onClick={() => handleDownload(material)}
                       >
                         <Download className="h-4 w-4" />
@@ -292,6 +301,17 @@ const MateriaisList: React.FC<MateriaisListProps> = ({
             setEditingMaterial(null);
             onRefresh();
           }}
+        />
+      )}
+
+      {/* Modal de Preview */}
+      {previewMaterial && (
+        <MaterialPreviewModal
+          open={!!previewMaterial}
+          onClose={() => setPreviewMaterial(null)}
+          nome={previewMaterial.nome}
+          arquivo_upload={previewMaterial.arquivo_upload || ''}
+          tipo_arquivo={previewMaterial.tipo_arquivo}
         />
       )}
     </div>
