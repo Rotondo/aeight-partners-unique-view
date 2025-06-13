@@ -25,7 +25,12 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Upload, Save } from 'lucide-react';
+import { Loader2, Upload, Save, PlusCircle } from 'lucide-react';
+
+// Schema para novo cliente apenas com nome obrigatório (fácil de expandir)
+const newClientSchema = z.object({
+  nome: z.string().min(2, { message: "Nome do cliente é obrigatório" }),
+});
 
 const formSchema = z.object({
   empresaId: z.string().uuid({ message: "Selecione um parceiro válido" }),
@@ -48,9 +53,11 @@ const formSchema = z.object({
   contato_telefone: z.string().optional(),
   clienteIds: z.array(z.string().uuid()).optional(),
   arquivo: z.instanceof(FileList).optional(),
+  novosClientes: z.array(newClientSchema).optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
+type NewClient = z.infer<typeof newClientSchema>;
 
 interface OnePagerFormProps {
   categorias: Categoria[];
@@ -71,6 +78,11 @@ const OnePagerForm: React.FC<OnePagerFormProps> = ({
   const [selectedCategoria, setSelectedCategoria] = useState<string>('');
   const [notaQuadrante, setNotaQuadrante] = useState<number | null>(null);
 
+  // Estado local para novos clientes
+  const [novosClientes, setNovosClientes] = useState<NewClient[]>([]);
+  const [novoClienteNome, setNovoClienteNome] = useState('');
+  const [adicionandoCliente, setAdicionandoCliente] = useState(false);
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -89,6 +101,7 @@ const OnePagerForm: React.FC<OnePagerFormProps> = ({
       contato_email: '',
       contato_telefone: '',
       clienteIds: [],
+      novosClientes: [],
     },
   });
 
@@ -111,7 +124,7 @@ const OnePagerForm: React.FC<OnePagerFormProps> = ({
       form.setValue('contato_telefone', editingOnePager.contato_telefone || '');
       setSelectedCategoria(editingOnePager.categoria_id);
       setNotaQuadrante(editingOnePager.nota_quadrante || null);
-      
+
       // Carregar clientes associados
       fetchClientesAssociados(editingOnePager.id);
     }
@@ -198,7 +211,7 @@ const OnePagerForm: React.FC<OnePagerFormProps> = ({
   // Busca nota do quadrante quando empresa é selecionada
   const handleEmpresaChange = async (empresaId: string) => {
     form.setValue('empresaId', empresaId);
-    
+
     try {
       const { data, error } = await supabase
         .from('indicadores_parceiro')
@@ -218,6 +231,31 @@ const OnePagerForm: React.FC<OnePagerFormProps> = ({
       console.error('Error fetching quadrante score:', error);
       setNotaQuadrante(null);
     }
+  };
+
+  // Handler para adicionar novo cliente na lista local
+  const handleAddNovoCliente = () => {
+    const nome = novoClienteNome.trim();
+    if (!nome) return;
+    // Validação básica: não duplicar na lista local nem na lista de clientes existentes
+    const existeJa = clientes.some(c => c.nome.toLowerCase() === nome.toLowerCase())
+      || novosClientes.some(c => c.nome.toLowerCase() === nome.toLowerCase());
+    if (existeJa) {
+      toast({
+        title: 'Cliente já existe',
+        description: 'Este nome já está na base ou na lista de novos clientes.',
+        variant: 'destructive',
+      });
+      setNovoClienteNome('');
+      return;
+    }
+    setNovosClientes([...novosClientes, { nome }]);
+    setNovoClienteNome('');
+  };
+
+  // Remover cliente da lista local de novos clientes
+  const handleRemoveNovoCliente = (nome: string) => {
+    setNovosClientes(novosClientes.filter(c => c.nome !== nome));
   };
 
   const onSubmit = async (values: FormValues) => {
@@ -283,7 +321,7 @@ const OnePagerForm: React.FC<OnePagerFormProps> = ({
           .from('onepager')
           .update(onepagerData)
           .eq('id', editingOnePager.id);
-        
+
         if (updateError) throw updateError;
         onepagerId = editingOnePager.id;
       } else {
@@ -293,21 +331,90 @@ const OnePagerForm: React.FC<OnePagerFormProps> = ({
           .insert(onepagerData)
           .select('id')
           .single();
-        
+
         if (insertError) throw insertError;
         onepagerId = insertData.id;
       }
 
-      // Gerencia relacionamentos com clientes
-      if (values.clienteIds && values.clienteIds.length > 0) {
-        // Remove relacionamentos existentes
-        await supabase
-          .from('onepager_clientes')
-          .delete()
-          .eq('onepager_id', onepagerId);
+      // Gerencia criação de novos clientes (em empresas) e correlaciona com parceiro (empresa_clientes)
+      let finalClienteIds: string[] = values.clienteIds ? [...values.clienteIds] : [];
 
-        // Adiciona novos relacionamentos
-        const clienteRelations = values.clienteIds.map(clienteId => ({
+      if (novosClientes.length > 0) {
+        for (const novo of novosClientes) {
+          // Verifica se já existe cliente com o mesmo nome (case insensitive)
+          const exists = clientes.find(
+            c => c.nome.trim().toLowerCase() === novo.nome.trim().toLowerCase()
+          );
+          let clienteId: string;
+          if (exists) {
+            clienteId = exists.id;
+          } else {
+            // Cria novo cliente na tabela empresas
+            const { data: inserted, error: insertError } = await supabase
+              .from('empresas')
+              .insert({
+                nome: novo.nome,
+                tipo: 'cliente',
+                status: true,
+              })
+              .select('id')
+              .single();
+            if (insertError) throw insertError;
+            clienteId = inserted.id;
+          }
+          finalClienteIds.push(clienteId);
+
+          // Cria relação empresa_clientes (parceiro-cliente), se não existir
+          if (values.empresaId && clienteId) {
+            const { data: relExists, error } = await supabase
+              .from('empresa_clientes')
+              .select('id')
+              .eq('empresa_proprietaria_id', values.empresaId)
+              .eq('empresa_cliente_id', clienteId)
+              .maybeSingle();
+            if (!relExists) {
+              await supabase.from('empresa_clientes').insert({
+                empresa_proprietaria_id: values.empresaId,
+                empresa_cliente_id: clienteId,
+                status: true,
+                data_relacionamento: new Date().toISOString(),
+                observacoes: 'Vínculo criado via OnePager',
+              });
+            }
+          }
+        }
+      }
+
+      // Para cada cliente selecionado, também garantir vínculo empresa_clientes
+      if (values.empresaId && finalClienteIds.length > 0) {
+        for (const clienteId of finalClienteIds) {
+          const { data: relExists, error } = await supabase
+            .from('empresa_clientes')
+            .select('id')
+            .eq('empresa_proprietaria_id', values.empresaId)
+            .eq('empresa_cliente_id', clienteId)
+            .maybeSingle();
+          if (!relExists) {
+            await supabase.from('empresa_clientes').insert({
+              empresa_proprietaria_id: values.empresaId,
+              empresa_cliente_id: clienteId,
+              status: true,
+              data_relacionamento: new Date().toISOString(),
+              observacoes: 'Vínculo criado via OnePager',
+            });
+          }
+        }
+      }
+
+      // Remove relacionamentos antigos
+      await supabase
+        .from('onepager_clientes')
+        .delete()
+        .eq('onepager_id', onepagerId);
+
+      // Adiciona novos relacionamentos
+      if (finalClienteIds.length > 0) {
+        const clienteRelations = finalClienteIds.map(clienteId => ({
           onepager_id: onepagerId,
           cliente_id: clienteId,
         }));
@@ -315,7 +422,7 @@ const OnePagerForm: React.FC<OnePagerFormProps> = ({
         const { error: clienteError } = await supabase
           .from('onepager_clientes')
           .insert(clienteRelations);
-        
+
         if (clienteError) throw clienteError;
       }
 
@@ -328,6 +435,8 @@ const OnePagerForm: React.FC<OnePagerFormProps> = ({
       if (!editingOnePager) {
         form.reset();
         setNotaQuadrante(null);
+        setNovosClientes([]);
+        setNovoClienteNome('');
       }
 
       if (onSuccess) onSuccess();
@@ -632,7 +741,7 @@ const OnePagerForm: React.FC<OnePagerFormProps> = ({
                   name="clienteIds"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Clientes A&eight que utilizam este parceiro</FormLabel>
+                      <FormLabel>Clientes Aeight que utilizam este parceiro</FormLabel>
                       <div className="space-y-2">
                         {clientes.map((cliente) => (
                           <div key={cliente.id} className="flex items-center space-x-2">
@@ -663,6 +772,58 @@ const OnePagerForm: React.FC<OnePagerFormProps> = ({
                     </FormItem>
                   )}
                 />
+
+                {/* Adição de novo cliente inline */}
+                <div className="mt-6">
+                  <FormLabel>Adicionar novo cliente</FormLabel>
+                  <div className="flex gap-2 items-center mt-2">
+                    <Input
+                      value={novoClienteNome}
+                      onChange={e => setNovoClienteNome(e.target.value)}
+                      placeholder="Nome do novo cliente"
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddNovoCliente();
+                        }
+                      }}
+                      disabled={adicionandoCliente}
+                      className="w-72"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleAddNovoCliente}
+                      disabled={adicionandoCliente || !novoClienteNome.trim()}
+                    >
+                      <PlusCircle className="h-4 w-4 mr-1" />
+                      Adicionar
+                    </Button>
+                  </div>
+                  {(novosClientes.length > 0) && (
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      {novosClientes.map((cliente) => (
+                        <span
+                          key={cliente.nome}
+                          className="inline-flex items-center px-3 py-1 bg-muted rounded-full text-sm border"
+                        >
+                          {cliente.nome}
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveNovoCliente(cliente.nome)}
+                            className="ml-2 text-red-500 hover:text-red-700 focus:outline-none"
+                            title="Remover cliente"
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <p className="text-xs mt-2 text-muted-foreground">
+                    Clientes adicionados aqui serão automaticamente vinculados ao parceiro deste OnePager e à base de clientes Aeight.
+                  </p>
+                </div>
               </TabsContent>
             </Tabs>
 
