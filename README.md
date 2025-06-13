@@ -1,4 +1,3 @@
-
 # Aeight Partners Unique View
 
 **Repositório:** [Rotondo/aeight-partners-unique-view](https://github.com/Rotondo/aeight-partners-unique-view)
@@ -21,7 +20,7 @@
 
 ## Descrição
 
-Sistema web completo para gestão, acompanhamento e análise de oportunidades de negócio, indicadores estratégicos, empresas e parcerias da Aeight Partners. O projeto é desenvolvido em **TypeScript** com **React**, utilizando **Supabase** como backend, roteamento via `react-router-dom` e UI moderna baseada em [shadcn/ui](https://ui.shadcn.com/).
+Sistema web completo para gestão, acompanhamento e análise de oportunidades de negócio, indicadores estratégicos, empresas e parcerias da Aeight Partners. O projeto é desenvolvido em **TypeScript** com frontend React e backend Supabase, totalmente serverless.
 
 O sistema permite o controle completo do funil de vendas, análise de performance de parcerias, gestão de indicadores e visualizações analíticas avançadas para tomada de decisão estratégica.
 
@@ -266,6 +265,15 @@ CREATE TYPE company_size AS ENUM ('PP', 'P', 'M', 'G', 'GG');
 - **Tags Inteligentes**: Sistema de categorização flexível
 - **Controle de Validade**: Alertas para contratos vencendo
 - **Busca Avançada**: Localização rápida de materiais
+- **Exclusão de materiais**: Ao excluir um material pelo frontend, o arquivo será removido do Supabase Storage e seu registro do banco, desde que as políticas estejam corretas (ver seção de configuração).
+- **Atenção:** Assegure-se de ter a seguinte policy no bucket `materiais` do Supabase para permitir deleção:
+  ```sql
+  CREATE POLICY "Allow delete for authenticated"
+  ON storage.objects
+  FOR DELETE
+  TO authenticated
+  USING (bucket_id = 'materiais');
+  ```
 
 ### 🔐 Administração
 - **Gestão de Usuários**: Controle de acesso e papéis
@@ -416,14 +424,24 @@ src/
    - Execute as migrations SQL presentes no diretório `supabase/`
    - Configure as variáveis de ambiente no Supabase (se necessário)
 
-4. **Inicie o projeto:**
+4. **Ajuste a policy de deleção do bucket de materiais:**
+   - Para permitir deleção de arquivos pelo frontend, crie a seguinte policy no bucket:
+     ```sql
+     CREATE POLICY "Allow delete for authenticated"
+     ON storage.objects
+     FOR DELETE
+     TO authenticated
+     USING (bucket_id = 'materiais');
+     ```
+
+5. **Inicie o projeto:**
    ```bash
    pnpm dev
    # ou npm run dev
    # ou yarn dev
    ```
 
-5. **Acesse a aplicação:**
+6. **Acesse a aplicação:**
    - Abra [http://localhost:5173](http://localhost:5173) no navegador
 
 ### Configuração do Banco de Dados
