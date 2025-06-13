@@ -1,5 +1,3 @@
-// editar arquivo src/pages/wishlist/WishlistItemsPage.tsx
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,12 +12,13 @@ import { ptBR } from "date-fns/locale";
 import { WishlistStatus, WishlistItem } from "@/types";
 import { supabase } from "@/lib/supabase";
 
-// Tipo auxiliar para empresas
 type EmpresaOption = {
   id: string;
   nome: string;
   tipo: string;
 };
+
+const getSafeString = (value: any): string => (value === undefined || value === null ? "" : String(value));
 
 const WishlistItemsPage: React.FC = () => {
   const {
@@ -46,10 +45,10 @@ const WishlistItemsPage: React.FC = () => {
   const [empresaDesejada, setEmpresaDesejada] = useState<string>("");
   const [empresaProprietaria, setEmpresaProprietaria] = useState<string>("");
   const [prioridade, setPrioridade] = useState<number>(3);
-  const [motivo, setMotivo] = useState("");
-  const [observacoes, setObservacoes] = useState("");
+  const [motivo, setMotivo] = useState<string>("");
+  const [observacoes, setObservacoes] = useState<string>("");
   const [criandoNovoCliente, setCriandoNovoCliente] = useState(false);
-  const [novoClienteNome, setNovoClienteNome] = useState("");
+  const [novoClienteNome, setNovoClienteNome] = useState<string>("");
 
   // Buscar empresas para o formulário
   useEffect(() => {
@@ -71,22 +70,21 @@ const WishlistItemsPage: React.FC = () => {
   // Preencher formulário ao editar
   useEffect(() => {
     if (editingItem) {
-      setEmpresaInteressada(editingItem.empresa_interessada_id ?? "");
-      setEmpresaDesejada(editingItem.empresa_desejada_id ?? "");
-      setEmpresaProprietaria(editingItem.empresa_proprietaria_id ?? "");
-      setPrioridade(editingItem.prioridade ?? 3);
-      setMotivo(editingItem.motivo ?? "");
-      setObservacoes(editingItem.observacoes ?? "");
+      setEmpresaInteressada(getSafeString(editingItem.empresa_interessada_id));
+      setEmpresaDesejada(getSafeString(editingItem.empresa_desejada_id));
+      setEmpresaProprietaria(getSafeString(editingItem.empresa_proprietaria_id));
+      setPrioridade(typeof editingItem.prioridade === "number" ? editingItem.prioridade : 3);
+      setMotivo(getSafeString(editingItem.motivo));
+      setObservacoes(getSafeString(editingItem.observacoes));
     } else {
       resetModal();
     }
+    // eslint-disable-next-line
   }, [editingItem, modalOpen]);
 
-  // Handler: criar novo cliente rapidamente
   const handleCriarNovoCliente = async () => {
     if (!novoClienteNome.trim()) return;
     setCriandoNovoCliente(true);
-    // Verifica se já existe cliente com esse nome
     const existe = empresasClientes.find(
       (c) => c.nome.trim().toLowerCase() === novoClienteNome.trim().toLowerCase()
     );
@@ -133,7 +131,6 @@ const WishlistItemsPage: React.FC = () => {
       return;
     }
     if (editingItem) {
-      // Editar existente
       await updateWishlistItem(editingItem.id, {
         empresa_interessada_id: empresaInteressada,
         empresa_desejada_id: empresaDesejada,
@@ -143,7 +140,6 @@ const WishlistItemsPage: React.FC = () => {
         observacoes,
       });
     } else {
-      // Criar novo
       await addWishlistItem({
         empresa_interessada_id: empresaInteressada,
         empresa_desejada_id: empresaDesejada,
@@ -259,10 +255,10 @@ const WishlistItemsPage: React.FC = () => {
                 {editingItem ? "Editar Solicitação de Wishlist" : "Nova Solicitação de Wishlist"}
               </DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4" autoComplete="off">
               <div>
                 <label className="block font-medium mb-1">Quem está solicitando?</label>
-                <Select value={empresaInteressada} onValueChange={setEmpresaInteressada}>
+                <Select value={empresaInteressada || ""} onValueChange={setEmpresaInteressada}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione empresa (parceiro/intragrupo)" />
                   </SelectTrigger>
@@ -275,7 +271,7 @@ const WishlistItemsPage: React.FC = () => {
               </div>
               <div>
                 <label className="block font-medium mb-1">Cliente ou Lead desejado</label>
-                <Select value={empresaDesejada} onValueChange={setEmpresaDesejada}>
+                <Select value={empresaDesejada || ""} onValueChange={setEmpresaDesejada}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione cliente/lead" />
                   </SelectTrigger>
@@ -288,7 +284,7 @@ const WishlistItemsPage: React.FC = () => {
                 <div className="flex mt-2 gap-2">
                   <Input
                     placeholder="Novo cliente/lead"
-                    value={novoClienteNome}
+                    value={novoClienteNome || ""}
                     onChange={e => setNovoClienteNome(e.target.value)}
                     onKeyDown={e => {
                       if (e.key === "Enter") {
@@ -314,7 +310,7 @@ const WishlistItemsPage: React.FC = () => {
               </div>
               <div>
                 <label className="block font-medium mb-1">Dono do relacionamento (parceiro ou intragrupo)</label>
-                <Select value={empresaProprietaria} onValueChange={setEmpresaProprietaria}>
+                <Select value={empresaProprietaria || ""} onValueChange={setEmpresaProprietaria}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione proprietário" />
                   </SelectTrigger>
@@ -349,7 +345,7 @@ const WishlistItemsPage: React.FC = () => {
               <div>
                 <label className="block font-medium mb-1">Motivo</label>
                 <Input
-                  value={motivo}
+                  value={motivo || ""}
                   onChange={e => setMotivo(e.target.value)}
                   placeholder="Descreva o motivo da solicitação"
                 />
@@ -357,7 +353,7 @@ const WishlistItemsPage: React.FC = () => {
               <div>
                 <label className="block font-medium mb-1">Observações (opcional)</label>
                 <Input
-                  value={observacoes}
+                  value={observacoes || ""}
                   onChange={e => setObservacoes(e.target.value)}
                   placeholder="Observações adicionais"
                 />
@@ -485,7 +481,9 @@ const WishlistItemsPage: React.FC = () => {
                 <div className="flex items-center text-sm text-muted-foreground">
                   <Calendar className="mr-2 h-4 w-4" />
                   Solicitado em{" "}
-                  {format(new Date(item.data_solicitacao), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                  {item.data_solicitacao
+                    ? format(new Date(item.data_solicitacao), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
+                    : ""}
                 </div>
 
                 {item.motivo && (
