@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Categoria, Empresa, RepositorioTag } from '@/types';
 import { supabase } from '@/lib/supabase';
@@ -53,10 +52,10 @@ const MaterialUpload: React.FC<MaterialUploadProps> = ({
     setUploading(true);
 
     try {
-      // Upload do arquivo
+      // Upload do arquivo (ajustado para bucket 'materiais')
       const fileName = `${Date.now()}_${formData.arquivo.name}`;
       const { error: uploadError } = await supabase.storage
-        .from('repositorio')
+        .from('materiais') // <--- nome correto do bucket
         .upload(fileName, formData.arquivo);
 
       if (uploadError) throw uploadError;
