@@ -1,10 +1,24 @@
+// editar arquivo src/components/ui/select.tsx
+
 import * as React from "react"
 import * as SelectPrimitive from "@radix-ui/react-select"
 import { Check, ChevronDown, ChevronUp } from "lucide-react"
-
 import { cn } from "@/lib/utils"
 
-const Select = SelectPrimitive.Root
+// Proteção global: value nunca pode ser undefined/null
+function safeValue(value: any) {
+  return value === undefined || value === null ? "" : value
+}
+
+const Select = Object.assign(
+  React.forwardRef<
+    React.ElementRef<typeof SelectPrimitive.Root>,
+    React.ComponentPropsWithoutRef<typeof SelectPrimitive.Root>
+  >(({ children, ...props }, ref) => (
+    <SelectPrimitive.Root {...props}>{children}</SelectPrimitive.Root>
+  )),
+  { displayName: "Select" }
+)
 
 const SelectGroup = SelectPrimitive.Group
 
@@ -112,9 +126,10 @@ SelectLabel.displayName = SelectPrimitive.Label.displayName
 const SelectItem = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Item>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Item>
->(({ className, children, ...props }, ref) => (
+>(({ className, children, value, ...props }, ref) => (
   <SelectPrimitive.Item
     ref={ref}
+    value={safeValue(value)}
     className={cn(
       "relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
       className
@@ -126,7 +141,6 @@ const SelectItem = React.forwardRef<
         <Check className="h-4 w-4" />
       </SelectPrimitive.ItemIndicator>
     </span>
-
     <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
   </SelectPrimitive.Item>
 ))
