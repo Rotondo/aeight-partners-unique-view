@@ -213,38 +213,27 @@ const EmpresasClientesPage: React.FC = () => {
     fetchEmpresasClientes();
   };
 
-  // Garante que o cliente do relacionamento está em empresasClientesOptions ao abrir o modal
-  useEffect(() => {
-    if (!modalOpen || !empresaCliente) return;
-    // Já existe no select? (evita duplicidade)
-    const existe = empresasClientesOptions.some((c) => c.id === empresaCliente);
-    if (!existe) {
-      // Tenta pegar o nome do cliente do relacionamento (vinculado)
-      let nome = "";
-      // Se modalType === editar, tente pegar da linha do relacionamento
-      if (modalType === "editar") {
-        const relacionamento = empresasClientes.find(
-          (rel) => rel.empresa_cliente_id === empresaCliente
-        );
-        if (relacionamento && relacionamento.empresa_cliente?.nome) {
-          nome = relacionamento.empresa_cliente.nome;
-        }
-      }
-      // Se modalType === novo, tente pegar da lista de todas empresas (cliente não vinculado)
-      if (!nome) {
-        const cliente = empresasClientesAll.find((c) => c.id === empresaCliente);
-        if (cliente) nome = cliente.nome;
-      }
-      if (nome) {
-        setEmpresasClientesOptions((prev) => [
-          ...prev,
-          { id: empresaCliente, nome, tipo: "cliente" },
-        ]);
-      }
-    }
-  }, [modalOpen, empresaCliente, empresasClientes, empresasClientesAll, empresasClientesOptions, modalType]);
+  const filteredClientesVinculados = empresasClientes.filter(
+    (cliente) =>
+      cliente.empresa_cliente?.nome
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
+      cliente.empresa_proprietaria?.nome
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase())
+  );
 
-  // handleEditar: Adiciona cliente ao select se não existir
+  // Clientes não vinculados: todos do tipo cliente que não estão em nenhum vínculo
+  const clientesVinculadosIds = new Set(
+    empresasClientes.map((c) => c.empresa_cliente_id)
+  );
+  const filteredClientesNaoVinculados = empresasClientesAll.filter(
+    (cliente) =>
+      !clientesVinculadosIds.has(cliente.id) &&
+      cliente.nome.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // --- CORREÇÃO MODAL: adiciona cliente da linha à lista de opções se não existir ---
   const handleEditar = (relacionamento: any) => {
     const clienteId = relacionamento.empresa_cliente_id;
     const nome = relacionamento.empresa_cliente?.nome;
