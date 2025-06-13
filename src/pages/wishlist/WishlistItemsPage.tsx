@@ -20,8 +20,9 @@ type EmpresaOption = {
   tipo: string;
 };
 
-const safeString = (v: any) => (typeof v === "string" ? v : v === undefined || v === null ? "" : String(v));
-const safeNumber = (v: any, fallback: number = 3) =>
+// Helpers para garantir valores seguros
+const toStringSafe = (v: any) => (typeof v === "string" ? v : v == null ? "" : String(v));
+const toNumberSafe = (v: any, fallback: number = 3) =>
   typeof v === "number" && !isNaN(v) ? v : fallback;
 
 const WishlistItemsPage: React.FC = () => {
@@ -57,44 +58,50 @@ const WishlistItemsPage: React.FC = () => {
 
   // Buscar empresas para o formulário
   useEffect(() => {
+    if (!modalOpen) return;
     const fetchEmpresas = async () => {
       const { data, error } = await supabase
         .from("empresas")
         .select("id,nome,tipo")
         .order("nome");
-
       if (!error && data) {
         setEmpresas(data);
         setEmpresasClientes(data.filter((e: EmpresaOption) => e.tipo === "cliente"));
-        setEmpresasParceiros(data.filter((e: EmpresaOption) => e.tipo === "parceiro" || e.tipo === "intragrupo"));
+        setEmpresasParceiros(data.filter(
+          (e: EmpresaOption) => e.tipo === "parceiro" || e.tipo === "intragrupo"
+        ));
+      } else if (error) {
+        toast({ title: "Erro ao buscar empresas", description: error.message, variant: "destructive" });
       }
     };
-    if (modalOpen) fetchEmpresas();
-  }, [modalOpen]);
+    fetchEmpresas();
+  }, [modalOpen, toast]);
 
   // Preencher formulário ao editar
   useEffect(() => {
     if (editingItem) {
-      // Log para debug de campos undefined:
+      // Debug log para analisar valores undefined:
       if (
         editingItem.empresa_interessada_id === undefined ||
         editingItem.empresa_desejada_id === undefined ||
         editingItem.empresa_proprietaria_id === undefined
       ) {
-        // eslint-disable-next-line no-console
-        console.error("Campo de empresa está undefined ao editar!", editingItem);
+        if (process.env.NODE_ENV === "development") {
+          // eslint-disable-next-line no-console
+          console.error("Campo de empresa está undefined ao editar!", editingItem);
+        }
       }
-      setEmpresaInteressada(safeString(editingItem.empresa_interessada_id));
-      setEmpresaDesejada(safeString(editingItem.empresa_desejada_id));
-      setEmpresaProprietaria(safeString(editingItem.empresa_proprietaria_id));
-      setPrioridade(safeNumber(editingItem.prioridade, 3));
-      setMotivo(safeString(editingItem.motivo));
-      setObservacoes(safeString(editingItem.observacoes));
+      setEmpresaInteressada(toStringSafe(editingItem.empresa_interessada_id));
+      setEmpresaDesejada(toStringSafe(editingItem.empresa_desejada_id));
+      setEmpresaProprietaria(toStringSafe(editingItem.empresa_proprietaria_id));
+      setPrioridade(toNumberSafe(editingItem.prioridade, 3));
+      setMotivo(toStringSafe(editingItem.motivo));
+      setObservacoes(toStringSafe(editingItem.observacoes));
     } else {
       resetModal();
     }
     // eslint-disable-next-line
-  }, [editingItem, modalOpen]);
+  }, [editingItem]);
 
   const handleCriarNovoCliente = async () => {
     if (!novoClienteNome.trim()) return;
@@ -182,8 +189,10 @@ const WishlistItemsPage: React.FC = () => {
         description: err?.message || "Erro inesperado",
         variant: "destructive",
       });
-      // eslint-disable-next-line no-console
-      console.error("Erro ao salvar wishlist item:", err);
+      if (process.env.NODE_ENV === "development") {
+        // eslint-disable-next-line no-console
+        console.error("Erro ao salvar wishlist item:", err);
+      }
     } finally {
       setModalLoading(false);
     }
@@ -506,7 +515,7 @@ const WishlistItemsPage: React.FC = () => {
                     {getStatusLabel(item.status)}
                   </Badge>
                   <div className="flex items-center">
-                    {getPriorityStars(safeNumber(item.prioridade, 3))}
+                    {getPriorityStars(toNumberSafe(item.prioridade, 3))}
                   </div>
                 </div>
               </div>
@@ -520,21 +529,18 @@ const WishlistItemsPage: React.FC = () => {
                     ? format(new Date(item.data_solicitacao), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
                     : ""}
                 </div>
-
                 {item.motivo && (
                   <div>
                     <p className="text-sm font-medium">Motivo:</p>
                     <p className="text-sm text-muted-foreground">{item.motivo}</p>
                   </div>
                 )}
-
                 {item.observacoes && (
                   <div>
                     <p className="text-sm font-medium">Observações:</p>
                     <p className="text-sm text-muted-foreground">{item.observacoes}</p>
                   </div>
                 )}
-
                 <div className="flex justify-end gap-2 pt-2">
                   {item.status === "pendente" && (
                     <>
@@ -566,7 +572,6 @@ const WishlistItemsPage: React.FC = () => {
             </CardContent>
           </Card>
         ))}
-
         {filteredItems.length === 0 && (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
