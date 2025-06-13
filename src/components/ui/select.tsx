@@ -2,9 +2,11 @@ import * as React from "react"
 import * as SelectPrimitive from "@radix-ui/react-select"
 import { Check, ChevronDown, ChevronUp } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { logControlledField } from "@/lib/logControlledField"
 
 // Proteção global: value nunca pode ser undefined/null
-function safeValue(value: any) {
+function safeValue(value: any, props?: any) {
+  logControlledField("Select", value, props || {});
   return value === undefined || value === null ? "" : value
 }
 
@@ -117,7 +119,7 @@ const SelectItem = React.forwardRef<
 >(({ className, children, value, ...props }, ref) => (
   <SelectPrimitive.Item
     ref={ref}
-    value={safeValue(value)}
+    value={safeValue(value, props)}
     className={cn(
       "relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
       className
