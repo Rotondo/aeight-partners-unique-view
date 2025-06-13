@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Loader2 } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
 
 interface MaterialPreviewModalProps {
   open: boolean;
@@ -11,7 +10,7 @@ interface MaterialPreviewModalProps {
   tipo_arquivo: string;
 }
 
-const BUCKET_NAME = 'materiais';
+const BUCKET_URL = "https://amuadbftctnmckncgeua.supabase.co/storage/v1/object/public/materiais/";
 
 function sanitizePath(path: string | undefined | null): string | null {
   if (!path || typeof path !== 'string') return null;
@@ -38,14 +37,8 @@ const MaterialPreviewModal: React.FC<MaterialPreviewModalProps> = ({
 
     if (sanitizedPath) {
       setLoading(true);
-      supabase.storage
-        .from(BUCKET_NAME)
-        .createSignedUrl(sanitizedPath, 3600)
-        .then(({ data }) => {
-          if (data?.signedUrl) setPublicUrl(data.signedUrl);
-          else setPublicUrl(null);
-        })
-        .finally(() => setLoading(false));
+      setPublicUrl(BUCKET_URL + sanitizedPath);
+      setLoading(false);
     } else {
       setPublicUrl(null);
     }
@@ -102,12 +95,6 @@ const MaterialPreviewModal: React.FC<MaterialPreviewModalProps> = ({
       </div>
     );
   };
-
-  // Debug: mostrar caminho do arquivo e url gerada
-  useEffect(() => {
-    // eslint-disable-next-line no-console
-    console.log('MaterialPreviewModal:', { arquivo_upload, sanitized: sanitizePath(arquivo_upload), publicUrl });
-  }, [arquivo_upload, publicUrl]);
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
