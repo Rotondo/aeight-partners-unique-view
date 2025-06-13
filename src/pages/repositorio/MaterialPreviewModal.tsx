@@ -42,7 +42,7 @@ const MaterialPreviewModal: React.FC<MaterialPreviewModalProps> = ({
       supabase.storage
         .from(BUCKET_NAME)
         .createSignedUrl(sanitizedPath, 3600)
-        .then(({ data, error }) => {
+        .then(({ data }) => {
           if (data?.signedUrl) setPublicUrl(data.signedUrl);
           else setPublicUrl(null);
         })
@@ -103,10 +103,13 @@ const MaterialPreviewModal: React.FC<MaterialPreviewModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="max-w-3xl" aria-describedby="material-preview-desc">
         <DialogHeader>
           <DialogTitle>Pré-visualização: {nome}</DialogTitle>
         </DialogHeader>
+        <div id="material-preview-desc" className="sr-only">
+          Pré-visualização do arquivo selecionado.
+        </div>
         <div className="p-2 min-h-[200px] flex items-center justify-center">
           {loading ? (
             <Loader2 className="animate-spin h-8 w-8 text-gray-500" />
