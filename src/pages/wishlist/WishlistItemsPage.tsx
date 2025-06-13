@@ -20,10 +20,12 @@ type EmpresaOption = {
   tipo: string;
 };
 
-// Helpers para garantir valores seguros
-const toStringSafe = (v: any) => (typeof v === "string" ? v : v == null ? "" : String(v));
-const toNumberSafe = (v: any, fallback: number = 3) =>
-  typeof v === "number" && !isNaN(v) ? v : fallback;
+function toSafeString(val: unknown): string {
+  return typeof val === "string" ? val : val == null ? "" : String(val);
+}
+function toSafeNumber(val: unknown, fallback = 3): number {
+  return typeof val === "number" && !isNaN(val) ? val : fallback;
+}
 
 const WishlistItemsPage: React.FC = () => {
   const {
@@ -34,7 +36,7 @@ const WishlistItemsPage: React.FC = () => {
     updateWishlistItem,
   } = useWishlist();
 
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<WishlistStatus | "all">("all");
 
   // Modal state
@@ -80,23 +82,12 @@ const WishlistItemsPage: React.FC = () => {
   // Preencher formulário ao editar
   useEffect(() => {
     if (editingItem) {
-      // Debug log para analisar valores undefined:
-      if (
-        editingItem.empresa_interessada_id === undefined ||
-        editingItem.empresa_desejada_id === undefined ||
-        editingItem.empresa_proprietaria_id === undefined
-      ) {
-        if (process.env.NODE_ENV === "development") {
-          // eslint-disable-next-line no-console
-          console.error("Campo de empresa está undefined ao editar!", editingItem);
-        }
-      }
-      setEmpresaInteressada(toStringSafe(editingItem.empresa_interessada_id));
-      setEmpresaDesejada(toStringSafe(editingItem.empresa_desejada_id));
-      setEmpresaProprietaria(toStringSafe(editingItem.empresa_proprietaria_id));
-      setPrioridade(toNumberSafe(editingItem.prioridade, 3));
-      setMotivo(toStringSafe(editingItem.motivo));
-      setObservacoes(toStringSafe(editingItem.observacoes));
+      setEmpresaInteressada(toSafeString(editingItem.empresa_interessada_id));
+      setEmpresaDesejada(toSafeString(editingItem.empresa_desejada_id));
+      setEmpresaProprietaria(toSafeString(editingItem.empresa_proprietaria_id));
+      setPrioridade(toSafeNumber(editingItem.prioridade, 3));
+      setMotivo(toSafeString(editingItem.motivo));
+      setObservacoes(toSafeString(editingItem.observacoes));
     } else {
       resetModal();
     }
@@ -515,7 +506,7 @@ const WishlistItemsPage: React.FC = () => {
                     {getStatusLabel(item.status)}
                   </Badge>
                   <div className="flex items-center">
-                    {getPriorityStars(toNumberSafe(item.prioridade, 3))}
+                    {getPriorityStars(toSafeNumber(item.prioridade, 3))}
                   </div>
                 </div>
               </div>
