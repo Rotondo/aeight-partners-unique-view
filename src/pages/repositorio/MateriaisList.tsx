@@ -107,6 +107,16 @@ const MateriaisList: React.FC<MateriaisListProps> = ({
     return String(value);
   }
 
+  // Para debug: logar previewMaterial ao abrir modal
+  const handlePreview = (material: RepositorioMaterial) => {
+    // Garanta que está passando o campo correto para o modal
+    // Se você recebe arquivo_upload_str, troque abaixo para arquivo_upload_str
+    // Exemplo: arquivo_upload={material.arquivo_upload_str || ''}
+    setPreviewMaterial(material);
+    // eslint-disable-next-line no-console
+    console.log('Pré-visualizar material:', material);
+  };
+
   if (isLoading) {
     return <div>Carregando materiais...</div>;
   }
@@ -265,7 +275,7 @@ const MateriaisList: React.FC<MateriaisListProps> = ({
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setPreviewMaterial(material)}
+                        onClick={() => handlePreview(material)}
                       >
                         <Eye className="h-4 w-4" />
                         <span className="ml-1">Visualizar</span>
@@ -307,7 +317,15 @@ const MateriaisList: React.FC<MateriaisListProps> = ({
           open={!!previewMaterial}
           onClose={() => setPreviewMaterial(null)}
           nome={previewMaterial.nome}
-          arquivo_upload={previewMaterial.arquivo_upload || ''}
+          // Se o campo correto for arquivo_upload_str, troque aqui!
+          arquivo_upload={
+            // @ts-ignore
+            previewMaterial.arquivo_upload_str
+              // @ts-ignore
+              ? previewMaterial.arquivo_upload_str
+              // @ts-ignore
+              : previewMaterial.arquivo_upload || ''
+          }
           tipo_arquivo={previewMaterial.tipo_arquivo}
         />
       )}
