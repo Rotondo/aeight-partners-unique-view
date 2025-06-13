@@ -1,5 +1,3 @@
-// editar arquivo src/components/ui/select.tsx
-
 import * as React from "react"
 import * as SelectPrimitive from "@radix-ui/react-select"
 import { Check, ChevronDown, ChevronUp } from "lucide-react"
@@ -10,18 +8,8 @@ function safeValue(value: any) {
   return value === undefined || value === null ? "" : value
 }
 
-const Select = Object.assign(
-  React.forwardRef<
-    React.ElementRef<typeof SelectPrimitive.Root>,
-    React.ComponentPropsWithoutRef<typeof SelectPrimitive.Root>
-  >(({ children, ...props }, ref) => (
-    <SelectPrimitive.Root {...props}>{children}</SelectPrimitive.Root>
-  )),
-  { displayName: "Select" }
-)
-
+const Select = SelectPrimitive.Root
 const SelectGroup = SelectPrimitive.Group
-
 const SelectValue = SelectPrimitive.Value
 
 const SelectTrigger = React.forwardRef<
