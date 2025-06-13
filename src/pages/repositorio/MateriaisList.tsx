@@ -118,7 +118,7 @@ const MateriaisList: React.FC<MateriaisListProps> = ({
     console.log('Pré-visualizar material:', material);
   };
 
-  // Exclusão de arquivo
+  // Exclusão de arquivo e registro
   const handleDelete = async (material: RepositorioMaterial) => {
     if (deletingMaterialId) return; // previne múltiplos cliques
 
@@ -127,7 +127,7 @@ const MateriaisList: React.FC<MateriaisListProps> = ({
     }
     setDeletingMaterialId(material.id);
     try {
-      // Caminho do arquivo no bucket
+      // Caminho do arquivo no bucket (exatamente igual ao preview)
       const filePath =
         material.arquivo_upload && material.arquivo_upload.startsWith('\\x')
           ? hexToUtf8String(material.arquivo_upload)
@@ -139,17 +139,37 @@ const MateriaisList: React.FC<MateriaisListProps> = ({
         return;
       }
 
-      const { error } = await supabase.storage
+      // 1. Remove do Storage
+      const { error: storageError } = await supabase.storage
         .from(BUCKET_NAME)
         .remove([filePath]);
 
-      if (error) {
-        alert('Erro ao excluir o arquivo: ' + error.message);
+      if (storageError) {
+        alert('Erro ao excluir o arquivo do Storage:\n' + storageError.message);
+        // eslint-disable-next-line no-console
+        console.error('Erro ao excluir do Storage:', storageError);
+        setDeletingMaterialId(null);
+        return;
+      }
+
+      // 2. Remove registro do banco
+      const { error: dbError } = await supabase
+        .from('repositorio_materiais')
+        .delete()
+        .eq('id', material.id);
+
+      if (dbError) {
+        alert('Arquivo excluído do Storage, mas houve erro ao excluir o registro do banco:\n' + dbError.message);
+        // eslint-disable-next-line no-console
+        console.error('Erro ao excluir do banco:', dbError);
       } else {
+        alert('Arquivo excluído com sucesso!');
         onRefresh();
       }
     } catch (error: any) {
-      alert('Erro ao excluir o arquivo: ' + error.message);
+      alert('Erro inesperado ao excluir o arquivo: ' + (error?.message || error));
+      // eslint-disable-next-line no-console
+      console.error('Erro inesperado:', error);
     } finally {
       setDeletingMaterialId(null);
     }
