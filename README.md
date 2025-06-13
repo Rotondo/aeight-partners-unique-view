@@ -26,7 +26,8 @@ Ela está dividida em três macrotemas interligados para facilitar consulta, man
 - [3. Onboarding & Primeiros Passos](#3-onboarding--primeiros-passos)
 - [4. Roadmap de Documentação](#4-roadmap-de-documentação)
 - [5. FAQ Rápido & Links Úteis](#5-faq-rápido--links-úteis)
-- [6. Licença, Atualização e Contato](#6-licença-atualização-e-contato)
+- [6. Wishlist & Networking](#6-wishlist--networking)
+- [7. Licença, Atualização e Contato](#7-licença-atualização-e-contato)
 
 ---
 
@@ -42,6 +43,7 @@ O sistema foi desenhado para ser modular, seguro, auditável, facilmente expans�
 - **Indicadores estratégicos**: dashboards, KPIs, métricas configuráveis, análises e visualizações.
 - **Segurança**: autenticação, RBAC, RLS granular, políticas de storage e banco, LGPD-ready.
 - **DevOps**: deploy automatizado, versionamento, integração contínua, variáveis seguras, monitoramento e logs.
+- **Wishlist & Networking**: gestão de interesses, solicitações e apresentações entre empresas, acelerando networking estratégico e geração de oportunidades.
 
 ---
 
@@ -55,6 +57,7 @@ O sistema foi desenhado para ser modular, seguro, auditável, facilmente expans�
 - Autenticação, RBAC, políticas globais, padrões de código, exemplos reais
 - Troubleshooting frontend/backend/devops
 - Roadmap técnico, upgrades, integração futura
+- Wishlist & Networking: fluxos detalhados, exemplos, integrações (ver seção própria)
 - Referências cruzadas para banco, storage e políticas (link para README.dados.md)
 
 ### 🔗 [README.dados.md](./README.dados.md)  
@@ -64,6 +67,7 @@ O sistema foi desenhado para ser modular, seguro, auditável, facilmente expans�
 - Policies RLS detalhadas, policies de Storage Supabase, triggers, exemplos SQL
 - Gestão completa de materiais (upload, preview, exclusão, versionamento, auditoria)
 - Scripts de backup/restore, versionamento de dados, troubleshooting de banco/storage
+- Wishlist & Networking: modelagem, fluxo de dados, auditoria e exemplos
 - FAQ minucioso, dicas de expansão, integração com frontend/backend
 
 ### 🔗 Este README.md  
@@ -76,11 +80,11 @@ O sistema foi desenhado para ser modular, seguro, auditável, facilmente expans�
 ### 3.1. Para desenvolvedores de frontend/backend/devops
 
 1. Leia [README.sistema.md](./README.sistema.md) para arquitetura, instalação, scripts, integração, padrões de código, troubleshooting.
-2. Consulte [README.dados.md](./README.dados.md) sempre que precisar de detalhes sobre banco, políticas, Storage, fluxos de materiais e auditoria.
+2. Consulte [README.dados.md](./README.dados.md) sempre que precisar de detalhes sobre banco, políticas, Storage, fluxos de materiais, auditoria, wishlist/networking.
 
 ### 3.2. Para DBAs, devs de dados, administradores
 
-1. Leia [README.dados.md](./README.dados.md) para modelagem completa, policies, auditoria, storage, fluxos de materiais e scripts.
+1. Leia [README.dados.md](./README.dados.md) para modelagem completa, policies, auditoria, storage, wishlist/networking e scripts.
 2. Consulte [README.sistema.md](./README.sistema.md) para integração com frontend/backend/devops.
 
 ### 3.3. Onboarding geral
@@ -109,6 +113,7 @@ Todo novo fluxo, feature, refatoração, policy, script ou decisão arquitetural
 - Policies, scripts, exemplos de código, integrações
 - FAQ aprofundado e troubleshooting real
 - Referências cruzadas para outros macrotemas
+- Wishlist & Networking: sempre atualizado com exemplos de uso e políticas
 
 ---
 
@@ -134,6 +139,9 @@ Todo novo fluxo, feature, refatoração, policy, script ou decisão arquitetural
 - **Como auditar operações (inclusive exclusão de arquivos)?**  
   [README.dados.md > Auditoria, Logs e Versionamento]
 
+- **Como funciona a Wishlist & Networking?**  
+  [README.sistema.md > Wishlist & Networking], [README.dados.md > Wishlist & Networking]
+
 - **Como contribuir ou abrir issues?**  
   [README.md > Links úteis]
 
@@ -146,7 +154,26 @@ Todo novo fluxo, feature, refatoração, policy, script ou decisão arquitetural
 
 ---
 
-## 6. Licença, Atualização e Contato
+## 6. Wishlist & Networking
+
+### Resumo
+
+Funcionalidade estratégica que permite empresas solicitarem conexões, facilitarem apresentações, aprovarem/rejeitarem solicitações e converterem apresentações em oportunidades.
+
+**Fluxos:**
+- Solicitação de wishlist: empresa interessada → proprietária → desejada
+- Aprovação/rejeição pela proprietária
+- Facilitação de apresentação (email, reunião, evento, digital, outro)
+- Conversão da apresentação em oportunidade
+- Histórico completo, filtros, controle de status, auditoria
+
+**Referências detalhadas:**  
+- [README.sistema.md > Wishlist & Networking](./README.sistema.md#wishlist--networking)
+- [README.dados.md > Wishlist & Networking](./README.dados.md#wishlist--networking)
+
+---
+
+## 7. Licença, Atualização e Contato
 
 - **Licença:**  
   Este projeto é **privado** e de uso exclusivo da **Aeight Partners**.  
