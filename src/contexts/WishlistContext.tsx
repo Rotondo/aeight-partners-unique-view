@@ -1,6 +1,14 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
-import { EmpresaCliente, WishlistItem, WishlistApresentacao, WishlistStats, WishlistStatus, StatusApresentacao, TipoApresentacao } from "@/types";
+import {
+  EmpresaCliente,
+  WishlistItem,
+  WishlistApresentacao,
+  WishlistStats,
+  WishlistStatus,
+  StatusApresentacao,
+  TipoApresentacao,
+} from "@/types";
 import { toast } from "@/hooks/use-toast";
 
 interface WishlistContextType {
@@ -16,21 +24,44 @@ interface WishlistContextType {
   fetchWishlistItems: () => Promise<void>;
   fetchApresentacoes: () => Promise<void>;
   fetchStats: () => Promise<void>;
-  
+
   // Empresa Cliente
-  addEmpresaCliente: (data: Omit<EmpresaCliente, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
-  updateEmpresaCliente: (id: string, data: Partial<EmpresaCliente>) => Promise<void>;
+  addEmpresaCliente: (
+    data: Omit<EmpresaCliente, "id" | "created_at" | "updated_at">
+  ) => Promise<void>;
+  updateEmpresaCliente: (
+    id: string,
+    data: Partial<EmpresaCliente>
+  ) => Promise<void>;
   deleteEmpresaCliente: (id: string) => Promise<void>;
-  
+
   // Wishlist Item
-  addWishlistItem: (data: Omit<WishlistItem, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
-  updateWishlistItem: (id: string, data: Partial<WishlistItem>) => Promise<void>;
+  addWishlistItem: (
+    data: Omit<WishlistItem, "id" | "created_at" | "updated_at">
+  ) => Promise<void>;
+  updateWishlistItem: (
+    id: string,
+    data: Partial<WishlistItem>
+  ) => Promise<void>;
   deleteWishlistItem: (id: string) => Promise<void>;
-  
+
   // Apresentação
-  addApresentacao: (data: Omit<WishlistApresentacao, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
-  updateApresentacao: (id: string, data: Partial<WishlistApresentacao>) => Promise<void>;
+  addApresentacao: (
+    data: Omit<WishlistApresentacao, "id" | "created_at" | "updated_at">
+  ) => Promise<void>;
+  updateApresentacao: (
+    id: string,
+    data: Partial<WishlistApresentacao>
+  ) => Promise<void>;
   convertToOportunidade: (itemId: string, oportunidadeData: any) => Promise<void>;
+
+  // NOVOS MÉTODOS
+  solicitarApresentacao: (args: {
+    empresa_cliente_id: string;
+    empresa_proprietaria_id: string;
+    relacionamento_id: string;
+    observacoes?: string;
+  }) => Promise<void>;
 }
 
 const WishlistContext = createContext<WishlistContextType | undefined>(undefined);
@@ -43,7 +74,9 @@ export const useWishlist = () => {
   return context;
 };
 
-export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const [empresasClientes, setEmpresasClientes] = useState<EmpresaCliente[]>([]);
   const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>([]);
   const [apresentacoes, setApresentacoes] = useState<WishlistApresentacao[]>([]);
@@ -56,11 +89,13 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setLoading(true);
       const { data, error } = await supabase
         .from("empresa_clientes")
-        .select(`
+        .select(
+          `
           *,
           empresa_proprietaria:empresas!empresa_clientes_empresa_proprietaria_id_fkey(*),
           empresa_cliente:empresas!empresa_clientes_empresa_cliente_id_fkey(*)
-        `)
+        `
+        )
         .eq("status", true)
         .order("created_at", { ascending: false });
 
@@ -84,22 +119,24 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setLoading(true);
       const { data, error } = await supabase
         .from("wishlist_items")
-        .select(`
+        .select(
+          `
           *,
           empresa_interessada:empresas!wishlist_items_empresa_interessada_id_fkey(*),
           empresa_desejada:empresas!wishlist_items_empresa_desejada_id_fkey(*),
           empresa_proprietaria:empresas!wishlist_items_empresa_proprietaria_id_fkey(*)
-        `)
+        `
+        )
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      
+
       // Garantir que os tipos estão corretos
-      const typedData = (data || []).map(item => ({
+      const typedData = (data || []).map((item) => ({
         ...item,
-        status: item.status as WishlistStatus
+        status: item.status as WishlistStatus,
       }));
-      
+
       setWishlistItems(typedData);
     } catch (error) {
       console.error("Erro ao buscar wishlist items:", error);
@@ -119,7 +156,8 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setLoading(true);
       const { data, error } = await supabase
         .from("wishlist_apresentacoes")
-        .select(`
+        .select(
+          `
           *,
           empresa_facilitadora:empresas(*),
           wishlist_item:wishlist_items(
@@ -127,22 +165,25 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             empresa_interessada:empresas!wishlist_items_empresa_interessada_id_fkey(*),
             empresa_desejada:empresas!wishlist_items_empresa_desejada_id_fkey(*)
           )
-        `)
+        `
+        )
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      
+
       // Garantir que os tipos estão corretos e corrigir o tipo do status do wishlist_item
-      const typedData = (data || []).map(item => ({
+      const typedData = (data || []).map((item) => ({
         ...item,
         tipo_apresentacao: item.tipo_apresentacao as TipoApresentacao,
         status_apresentacao: item.status_apresentacao as StatusApresentacao,
-        wishlist_item: item.wishlist_item ? {
-          ...item.wishlist_item,
-          status: item.wishlist_item.status as WishlistStatus
-        } : null
+        wishlist_item: item.wishlist_item
+          ? {
+              ...item.wishlist_item,
+              status: item.wishlist_item.status as WishlistStatus,
+            }
+          : null,
       }));
-      
+
       setApresentacoes(typedData);
     } catch (error) {
       console.error("Erro ao buscar apresentações:", error);
@@ -162,7 +203,7 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       // Buscar estatísticas básicas
       const [wishlistData, apresentacoesData] = await Promise.all([
         supabase.from("wishlist_items").select("*"),
-        supabase.from("wishlist_apresentacoes").select("*")
+        supabase.from("wishlist_apresentacoes").select("*"),
       ]);
 
       if (wishlistData.error) throw wishlistData.error;
@@ -173,12 +214,20 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       const statsData: WishlistStats = {
         totalSolicitacoes: wishlist.length,
-        solicitacoesPendentes: wishlist.filter(item => item.status === "pendente").length,
-        solicitacoesAprovadas: wishlist.filter(item => item.status === "aprovado").length,
-        apresentacoesRealizadas: apresentacoes.filter(item => item.status_apresentacao === "realizada").length,
-        conversaoOportunidades: apresentacoes.filter(item => item.converteu_oportunidade).length,
+        solicitacoesPendentes: wishlist.filter(
+          (item) => item.status === "pendente"
+        ).length,
+        solicitacoesAprovadas: wishlist.filter(
+          (item) => item.status === "aprovado"
+        ).length,
+        apresentacoesRealizadas: apresentacoes.filter(
+          (item) => item.status_apresentacao === "realizada"
+        ).length,
+        conversaoOportunidades: apresentacoes.filter(
+          (item) => item.converteu_oportunidade
+        ).length,
         empresasMaisDesejadas: [],
-        facilitacoesPorParceiro: []
+        facilitacoesPorParceiro: [],
       };
 
       setStats(statsData);
@@ -188,19 +237,21 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   // CRUD Functions
-  const addEmpresaCliente = async (data: Omit<EmpresaCliente, 'id' | 'created_at' | 'updated_at'>) => {
+  const addEmpresaCliente = async (
+    data: Omit<EmpresaCliente, "id" | "created_at" | "updated_at">
+  ) => {
     try {
       const { error } = await supabase
         .from("empresa_clientes")
         .insert([data]);
 
       if (error) throw error;
-      
+
       toast({
         title: "Sucesso",
         description: "Empresa cliente adicionada com sucesso",
       });
-      
+
       await fetchEmpresasClientes();
     } catch (error) {
       console.error("Erro ao adicionar empresa cliente:", error);
@@ -212,7 +263,10 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   };
 
-  const updateEmpresaCliente = async (id: string, data: Partial<EmpresaCliente>) => {
+  const updateEmpresaCliente = async (
+    id: string,
+    data: Partial<EmpresaCliente>
+  ) => {
     try {
       const { error } = await supabase
         .from("empresa_clientes")
@@ -220,12 +274,12 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         .eq("id", id);
 
       if (error) throw error;
-      
+
       toast({
         title: "Sucesso",
         description: "Empresa cliente atualizada com sucesso",
       });
-      
+
       await fetchEmpresasClientes();
     } catch (error) {
       console.error("Erro ao atualizar empresa cliente:", error);
@@ -245,12 +299,12 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         .eq("id", id);
 
       if (error) throw error;
-      
+
       toast({
         title: "Sucesso",
         description: "Empresa cliente removida com sucesso",
       });
-      
+
       await fetchEmpresasClientes();
     } catch (error) {
       console.error("Erro ao remover empresa cliente:", error);
@@ -262,19 +316,21 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   };
 
-  const addWishlistItem = async (data: Omit<WishlistItem, 'id' | 'created_at' | 'updated_at'>) => {
+  const addWishlistItem = async (
+    data: Omit<WishlistItem, "id" | "created_at" | "updated_at">
+  ) => {
     try {
       const { error } = await supabase
         .from("wishlist_items")
         .insert([data]);
 
       if (error) throw error;
-      
+
       toast({
         title: "Sucesso",
         description: "Item adicionado à wishlist com sucesso",
       });
-      
+
       await fetchWishlistItems();
     } catch (error) {
       console.error("Erro ao adicionar item à wishlist:", error);
@@ -286,7 +342,10 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   };
 
-  const updateWishlistItem = async (id: string, data: Partial<WishlistItem>) => {
+  const updateWishlistItem = async (
+    id: string,
+    data: Partial<WishlistItem>
+  ) => {
     try {
       const { error } = await supabase
         .from("wishlist_items")
@@ -294,12 +353,12 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         .eq("id", id);
 
       if (error) throw error;
-      
+
       toast({
         title: "Sucesso",
         description: "Item da wishlist atualizado com sucesso",
       });
-      
+
       await fetchWishlistItems();
     } catch (error) {
       console.error("Erro ao atualizar item da wishlist:", error);
@@ -319,12 +378,12 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         .eq("id", id);
 
       if (error) throw error;
-      
+
       toast({
         title: "Sucesso",
         description: "Item removido da wishlist com sucesso",
       });
-      
+
       await fetchWishlistItems();
     } catch (error) {
       console.error("Erro ao remover item da wishlist:", error);
@@ -336,19 +395,21 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   };
 
-  const addApresentacao = async (data: Omit<WishlistApresentacao, 'id' | 'created_at' | 'updated_at'>) => {
+  const addApresentacao = async (
+    data: Omit<WishlistApresentacao, "id" | "created_at" | "updated_at">
+  ) => {
     try {
       const { error } = await supabase
         .from("wishlist_apresentacoes")
         .insert([data]);
 
       if (error) throw error;
-      
+
       toast({
         title: "Sucesso",
         description: "Apresentação registrada com sucesso",
       });
-      
+
       await fetchApresentacoes();
     } catch (error) {
       console.error("Erro ao registrar apresentação:", error);
@@ -360,7 +421,10 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   };
 
-  const updateApresentacao = async (id: string, data: Partial<WishlistApresentacao>) => {
+  const updateApresentacao = async (
+    id: string,
+    data: Partial<WishlistApresentacao>
+  ) => {
     try {
       const { error } = await supabase
         .from("wishlist_apresentacoes")
@@ -368,12 +432,12 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         .eq("id", id);
 
       if (error) throw error;
-      
+
       toast({
         title: "Sucesso",
         description: "Apresentação atualizada com sucesso",
       });
-      
+
       await fetchApresentacoes();
     } catch (error) {
       console.error("Erro ao atualizar apresentação:", error);
@@ -385,7 +449,10 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   };
 
-  const convertToOportunidade = async (itemId: string, oportunidadeData: any) => {
+  const convertToOportunidade = async (
+    itemId: string,
+    oportunidadeData: any
+  ) => {
     try {
       // Primeiro criar a oportunidade
       const { data: oportunidade, error: oportunidadeError } = await supabase
@@ -399,9 +466,9 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       // Depois atualizar o status do wishlist item
       const { error: wishlistError } = await supabase
         .from("wishlist_items")
-        .update({ 
+        .update({
           status: "convertido",
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
         .eq("id", itemId);
 
@@ -411,13 +478,53 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         title: "Sucesso",
         description: "Item convertido para oportunidade com sucesso",
       });
-      
+
       await Promise.all([fetchWishlistItems(), fetchApresentacoes()]);
     } catch (error) {
       console.error("Erro ao converter para oportunidade:", error);
       toast({
         title: "Erro",
         description: "Erro ao converter para oportunidade",
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
+  // NOVO: Solicitar apresentação para relacionamento empresa_cliente
+  const solicitarApresentacao = async ({
+    empresa_cliente_id,
+    empresa_proprietaria_id,
+    relacionamento_id,
+    observacoes,
+  }: {
+    empresa_cliente_id: string;
+    empresa_proprietaria_id: string;
+    relacionamento_id: string;
+    observacoes?: string;
+  }): Promise<void> => {
+    try {
+      const { error } = await supabase.from("wishlist_apresentacoes").insert([
+        {
+          empresa_cliente_id,
+          empresa_proprietaria_id,
+          relacionamento_id,
+          observacoes: observacoes || null,
+          status_apresentacao: "pendente",
+          created_at: new Date().toISOString(),
+        },
+      ]);
+      if (error) throw error;
+      toast({
+        title: "Solicitação enviada",
+        description: "Apresentação solicitada com sucesso",
+      });
+      await fetchApresentacoes();
+    } catch (error) {
+      console.error("Erro ao solicitar apresentação:", error);
+      toast({
+        title: "Erro",
+        description: "Erro ao solicitar apresentação",
         variant: "destructive",
       });
       throw error;
@@ -451,7 +558,12 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     addApresentacao,
     updateApresentacao,
     convertToOportunidade,
+    solicitarApresentacao,
   };
 
-  return <WishlistContext.Provider value={value}>{children}</WishlistContext.Provider>;
+  return (
+    <WishlistContext.Provider value={value}>
+      {children}
+    </WishlistContext.Provider>
+  );
 };
