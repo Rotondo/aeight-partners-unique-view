@@ -1,9 +1,9 @@
-# Aeight Partners Unique View — Dados, Banco, Storage, Materiais, Policies e Auditoria
+# Aeight Partners Unique View — Dados, Banco, Storage, Materiais, Policies, Wishlist e Auditoria
 
 ---
 
 **Este documento cobre DE FORMA EXAUSTIVA todos os aspectos de dados do sistema:**  
-Modelagem de banco, enums, relacionamentos, policies RLS, Supabase Storage, fluxos de materiais, triggers, auditoria, versionamento, troubleshooting, scripts, FAQ e referências cruzadas para garantir rastreabilidade, manutenção e evolução.
+Modelagem de banco, enums, relacionamentos, policies RLS, Supabase Storage, fluxos de materiais, triggers, auditoria, versionamento, troubleshooting, scripts, FAQ e referências cruzadas para garantir rastreabilidade, manutenção, evolução e governança de dados.
 
 ---
 
@@ -14,21 +14,26 @@ Modelagem de banco, enums, relacionamentos, policies RLS, Supabase Storage, flux
     - [Campos, tipos e constraints](#campos-tipos-e-constraints)
     - [Enums globais](#enums-globais)
     - [Relacionamentos e diagrama textual](#relacionamentos-e-diagrama-textual)
-2. [Fluxos e Políticas de Segurança](#fluxos-e-políticas-de-segurança)
+2. [Wishlist & Networking](#wishlist--networking)
+    - [Modelagem de Wishlist](#modelagem-de-wishlist)
+    - [Enums e integrações](#enums-e-integrações)
+    - [Exemplos de queries de wishlist](#exemplos-de-queries-de-wishlist)
+    - [Auditoria e versionamento da Wishlist](#auditoria-e-versionamento-da-wishlist)
+3. [Fluxos e Políticas de Segurança](#fluxos-e-políticas-de-segurança)
     - [Policies RLS por tabela](#policies-rls-por-tabela)
     - [Triggers e auditoria](#triggers-e-auditoria)
     - [Exemplos de queries críticas](#exemplos-de-queries-críticas)
-3. [Supabase Storage & Materiais](#supabase-storage--materiais)
+4. [Supabase Storage & Materiais](#supabase-storage--materiais)
     - [Buckets, estrutura e versionamento](#buckets-estrutura-e-versionamento)
     - [Policies de Storage](#policies-de-storage)
     - [Fluxo completo de upload, preview, exclusão](#fluxo-completo-de-upload-preview-exclusão)
     - [Tratamento de arquivos, preview e troubleshooting](#tratamento-de-arquivos-preview-e-troubleshooting)
-4. [Auditoria, Logs e Versionamento](#auditoria-logs-e-versionamento)
+5. [Auditoria, Logs e Versionamento](#auditoria-logs-e-versionamento)
     - [Triggers e tabelas de auditoria](#triggers-e-tabelas-de-auditoria)
     - [Exemplo de logs e rastreabilidade](#exemplo-de-logs-e-rastreabilidade)
     - [Backup, restore e dicas de expansão](#backup-restore-e-dicas-de-expansão)
-5. [FAQ e Troubleshooting de Dados](#faq-e-troubleshooting-de-dados)
-6. [Referências Cruzadas e Integrações](#referências-cruzadas-e-integrações)
+6. [FAQ e Troubleshooting de Dados](#faq-e-troubleshooting-de-dados)
+7. [Referências Cruzadas e Integrações](#referências-cruzadas-e-integrações)
 
 ---
 
@@ -131,7 +136,87 @@ CREATE TYPE company_size AS ENUM ('PP', 'P', 'M', 'G', 'GG');
 
 ---
 
-## 2. Fluxos e Políticas de Segurança
+## 2. Wishlist & Networking
+
+### Modelagem de Wishlist
+
+#### Tabela: empresa_cliente
+- id (UUID, PK)
+- empresa_proprietaria_id (FK → empresas)
+- empresa_cliente_id (FK → empresas)
+- data_relacionamento (timestamp)
+- status (boolean)
+- observacoes (string, opcional)
+- created_at (timestamp)
+- updated_at (timestamp)
+
+#### Tabela: wishlist_items
+- id (UUID, PK)
+- empresa_interessada_id (FK → empresas)
+- empresa_desejada_id (FK → empresas)
+- empresa_proprietaria_id (FK → empresas)
+- motivo (string, opcional)
+- prioridade (integer, 1 a 5)
+- status (enum: `pendente`, `em_andamento`, `aprovado`, `rejeitado`, `convertido`)
+- data_solicitacao (timestamp)
+- data_resposta (timestamp, opcional)
+- observacoes (string, opcional)
+- created_at (timestamp)
+- updated_at (timestamp)
+
+#### Tabela: wishlist_apresentacoes
+- id (UUID, PK)
+- wishlist_item_id (FK → wishlist_items)
+- empresa_facilitadora_id (FK → empresas)
+- data_apresentacao (timestamp)
+- tipo_apresentacao (enum: `email`, `reuniao`, `evento`, `digital`, `outro`)
+- status_apresentacao (enum: `agendada`, `realizada`, `cancelada`)
+- feedback (string, opcional)
+- converteu_oportunidade (boolean)
+- oportunidade_id (FK → oportunidades, opcional)
+- created_at (timestamp)
+- updated_at (timestamp)
+
+---
+
+### Enums e integrações
+
+- **WishlistStatus**: `pendente`, `em_andamento`, `aprovado`, `rejeitado`, `convertido`
+- **TipoApresentacao**: `email`, `reuniao`, `evento`, `digital`, `outro`
+- **StatusApresentacao**: `agendada`, `realizada`, `cancelada`
+
+#### Relacionamentos
+- Um wishlist_item sempre vincula três empresas: interessada, desejada, proprietária do relacionamento
+- Um wishlist_item pode ter várias apresentações (wishlist_apresentacoes)
+- Apresentações podem gerar oportunidades
+- Todas as FK são restritivas quanto à integridade referencial
+
+---
+
+### Exemplos de queries de wishlist
+
+```sql
+-- Buscar todos os wishlist items de uma empresa como interessada ou proprietária
+SELECT * FROM wishlist_items WHERE empresa_interessada_id = :empresaId OR empresa_proprietaria_id = :empresaId;
+
+-- Buscar apresentações vinculadas a um item
+SELECT * FROM wishlist_apresentacoes WHERE wishlist_item_id = :itemId;
+
+-- Contar solicitações por status
+SELECT status, COUNT(*) FROM wishlist_items GROUP BY status;
+```
+
+---
+
+### Auditoria e versionamento da Wishlist
+
+- Todas as alterações relevantes (status, prioridade, aprovação, conversão) são registradas em campos timestamp e via triggers de auditoria.
+- Logs de quem aprovou/rejeitou/converteu devem ser mantidos em tabela de auditoria.
+- Recomenda-se criar triggers específicas para rastrear alterações em wishlist_items e wishlist_apresentacoes.
+
+---
+
+## 3. Fluxos e Políticas de Segurança
 
 ### Policies RLS por tabela
 
@@ -152,6 +237,26 @@ ON public.repositorio_materiais
 FOR DELETE
 TO authenticated
 USING (usuario_upload = auth.uid());
+```
+
+**Exemplo — Wishlist:**
+```sql
+-- Apenas empresas interessadas, proprietárias ou facilitadoras podem visualizar seus itens
+CREATE POLICY "Read own wishlist items"
+ON public.wishlist_items
+FOR SELECT
+USING (
+  empresa_interessada_id = auth.uid_empresa()
+  OR empresa_proprietaria_id = auth.uid_empresa()
+);
+
+-- Apenas empresa_proprietaria pode aprovar/rejeitar
+CREATE POLICY "Update status by owner"
+ON public.wishlist_items
+FOR UPDATE
+USING (
+  empresa_proprietaria_id = auth.uid_empresa()
+);
 ```
 
 **Boilerplate para outras tabelas:**
@@ -222,7 +327,7 @@ ORDER BY data_exclusao DESC;
 
 ---
 
-## 3. Supabase Storage & Materiais
+## 4. Supabase Storage & Materiais
 
 ### Buckets, estrutura e versionamento
 
@@ -304,12 +409,13 @@ const handleDeleteMaterial = async (materialId: string, path: string) => {
 
 ---
 
-## 4. Auditoria, Logs e Versionamento
+## 5. Auditoria, Logs e Versionamento
 
 ### Triggers e tabelas de auditoria
 
 - **log_materiais_excluidos:** cada exclusão de arquivo e registro é logada (com material_id, usuario_id, data_exclusao).
 - **historico_oportunidade:** toda alteração relevante em oportunidades é auditada, incluindo campo alterado, valor antigo/novo e responsável.
+- **log_wishlist:** (sugestão) crie tabela para alterações em wishlist_items/apresentacoes, mantendo rastreabilidade completa das decisões e ações.
 
 ### Exemplo de logs e rastreabilidade
 
@@ -329,6 +435,13 @@ JOIN oportunidades o ON h.oportunidade_id = o.id
 JOIN usuarios u ON h.usuario_id = u.id
 ORDER BY h.data_alteracao DESC;
 ```
+- **Auditoria de wishlist:**
+```sql
+SELECT w.id, l.acao, l.usuario_id, l.data_acao, l.dados_anteriores, l.dados_novos
+FROM log_wishlist l
+JOIN wishlist_items w ON l.wishlist_id = w.id
+ORDER BY l.data_acao DESC;
+```
 
 ### Backup, restore e dicas de expansão
 
@@ -338,10 +451,11 @@ ORDER BY h.data_alteracao DESC;
 - **Expansão:**  
   - Novas categorias/empresas = apenas novo registro em tabela.
   - Novos tipos de materiais = adicione extensões permitidas e ajuste policies.
+  - Novos fluxos Wishlist: crie novas triggers/logs para rastreio.
 
 ---
 
-## 5. FAQ e Troubleshooting de Dados
+## 6. FAQ e Troubleshooting de Dados
 
 **Como restaurar arquivo deletado?**  
 Não é possível nativamente. Mantenha backups regulares do bucket.
@@ -358,6 +472,9 @@ Baseie-se nos exemplos e consulte a [documentação oficial do Supabase](https:/
 **Como rastrear alterações em oportunidades?**  
 Consulte `historico_oportunidade` via queries de auditoria.
 
+**Como rastrear decisões e fluxo da Wishlist?**  
+Implemente e consulte a tabela `log_wishlist`. Sempre registre o usuário, ação, timestamp e dados antes/depois.
+
 **Como fazer backup completo?**  
 Ative backup automático do Supabase e exporte periodicamente o bucket de Storage.
 
@@ -366,7 +483,7 @@ Implemente campo `versao`/`parent_id` em `repositorio_materiais` e nunca sobresc
 
 ---
 
-## 6. Referências Cruzadas e Integrações
+## 7. Referências Cruzadas e Integrações
 
 - **Arquitetura, devops, integrações e padrões de código:** [README.sistema.md](./README.sistema.md)
 - **Visão geral, onboarding, FAQ índice:** [README.md](./README.md)
