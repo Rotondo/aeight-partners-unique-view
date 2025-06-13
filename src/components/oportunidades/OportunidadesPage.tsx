@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { OportunidadesProvider } from "@/components/oportunidades/OportunidadesContext";
 import { OportunidadesList } from "@/components/oportunidades/OportunidadesList";
@@ -11,6 +10,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
 import { Oportunidade } from "@/types";
 
+/**
+ * Página principal de gestão de oportunidades.
+ * Mantém todos os fluxos: listagem, filtro, estatísticas e cadastro/edição de oportunidades.
+ * NÃO MODIFIQUE este fluxo sem aprovação, pois está validado e funcional.
+ */
 export const OportunidadesPage: React.FC = () => {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedOportunidadeId, setSelectedOportunidadeId] = useState<string | null>(null);
