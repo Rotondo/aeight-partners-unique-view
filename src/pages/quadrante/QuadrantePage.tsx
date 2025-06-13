@@ -58,28 +58,29 @@ const QuadrantePage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<"edit" | "new">("edit");
 
   // Carrega empresas (apenas parceiros) e indicadores do supabase
+  const fetchData = async () => {
+    setLoading(true);
+    const { data: empresasData } = await supabase
+      .from("empresas")
+      .select("*")
+      .eq("tipo", "parceiro");
+    setEmpresas(empresasData || []);
+    const { data: indicadoresData } = await supabase
+      .from("indicadores_parceiro")
+      .select("*")
+      .order("data_avaliacao", { ascending: false });
+    // Apenas o registro mais recente de cada parceiro
+    const unicosPorEmpresa: Record<string, IndicadoresParceiro> = {};
+    (indicadoresData || []).forEach((item) => {
+      if (item.empresa_id && !unicosPorEmpresa[item.empresa_id]) {
+        unicosPorEmpresa[item.empresa_id] = item;
+      }
+    });
+    setIndicadores(Object.values(unicosPorEmpresa));
+    setLoading(false);
+  };
+
   useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      const { data: empresasData } = await supabase
-        .from("empresas")
-        .select("*")
-        .eq("tipo", "parceiro");
-      setEmpresas(empresasData || []);
-      const { data: indicadoresData } = await supabase
-        .from("indicadores_parceiro")
-        .select("*")
-        .order("data_avaliacao", { ascending: false });
-      // Apenas o registro mais recente de cada parceiro
-      const unicosPorEmpresa: Record<string, IndicadoresParceiro> = {};
-      (indicadoresData || []).forEach((item) => {
-        if (item.empresa_id && !unicosPorEmpresa[item.empresa_id]) {
-          unicosPorEmpresa[item.empresa_id] = item;
-        }
-      });
-      setIndicadores(Object.values(unicosPorEmpresa));
-      setLoading(false);
-    };
     fetchData();
   }, []);
 
@@ -109,19 +110,14 @@ const QuadrantePage: React.FC = () => {
   // Salva indicador (edição/criação) e atualiza quadrante em tempo real
   const handleSaveIndicador = async (indicador: Partial<IndicadoresParceiro>) => {
     try {
-      let updatedIndicadores;
       if (indicador.id) {
         // Edição
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from("indicadores_parceiro")
           .update(indicador)
-          .eq("id", indicador.id)
-          .select();
+          .eq("id", indicador.id);
         if (error) throw error;
-        updatedIndicadores = indicadores.map((item) =>
-          item.id === indicador.id ? { ...item, ...indicador } : item
-        );
-        setIndicadores(updatedIndicadores);
+        await fetchData();
       } else {
         // Criação (Novo)
         const now = new Date().toISOString();
@@ -136,25 +132,11 @@ const QuadrantePage: React.FC = () => {
           data_avaliacao: now,
         };
 
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from("indicadores_parceiro")
-          .insert([newIndicador])
-          .select();
+          .insert([newIndicador]);
         if (error) throw error;
-
-        // Após inserir, re-filtra para manter só o mais recente de cada empresa
-        const novaLista = [data?.[0] ?? newIndicador, ...indicadores].sort(
-          (a, b) =>
-            new Date(b.data_avaliacao || "").getTime() -
-            new Date(a.data_avaliacao || "").getTime()
-        );
-        const unicosPorEmpresa: Record<string, IndicadoresParceiro> = {};
-        novaLista.forEach((item) => {
-          if (item.empresa_id && !unicosPorEmpresa[item.empresa_id]) {
-            unicosPorEmpresa[item.empresa_id] = item;
-          }
-        });
-        setIndicadores(Object.values(unicosPorEmpresa));
+        await fetchData();
       }
       toast({
         title: "Sucesso",
@@ -221,6 +203,7 @@ const QuadrantePage: React.FC = () => {
                   onSave={handleSaveIndicador}
                   readOnly={!user || user.papel === "user"}
                   onParceiroSelect={handleParceiroSelect}
+                  empresas={empresas}
                 />
               </TabsContent>
               {user?.papel === "admin" && (
@@ -229,6 +212,7 @@ const QuadrantePage: React.FC = () => {
                     indicador={null}
                     onSave={handleSaveIndicador}
                     readOnly={false}
+                    empresas={empresas}
                   />
                 </TabsContent>
               )}
