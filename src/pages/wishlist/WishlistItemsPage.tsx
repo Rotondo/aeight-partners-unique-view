@@ -39,6 +39,11 @@ function toSafeNumber(val: unknown, fallback = 3): number {
   return typeof val === "number" && !isNaN(val) ? val : fallback;
 }
 
+// Busca o nome do cliente pelo id no array de opções
+function getClienteNomePorId(id: string, clientes: EmpresaOption[]) {
+  return clientes.find((c) => c.id === id)?.nome || "";
+}
+
 const WishlistItemsPage: React.FC = () => {
   const {
     wishlistItems,
@@ -63,6 +68,7 @@ const WishlistItemsPage: React.FC = () => {
   const [empresasParceiros, setEmpresasParceiros] = useState<EmpresaOption[]>([]);
   const [empresaInteressada, setEmpresaInteressada] = useState<string>("");
   const [empresaDesejada, setEmpresaDesejada] = useState<string>("");
+  const [empresaDesejadaNome, setEmpresaDesejadaNome] = useState<string>("");
   const [empresaProprietaria, setEmpresaProprietaria] = useState<string>("");
   const [prioridade, setPrioridade] = useState<number>(3);
   const [motivo, setMotivo] = useState<string>("");
@@ -107,11 +113,21 @@ const WishlistItemsPage: React.FC = () => {
       setPrioridade(toSafeNumber(editingItem.prioridade, 3));
       setMotivo(toSafeString(editingItem.motivo));
       setObservacoes(toSafeString(editingItem.observacoes));
+      setEmpresaDesejadaNome(editingItem.empresa_desejada?.nome ?? "");
     } else {
       resetModal();
     }
     // eslint-disable-next-line
   }, [editingItem]);
+
+  // Sempre que empresaDesejada mudar, atualize o nome (fallback para quando muda no select)
+  useEffect(() => {
+    if (empresaDesejada) {
+      setEmpresaDesejadaNome(getClienteNomePorId(empresaDesejada, empresasClientes));
+    } else {
+      setEmpresaDesejadaNome("");
+    }
+  }, [empresaDesejada, empresasClientes]);
 
   // Função para garantir que o cliente recém-criado esteja no array antes de selecionar
   const handleCriarNovoCliente = async () => {
@@ -135,7 +151,6 @@ const WishlistItemsPage: React.FC = () => {
         .single();
       if (!error && data) {
         clienteId = data.id;
-        // Atualize as listas ANTES de selecionar o valor, assim o label aparece
         setEmpresasClientes((prev) => [
           ...prev,
           { id: data.id, nome: data.nome, tipo: data.tipo },
@@ -147,7 +162,6 @@ const WishlistItemsPage: React.FC = () => {
       }
     }
     if (clienteId) {
-      // Aguarde o array atualizar antes de selecionar o cliente (garante label)
       setTimeout(() => setEmpresaDesejada(clienteId), 0);
     }
     setNovoClienteNome("");
@@ -157,6 +171,7 @@ const WishlistItemsPage: React.FC = () => {
   const resetModal = () => {
     setEmpresaInteressada("");
     setEmpresaDesejada("");
+    setEmpresaDesejadaNome("");
     setEmpresaProprietaria("");
     setPrioridade(3);
     setMotivo("");
@@ -371,11 +386,12 @@ const WishlistItemsPage: React.FC = () => {
                   onValueChange={setEmpresaDesejada}
                 >
                   <SelectTrigger>
-                    <SelectValue
-                      placeholder="Selecione cliente/lead"
-                      // Exibe o nome do cliente selecionado no trigger
-                      // O Radix/ui já faz isso corretamente se o id existe em SelectItem
-                    />
+                    <SelectValue placeholder="Selecione cliente/lead">
+                      {empresaDesejada
+                        ? empresaDesejadaNome ||
+                          getClienteNomePorId(empresaDesejada, empresasClientes)
+                        : undefined}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {empresasClientes.map((e) => (
