@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
@@ -69,7 +68,7 @@ const OnePagerPage: React.FC = () => {
       setLoading(true);
       try {
         console.log('Fetching parceiros for categoria:', selectedCategoria.id);
-        
+
         // Busca IDs das empresas vinculadas à categoria
         const { data: empresaCategoriaData, error: empresaCategoriaError } = await supabase
           .from('empresa_categoria')
@@ -138,9 +137,9 @@ const OnePagerPage: React.FC = () => {
 
     const fetchOnePager = async () => {
       try {
-        console.log('Fetching OnePager for:', { 
-          empresa_id: selectedParceiro.id, 
-          categoria_id: selectedCategoria.id 
+        console.log('Fetching OnePager for:', {
+          empresa_id: selectedParceiro.id,
+          categoria_id: selectedCategoria.id
         });
 
         const { data, error } = await supabase
@@ -157,7 +156,7 @@ const OnePagerPage: React.FC = () => {
 
         console.log('OnePager data found:', data);
         setOnePager(data as OnePager || null);
-        
+
         if (!data) {
           console.log('No OnePager found for this partner and category combination');
         }
