@@ -73,7 +73,7 @@ const EmpresasClientesPage: React.FC = () => {
     fetchEmpresas();
   }, []);
 
-  // Atualiza empresas para select ao abrir modal
+  // Atualiza empresas para select ao abrir modal (mantendo lógica original)
   useEffect(() => {
     if (!modalOpen) return;
     const fetchEmpresas = async () => {
@@ -169,33 +169,18 @@ const EmpresasClientesPage: React.FC = () => {
     fetchEmpresasClientes();
   };
 
-  // Garante que o cliente do relacionamento está em empresasClientesOptions ao abrir o modal
-  useEffect(() => {
-    if (!modalOpen || !empresaCliente) return;
-    const existe = empresasClientesOptions.some((c) => c.id === empresaCliente);
-    if (!existe) {
-      // Tenta encontrar nome_cliente na lista de relacionamentos (clientes vinculados)
-      let nome = "";
-      if (modalType === "editar") {
-        const relacionamento = empresasClientes.find((rel) => rel.empresa_cliente_id === empresaCliente);
-        if (relacionamento && relacionamento.nome_cliente) {
-          nome = relacionamento.nome_cliente;
-        }
-      }
-      // Tenta encontrar nome na lista de clientes não vinculados
-      if (!nome) {
-        const cliente = empresasClientesAll.find((c) => c.id === empresaCliente);
-        if (cliente) nome = cliente.nome;
-      }
-      if (nome) {
-        setEmpresasClientesOptions((prev) => [
-          ...prev,
-          { id: empresaCliente, nome, tipo: "cliente" },
-        ]);
-      }
-    }
-  // eslint-disable-next-line
-  }, [modalOpen, empresaCliente, empresasClientesOptions, empresasClientes, empresasClientesAll, modalType]);
+  const filteredClientesVinculados = empresasClientes.filter(cliente =>
+    cliente.empresa_cliente?.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    cliente.empresa_proprietaria?.nome.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Clientes não vinculados: todos do tipo cliente que não estão em nenhum vínculo
+  const clientesVinculadosIds = new Set(empresasClientes.map(c => c.empresa_cliente_id));
+  const filteredClientesNaoVinculados = empresasClientesAll
+    .filter(cliente =>
+      !clientesVinculadosIds.has(cliente.id) &&
+      cliente.nome.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
   const handleEditar = (relacionamento: any) => {
     setModalType("editar");
@@ -357,10 +342,10 @@ const EmpresasClientesPage: React.FC = () => {
             <form onSubmit={handleSubmitApresentacao} className="space-y-4">
               <div>
                 <div className="font-medium mb-2">
-                  Cliente: <span className="font-normal">{apresentacaoCliente?.nome_cliente}</span>
+                  Cliente: <span className="font-normal">{apresentacaoCliente?.empresa_cliente?.nome}</span>
                 </div>
                 <div className="font-medium mb-2">
-                  Proprietário: <span className="font-normal">{apresentacaoCliente?.nome_proprietaria}</span>
+                  Proprietário: <span className="font-normal">{apresentacaoCliente?.empresa_proprietaria?.nome}</span>
                 </div>
                 <Input
                   placeholder="Observações para a apresentação"
@@ -417,7 +402,7 @@ const EmpresasClientesPage: React.FC = () => {
         </Card>
       </div>
 
-      {/* Lista de clientes vinculados (estilo table/lista) */}
+      {/* Minimalista: Lista de clientes vinculados (estilo table/lista) */}
       <div className="overflow-x-auto rounded-md border bg-background shadow-sm mt-2">
         <table className="min-w-full text-sm align-middle">
           <thead>
@@ -430,16 +415,10 @@ const EmpresasClientesPage: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {/* Clientes VINCULADOS */}
-            {empresasClientes
-              .filter(cliente =>
-                (cliente.nome_cliente || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-                (cliente.nome_proprietaria || "").toLowerCase().includes(searchTerm.toLowerCase())
-              )
-              .map((cliente) => (
+            {filteredClientesVinculados.map((cliente) => (
               <tr key={cliente.id} className="border-b hover:bg-muted/50 transition">
-                <td className="px-3 py-2 font-medium whitespace-nowrap">{cliente.nome_cliente}</td>
-                <td className="px-3 py-2">{cliente.nome_proprietaria}</td>
+                <td className="px-3 py-2 font-medium whitespace-nowrap">{cliente.empresa_cliente?.nome}</td>
+                <td className="px-3 py-2">{cliente.empresa_proprietaria?.nome}</td>
                 <td className="px-3 py-2">
                   <Badge variant={cliente.status ? "default" : "secondary"}>
                     {cliente.status ? "Ativo" : "Inativo"}
@@ -480,12 +459,7 @@ const EmpresasClientesPage: React.FC = () => {
               </tr>
             ))}
             {/* Clientes NÃO vinculados */}
-            {empresasClientesAll
-              .filter(cliente =>
-                !empresasClientes.some(c => c.empresa_cliente_id === cliente.id) &&
-                cliente.nome.toLowerCase().includes(searchTerm.toLowerCase())
-              )
-              .map((cliente) => (
+            {filteredClientesNaoVinculados.map((cliente) => (
               <tr key={cliente.id} className="border-b hover:bg-muted/40">
                 <td className="px-3 py-2 font-medium">{cliente.nome}</td>
                 <td className="px-3 py-2">
@@ -520,11 +494,7 @@ const EmpresasClientesPage: React.FC = () => {
               </tr>
             ))}
             {/* Caso nenhum cliente exibido */}
-            {empresasClientes.length +
-              empresasClientesAll.filter(cliente =>
-                !empresasClientes.some(c => c.empresa_cliente_id === cliente.id) &&
-                cliente.nome.toLowerCase().includes(searchTerm.toLowerCase())
-              ).length === 0 && (
+            {filteredClientesVinculados.length + filteredClientesNaoVinculados.length === 0 && (
               <tr>
                 <td colSpan={5} className="py-12 text-center text-muted-foreground">
                   <Building2 className="h-12 w-12 mx-auto mb-2 text-muted-foreground" />
