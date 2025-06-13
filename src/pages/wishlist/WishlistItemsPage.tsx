@@ -11,14 +11,18 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { WishlistStatus, WishlistItem } from "@/types";
 import { supabase } from "@/lib/supabase";
+import { toast } from "@/hooks/use-toast";
 
+// Tipo auxiliar para empresas
 type EmpresaOption = {
   id: string;
   nome: string;
   tipo: string;
 };
 
-const getSafeString = (value: any): string => (value === undefined || value === null ? "" : String(value));
+const safeString = (v: any) => (typeof v === "string" ? v : v === undefined || v === null ? "" : String(v));
+const safeNumber = (v: any, fallback: number = 3) =>
+  typeof v === "number" && !isNaN(v) ? v : fallback;
 
 const WishlistItemsPage: React.FC = () => {
   const {
@@ -36,6 +40,7 @@ const WishlistItemsPage: React.FC = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
   const [editingItem, setEditingItem] = useState<WishlistItem | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
 
   // Form state
   const [empresas, setEmpresas] = useState<EmpresaOption[]>([]);
@@ -70,12 +75,21 @@ const WishlistItemsPage: React.FC = () => {
   // Preencher formulário ao editar
   useEffect(() => {
     if (editingItem) {
-      setEmpresaInteressada(getSafeString(editingItem.empresa_interessada_id));
-      setEmpresaDesejada(getSafeString(editingItem.empresa_desejada_id));
-      setEmpresaProprietaria(getSafeString(editingItem.empresa_proprietaria_id));
-      setPrioridade(typeof editingItem.prioridade === "number" ? editingItem.prioridade : 3);
-      setMotivo(getSafeString(editingItem.motivo));
-      setObservacoes(getSafeString(editingItem.observacoes));
+      // Log para debug de campos undefined:
+      if (
+        editingItem.empresa_interessada_id === undefined ||
+        editingItem.empresa_desejada_id === undefined ||
+        editingItem.empresa_proprietaria_id === undefined
+      ) {
+        // eslint-disable-next-line no-console
+        console.error("Campo de empresa está undefined ao editar!", editingItem);
+      }
+      setEmpresaInteressada(safeString(editingItem.empresa_interessada_id));
+      setEmpresaDesejada(safeString(editingItem.empresa_desejada_id));
+      setEmpresaProprietaria(safeString(editingItem.empresa_proprietaria_id));
+      setPrioridade(safeNumber(editingItem.prioridade, 3));
+      setMotivo(safeString(editingItem.motivo));
+      setObservacoes(safeString(editingItem.observacoes));
     } else {
       resetModal();
     }
@@ -120,41 +134,59 @@ const WishlistItemsPage: React.FC = () => {
     setMotivo("");
     setObservacoes("");
     setNovoClienteNome("");
+    setFormError(null);
     setEditingItem(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError(null);
     setModalLoading(true);
+
     if (!empresaInteressada || !empresaDesejada || !empresaProprietaria) {
+      setFormError("Preencha todos os campos obrigatórios.");
       setModalLoading(false);
       return;
     }
-    if (editingItem) {
-      await updateWishlistItem(editingItem.id, {
-        empresa_interessada_id: empresaInteressada,
-        empresa_desejada_id: empresaDesejada,
-        empresa_proprietaria_id: empresaProprietaria,
-        prioridade,
-        motivo,
-        observacoes,
+
+    try {
+      if (editingItem) {
+        await updateWishlistItem(editingItem.id, {
+          empresa_interessada_id: empresaInteressada,
+          empresa_desejada_id: empresaDesejada,
+          empresa_proprietaria_id: empresaProprietaria,
+          prioridade,
+          motivo,
+          observacoes,
+        });
+      } else {
+        await addWishlistItem({
+          empresa_interessada_id: empresaInteressada,
+          empresa_desejada_id: empresaDesejada,
+          empresa_proprietaria_id: empresaProprietaria,
+          prioridade,
+          motivo,
+          observacoes,
+          status: "pendente",
+          data_solicitacao: new Date().toISOString(),
+        });
+      }
+      setModalOpen(false);
+      resetModal();
+      fetchWishlistItems();
+      toast({ title: "Sucesso!", description: "Solicitação salva com sucesso." });
+    } catch (err: any) {
+      setFormError("Erro ao salvar. Tente novamente.");
+      toast({
+        title: "Erro ao salvar",
+        description: err?.message || "Erro inesperado",
+        variant: "destructive",
       });
-    } else {
-      await addWishlistItem({
-        empresa_interessada_id: empresaInteressada,
-        empresa_desejada_id: empresaDesejada,
-        empresa_proprietaria_id: empresaProprietaria,
-        prioridade,
-        motivo,
-        observacoes,
-        status: "pendente",
-        data_solicitacao: new Date().toISOString(),
-      });
+      // eslint-disable-next-line no-console
+      console.error("Erro ao salvar wishlist item:", err);
+    } finally {
+      setModalLoading(false);
     }
-    setModalLoading(false);
-    setModalOpen(false);
-    resetModal();
-    fetchWishlistItems();
   };
 
   const filteredItems = wishlistItems.filter(item => {
@@ -255,6 +287,9 @@ const WishlistItemsPage: React.FC = () => {
                 {editingItem ? "Editar Solicitação de Wishlist" : "Nova Solicitação de Wishlist"}
               </DialogTitle>
             </DialogHeader>
+            {formError && (
+              <div className="text-red-600 text-sm mb-2">{formError}</div>
+            )}
             <form onSubmit={handleSubmit} className="space-y-4" autoComplete="off">
               <div>
                 <label className="block font-medium mb-1">Quem está solicitando?</label>
@@ -460,10 +495,10 @@ const WishlistItemsPage: React.FC = () => {
               <div className="flex justify-between items-start">
                 <div>
                   <CardTitle className="text-lg">
-                    {item.empresa_interessada?.nome} → {item.empresa_desejada?.nome}
+                    {(item.empresa_interessada?.nome || "—")} → {(item.empresa_desejada?.nome || "—")}
                   </CardTitle>
                   <CardDescription>
-                    Proprietário: {item.empresa_proprietaria?.nome}
+                    Proprietário: {(item.empresa_proprietaria?.nome || "—")}
                   </CardDescription>
                 </div>
                 <div className="flex items-center gap-2">
@@ -471,7 +506,7 @@ const WishlistItemsPage: React.FC = () => {
                     {getStatusLabel(item.status)}
                   </Badge>
                   <div className="flex items-center">
-                    {getPriorityStars(item.prioridade)}
+                    {getPriorityStars(safeNumber(item.prioridade, 3))}
                   </div>
                 </div>
               </div>
