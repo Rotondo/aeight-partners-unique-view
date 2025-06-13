@@ -3,8 +3,20 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { useWishlist } from "@/contexts/WishlistContext";
 import { Plus, Search, Heart, Calendar, Star, Loader2 } from "lucide-react";
 import { format } from "date-fns";
@@ -69,11 +81,18 @@ const WishlistItemsPage: React.FC = () => {
       if (!error && data) {
         setEmpresas(data);
         setEmpresasClientes(data.filter((e: EmpresaOption) => e.tipo === "cliente"));
-        setEmpresasParceiros(data.filter(
-          (e: EmpresaOption) => e.tipo === "parceiro" || e.tipo === "intragrupo"
-        ));
+        setEmpresasParceiros(
+          data.filter(
+            (e: EmpresaOption) =>
+              e.tipo === "parceiro" || e.tipo === "intragrupo"
+          )
+        );
       } else if (error) {
-        toast({ title: "Erro ao buscar empresas", description: error.message, variant: "destructive" });
+        toast({
+          title: "Erro ao buscar empresas",
+          description: error.message,
+          variant: "destructive",
+        });
       }
     };
     fetchEmpresas();
@@ -98,7 +117,8 @@ const WishlistItemsPage: React.FC = () => {
     if (!novoClienteNome.trim()) return;
     setCriandoNovoCliente(true);
     const existe = empresasClientes.find(
-      (c) => c.nome.trim().toLowerCase() === novoClienteNome.trim().toLowerCase()
+      (c) =>
+        c.nome.trim().toLowerCase() === novoClienteNome.trim().toLowerCase()
     );
     let clienteId = "";
     if (existe) {
@@ -115,8 +135,14 @@ const WishlistItemsPage: React.FC = () => {
         .single();
       if (!error && data) {
         clienteId = data.id;
-        setEmpresasClientes((prev) => [...prev, { id: data.id, nome: novoClienteNome.trim(), tipo: "cliente" }]);
-        setEmpresas((prev) => [...prev, { id: data.id, nome: novoClienteNome.trim(), tipo: "cliente" }]);
+        setEmpresasClientes((prev) => [
+          ...prev,
+          { id: data.id, nome: novoClienteNome.trim(), tipo: "cliente" },
+        ]);
+        setEmpresas((prev) => [
+          ...prev,
+          { id: data.id, nome: novoClienteNome.trim(), tipo: "cliente" },
+        ]);
       }
     }
     if (clienteId) setEmpresaDesejada(clienteId);
@@ -172,7 +198,10 @@ const WishlistItemsPage: React.FC = () => {
       setModalOpen(false);
       resetModal();
       fetchWishlistItems();
-      toast({ title: "Sucesso!", description: "Solicitação salva com sucesso." });
+      toast({
+        title: "Sucesso!",
+        description: "Solicitação salva com sucesso.",
+      });
     } catch (err: any) {
       setFormError("Erro ao salvar. Tente novamente.");
       toast({
@@ -189,11 +218,17 @@ const WishlistItemsPage: React.FC = () => {
     }
   };
 
-  const filteredItems = wishlistItems.filter(item => {
+  const filteredItems = wishlistItems.filter((item) => {
     const matchesSearch =
-      (item.empresa_interessada?.nome || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (item.empresa_desejada?.nome || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (item.empresa_proprietaria?.nome || "").toLowerCase().includes(searchTerm.toLowerCase());
+      (item.empresa_interessada?.nome || "")
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
+      (item.empresa_desejada?.nome || "")
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
+      (item.empresa_proprietaria?.nome || "")
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase());
 
     const matchesStatus = statusFilter === "all" || item.status === statusFilter;
 
@@ -238,7 +273,9 @@ const WishlistItemsPage: React.FC = () => {
     return Array.from({ length: 5 }, (_, i) => (
       <Star
         key={i}
-        className={`h-3 w-3 ${i < prioridade ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}`}
+        className={`h-3 w-3 ${
+          i < prioridade ? "fill-yellow-400 text-yellow-400" : "text-gray-300"
+        }`}
       />
     ));
   };
@@ -266,7 +303,7 @@ const WishlistItemsPage: React.FC = () => {
         </div>
         <Dialog
           open={modalOpen}
-          onOpenChange={o => {
+          onOpenChange={(o) => {
             setModalOpen(o);
             if (!o) resetModal();
           }}
@@ -284,35 +321,59 @@ const WishlistItemsPage: React.FC = () => {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>
-                {editingItem ? "Editar Solicitação de Wishlist" : "Nova Solicitação de Wishlist"}
+                {editingItem
+                  ? "Editar Solicitação de Wishlist"
+                  : "Nova Solicitação de Wishlist"}
               </DialogTitle>
+              <DialogDescription>
+                Preencha os campos e clique em{" "}
+                {editingItem ? "Salvar Alterações" : "Criar Solicitação"}.
+              </DialogDescription>
             </DialogHeader>
             {formError && (
               <div className="text-red-600 text-sm mb-2">{formError}</div>
             )}
-            <form onSubmit={handleSubmit} className="space-y-4" autoComplete="off">
+            <form
+              onSubmit={handleSubmit}
+              className="space-y-4"
+              autoComplete="off"
+            >
               <div>
-                <label className="block font-medium mb-1">Quem está solicitando?</label>
-                <Select value={empresaInteressada || ""} onValueChange={setEmpresaInteressada}>
+                <label className="block font-medium mb-1">
+                  Quem está solicitando?
+                </label>
+                <Select
+                  value={empresaInteressada || ""}
+                  onValueChange={setEmpresaInteressada}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione empresa (parceiro/intragrupo)" />
                   </SelectTrigger>
                   <SelectContent>
                     {empresasParceiros.map((e) => (
-                      <SelectItem key={e.id} value={e.id}>{e.nome}</SelectItem>
+                      <SelectItem key={e.id} value={e.id}>
+                        {e.nome}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <label className="block font-medium mb-1">Cliente ou Lead desejado</label>
-                <Select value={empresaDesejada || ""} onValueChange={setEmpresaDesejada}>
+                <label className="block font-medium mb-1">
+                  Cliente ou Lead desejado
+                </label>
+                <Select
+                  value={empresaDesejada || ""}
+                  onValueChange={setEmpresaDesejada}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione cliente/lead" />
                   </SelectTrigger>
                   <SelectContent>
                     {empresasClientes.map((e) => (
-                      <SelectItem key={e.id} value={e.id}>{e.nome}</SelectItem>
+                      <SelectItem key={e.id} value={e.id}>
+                        {e.nome}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -320,8 +381,8 @@ const WishlistItemsPage: React.FC = () => {
                   <Input
                     placeholder="Novo cliente/lead"
                     value={novoClienteNome || ""}
-                    onChange={e => setNovoClienteNome(e.target.value)}
-                    onKeyDown={e => {
+                    onChange={(e) => setNovoClienteNome(e.target.value)}
+                    onKeyDown={(e) => {
                       if (e.key === "Enter") {
                         e.preventDefault();
                         handleCriarNovoCliente();
@@ -335,7 +396,9 @@ const WishlistItemsPage: React.FC = () => {
                     onClick={handleCriarNovoCliente}
                     disabled={criandoNovoCliente || !novoClienteNome.trim()}
                   >
-                    {criandoNovoCliente && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+                    {criandoNovoCliente && (
+                      <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                    )}
                     Adicionar
                   </Button>
                 </div>
@@ -344,14 +407,21 @@ const WishlistItemsPage: React.FC = () => {
                 </p>
               </div>
               <div>
-                <label className="block font-medium mb-1">Dono do relacionamento (parceiro ou intragrupo)</label>
-                <Select value={empresaProprietaria || ""} onValueChange={setEmpresaProprietaria}>
+                <label className="block font-medium mb-1">
+                  Dono do relacionamento (parceiro ou intragrupo)
+                </label>
+                <Select
+                  value={empresaProprietaria || ""}
+                  onValueChange={setEmpresaProprietaria}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione proprietário" />
                   </SelectTrigger>
                   <SelectContent>
                     {empresasParceiros.map((e) => (
-                      <SelectItem key={e.id} value={e.id}>{e.nome}</SelectItem>
+                      <SelectItem key={e.id} value={e.id}>
+                        {e.nome}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -368,10 +438,11 @@ const WishlistItemsPage: React.FC = () => {
                       className="focus:outline-none"
                     >
                       <Star
-                        className={`h-5 w-5 ${prioridade >= star
-                          ? "fill-yellow-400 text-yellow-400"
-                          : "text-gray-300"
-                          }`}
+                        className={`h-5 w-5 ${
+                          prioridade >= star
+                            ? "fill-yellow-400 text-yellow-400"
+                            : "text-gray-300"
+                        }`}
                       />
                     </button>
                   ))}
@@ -381,15 +452,17 @@ const WishlistItemsPage: React.FC = () => {
                 <label className="block font-medium mb-1">Motivo</label>
                 <Input
                   value={motivo || ""}
-                  onChange={e => setMotivo(e.target.value)}
+                  onChange={(e) => setMotivo(e.target.value)}
                   placeholder="Descreva o motivo da solicitação"
                 />
               </div>
               <div>
-                <label className="block font-medium mb-1">Observações (opcional)</label>
+                <label className="block font-medium mb-1">
+                  Observações (opcional)
+                </label>
                 <Input
                   value={observacoes || ""}
-                  onChange={e => setObservacoes(e.target.value)}
+                  onChange={(e) => setObservacoes(e.target.value)}
                   placeholder="Observações adicionais"
                 />
               </div>
@@ -403,7 +476,9 @@ const WishlistItemsPage: React.FC = () => {
                     !empresaProprietaria
                   }
                 >
-                  {modalLoading && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+                  {modalLoading && (
+                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  )}
                   {editingItem ? "Salvar Alterações" : "Criar Solicitação"}
                 </Button>
               </div>
@@ -423,7 +498,10 @@ const WishlistItemsPage: React.FC = () => {
             className="pl-8"
           />
         </div>
-        <Select value={statusFilter} onValueChange={(value: WishlistStatus | "all") => setStatusFilter(value)}>
+        <Select
+          value={statusFilter}
+          onValueChange={(value: WishlistStatus | "all") => setStatusFilter(value)}
+        >
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Filtrar por status" />
           </SelectTrigger>
@@ -453,11 +531,13 @@ const WishlistItemsPage: React.FC = () => {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Pendentes</CardTitle>
-            <Badge variant="secondary">{wishlistItems.filter(i => i.status === "pendente").length}</Badge>
+            <Badge variant="secondary">
+              {wishlistItems.filter((i) => i.status === "pendente").length}
+            </Badge>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {wishlistItems.filter(i => i.status === "pendente").length}
+              {wishlistItems.filter((i) => i.status === "pendente").length}
             </div>
           </CardContent>
         </Card>
@@ -465,11 +545,13 @@ const WishlistItemsPage: React.FC = () => {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Aprovados</CardTitle>
-            <Badge variant="default">{wishlistItems.filter(i => i.status === "aprovado").length}</Badge>
+            <Badge variant="default">
+              {wishlistItems.filter((i) => i.status === "aprovado").length}
+            </Badge>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {wishlistItems.filter(i => i.status === "aprovado").length}
+              {wishlistItems.filter((i) => i.status === "aprovado").length}
             </div>
           </CardContent>
         </Card>
@@ -477,11 +559,13 @@ const WishlistItemsPage: React.FC = () => {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Convertidos</CardTitle>
-            <Badge variant="default">{wishlistItems.filter(i => i.status === "convertido").length}</Badge>
+            <Badge variant="default">
+              {wishlistItems.filter((i) => i.status === "convertido").length}
+            </Badge>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {wishlistItems.filter(i => i.status === "convertido").length}
+              {wishlistItems.filter((i) => i.status === "convertido").length}
             </div>
           </CardContent>
         </Card>
@@ -495,7 +579,8 @@ const WishlistItemsPage: React.FC = () => {
               <div className="flex justify-between items-start">
                 <div>
                   <CardTitle className="text-lg">
-                    {(item.empresa_interessada?.nome || "—")} → {(item.empresa_desejada?.nome || "—")}
+                    {(item.empresa_interessada?.nome || "—")} →{" "}
+                    {(item.empresa_desejada?.nome || "—")}
                   </CardTitle>
                   <CardDescription>
                     Proprietário: {(item.empresa_proprietaria?.nome || "—")}
@@ -517,19 +602,27 @@ const WishlistItemsPage: React.FC = () => {
                   <Calendar className="mr-2 h-4 w-4" />
                   Solicitado em{" "}
                   {item.data_solicitacao
-                    ? format(new Date(item.data_solicitacao), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
+                    ? format(
+                        new Date(item.data_solicitacao),
+                        "dd 'de' MMMM 'de' yyyy",
+                        { locale: ptBR }
+                      )
                     : ""}
                 </div>
                 {item.motivo && (
                   <div>
                     <p className="text-sm font-medium">Motivo:</p>
-                    <p className="text-sm text-muted-foreground">{item.motivo}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {item.motivo}
+                    </p>
                   </div>
                 )}
                 {item.observacoes && (
                   <div>
                     <p className="text-sm font-medium">Observações:</p>
-                    <p className="text-sm text-muted-foreground">{item.observacoes}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {item.observacoes}
+                    </p>
                   </div>
                 )}
                 <div className="flex justify-end gap-2 pt-2">
@@ -567,13 +660,20 @@ const WishlistItemsPage: React.FC = () => {
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
               <Heart className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Nenhum item encontrado</h3>
+              <h3 className="text-lg font-semibold mb-2">
+                Nenhum item encontrado
+              </h3>
               <p className="text-muted-foreground text-center mb-4">
                 {searchTerm || statusFilter !== "all"
                   ? "Tente ajustar os filtros de busca"
                   : "Adicione o primeiro item à wishlist"}
               </p>
-              <Button onClick={() => { setEditingItem(null); setModalOpen(true); }}>
+              <Button
+                onClick={() => {
+                  setEditingItem(null);
+                  setModalOpen(true);
+                }}
+              >
                 <Plus className="mr-2 h-4 w-4" />
                 Nova Solicitação
               </Button>
