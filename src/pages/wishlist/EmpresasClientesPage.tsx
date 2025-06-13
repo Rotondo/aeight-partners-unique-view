@@ -9,8 +9,7 @@ import { Plus, Search, Building2, Calendar, Loader2, Edit2, ArrowRight, MoreVert
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { supabase } from "@/lib/supabase";
-// MultiSelect
-import { MultiSelect } from "@/components/ui/multiselect";
+import { MultiSelect } from "@/components/ui/MultiSelect";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 
@@ -240,8 +239,8 @@ const EmpresasClientesPage: React.FC = () => {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Base de Clientes</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight mb-1">Base de Clientes</h1>
+          <p className="text-muted-foreground text-sm">
             Gerencie a base de clientes de cada parceiro
           </p>
         </div>
@@ -366,7 +365,7 @@ const EmpresasClientesPage: React.FC = () => {
       </div>
 
       {/* Search */}
-      <div className="flex items-center space-x-2">
+      <div className="flex items-center space-x-2 mt-2">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
@@ -379,32 +378,32 @@ const EmpresasClientesPage: React.FC = () => {
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-2 md:grid-cols-3">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Clientes Vinculados</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between py-3">
+            <CardTitle className="text-xs font-medium">Total de Clientes Vinculados</CardTitle>
             <Building2 className="h-4 w-4 text-muted-foreground" />
-            <span className="text-2xl font-bold">{empresasClientes.length}</span>
+            <span className="text-xl font-bold">{empresasClientes.length}</span>
           </CardHeader>
         </Card>
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Proprietários Únicos</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between py-3">
+            <CardTitle className="text-xs font-medium">Proprietários Únicos</CardTitle>
             <Building2 className="h-4 w-4 text-muted-foreground" />
-            <span className="text-2xl font-bold">{new Set(empresasClientes.map(c => c.empresa_proprietaria_id)).size}</span>
+            <span className="text-xl font-bold">{new Set(empresasClientes.map(c => c.empresa_proprietaria_id)).size}</span>
           </CardHeader>
         </Card>
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Relacionamentos Ativos</CardTitle>
-            <Badge variant="outline">Ativo</Badge>
-            <span className="text-2xl font-bold">{empresasClientes.filter(c => c.status).length}</span>
+          <CardHeader className="flex flex-row items-center justify-between py-3">
+            <CardTitle className="text-xs font-medium">Relacionamentos Ativos</CardTitle>
+            <Badge variant="outline" className="ml-2">Ativo</Badge>
+            <span className="text-xl font-bold">{empresasClientes.filter(c => c.status).length}</span>
           </CardHeader>
         </Card>
       </div>
 
       {/* Minimalista: Lista de clientes vinculados (estilo table/lista) */}
-      <div className="overflow-x-auto rounded-md border bg-background shadow-sm">
+      <div className="overflow-x-auto rounded-md border bg-background shadow-sm mt-2">
         <table className="min-w-full text-sm align-middle">
           <thead>
             <tr className="border-b text-muted-foreground">
