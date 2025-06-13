@@ -113,12 +113,12 @@ const WishlistItemsPage: React.FC = () => {
     // eslint-disable-next-line
   }, [editingItem]);
 
+  // Função para garantir que o cliente recém-criado esteja no array antes de selecionar
   const handleCriarNovoCliente = async () => {
     if (!novoClienteNome.trim()) return;
     setCriandoNovoCliente(true);
     const existe = empresasClientes.find(
-      (c) =>
-        c.nome.trim().toLowerCase() === novoClienteNome.trim().toLowerCase()
+      (c) => c.nome.trim().toLowerCase() === novoClienteNome.trim().toLowerCase()
     );
     let clienteId = "";
     if (existe) {
@@ -131,21 +131,25 @@ const WishlistItemsPage: React.FC = () => {
           tipo: "cliente",
           status: true,
         })
-        .select("id")
+        .select("id, nome, tipo")
         .single();
       if (!error && data) {
         clienteId = data.id;
+        // Atualize as listas ANTES de selecionar o valor, assim o label aparece
         setEmpresasClientes((prev) => [
           ...prev,
-          { id: data.id, nome: novoClienteNome.trim(), tipo: "cliente" },
+          { id: data.id, nome: data.nome, tipo: data.tipo },
         ]);
         setEmpresas((prev) => [
           ...prev,
-          { id: data.id, nome: novoClienteNome.trim(), tipo: "cliente" },
+          { id: data.id, nome: data.nome, tipo: data.tipo },
         ]);
       }
     }
-    if (clienteId) setEmpresaDesejada(clienteId);
+    if (clienteId) {
+      // Aguarde o array atualizar antes de selecionar o cliente (garante label)
+      setTimeout(() => setEmpresaDesejada(clienteId), 0);
+    }
     setNovoClienteNome("");
     setCriandoNovoCliente(false);
   };
@@ -367,7 +371,11 @@ const WishlistItemsPage: React.FC = () => {
                   onValueChange={setEmpresaDesejada}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecione cliente/lead" />
+                    <SelectValue
+                      placeholder="Selecione cliente/lead"
+                      // Exibe o nome do cliente selecionado no trigger
+                      // O Radix/ui já faz isso corretamente se o id existe em SelectItem
+                    />
                   </SelectTrigger>
                   <SelectContent>
                     {empresasClientes.map((e) => (
