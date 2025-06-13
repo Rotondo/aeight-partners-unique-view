@@ -56,10 +56,13 @@ const QuadranteForm: React.FC<QuadranteFormProps> = ({
   const [loading, setLoading] = useState(false);
   const [parceiros, setParceiros] = useState<Empresa[]>([]);
 
-  // Carrega empresas (parceiros)
+  // Carrega empresas (apenas parceiros)
   useEffect(() => {
     const fetchEmpresas = async () => {
-      const { data } = await supabase.from("empresas").select("*");
+      const { data } = await supabase
+        .from("empresas")
+        .select("*")
+        .eq("tipo", "parceiro");
       setParceiros(data || []);
     };
     fetchEmpresas();
@@ -147,7 +150,6 @@ const QuadranteForm: React.FC<QuadranteFormProps> = ({
             <FormItem>
               <FormLabel>Parceiro</FormLabel>
               <Select
-                // O campo só é desabilitado se readOnly de fato, nunca por haver indicador selecionado!
                 disabled={readOnly}
                 onValueChange={(val) => {
                   field.onChange(val);
