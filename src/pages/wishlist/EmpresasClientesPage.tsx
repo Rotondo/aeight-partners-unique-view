@@ -5,13 +5,27 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useWishlist } from "@/contexts/WishlistContext";
-import { Plus, Search, Building2, Calendar, Loader2, Edit2, ArrowRight, MoreVertical } from "lucide-react";
+import {
+  Plus,
+  Search,
+  Building2,
+  Calendar,
+  Loader2,
+  Edit2,
+  ArrowRight,
+  MoreVertical,
+} from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { supabase } from "@/lib/supabase";
 import { MultiSelect } from "@/components/ui/MultiSelect";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
-import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+  TooltipProvider,
+} from "@/components/ui/tooltip";
 
 type EmpresaOption = {
   id: string;
@@ -65,9 +79,18 @@ const EmpresasClientesPage: React.FC = () => {
 
       if (!error && data) {
         setEmpresas(data);
-        setEmpresasClientesOptions(data.filter((e: EmpresaOption) => e.tipo === "cliente"));
-        setEmpresasParceiros(data.filter((e: EmpresaOption) => e.tipo === "parceiro" || e.tipo === "intragrupo"));
-        setEmpresasClientesAll(data.filter((e: EmpresaOption) => e.tipo === "cliente"));
+        setEmpresasClientesOptions(
+          data.filter((e: EmpresaOption) => e.tipo === "cliente")
+        );
+        setEmpresasParceiros(
+          data.filter(
+            (e: EmpresaOption) =>
+              e.tipo === "parceiro" || e.tipo === "intragrupo"
+          )
+        );
+        setEmpresasClientesAll(
+          data.filter((e: EmpresaOption) => e.tipo === "cliente")
+        );
       }
     };
     fetchEmpresas();
@@ -84,8 +107,15 @@ const EmpresasClientesPage: React.FC = () => {
 
       if (!error && data) {
         setEmpresas(data);
-        setEmpresasClientesOptions(data.filter((e: EmpresaOption) => e.tipo === "cliente"));
-        setEmpresasParceiros(data.filter((e: EmpresaOption) => e.tipo === "parceiro" || e.tipo === "intragrupo"));
+        setEmpresasClientesOptions(
+          data.filter((e: EmpresaOption) => e.tipo === "cliente")
+        );
+        setEmpresasParceiros(
+          data.filter(
+            (e: EmpresaOption) =>
+              e.tipo === "parceiro" || e.tipo === "intragrupo"
+          )
+        );
       }
     };
     fetchEmpresas();
@@ -96,7 +126,8 @@ const EmpresasClientesPage: React.FC = () => {
     if (!novoClienteNome.trim()) return;
     setCriandoNovoCliente(true);
     const existe = empresasClientesOptions.find(
-      (c) => c.nome.trim().toLowerCase() === novoClienteNome.trim().toLowerCase()
+      (c) =>
+        c.nome.trim().toLowerCase() === novoClienteNome.trim().toLowerCase()
     );
     let clienteId = "";
     if (existe) {
@@ -113,9 +144,18 @@ const EmpresasClientesPage: React.FC = () => {
         .single();
       if (!error && data) {
         clienteId = data.id;
-        setEmpresasClientesOptions((prev) => [...prev, { id: data.id, nome: novoClienteNome.trim(), tipo: "cliente" }]);
-        setEmpresas((prev) => [...prev, { id: data.id, nome: novoClienteNome.trim(), tipo: "cliente" }]);
-        setEmpresasClientesAll((prev) => [...prev, { id: data.id, nome: novoClienteNome.trim(), tipo: "cliente" }]);
+        setEmpresasClientesOptions((prev) => [
+          ...prev,
+          { id: data.id, nome: novoClienteNome.trim(), tipo: "cliente" },
+        ]);
+        setEmpresas((prev) => [
+          ...prev,
+          { id: data.id, nome: novoClienteNome.trim(), tipo: "cliente" },
+        ]);
+        setEmpresasClientesAll((prev) => [
+          ...prev,
+          { id: data.id, nome: novoClienteNome.trim(), tipo: "cliente" },
+        ]);
       }
     }
     if (clienteId) setEmpresaCliente(clienteId);
@@ -152,16 +192,20 @@ const EmpresasClientesPage: React.FC = () => {
     } else {
       // Criar múltiplos vínculos: para cada parceiro selecionado, cria um vínculo com o cliente escolhido
       const jaVinculados = parceirosJaVinculadosAoCliente(empresaCliente);
-      const novosParceiros = parceirosSelecionados.filter(id => !jaVinculados.includes(id));
-      await Promise.all(novosParceiros.map(parceiroId =>
-        addEmpresaCliente({
-          empresa_proprietaria_id: parceiroId,
-          empresa_cliente_id: empresaCliente,
-          status: true,
-          data_relacionamento: new Date().toISOString(),
-          observacoes,
-        })
-      ));
+      const novosParceiros = parceirosSelecionados.filter(
+        (id) => !jaVinculados.includes(id)
+      );
+      await Promise.all(
+        novosParceiros.map((parceiroId) =>
+          addEmpresaCliente({
+            empresa_proprietaria_id: parceiroId,
+            empresa_cliente_id: empresaCliente,
+            status: true,
+            data_relacionamento: new Date().toISOString(),
+            observacoes,
+          })
+        )
+      );
     }
     setModalLoading(false);
     setModalOpen(false);
@@ -169,24 +213,44 @@ const EmpresasClientesPage: React.FC = () => {
     fetchEmpresasClientes();
   };
 
-  const filteredClientesVinculados = empresasClientes.filter(cliente =>
-    cliente.empresa_cliente?.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    cliente.empresa_proprietaria?.nome.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredClientesVinculados = empresasClientes.filter(
+    (cliente) =>
+      cliente.empresa_cliente?.nome
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
+      cliente.empresa_proprietaria?.nome
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase())
   );
 
   // Clientes não vinculados: todos do tipo cliente que não estão em nenhum vínculo
-  const clientesVinculadosIds = new Set(empresasClientes.map(c => c.empresa_cliente_id));
-  const filteredClientesNaoVinculados = empresasClientesAll
-    .filter(cliente =>
+  const clientesVinculadosIds = new Set(
+    empresasClientes.map((c) => c.empresa_cliente_id)
+  );
+  const filteredClientesNaoVinculados = empresasClientesAll.filter(
+    (cliente) =>
       !clientesVinculadosIds.has(cliente.id) &&
       cliente.nome.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+  );
 
+  // --- CORREÇÃO MODAL: adiciona cliente da linha à lista de opções se não existir ---
   const handleEditar = (relacionamento: any) => {
+    const clienteId = relacionamento.empresa_cliente_id;
+    const nome = relacionamento.empresa_cliente?.nome;
+    if (
+      clienteId &&
+      nome &&
+      !empresasClientesOptions.some((e) => e.id === clienteId)
+    ) {
+      setEmpresasClientesOptions((prev) => [
+        ...prev,
+        { id: clienteId, nome, tipo: "cliente" },
+      ]);
+    }
     setModalType("editar");
     setEditRelacionamentoId(relacionamento.id);
     setParceirosSelecionados([relacionamento.empresa_proprietaria_id]);
-    setEmpresaCliente(relacionamento.empresa_cliente_id);
+    setEmpresaCliente(clienteId);
     setObservacoes(relacionamento.observacoes || "");
     setModalOpen(true);
   };
@@ -239,27 +303,47 @@ const EmpresasClientesPage: React.FC = () => {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight mb-1">Base de Clientes</h1>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight mb-1">
+            Base de Clientes
+          </h1>
           <p className="text-muted-foreground text-sm">
             Gerencie a base de clientes de cada parceiro
           </p>
         </div>
-        <Dialog open={modalOpen} onOpenChange={o => { setModalOpen(o); if (!o) resetModal(); }}>
-          <Button onClick={() => { setModalOpen(true); setModalType("novo"); }}>
+        <Dialog
+          open={modalOpen}
+          onOpenChange={(o) => {
+            setModalOpen(o);
+            if (!o) resetModal();
+          }}
+        >
+          <Button
+            onClick={() => {
+              setModalOpen(true);
+              setModalType("novo");
+            }}
+          >
             <Plus className="mr-2 h-4 w-4" />
             Adicionar Cliente
           </Button>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>
-                {modalType === "editar" ? "Editar Relacionamento" : "Novo Relacionamento Parceiro-Cliente"}
+                {modalType === "editar"
+                  ? "Editar Relacionamento"
+                  : "Novo Relacionamento Parceiro-Cliente"}
               </DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block font-medium mb-1">Parceiro(s) / Proprietário(s)</label>
+                <label className="block font-medium mb-1">
+                  Parceiro(s) / Proprietário(s)
+                </label>
                 <MultiSelect
-                  options={parceirosDisponiveis.map(p => ({ value: p.id, label: p.nome }))}
+                  options={parceirosDisponiveis.map((p) => ({
+                    value: p.id,
+                    label: p.nome,
+                  }))}
                   values={parceirosSelecionados}
                   onChange={setParceirosSelecionados}
                   disabled={modalType === "editar"}
@@ -271,7 +355,7 @@ const EmpresasClientesPage: React.FC = () => {
                 <Input
                   as="select"
                   value={empresaCliente}
-                  onChange={e => setEmpresaCliente(e.target.value)}
+                  onChange={(e) => setEmpresaCliente(e.target.value)}
                   disabled={modalType === "editar"}
                   className="w-full"
                 >
@@ -279,15 +363,17 @@ const EmpresasClientesPage: React.FC = () => {
                     Selecione cliente
                   </option>
                   {empresasClientesOptions.map((e) => (
-                    <option key={e.id} value={e.id}>{e.nome}</option>
+                    <option key={e.id} value={e.id}>
+                      {e.nome}
+                    </option>
                   ))}
                 </Input>
                 <div className="flex mt-2 gap-2">
                   <Input
                     placeholder="Novo cliente"
                     value={novoClienteNome}
-                    onChange={e => setNovoClienteNome(e.target.value)}
-                    onKeyDown={e => {
+                    onChange={(e) => setNovoClienteNome(e.target.value)}
+                    onKeyDown={(e) => {
                       if (e.key === "Enter") {
                         e.preventDefault();
                         handleCriarNovoCliente();
@@ -301,7 +387,9 @@ const EmpresasClientesPage: React.FC = () => {
                     onClick={handleCriarNovoCliente}
                     disabled={criandoNovoCliente || !novoClienteNome.trim()}
                   >
-                    {criandoNovoCliente && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+                    {criandoNovoCliente && (
+                      <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                    )}
                     Adicionar
                   </Button>
                 </div>
@@ -310,10 +398,12 @@ const EmpresasClientesPage: React.FC = () => {
                 </p>
               </div>
               <div>
-                <label className="block font-medium mb-1">Observações (opcional)</label>
+                <label className="block font-medium mb-1">
+                  Observações (opcional)
+                </label>
                 <Input
                   value={observacoes}
-                  onChange={e => setObservacoes(e.target.value)}
+                  onChange={(e) => setObservacoes(e.target.value)}
                   placeholder="Observações sobre o relacionamento"
                 />
               </div>
@@ -326,15 +416,22 @@ const EmpresasClientesPage: React.FC = () => {
                     !empresaCliente
                   }
                 >
-                  {modalLoading && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
-                  {modalType === "editar" ? "Salvar Alterações" : "Criar Relacionamento(s)"}
+                  {modalLoading && (
+                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  )}
+                  {modalType === "editar"
+                    ? "Salvar Alterações"
+                    : "Criar Relacionamento(s)"}
                 </Button>
               </div>
             </form>
           </DialogContent>
         </Dialog>
         {/* Modal Solicitar Apresentação */}
-        <Dialog open={modalApresentacaoOpen} onOpenChange={setModalApresentacaoOpen}>
+        <Dialog
+          open={modalApresentacaoOpen}
+          onOpenChange={setModalApresentacaoOpen}
+        >
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Solicitar Apresentação</DialogTitle>
@@ -342,20 +439,28 @@ const EmpresasClientesPage: React.FC = () => {
             <form onSubmit={handleSubmitApresentacao} className="space-y-4">
               <div>
                 <div className="font-medium mb-2">
-                  Cliente: <span className="font-normal">{apresentacaoCliente?.empresa_cliente?.nome}</span>
+                  Cliente:{" "}
+                  <span className="font-normal">
+                    {apresentacaoCliente?.empresa_cliente?.nome}
+                  </span>
                 </div>
                 <div className="font-medium mb-2">
-                  Proprietário: <span className="font-normal">{apresentacaoCliente?.empresa_proprietaria?.nome}</span>
+                  Proprietário:{" "}
+                  <span className="font-normal">
+                    {apresentacaoCliente?.empresa_proprietaria?.nome}
+                  </span>
                 </div>
                 <Input
                   placeholder="Observações para a apresentação"
                   value={apresentacaoObs}
-                  onChange={e => setApresentacaoObs(e.target.value)}
+                  onChange={(e) => setApresentacaoObs(e.target.value)}
                 />
               </div>
               <div className="flex justify-end">
                 <Button type="submit" disabled={apresentacaoLoading}>
-                  {apresentacaoLoading && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+                  {apresentacaoLoading && (
+                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  )}
                   Solicitar Apresentação
                 </Button>
               </div>
@@ -381,23 +486,39 @@ const EmpresasClientesPage: React.FC = () => {
       <div className="grid gap-2 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between py-3">
-            <CardTitle className="text-xs font-medium">Total de Clientes Vinculados</CardTitle>
+            <CardTitle className="text-xs font-medium">
+              Total de Clientes Vinculados
+            </CardTitle>
             <Building2 className="h-4 w-4 text-muted-foreground" />
-            <span className="text-xl font-bold">{empresasClientes.length}</span>
+            <span className="text-xl font-bold">
+              {empresasClientes.length}
+            </span>
           </CardHeader>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between py-3">
-            <CardTitle className="text-xs font-medium">Proprietários Únicos</CardTitle>
+            <CardTitle className="text-xs font-medium">
+              Proprietários Únicos
+            </CardTitle>
             <Building2 className="h-4 w-4 text-muted-foreground" />
-            <span className="text-xl font-bold">{new Set(empresasClientes.map(c => c.empresa_proprietaria_id)).size}</span>
+            <span className="text-xl font-bold">
+              {new Set(
+                empresasClientes.map((c) => c.empresa_proprietaria_id)
+              ).size}
+            </span>
           </CardHeader>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between py-3">
-            <CardTitle className="text-xs font-medium">Relacionamentos Ativos</CardTitle>
-            <Badge variant="outline" className="ml-2">Ativo</Badge>
-            <span className="text-xl font-bold">{empresasClientes.filter(c => c.status).length}</span>
+            <CardTitle className="text-xs font-medium">
+              Relacionamentos Ativos
+            </CardTitle>
+            <Badge variant="outline" className="ml-2">
+              Ativo
+            </Badge>
+            <span className="text-xl font-bold">
+              {empresasClientes.filter((c) => c.status).length}
+            </span>
           </CardHeader>
         </Card>
       </div>
@@ -416,11 +537,20 @@ const EmpresasClientesPage: React.FC = () => {
           </thead>
           <tbody>
             {filteredClientesVinculados.map((cliente) => (
-              <tr key={cliente.id} className="border-b hover:bg-muted/50 transition">
-                <td className="px-3 py-2 font-medium whitespace-nowrap">{cliente.empresa_cliente?.nome}</td>
-                <td className="px-3 py-2">{cliente.empresa_proprietaria?.nome}</td>
+              <tr
+                key={cliente.id}
+                className="border-b hover:bg-muted/50 transition"
+              >
+                <td className="px-3 py-2 font-medium whitespace-nowrap">
+                  {cliente.empresa_cliente?.nome}
+                </td>
                 <td className="px-3 py-2">
-                  <Badge variant={cliente.status ? "default" : "secondary"}>
+                  {cliente.empresa_proprietaria?.nome}
+                </td>
+                <td className="px-3 py-2">
+                  <Badge
+                    variant={cliente.status ? "default" : "secondary"}
+                  >
                     {cliente.status ? "Ativo" : "Inativo"}
                   </Badge>
                 </td>
@@ -429,12 +559,20 @@ const EmpresasClientesPage: React.FC = () => {
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <span>
-                          {format(new Date(cliente.data_relacionamento), "dd/MM/yyyy", { locale: ptBR })}
+                          {format(
+                            new Date(cliente.data_relacionamento),
+                            "dd/MM/yyyy",
+                            { locale: ptBR }
+                          )}
                         </span>
                       </TooltipTrigger>
                       <TooltipContent>
                         Relacionamento desde{" "}
-                        {format(new Date(cliente.data_relacionamento), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                        {format(
+                          new Date(cliente.data_relacionamento),
+                          "dd 'de' MMMM 'de' yyyy",
+                          { locale: ptBR }
+                        )}
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -442,15 +580,29 @@ const EmpresasClientesPage: React.FC = () => {
                 <td className="px-3 py-2">
                   <Popover>
                     <PopoverTrigger asChild>
-                      <Button variant="ghost" size="icon" className="p-1 h-8 w-8">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="p-1 h-8 w-8"
+                      >
                         <MoreVertical className="h-4 w-4" />
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent align="end" className="w-36 p-1 flex flex-col gap-1">
-                      <Button variant="ghost" size="sm" className="justify-start w-full" onClick={() => handleEditar(cliente)}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="justify-start w-full"
+                        onClick={() => handleEditar(cliente)}
+                      >
                         <Edit2 className="h-4 w-4 mr-2" /> Editar
                       </Button>
-                      <Button variant="ghost" size="sm" className="justify-start w-full" onClick={() => handleSolicitarApresentacao(cliente)}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="justify-start w-full"
+                        onClick={() => handleSolicitarApresentacao(cliente)}
+                      >
                         <ArrowRight className="h-4 w-4 mr-2" /> Solicitar Apresentação
                       </Button>
                     </PopoverContent>
@@ -460,10 +612,15 @@ const EmpresasClientesPage: React.FC = () => {
             ))}
             {/* Clientes NÃO vinculados */}
             {filteredClientesNaoVinculados.map((cliente) => (
-              <tr key={cliente.id} className="border-b hover:bg-muted/40">
+              <tr
+                key={cliente.id}
+                className="border-b hover:bg-muted/40"
+              >
                 <td className="px-3 py-2 font-medium">{cliente.nome}</td>
                 <td className="px-3 py-2">
-                  <span className="italic text-muted-foreground">Sem proprietário</span>
+                  <span className="italic text-muted-foreground">
+                    Sem proprietário
+                  </span>
                 </td>
                 <td className="px-3 py-2">
                   <Badge variant="secondary">Não vinculado</Badge>
@@ -477,6 +634,22 @@ const EmpresasClientesPage: React.FC = () => {
                           variant="outline"
                           size="sm"
                           onClick={() => {
+                            if (
+                              cliente.id &&
+                              cliente.nome &&
+                              !empresasClientesOptions.some(
+                                (e) => e.id === cliente.id
+                              )
+                            ) {
+                              setEmpresasClientesOptions((prev) => [
+                                ...prev,
+                                {
+                                  id: cliente.id,
+                                  nome: cliente.nome,
+                                  tipo: "cliente",
+                                },
+                              ]);
+                            }
                             setEmpresaCliente(cliente.id);
                             setModalOpen(true);
                             setModalType("novo");
@@ -494,13 +667,25 @@ const EmpresasClientesPage: React.FC = () => {
               </tr>
             ))}
             {/* Caso nenhum cliente exibido */}
-            {filteredClientesVinculados.length + filteredClientesNaoVinculados.length === 0 && (
+            {filteredClientesVinculados.length +
+              filteredClientesNaoVinculados.length === 0 && (
               <tr>
                 <td colSpan={5} className="py-12 text-center text-muted-foreground">
                   <Building2 className="h-12 w-12 mx-auto mb-2 text-muted-foreground" />
-                  <div className="text-lg font-semibold mb-1">Nenhum cliente encontrado</div>
-                  <div className="mb-4">{searchTerm ? "Tente ajustar os filtros de busca" : "Adicione o primeiro cliente à base"}</div>
-                  <Button onClick={() => { setModalOpen(true); setModalType("novo"); }}>
+                  <div className="text-lg font-semibold mb-1">
+                    Nenhum cliente encontrado
+                  </div>
+                  <div className="mb-4">
+                    {searchTerm
+                      ? "Tente ajustar os filtros de busca"
+                      : "Adicione o primeiro cliente à base"}
+                  </div>
+                  <Button
+                    onClick={() => {
+                      setModalOpen(true);
+                      setModalType("novo");
+                    }}
+                  >
                     <Plus className="mr-2 h-4 w-4" />
                     Adicionar Cliente
                   </Button>
