@@ -18,7 +18,12 @@ type EmpresaOption = {
 };
 
 const EmpresasClientesPage: React.FC = () => {
-  const { empresasClientes, loading: loadingEmpresasClientes, fetchEmpresasClientes, addEmpresaCliente } = useWishlist();
+  const {
+    empresasClientes,
+    loading: loadingEmpresasClientes,
+    fetchEmpresasClientes,
+    addEmpresaCliente,
+  } = useWishlist();
   const [searchTerm, setSearchTerm] = useState("");
 
   // Modal states
@@ -35,8 +40,30 @@ const EmpresasClientesPage: React.FC = () => {
   const [criandoNovoCliente, setCriandoNovoCliente] = useState(false);
   const [novoClienteNome, setNovoClienteNome] = useState("");
 
-  // Buscar empresas para o formulário
+  // Estado para todas as empresas do tipo cliente (para exibir clientes não vinculados)
+  const [empresasClientesAll, setEmpresasClientesAll] = useState<EmpresaOption[]>([]);
+
+  // Buscar empresas para o formulário e ALL clientes para exibição
   useEffect(() => {
+    const fetchEmpresas = async () => {
+      const { data, error } = await supabase
+        .from("empresas")
+        .select("id,nome,tipo")
+        .order("nome");
+
+      if (!error && data) {
+        setEmpresas(data);
+        setEmpresasClientesOptions(data.filter((e: EmpresaOption) => e.tipo === "cliente"));
+        setEmpresasParceiros(data.filter((e: EmpresaOption) => e.tipo === "parceiro" || e.tipo === "intragrupo"));
+        setEmpresasClientesAll(data.filter((e: EmpresaOption) => e.tipo === "cliente"));
+      }
+    };
+    fetchEmpresas();
+  }, []);
+
+  // Atualiza empresas para select ao abrir modal (mantendo lógica original)
+  useEffect(() => {
+    if (!modalOpen) return;
     const fetchEmpresas = async () => {
       const { data, error } = await supabase
         .from("empresas")
@@ -49,7 +76,7 @@ const EmpresasClientesPage: React.FC = () => {
         setEmpresasParceiros(data.filter((e: EmpresaOption) => e.tipo === "parceiro" || e.tipo === "intragrupo"));
       }
     };
-    if (modalOpen) fetchEmpresas();
+    fetchEmpresas();
   }, [modalOpen]);
 
   // Handler: criar novo cliente rapidamente
@@ -76,6 +103,7 @@ const EmpresasClientesPage: React.FC = () => {
         clienteId = data.id;
         setEmpresasClientesOptions((prev) => [...prev, { id: data.id, nome: novoClienteNome.trim(), tipo: "cliente" }]);
         setEmpresas((prev) => [...prev, { id: data.id, nome: novoClienteNome.trim(), tipo: "cliente" }]);
+        setEmpresasClientesAll((prev) => [...prev, { id: data.id, nome: novoClienteNome.trim(), tipo: "cliente" }]);
       }
     }
     if (clienteId) setEmpresaCliente(clienteId);
@@ -111,10 +139,18 @@ const EmpresasClientesPage: React.FC = () => {
     fetchEmpresasClientes();
   };
 
-  const filteredClientes = empresasClientes.filter(cliente =>
+  const filteredClientesVinculados = empresasClientes.filter(cliente =>
     cliente.empresa_cliente?.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
     cliente.empresa_proprietaria?.nome.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // Clientes não vinculados: todos do tipo cliente que não estão em nenhum vínculo
+  const clientesVinculadosIds = new Set(empresasClientes.map(c => c.empresa_cliente_id));
+  const filteredClientesNaoVinculados = empresasClientesAll
+    .filter(cliente =>
+      !clientesVinculadosIds.has(cliente.id) &&
+      cliente.nome.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
   if (loadingEmpresasClientes) {
     return (
@@ -238,7 +274,7 @@ const EmpresasClientesPage: React.FC = () => {
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Clientes</CardTitle>
+            <CardTitle className="text-sm font-medium">Total de Clientes Vinculados</CardTitle>
             <Building2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -271,9 +307,9 @@ const EmpresasClientesPage: React.FC = () => {
         </Card>
       </div>
 
-      {/* Lista de Clientes */}
+      {/* Lista de Clientes Vinculados */}
       <div className="grid gap-4">
-        {filteredClientes.map((cliente) => (
+        {filteredClientesVinculados.map((cliente) => (
           <Card key={cliente.id}>
             <CardHeader>
               <div className="flex justify-between items-start">
@@ -319,8 +355,47 @@ const EmpresasClientesPage: React.FC = () => {
             </CardContent>
           </Card>
         ))}
-
-        {filteredClientes.length === 0 && (
+        {/* Clientes NÃO vinculados */}
+        {filteredClientesNaoVinculados.map((cliente) => (
+          <Card key={cliente.id}>
+            <CardHeader>
+              <div className="flex justify-between items-start">
+                <div>
+                  <CardTitle className="text-lg">
+                    {cliente.nome}
+                  </CardTitle>
+                  <CardDescription>
+                    <span className="italic text-muted-foreground">Sem relacionamento registrado</span>
+                  </CardDescription>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary">Não vinculado</Badge>
+                  <Badge variant="outline">{cliente.tipo}</Badge>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center text-sm text-muted-foreground">
+                <Building2 className="mr-2 h-4 w-4" />
+                Cliente cadastrado na base, aguardando relacionamento.
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setEmpresaCliente(cliente.id);
+                    setModalOpen(true);
+                  }}
+                >
+                  Vincular a Proprietário
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+        {/* Caso nenhum cliente exibido */}
+        {filteredClientesVinculados.length + filteredClientesNaoVinculados.length === 0 && (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
               <Building2 className="h-12 w-12 text-muted-foreground mb-4" />
