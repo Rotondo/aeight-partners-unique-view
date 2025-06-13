@@ -1,3 +1,7 @@
+/**
+ * Helper para logar problemas de campos controlados (undefined/null) em dev.
+ * Exibe nome, id, props e stack trace para facilitar a localização do erro.
+ */
 export function logControlledField(
   kind: string,
   value: any,
