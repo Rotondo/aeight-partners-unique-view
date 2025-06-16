@@ -131,7 +131,7 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setEmpresasClientes(data || []);
+      setEmpresasClientes(data ?? []);
     } catch (error) {
       console.error("Erro ao buscar empresas clientes:", error);
       toast({
@@ -161,7 +161,7 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      const typedData = (data || []).map((item) => ({
+      const typedData = (data ?? []).map((item) => ({
         ...item,
         status: item.status as WishlistStatus,
       }));
@@ -199,7 +199,7 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({
 
       if (error) throw error;
 
-      const typedData = (data || []).map((item) => ({
+      const typedData = (data ?? []).map((item) => ({
         ...item,
         tipo_apresentacao: item.tipo_apresentacao as TipoApresentacao,
         status_apresentacao: item.status_apresentacao as StatusApresentacao,
@@ -235,8 +235,8 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({
       if (wishlistData.error) throw wishlistData.error;
       if (apresentacoesData.error) throw apresentacoesData.error;
 
-      const wishlist: any[] = wishlistData.data || [];
-      const apresentacoes: any[] = apresentacoesData.data || [];
+      const wishlist: any[] = wishlistData.data ?? [];
+      const apresentacoes: any[] = apresentacoesData.data ?? [];
 
       // Agrupa wishlist por mês/ano
       const wishlistPerMonth: Record<string, number> = {};
@@ -278,14 +278,18 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({
       const apresentacoesRealizadas = apresentacoes.filter((item) => item.status_apresentacao === "realizada").length;
       const conversaoOportunidades = apresentacoes.filter((item) => item.converteu_oportunidade).length;
 
+      // Exemplo de agregação (ajuste conforme necessário)
+      const empresasMaisDesejadas: Array<{ nome: string; count: number }> = [];
+      const facilitacoesPorParceiro: Array<{ nome: string; count: number }> = [];
+
       const statsData: WishlistStats = {
         totalSolicitacoes,
         solicitacoesPendentes,
         solicitacoesAprovadas,
         apresentacoesRealizadas,
         conversaoOportunidades,
-        empresasMaisDesejadas: [],
-        facilitacoesPorParceiro: [],
+        empresasMaisDesejadas: empresasMaisDesejadas ?? [],
+        facilitacoesPorParceiro: facilitacoesPorParceiro ?? [],
         evolucao: {
           totalSolicitacoes: calcEvolution(
             wishlistPerMonth[currentMonth] || 0,
