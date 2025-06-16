@@ -1,25 +1,35 @@
-import { useState } from "react";
-import { UUID } from "@/types/diario";
+import { useQuery } from "react-query";
+import { Partner } from "@/types/diario";
+import { supabase } from "@/lib/supabaseClient";
 
-// Simulação de busca de parceiros (substitua por fetch real no projeto)
-export interface Partner {
-  id: UUID;
-  name: string;
-}
-
+/**
+ * Hook customizado para buscar e gerenciar a lista de parceiros.
+ * Exemplo de uso:
+ * const { partners, loading, error, refetch } = usePartners();
+ */
 export function usePartners() {
-  const [loading, setLoading] = useState(false);
-  const [partners, setPartners] = useState<Partner[]>([]);
-  const fetchPartners = async (query: string) => {
-    setLoading(true);
-    // Substitua pelo fetch real (ex: Supabase)
-    setTimeout(() => {
-      setPartners([
-        { id: "1", name: "Parceiro Alpha" },
-        { id: "2", name: "Parceiro Beta" },
-      ]);
-      setLoading(false);
-    }, 500);
+  const {
+    data: partners,
+    isLoading: loading,
+    isError,
+    error,
+    refetch,
+  } = useQuery<Partner[], Error>(
+    "partners",
+    async () => {
+      const { data, error } = await supabase.from("parceiros").select("*");
+      if (error) throw error;
+      return data as Partner[];
+    },
+    {
+      staleTime: 5 * 60 * 1000,
+    }
+  );
+
+  return {
+    partners: partners || [],
+    loading,
+    error: isError ? error?.message : null,
+    refetch,
   };
-  return { partners, fetchPartners, loading };
 }
