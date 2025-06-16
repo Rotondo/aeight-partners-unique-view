@@ -309,8 +309,6 @@ const WishlistItemsPage: React.FC = () => {
 
   // Facilitar apresentação
   const handleFacilitate = async () => {
-    // Redirecionar ou abrir modal de apresentação conforme seu fluxo.
-    // Aqui, apenas feedback visual de placeholder.
     setFacilitateDialogOpen(false);
     toast({
       title: "Fluxo de facilitação",
@@ -343,7 +341,9 @@ const WishlistItemsPage: React.FC = () => {
     setItemToDelete(null);
   };
 
-  const filteredItems = wishlistItems.filter((item) => {
+  // Defensive .map for wishlistItems and filteredItems
+  const safeWishlistItems = Array.isArray(wishlistItems) ? wishlistItems : [];
+  const filteredItems = safeWishlistItems.filter((item) => {
     const matchesSearch =
       (item.empresa_interessada?.nome || "")
         .toLowerCase()
@@ -475,7 +475,7 @@ const WishlistItemsPage: React.FC = () => {
                     <SelectValue placeholder="Selecione empresa (parceiro/intragrupo)" />
                   </SelectTrigger>
                   <SelectContent>
-                    {empresasParceiros.map((e) => (
+                    {(empresasParceiros ?? []).map((e) => (
                       <SelectItem key={e.id} value={e.id}>
                         {e.nome}
                       </SelectItem>
@@ -500,7 +500,7 @@ const WishlistItemsPage: React.FC = () => {
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    {empresasClientes.map((e) => (
+                    {(empresasClientes ?? []).map((e) => (
                       <SelectItem key={e.id} value={e.id}>
                         {e.nome}
                       </SelectItem>
@@ -548,7 +548,7 @@ const WishlistItemsPage: React.FC = () => {
                     <SelectValue placeholder="Selecione proprietário" />
                   </SelectTrigger>
                   <SelectContent>
-                    {empresasParceiros.map((e) => (
+                    {(empresasParceiros ?? []).map((e) => (
                       <SelectItem key={e.id} value={e.id}>
                         {e.nome}
                       </SelectItem>
@@ -654,7 +654,7 @@ const WishlistItemsPage: React.FC = () => {
             <Heart className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{wishlistItems.length}</div>
+            <div className="text-2xl font-bold">{safeWishlistItems.length}</div>
           </CardContent>
         </Card>
 
@@ -662,12 +662,12 @@ const WishlistItemsPage: React.FC = () => {
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Pendentes</CardTitle>
             <Badge variant="secondary">
-              {wishlistItems.filter((i) => i.status === "pendente").length}
+              {safeWishlistItems.filter((i) => i.status === "pendente").length}
             </Badge>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {wishlistItems.filter((i) => i.status === "pendente").length}
+              {safeWishlistItems.filter((i) => i.status === "pendente").length}
             </div>
           </CardContent>
         </Card>
@@ -676,12 +676,12 @@ const WishlistItemsPage: React.FC = () => {
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Aprovados</CardTitle>
             <Badge variant="default">
-              {wishlistItems.filter((i) => i.status === "aprovado").length}
+              {safeWishlistItems.filter((i) => i.status === "aprovado").length}
             </Badge>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {wishlistItems.filter((i) => i.status === "aprovado").length}
+              {safeWishlistItems.filter((i) => i.status === "aprovado").length}
             </div>
           </CardContent>
         </Card>
@@ -690,12 +690,12 @@ const WishlistItemsPage: React.FC = () => {
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Convertidos</CardTitle>
             <Badge variant="default">
-              {wishlistItems.filter((i) => i.status === "convertido").length}
+              {safeWishlistItems.filter((i) => i.status === "convertido").length}
             </Badge>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {wishlistItems.filter((i) => i.status === "convertido").length}
+              {safeWishlistItems.filter((i) => i.status === "convertido").length}
             </div>
           </CardContent>
         </Card>
@@ -703,7 +703,7 @@ const WishlistItemsPage: React.FC = () => {
 
       {/* Lista de Items */}
       <div className="grid gap-4">
-        {filteredItems.map((item) => (
+        {(filteredItems ?? []).map((item) => (
           <Card key={item.id}>
             <CardHeader>
               <div className="flex justify-between items-start">
@@ -824,7 +824,7 @@ const WishlistItemsPage: React.FC = () => {
             </CardContent>
           </Card>
         ))}
-        {filteredItems.length === 0 && (
+        {(filteredItems ?? []).length === 0 && (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
               <Heart className="h-12 w-12 text-muted-foreground mb-4" />
