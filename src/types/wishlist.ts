@@ -99,4 +99,9 @@ export interface WishlistStats {
   conversaoOportunidades: number;
   empresasMaisDesejadas: Array<{ nome: string; count: number }>;
   facilitacoesPorParceiro: Array<{ nome: string; count: number }>;
+  evolucao?: {
+    totalSolicitacoes?: number | null;
+    apresentacoesRealizadas?: number | null;
+    conversaoOportunidades?: number | null;
+  };
 }
