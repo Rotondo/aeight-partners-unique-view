@@ -1,9 +1,9 @@
-
 import React from "react";
 import { Outlet } from "react-router-dom";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
 import Header from "./Header";
+import { SpeedInsights } from "@vercel/speed-insights/react"; // Adicionado
 
 const MainLayout: React.FC = () => {
   return (
@@ -18,6 +18,7 @@ const MainLayout: React.FC = () => {
           <footer className="w-full py-2 text-center text-xs text-muted-foreground border-t">
             Desenvolvido por Thiago Rotondo
           </footer>
+          <SpeedInsights /> {/* Adicionado para Vercel Speed Insights */}
         </SidebarInset>
       </div>
     </SidebarProvider>
