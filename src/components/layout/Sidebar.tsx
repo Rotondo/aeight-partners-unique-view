@@ -1,146 +1,98 @@
 import React from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-} from "@/components/ui/sidebar";
-import {
-  BarChart3,
-  Building2,
-  FileText,
-  Users,
-  TrendingUp,
-  Settings,
-  FolderOpen,
-  Heart,
   LayoutDashboard,
-  LogIn,
-  LogOut,
-  NotebookPen,
+  ListChecks,
+  BarChart2,
+  Settings,
+  Activity,
+  Building2,
+  PanelLeft,
+  KanbanSquare
 } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
+import { NavLink } from "react-router-dom";
 
-const menuItems = [
-  {
-    title: "Dashboard",
-    url: "/",
-    icon: LayoutDashboard,
-  },
-  {
-    title: "Oportunidades",
-    url: "/oportunidades",
-    icon: TrendingUp,
-  },
-  {
-    title: "Dashboard Oportunidades",
-    url: "/oportunidades-dashboard",
-    icon: BarChart3,
-  },
-  {
-    title: "Wishlist & Networking",
-    url: "/wishlist",
-    icon: Heart,
-  },
-  {
-    title: "Indicadores",
-    url: "/indicadores",
-    icon: BarChart3,
-  },
-  {
-    title: "Empresas",
-    url: "/empresas",
-    icon: Building2,
-  },
-  {
-    title: "OnePager",
-    url: "/onepager",
-    icon: FileText,
-  },
-  {
-    title: "Repositório",
-    url: "/repositorio",
-    icon: FolderOpen,
-  },
-  {
-    title: "Quadrante",
-    url: "/quadrante",
-    icon: Users,
-  },
-  {
-    title: "Diário",
-    url: "/diario",
-    icon: NotebookPen,
-  },
-  {
-    title: "Admin",
-    url: "/admin",
-    icon: Settings,
-  },
-];
+interface SidebarProps {
+  isCollapsed: boolean;
+}
 
-export const AppSidebar: React.FC = () => {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const { isAuthenticated, logout, loading } = useAuth();
-
-  // Handler para logout
-  const handleLogout = async () => {
-    await logout();
-    navigate("/login");
-  };
+const Sidebar: React.FC<SidebarProps> = ({ isCollapsed }) => {
+  const menuItems = [
+    {
+      icon: <LayoutDashboard size={18} />,
+      label: "Dashboard",
+      href: "/",
+    },
+    {
+      icon: <ListChecks size={18} />,
+      label: "Oportunidades",
+      href: "/oportunidades",
+    },
+    {
+      icon: <BarChart2 size={18} />,
+      label: "Dashboard de Oportunidades",
+      href: "/oportunidades-dashboard",
+    },
+    {
+      icon: <Activity size={18} />,
+      label: "Indicadores",
+      href: "/indicadores",
+    },
+    {
+      icon: <Building2 size={18} />,
+      label: "Empresas",
+      href: "/empresas",
+    },
+    {
+      icon: <PanelLeft size={18} />,
+      label: "One Pager",
+      href: "/onepager",
+    },
+    {
+      icon: <KanbanSquare size={18} />,
+      label: "Quadrante",
+      href: "/quadrante",
+    },
+    {
+      icon: <Settings size={18} />,
+      label: "Admin",
+      href: "/admin",
+    },
+  ];
 
   return (
-    <Sidebar>
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Menu Principal</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {menuItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={
-                      location.pathname === item.url ||
-                      location.pathname.startsWith(item.url + "/")
-                    }
-                  >
-                    <Link to={item.url}>
-                      <item.icon />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-              {/* Login/Logout */}
-              <SidebarMenuItem>
-                {isAuthenticated ? (
-                  <SidebarMenuButton onClick={handleLogout} isActive={false}>
-                    <LogOut />
-                    <span>Logout</span>
-                  </SidebarMenuButton>
-                ) : (
-                  <SidebarMenuButton
-                    asChild
-                    isActive={location.pathname === "/login"}
-                  >
-                    <Link to="/login">
-                      <LogIn />
-                      <span>Login</span>
-                    </Link>
-                  </SidebarMenuButton>
-                )}
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
-    </Sidebar>
+    <div
+      className={`flex flex-col h-full ${
+        isCollapsed ? "w-16" : "w-64"
+      } bg-gray-50 border-r border-gray-200`}
+    >
+      <div className="p-4">
+        <h1 className={`text-2xl font-bold ${isCollapsed ? "hidden" : ""}`}>
+          A&eight
+        </h1>
+      </div>
+      <nav className="flex-grow p-4">
+        <ul className="space-y-2">
+          {menuItems.map((item) => (
+            <li key={item.label}>
+              <NavLink
+                to={item.href}
+                className={({ isActive }) =>
+                  `flex items-center p-2 rounded-md hover:bg-gray-100 ${
+                    isActive ? "bg-gray-100 font-semibold" : ""
+                  }`
+                }
+              >
+                <span className="mr-2">{item.icon}</span>
+                <span className={`${isCollapsed ? "hidden" : ""}`}>
+                  {item.label}
+                </span>
+              </NavLink>
+            </li>
+          ))}
+        </ul>
+      </nav>
+    </div>
   );
 };
+
+export default Sidebar;

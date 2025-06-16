@@ -22,7 +22,6 @@ import {
   LayoutDashboard,
   LogIn,
   LogOut,
-  NotebookPen,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -71,11 +70,6 @@ const menuItems = [
     title: "Quadrante",
     url: "/quadrante",
     icon: Users,
-  },
-  {
-    title: "Diário",
-    url: "/diario",
-    icon: NotebookPen,
   },
   {
     title: "Admin",
