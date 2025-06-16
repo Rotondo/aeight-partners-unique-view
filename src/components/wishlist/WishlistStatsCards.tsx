@@ -1,7 +1,7 @@
 import React from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Heart, Presentation, TrendingUp, Users } from "lucide-react";
+import { Heart, Presentation, TrendingUp } from "lucide-react";
 import { WishlistStats } from "@/types";
 
 /**
@@ -9,6 +9,13 @@ import { WishlistStats } from "@/types";
  */
 type Props = {
   stats?: WishlistStats | null;
+};
+
+const formatEvolution = (value?: number | null) => {
+  if (value === null || value === undefined) return null;
+  if (value === 0) return "0% em relação ao mês anterior";
+  if (value > 0) return `+${value}% em relação ao mês anterior`;
+  return `${value}% em relação ao mês anterior`;
 };
 
 const WishlistStatsCards: React.FC<Props> = ({ stats }) => (
@@ -21,7 +28,7 @@ const WishlistStatsCards: React.FC<Props> = ({ stats }) => (
       <CardContent>
         <div className="text-2xl font-bold">{stats?.totalSolicitacoes || 0}</div>
         <p className="text-xs text-muted-foreground">
-          +20% desde o mês passado
+          {formatEvolution(stats?.evolucao?.totalSolicitacoes) ?? "Sem histórico"}
         </p>
       </CardContent>
     </Card>
@@ -47,7 +54,7 @@ const WishlistStatsCards: React.FC<Props> = ({ stats }) => (
       <CardContent>
         <div className="text-2xl font-bold">{stats?.apresentacoesRealizadas || 0}</div>
         <p className="text-xs text-muted-foreground">
-          Realizadas este mês
+          {formatEvolution(stats?.evolucao?.apresentacoesRealizadas) ?? "Sem histórico"}
         </p>
       </CardContent>
     </Card>
@@ -59,7 +66,7 @@ const WishlistStatsCards: React.FC<Props> = ({ stats }) => (
       <CardContent>
         <div className="text-2xl font-bold">{stats?.conversaoOportunidades || 0}</div>
         <p className="text-xs text-muted-foreground">
-          Para oportunidades
+          {formatEvolution(stats?.evolucao?.conversaoOportunidades) ?? "Sem histórico"}
         </p>
       </CardContent>
     </Card>
