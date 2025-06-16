@@ -1,10 +1,8 @@
-import { toast } from '@/hooks/use-toast';
-import type { Database } from '@/integrations/supabase/types';
+import { createClient } from "@supabase/supabase-js";
+import { Database } from "@/integrations/supabase/types";
 
-// Re-export the properly configured Supabase client from integrations
-export { supabase } from '@/integrations/supabase/client';
-
-// Type export for convenience
-export type { Database };
-
-console.log("Cliente Supabase inicializado");
+// Centralize Supabase client configuration
+export const supabase = createClient<Database>(
+  process.env.REACT_APP_SUPABASE_URL!,
+  process.env.REACT_APP_SUPABASE_ANON_KEY!
+);

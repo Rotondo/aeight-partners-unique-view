@@ -1,4 +1,3 @@
-
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import MainLayout from "@/components/layout/MainLayout";
@@ -18,6 +17,7 @@ import { Toaster } from "@/components/ui/toaster";
 import OportunidadesDashboardPage from "@/pages/oportunidades-dashboard";
 import RepositorioPage from "@/pages/repositorio/RepositorioPage";
 import WishlistPage from "@/pages/wishlist/WishlistPage";
+import DiarioPage from "@/pages/diario";
 
 const App: React.FC = () => (
   <Router>
@@ -34,6 +34,7 @@ const App: React.FC = () => (
             >
               {/* Rotas internas agora abertas, sem proteção */}
               <Route index element={<DashboardPage />} />
+              <Route path="diario" element={<DiarioPage />} />
               <Route path="oportunidades" element={<OportunidadesPage />} />
               <Route path="oportunidades-dashboard" element={<OportunidadesDashboardPage />} />
               <Route path="indicadores" element={<IndicadoresPage />} />
