@@ -1,4 +1,4 @@
-import { useQuery } from "react-query";
+import { useQuery } from "@tanstack/react-query";
 import { User } from "@/types/diario";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -14,17 +14,15 @@ export function useUsers() {
     isError,
     error,
     refetch,
-  } = useQuery<User[], Error>(
-    "users",
-    async () => {
+  } = useQuery<User[], Error>({
+    queryKey: ["users"],
+    queryFn: async () => {
       const { data, error } = await supabase.from("usuarios").select("*");
       if (error) throw error;
       return data as User[];
     },
-    {
-      staleTime: 5 * 60 * 1000,
-    }
-  );
+    staleTime: 5 * 60 * 1000,
+  });
 
   return {
     users: users || [],
