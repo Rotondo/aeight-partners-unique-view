@@ -1,4 +1,3 @@
-
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import MainLayout from "@/components/layout/MainLayout";
@@ -18,6 +17,7 @@ import { Toaster } from "@/components/ui/toaster";
 import OportunidadesDashboardPage from "@/pages/oportunidades-dashboard";
 import RepositorioPage from "@/pages/repositorio/RepositorioPage";
 import WishlistPage from "@/pages/wishlist/WishlistPage";
+import DiarioPage from "@/pages/diario"; // <-- ADICIONADO
 
 const App: React.FC = () => (
   <Router>
@@ -42,6 +42,7 @@ const App: React.FC = () => (
               <Route path="repositorio" element={<RepositorioPage />} />
               <Route path="wishlist/*" element={<WishlistPage />} />
               <Route path="quadrante" element={<QuadrantePage />} />
+              <Route path="diario" element={<DiarioPage />} /> {/* <-- ADICIONADO */}
               <Route path="admin" element={<Admin />} />
               <Route path="*" element={<NotFoundPage />} />
             </Route>
