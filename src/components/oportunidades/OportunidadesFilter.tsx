@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useOportunidades } from "./OportunidadesContext";
 import { Button } from "@/components/ui/button";
@@ -52,6 +51,7 @@ export const OportunidadesFilter: React.FC = () => {
     empresaDestinoId: filterParams.empresaDestinoId,
     status: filterParams.status,
     usuarioId: filterParams.usuarioId,
+    valorStatus: filterParams.valorStatus,
   });
 
   // Aplicar busca por texto em tempo real
@@ -61,7 +61,7 @@ export const OportunidadesFilter: React.FC = () => {
         ...filterParams,
         searchTerm: searchTerm || undefined
       });
-    }, 300); // Debounce de 300ms
+    }, 300);
 
     return () => clearTimeout(delayedSearch);
   }, [searchTerm]);
@@ -69,7 +69,6 @@ export const OportunidadesFilter: React.FC = () => {
   useEffect(() => {
     async function fetchFilterData() {
       try {
-        // Fetch empresas
         const { data: empresasData, error: empresasError } = await supabase
           .from("empresas")
           .select("id, nome, tipo, status, descricao")
@@ -89,7 +88,6 @@ export const OportunidadesFilter: React.FC = () => {
           setEmpresas(typedEmpresas);
         }
 
-        // Fetch usuarios
         const { data: usuariosData, error: usuariosError } = await supabase
           .from("usuarios")
           .select("id, nome, email, empresa_id, papel, ativo")
@@ -358,6 +356,28 @@ export const OportunidadesFilter: React.FC = () => {
                 </Select>
               </div>
 
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Valor</label>
+                <Select
+                  value={tempFilters.valorStatus ?? "all"}
+                  onValueChange={(value) =>
+                    setTempFilters({
+                      ...tempFilters,
+                      valorStatus: value === "all" ? undefined : value,
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Todos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="com_valor">Com valor</SelectItem>
+                    <SelectItem value="sem_valor">Sem valor</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="flex justify-between pt-2">
                 <Button variant="outline" onClick={resetFilters}>
                   Limpar Filtros
@@ -486,6 +506,22 @@ export const OportunidadesFilter: React.FC = () => {
                 className="h-4 w-4 ml-1 p-0"
                 onClick={() =>
                   setFilterParams({ ...filterParams, usuarioId: undefined })
+                }
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            </Badge>
+          )}
+
+          {filterParams.valorStatus && (
+            <Badge variant="outline" className="flex items-center gap-1">
+              Valor: {filterParams.valorStatus === "com_valor" ? "Com valor" : filterParams.valorStatus === "sem_valor" ? "Sem valor" : filterParams.valorStatus}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-4 w-4 ml-1 p-0"
+                onClick={() =>
+                  setFilterParams({ ...filterParams, valorStatus: undefined })
                 }
               >
                 <X className="h-3 w-3" />

@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -11,11 +10,17 @@ import {
   Eye,
   ArrowUp,
   ArrowDown,
+  Check,
+  X as Cancel,
+  Pencil,
+  AlertCircle,
 } from "lucide-react";
 import { Oportunidade, StatusOportunidade } from "@/types";
 import { useOportunidades } from "./OportunidadesContext";
 import { ActivityIndicator } from "./ActivityIndicator";
 import { PrivateData } from "@/components/privacy/PrivateData";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 
 // Tipos de ordenação suportados
 type ColKey =
@@ -24,6 +29,7 @@ type ColKey =
   | "empresa_destino"
   | "tipo_relacao"
   | "status"
+  | "valor"
   | "data_indicacao"
   | "usuario_responsavel";
 
@@ -34,6 +40,7 @@ const columns: { key: ColKey; label: string }[] = [
   { key: "empresa_destino", label: "Destino" },
   { key: "tipo_relacao", label: "Tipo" },
   { key: "status", label: "Status" },
+  { key: "valor", label: "Valor (R$)" },
   { key: "data_indicacao", label: "Data" },
   { key: "usuario_responsavel", label: "Executivo Responsável" },
 ];
@@ -48,17 +55,28 @@ interface SortState {
   asc: boolean;
 }
 
+function formatCurrencyBRL(value: number | null | undefined) {
+  if (typeof value !== "number" || isNaN(value)) return "";
+  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
 export const OportunidadesList: React.FC<OportunidadesListProps> = ({
   onEdit,
   onView,
 }) => {
-  const { filteredOportunidades, isLoading, deleteOportunidade } = useOportunidades();
+  const { filteredOportunidades, isLoading, deleteOportunidade, updateOportunidade } = useOportunidades();
   const [deleteConfirm, setDeleteConfirm] = useState<{
     open: boolean;
     oportunidade: Oportunidade | null;
   }>({ open: false, oportunidade: null });
 
   const [sort, setSort] = useState<SortState>({ col: "data_indicacao", asc: false });
+
+  // Edição inline de valor
+  const [editRowId, setEditRowId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState<string>("");
+  const [savingRowId, setSavingRowId] = useState<string | null>(null);
+  const [editError, setEditError] = useState<string | null>(null);
 
   // Função para alteração de ordenação ao clicar no cabeçalho
   const handleSort = (col: ColKey) => {
@@ -80,10 +98,11 @@ export const OportunidadesList: React.FC<OportunidadesListProps> = ({
         return (op as any).tipo_relacao === "intra" ? "Intra" : "Extra";
       case "status":
         return getStatusLabel(op.status);
+      case "valor":
+        return typeof op.valor === "number" && !isNaN(op.valor) ? op.valor : -1;
       case "data_indicacao":
         return op.data_indicacao || "";
       case "usuario_responsavel":
-        // Considera o usuário responsável como o de recebimento
         return op.usuario_recebe?.nome || "";
       default:
         return "";
@@ -142,6 +161,64 @@ export const OportunidadesList: React.FC<OportunidadesListProps> = ({
     }
   };
 
+  // Edição inline do valor
+  const handleEditValueClick = (op: Oportunidade) => {
+    setEditRowId(op.id);
+    setEditValue(
+      typeof op.valor === "number" && !isNaN(op.valor) ? String(op.valor) : ""
+    );
+    setEditError(null);
+  };
+
+  const handleEditValueCancel = () => {
+    setEditRowId(null);
+    setEditError(null);
+  };
+
+  const handleEditValueChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(",", ".");
+    // only allow numbers/decimals
+    if (/^[0-9]*\.?[0-9]*$/.test(value) || value === "") {
+      setEditValue(value);
+      setEditError(null);
+    }
+  };
+
+  const handleEditValueSave = async (op: Oportunidade) => {
+    setSavingRowId(op.id);
+    setEditError(null);
+    let valorFinal: number | null = null;
+    if (editValue === "") {
+      valorFinal = null;
+    } else {
+      const num = Number(editValue);
+      if (isNaN(num) || num < 0) {
+        setEditError("Valor inválido");
+        setSavingRowId(null);
+        return;
+      }
+      valorFinal = num;
+    }
+    const ok = await updateOportunidade(op.id, { valor: valorFinal });
+    if (!ok) {
+      setEditError("Erro ao salvar. Tente novamente.");
+    } else {
+      setEditRowId(null);
+    }
+    setSavingRowId(null);
+  };
+
+  // Soma e contagem
+  const totalCount = sortedOportunidades.length;
+  const valorSum = sortedOportunidades.reduce(
+    (acc, op) =>
+      typeof op.valor === "number" && !isNaN(op.valor) ? acc + op.valor : acc,
+    0
+  );
+  const semValorCount = sortedOportunidades.filter(
+    (op) => !(typeof op.valor === "number" && !isNaN(op.valor) && op.valor > 0)
+  ).length;
+
   if (isLoading) {
     return (
       <div className="w-full overflow-x-auto">
@@ -191,8 +268,26 @@ export const OportunidadesList: React.FC<OportunidadesListProps> = ({
     );
   }
 
+  // Render soma e contagem (topo ou rodapé)
+  const renderTotais = () => (
+    <div className="flex flex-wrap items-center justify-between border-b border-gray-200 bg-gray-50 px-4 py-2 mb-2 rounded-t-md text-sm">
+      <div>
+        <span className="font-semibold">{totalCount} oportunidade{totalCount === 1 ? "" : "s"}</span>
+        {semValorCount > 0 ? (
+          <span className="ml-2 text-amber-700 flex items-center gap-1">
+            <AlertCircle className="h-4 w-4" /> {semValorCount} sem valor
+          </span>
+        ) : null}
+      </div>
+      <div>
+        Soma dos valores: <span className="font-semibold">{formatCurrencyBRL(valorSum)}</span>
+      </div>
+    </div>
+  );
+
   return (
     <>
+      {renderTotais()}
       <div className="w-full overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-md bg-white text-sm">
           <thead>
@@ -248,6 +343,79 @@ export const OportunidadesList: React.FC<OportunidadesListProps> = ({
                   </Badge>
                   <ActivityIndicator oportunidadeId={op.id} />
                 </td>
+                {/* Valor - edição inline */}
+                <td className="p-3 whitespace-nowrap">
+                  {editRowId === op.id ? (
+                    <div className="flex items-center gap-2">
+                      <Input
+                        value={editValue}
+                        onChange={handleEditValueChange}
+                        type="number"
+                        min={0}
+                        step={0.01}
+                        className={cn(
+                          "w-24",
+                          editError && "border-red-500"
+                        )}
+                        autoFocus
+                        onKeyDown={e => {
+                          if (e.key === "Enter") handleEditValueSave(op);
+                          if (e.key === "Escape") handleEditValueCancel();
+                        }}
+                        disabled={savingRowId === op.id}
+                      />
+                      <Button
+                        size="icon"
+                        variant="default"
+                        onClick={() => handleEditValueSave(op)}
+                        disabled={savingRowId === op.id}
+                        title="Salvar valor"
+                      >
+                        <Check className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={handleEditValueCancel}
+                        disabled={savingRowId === op.id}
+                        title="Cancelar"
+                      >
+                        <Cancel className="h-4 w-4" />
+                      </Button>
+                      {editError && (
+                        <span className="text-xs text-red-500">{editError}</span>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={cn(
+                          typeof op.valor === "number" && !isNaN(op.valor) && op.valor > 0
+                            ? ""
+                            : "text-amber-700 font-semibold"
+                        )}
+                      >
+                        {typeof op.valor === "number" && !isNaN(op.valor) && op.valor > 0
+                          ? formatCurrencyBRL(op.valor)
+                          : (
+                            <span className="flex items-center gap-1">
+                              <AlertCircle className="h-4 w-4" /> Preencher
+                            </span>
+                          )
+                        }
+                      </span>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        title="Editar valor"
+                        onClick={() => handleEditValueClick(op)}
+                        className="p-1"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
+                </td>
                 {/* Data */}
                 <td className="p-3 whitespace-nowrap">
                   {op.data_indicacao
@@ -292,7 +460,8 @@ export const OportunidadesList: React.FC<OportunidadesListProps> = ({
           </tbody>
         </table>
       </div>
-
+      {/* Rodapé - totais */}
+      {renderTotais()}
       <ConfirmDialog
         open={deleteConfirm.open}
         onOpenChange={(open) => setDeleteConfirm({ open, oportunidade: null })}

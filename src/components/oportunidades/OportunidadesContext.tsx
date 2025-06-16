@@ -204,6 +204,13 @@ export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ child
       );
     }
 
+    // Filtro de valor preenchido/não preenchido
+    if (params.valorStatus === "com_valor") {
+      filtered = filtered.filter(op => typeof op.valor === "number" && !isNaN(op.valor) && op.valor > 0);
+    } else if (params.valorStatus === "sem_valor") {
+      filtered = filtered.filter(op => !(typeof op.valor === "number" && !isNaN(op.valor) && op.valor > 0));
+    }
+
     setFilteredOportunidades(filtered);
   };
 
@@ -244,7 +251,6 @@ export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ child
     }
 
     try {
-      // Validação UUID dos campos obrigatórios e opcionais
       if (!oportunidade.empresa_origem_id || !oportunidade.empresa_destino_id) {
         toast({
           title: "Erro",
