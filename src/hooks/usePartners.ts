@@ -1,4 +1,4 @@
-import { useQuery } from "react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Partner } from "@/types/diario";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -14,17 +14,15 @@ export function usePartners() {
     isError,
     error,
     refetch,
-  } = useQuery<Partner[], Error>(
-    "partners",
-    async () => {
+  } = useQuery<Partner[], Error>({
+    queryKey: ["partners"],
+    queryFn: async () => {
       const { data, error } = await supabase.from("parceiros").select("*");
       if (error) throw error;
       return data as Partner[];
     },
-    {
-      staleTime: 5 * 60 * 1000,
-    }
-  );
+    staleTime: 5 * 60 * 1000,
+  });
 
   return {
     partners: partners || [],
