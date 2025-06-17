@@ -26,14 +26,20 @@ export const useStatsCalculation = (oportunidades: Oportunidade[]) => {
       return counts;
     };
 
-    const calculateMovimentacao = (ops: Oportunidade[]) => {
-      const enviadas = ops.filter(op => 
-        normalizeMovimentacao(op.tipo_movimentacao) === "enviada"
-      ).length;
+    const calculateFluxoIndicacoes = (ops: Oportunidade[]) => {
+      // Enviadas: quando o grupo (intragrupo) envia para parceiros (extragrupo)
+      const enviadas = ops.filter(op => {
+        const origemTipo = normalizeRelacao(op.empresa_origem?.tipo);
+        const destinoTipo = normalizeRelacao(op.empresa_destino?.tipo);
+        return origemTipo === "intragrupo" && (destinoTipo === "parceiro" || destinoTipo === "cliente");
+      }).length;
       
-      const recebidas = ops.filter(op => 
-        normalizeMovimentacao(op.tipo_movimentacao) === "recebida"
-      ).length;
+      // Recebidas: quando parceiros/clientes enviam para o grupo (intragrupo)
+      const recebidas = ops.filter(op => {
+        const origemTipo = normalizeRelacao(op.empresa_origem?.tipo);
+        const destinoTipo = normalizeRelacao(op.empresa_destino?.tipo);
+        return (origemTipo === "parceiro" || origemTipo === "cliente") && destinoTipo === "intragrupo";
+      }).length;
 
       return {
         enviadas,
@@ -43,18 +49,25 @@ export const useStatsCalculation = (oportunidades: Oportunidade[]) => {
     };
 
     const intraOps = oportunidades.filter(op => 
-      normalizeRelacao(op.tipo_relacao) === "intra"
+      normalizeRelacao(op.empresa_origem?.tipo) === "intragrupo" && 
+      normalizeRelacao(op.empresa_destino?.tipo) === "intragrupo"
     );
     
     const extraOps = oportunidades.filter(op => 
-      normalizeRelacao(op.tipo_relacao) === "extra"
+      (normalizeRelacao(op.empresa_origem?.tipo) === "intragrupo" && normalizeRelacao(op.empresa_destino?.tipo) !== "intragrupo") ||
+      (normalizeRelacao(op.empresa_origem?.tipo) !== "intragrupo" && normalizeRelacao(op.empresa_destino?.tipo) === "intragrupo") ||
+      (normalizeRelacao(op.empresa_origem?.tipo) !== "intragrupo" && normalizeRelacao(op.empresa_destino?.tipo) !== "intragrupo")
     );
+
+    const fluxo = calculateFluxoIndicacoes(oportunidades);
 
     return {
       total: calculateStatusCounts(oportunidades),
       intra: calculateStatusCounts(intraOps),
       extra: calculateStatusCounts(extraOps),
-      ...calculateMovimentacao(oportunidades)
+      enviadas: fluxo.enviadas,
+      recebidas: fluxo.recebidas,
+      saldo: fluxo.saldo
     };
   }, [oportunidades]);
 };
@@ -83,21 +96,20 @@ const normalizeStatus = (status: any): string => {
 };
 
 const normalizeRelacao = (tipo: any): string => {
-  if (typeof tipo !== "string") return "extra";
+  if (typeof tipo !== "string") return "extragrupo";
   
-  return tipo
+  const normalized = tipo
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .trim()
     .toLowerCase();
-};
 
-const normalizeMovimentacao = (tipo: any): string => {
-  if (typeof tipo !== "string") return "enviada";
+  // Mapear os tipos para as categorias corretas
+  const tipoMap: Record<string, string> = {
+    "intragrupo": "intragrupo",
+    "parceiro": "parceiro", 
+    "cliente": "cliente"
+  };
   
-  return tipo
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .trim()
-    .toLowerCase();
+  return tipoMap[normalized] || "extragrupo";
 };

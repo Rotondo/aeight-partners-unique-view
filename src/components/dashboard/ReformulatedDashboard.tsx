@@ -12,8 +12,8 @@ import {
   Users, 
   ArrowUpDown, 
   Calendar,
-  Award,
-  BarChart3
+  BarChart3,
+  Percent
 } from "lucide-react";
 
 export const ReformulatedDashboard: React.FC = () => {
@@ -29,14 +29,16 @@ export const ReformulatedDashboard: React.FC = () => {
   const taxaConversao = totalOportunidades > 0 ? ((oportunidadesGanhas / totalOportunidades) * 100) : 0;
   const taxaPerda = totalOportunidades > 0 ? ((oportunidadesPerdidas / totalOportunidades) * 100) : 0;
   
-  const saldoIndicacoes = (stats?.enviadas || 0) - (stats?.recebidas || 0);
+  const saldoIndicacoes = stats?.saldo || 0;
   const intraVsExtra = ((stats?.intra?.total || 0) / Math.max(1, totalOportunidades)) * 100;
+
+  // Cálculo da taxa de reciprocidade
+  const taxaReciprocidade = (stats?.recebidas || 0) > 0 ? 
+    (((stats?.recebidas || 0) / Math.max(1, (stats?.enviadas || 0))) * 100) : 0;
 
   // Simulação de valores financeiros para demonstração
   const valorMedioNegocio = oportunidadesGanhas > 0 ? 85000 : 0;
   const receitaPotencial = emAndamento * 65000;
-  const metaMensal = 150000;
-  const realizadoMes = oportunidadesGanhas * valorMedioNegocio;
 
   if (isLoading) {
     return (
@@ -120,7 +122,7 @@ export const ReformulatedDashboard: React.FC = () => {
           value={saldoIndicacoes > 0 ? `+${saldoIndicacoes}` : saldoIndicacoes.toString()}
           icon={<ArrowUpDown className="h-4 w-4" />}
           color={saldoIndicacoes >= 0 ? "bg-green-500/10" : "bg-red-500/10"}
-          description="Enviadas vs Recebidas"
+          description="Grupo → Parceiros vs Parceiros → Grupo"
           renderValue={(value) => (
             <PrivateData type="asterisk">
               {value}
@@ -142,11 +144,11 @@ export const ReformulatedDashboard: React.FC = () => {
         />
 
         <DashboardCard
-          title="Meta vs Realizado"
-          value={`${((realizadoMes / metaMensal) * 100).toFixed(0)}%`}
-          icon={<Award className="h-4 w-4" />}
+          title="Taxa de Reciprocidade"
+          value={`${taxaReciprocidade.toFixed(1)}%`}
+          icon={<Percent className="h-4 w-4" />}
           color="bg-indigo-500/10"
-          description={`R$ ${(realizadoMes / 1000).toFixed(0)}K / R$ ${(metaMensal / 1000).toFixed(0)}K`}
+          description="Recebidas / Enviadas"
           renderValue={(value) => (
             <PrivateData type="blur">
               {value}
@@ -233,13 +235,13 @@ export const ReformulatedDashboard: React.FC = () => {
           </CardHeader>
           <CardContent className="space-y-2">
             <div className="flex justify-between">
-              <span className="text-sm text-muted-foreground">Enviadas:</span>
+              <span className="text-sm text-muted-foreground">Grupo → Parceiros:</span>
               <PrivateData type="asterisk">
                 <span className="font-medium text-blue-600">{stats?.enviadas || 0}</span>
               </PrivateData>
             </div>
             <div className="flex justify-between">
-              <span className="text-sm text-muted-foreground">Recebidas:</span>
+              <span className="text-sm text-muted-foreground">Parceiros → Grupo:</span>
               <PrivateData type="asterisk">
                 <span className="font-medium text-green-600">{stats?.recebidas || 0}</span>
               </PrivateData>
@@ -251,6 +253,9 @@ export const ReformulatedDashboard: React.FC = () => {
                   {saldoIndicacoes > 0 ? `+${saldoIndicacoes}` : saldoIndicacoes}
                 </span>
               </PrivateData>
+            </div>
+            <div className="text-xs text-muted-foreground mt-2">
+              Saldo negativo indica mais recebidas que enviadas (favorável)
             </div>
           </CardContent>
         </Card>
