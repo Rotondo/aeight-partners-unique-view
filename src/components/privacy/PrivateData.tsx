@@ -5,7 +5,7 @@ import { usePrivacy } from '@/contexts/PrivacyContext';
 interface PrivateDataProps {
   children: React.ReactNode;
   fallback?: React.ReactNode;
-  type?: 'name' | 'email' | 'phone' | 'value' | 'company' | 'address' | 'document' | 'generic';
+  type?: 'name' | 'email' | 'phone' | 'value' | 'company' | 'address' | 'document' | 'generic' | 'currency' | 'blur' | 'asterisk';
 }
 
 export const PrivateData: React.FC<PrivateDataProps> = ({ 
@@ -33,6 +33,9 @@ export const PrivateData: React.FC<PrivateDataProps> = ({
     company: 'Empresa Demonstração Ltda',
     address: 'Rua Exemplo, 123 - São Paulo/SP',
     document: '***.***.***-**',
+    currency: 'R$ ***.**',
+    blur: '[Dados ocultos]',
+    asterisk: '****',
     generic: '[Dados ocultos - Modo Demonstração]'
   };
 

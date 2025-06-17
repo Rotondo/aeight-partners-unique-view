@@ -1,14 +1,13 @@
+
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import { LoginPage } from './pages/LoginPage';
-import { Index } from './pages/Index';
-import { PrivateRoute } from './components/auth/PrivateRoute';
-import { MainLayout } from './components/layout/MainLayout';
+import LoginPage from './pages/auth/LoginPage';
+import Index from './pages/Index';
+import PrivateRoute from './components/auth/PrivateRoute';
+import MainLayout from './components/layout/MainLayout';
 import { PrivacyProvider } from './contexts/PrivacyContext';
-import { WishlistPage } from './pages/WishlistPage';
-import { PartnersPage } from './pages/PartnersPage';
-import { UsersPage } from './pages/UsersPage';
-import { DiarioPage } from './pages/diario';
+import WishlistPage from './pages/wishlist/WishlistPage';
+import DiarioPage from './pages/diario';
 import EventosPage from './pages/eventos/EventosPage';
 
 function App() {
@@ -25,24 +24,10 @@ function App() {
                 </MainLayout>
               </PrivateRoute>
             } />
-            <Route path="/wishlist" element={
+            <Route path="/wishlist/*" element={
               <PrivateRoute>
                 <MainLayout>
                   <WishlistPage />
-                </MainLayout>
-              </PrivateRoute>
-            } />
-            <Route path="/partners" element={
-              <PrivateRoute>
-                <MainLayout>
-                  <PartnersPage />
-                </MainLayout>
-              </PrivateRoute>
-            } />
-            <Route path="/users" element={
-              <PrivateRoute>
-                <MainLayout>
-                  <UsersPage />
                 </MainLayout>
               </PrivateRoute>
             } />
@@ -53,7 +38,6 @@ function App() {
                 </MainLayout>
               </PrivateRoute>
             } />
-            
             <Route path="/eventos" element={
               <PrivateRoute>
                 <MainLayout>
@@ -61,7 +45,6 @@ function App() {
                 </MainLayout>
               </PrivateRoute>
             } />
-            
           </Routes>
         </Router>
       </PrivacyProvider>
