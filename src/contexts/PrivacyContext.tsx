@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 
 interface PrivacyContextType {
   isDemoMode: boolean;
@@ -14,19 +14,15 @@ interface PrivacyProviderProps {
 }
 
 export const PrivacyProvider: React.FC<PrivacyProviderProps> = ({ children }) => {
-  const [isDemoMode, setIsDemoMode] = useState(false);
+  const [isDemoMode, setIsDemoMode] = useState<boolean>(() => {
+    // Carregar do localStorage se existir
+    const saved = localStorage.getItem('aeight-demo-mode');
+    return saved ? JSON.parse(saved) : false;
+  });
 
-  // Carregar estado do localStorage na inicialização
+  // Salvar no localStorage quando mudar
   useEffect(() => {
-    const savedDemoMode = localStorage.getItem('demoMode');
-    if (savedDemoMode) {
-      setIsDemoMode(JSON.parse(savedDemoMode));
-    }
-  }, []);
-
-  // Salvar estado no localStorage sempre que mudar
-  useEffect(() => {
-    localStorage.setItem('demoMode', JSON.stringify(isDemoMode));
+    localStorage.setItem('aeight-demo-mode', JSON.stringify(isDemoMode));
   }, [isDemoMode]);
 
   const toggleDemoMode = () => {
@@ -37,12 +33,14 @@ export const PrivacyProvider: React.FC<PrivacyProviderProps> = ({ children }) =>
     setIsDemoMode(enabled);
   };
 
+  const value: PrivacyContextType = {
+    isDemoMode,
+    toggleDemoMode,
+    setDemoMode
+  };
+
   return (
-    <PrivacyContext.Provider value={{
-      isDemoMode,
-      toggleDemoMode,
-      setDemoMode
-    }}>
+    <PrivacyContext.Provider value={value}>
       {children}
     </PrivacyContext.Provider>
   );
@@ -51,7 +49,7 @@ export const PrivacyProvider: React.FC<PrivacyProviderProps> = ({ children }) =>
 export const usePrivacy = () => {
   const context = useContext(PrivacyContext);
   if (context === undefined) {
-    throw new Error('usePrivacy must be used within a PrivacyProvider');
+    throw new Error('usePrivacy deve ser usado dentro de um PrivacyProvider');
   }
   return context;
 };

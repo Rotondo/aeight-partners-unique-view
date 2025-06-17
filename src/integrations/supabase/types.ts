@@ -104,6 +104,71 @@ export type Database = {
           },
         ]
       }
+      contatos_evento: {
+        Row: {
+          cargo: string | null
+          created_at: string | null
+          data_contato: string | null
+          discussao: string | null
+          email: string | null
+          empresa: string | null
+          evento_id: string
+          foto_cartao: string | null
+          id: string
+          interesse_nivel: number | null
+          nome: string | null
+          observacoes: string | null
+          proximos_passos: string | null
+          sugestao_followup: string | null
+          telefone: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          cargo?: string | null
+          created_at?: string | null
+          data_contato?: string | null
+          discussao?: string | null
+          email?: string | null
+          empresa?: string | null
+          evento_id: string
+          foto_cartao?: string | null
+          id?: string
+          interesse_nivel?: number | null
+          nome?: string | null
+          observacoes?: string | null
+          proximos_passos?: string | null
+          sugestao_followup?: string | null
+          telefone?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          cargo?: string | null
+          created_at?: string | null
+          data_contato?: string | null
+          discussao?: string | null
+          email?: string | null
+          empresa?: string | null
+          evento_id?: string
+          foto_cartao?: string | null
+          id?: string
+          interesse_nivel?: number | null
+          nome?: string | null
+          observacoes?: string | null
+          proximos_passos?: string | null
+          sugestao_followup?: string | null
+          telefone?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contatos_evento_evento_id_fkey"
+            columns: ["evento_id"]
+            isOneToOne: false
+            referencedRelation: "eventos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       diario_agenda_eventos: {
         Row: {
           created_at: string
@@ -346,6 +411,53 @@ export type Database = {
           tipo?: Database["public"]["Enums"]["company_type"]
         }
         Relationships: []
+      }
+      eventos: {
+        Row: {
+          created_at: string | null
+          data_fim: string | null
+          data_inicio: string
+          descricao: string | null
+          id: string
+          local: string | null
+          nome: string
+          status: string | null
+          updated_at: string | null
+          usuario_responsavel_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          data_fim?: string | null
+          data_inicio: string
+          descricao?: string | null
+          id?: string
+          local?: string | null
+          nome: string
+          status?: string | null
+          updated_at?: string | null
+          usuario_responsavel_id: string
+        }
+        Update: {
+          created_at?: string | null
+          data_fim?: string | null
+          data_inicio?: string
+          descricao?: string | null
+          id?: string
+          local?: string | null
+          nome?: string
+          status?: string | null
+          updated_at?: string | null
+          usuario_responsavel_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eventos_usuario_responsavel_id_fkey"
+            columns: ["usuario_responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       historico_oportunidade: {
         Row: {

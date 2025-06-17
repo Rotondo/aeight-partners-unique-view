@@ -1,20 +1,17 @@
 
-import React, { ReactNode } from 'react';
+import React from 'react';
 import { usePrivacy } from '@/contexts/PrivacyContext';
-import { cn } from '@/lib/utils';
 
 interface PrivateDataProps {
-  children: ReactNode;
-  type?: 'blur' | 'asterisk' | 'placeholder' | 'hide' | 'name' | 'currency';
-  placeholder?: string;
-  className?: string;
+  children: React.ReactNode;
+  fallback?: React.ReactNode;
+  type?: 'name' | 'email' | 'phone' | 'value' | 'company' | 'address' | 'document' | 'generic';
 }
 
-export const PrivateData: React.FC<PrivateDataProps> = ({
-  children,
-  type = 'blur',
-  placeholder,
-  className
+export const PrivateData: React.FC<PrivateDataProps> = ({ 
+  children, 
+  fallback,
+  type = 'generic'
 }) => {
   const { isDemoMode } = usePrivacy();
 
@@ -22,31 +19,22 @@ export const PrivateData: React.FC<PrivateDataProps> = ({
     return <>{children}</>;
   }
 
-  const getDisplayContent = () => {
-    switch (type) {
-      case 'blur':
-        return (
-          <span 
-            className={cn("select-none", className)}
-            style={{ filter: 'blur(4px)' }}
-          >
-            {children}
-          </span>
-        );
-      case 'asterisk':
-        return <span className={className}>***</span>;
-      case 'placeholder':
-        return <span className={cn("text-muted-foreground", className)}>{placeholder || "Dados ocultos"}</span>;
-      case 'hide':
-        return <span className={className}>---</span>;
-      case 'name':
-        return <span className={className}>Nome Oculto</span>;
-      case 'currency':
-        return <span className={className}>R$ ***,**</span>;
-      default:
-        return <>{children}</>;
-    }
+  // Se tem fallback customizado, usar ele
+  if (fallback) {
+    return <>{fallback}</>;
+  }
+
+  // Fallbacks padrão baseados no tipo
+  const defaultFallbacks = {
+    name: 'João da Silva',
+    email: 'exemplo@email.com',
+    phone: '(11) 99999-9999',
+    value: 'R$ 50.000',
+    company: 'Empresa Demonstração Ltda',
+    address: 'Rua Exemplo, 123 - São Paulo/SP',
+    document: '***.***.***-**',
+    generic: '[Dados ocultos - Modo Demonstração]'
   };
 
-  return getDisplayContent();
+  return <span className="italic text-gray-500">{defaultFallbacks[type]}</span>;
 };

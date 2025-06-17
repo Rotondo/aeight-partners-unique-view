@@ -1,40 +1,56 @@
 
-import React from "react";
-import { SidebarTrigger } from "@/components/ui/sidebar";
-import { useAuth } from "@/hooks/useAuth";
-import { DemoModeToggle } from "@/components/privacy/DemoModeToggle";
-import { DemoModeIndicator } from "@/components/privacy/DemoModeIndicator";
-import { Logo } from "./Logo";
+import React from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { DemoModeToggle } from '@/components/privacy/DemoModeToggle';
+import { DemoModeIndicator } from '@/components/privacy/DemoModeIndicator';
+import { LogOut, User } from 'lucide-react';
 
-const Header: React.FC = () => {
-  const { user } = useAuth();
+export const Header: React.FC = () => {
+  const { user, logout } = useAuth();
+
+  if (!user) return null;
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="flex h-14 items-center px-3 md:px-6">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <SidebarTrigger className="md:hidden" />
-            <div className="hidden md:block">
-              <SidebarTrigger />
-            </div>
-          </div>
-          <Logo className="h-8 w-auto" />
+    <header className="bg-white border-b border-gray-200 px-6 py-4">
+      <DemoModeIndicator />
+      
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-4">
+          <h1 className="text-xl font-semibold text-gray-900">
+            A&eight Partners
+          </h1>
         </div>
-        <div className="flex-1 flex justify-center">
-          <DemoModeIndicator />
-        </div>
-        <div className="flex items-center gap-4">
+
+        <div className="flex items-center space-x-4">
+          {/* Toggle do Modo Demonstração */}
           <DemoModeToggle />
-          {user && (
-            <div className="text-sm text-muted-foreground hidden sm:block">
-              Bem-vindo, {user.email}
+
+          {/* Info do usuário */}
+          <div className="flex items-center space-x-3">
+            <Avatar className="h-8 w-8">
+              <AvatarFallback className="bg-blue-500 text-white">
+                {user.nome.charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            
+            <div className="hidden md:block">
+              <p className="text-sm font-medium text-gray-900">{user.nome}</p>
+              <p className="text-xs text-gray-500">{user.papel}</p>
             </div>
-          )}
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={logout}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              <LogOut className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </div>
     </header>
   );
 };
-
-export default Header;

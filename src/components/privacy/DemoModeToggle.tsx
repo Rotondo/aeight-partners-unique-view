@@ -1,46 +1,39 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { usePrivacy } from '@/contexts/PrivacyContext';
-import { useAuth } from '@/hooks/useAuth';
 import { Eye, EyeOff } from 'lucide-react';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+import { usePrivacy } from '@/contexts/PrivacyContext';
 
-export const DemoModeToggle: React.FC = () => {
+interface DemoModeToggleProps {
+  variant?: 'default' | 'outline' | 'ghost';
+  size?: 'sm' | 'default' | 'lg';
+  showLabel?: boolean;
+}
+
+export const DemoModeToggle: React.FC<DemoModeToggleProps> = ({ 
+  variant = 'outline',
+  size = 'sm',
+  showLabel = true
+}) => {
   const { isDemoMode, toggleDemoMode } = usePrivacy();
-  const { user } = useAuth();
-
-  // Só mostrar para admins
-  if (user?.papel !== 'admin') {
-    return null;
-  }
 
   return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant={isDemoMode ? "default" : "outline"}
-            size="icon"
-            onClick={toggleDemoMode}
-            className={isDemoMode ? "bg-amber-500 hover:bg-amber-600" : ""}
-          >
-            {isDemoMode ? (
-              <EyeOff className="h-4 w-4" />
-            ) : (
-              <Eye className="h-4 w-4" />
-            )}
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>{isDemoMode ? "Sair do modo demonstração" : "Ativar modo demonstração"}</p>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <Button
+      variant={variant}
+      size={size}
+      onClick={toggleDemoMode}
+      className={isDemoMode ? 'bg-amber-100 border-amber-300 text-amber-700' : ''}
+    >
+      {isDemoMode ? (
+        <Eye className="h-4 w-4" />
+      ) : (
+        <EyeOff className="h-4 w-4" />
+      )}
+      {showLabel && (
+        <span className="ml-2">
+          {isDemoMode ? 'Dados Ocultos' : 'Modo Demo'}
+        </span>
+      )}
+    </Button>
   );
 };

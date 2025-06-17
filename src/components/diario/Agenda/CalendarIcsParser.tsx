@@ -1,10 +1,10 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Calendar, Download, AlertCircle, CheckCircle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { PrivateData } from '@/components/privacy/PrivateData';
 
 interface IcsEvent {
   summary: string;
@@ -188,7 +188,9 @@ export const CalendarIcsParser: React.FC<CalendarIcsParserProps> = ({
               <div className="max-h-40 overflow-y-auto space-y-1">
                 {events.slice(0, 5).map((event, index) => (
                   <div key={index} className="text-xs p-2 bg-muted/30 rounded">
-                    <div className="font-medium">{event.summary}</div>
+                    <div className="font-medium">
+                      <PrivateData type="generic">{event.summary}</PrivateData>
+                    </div>
                     <div className="text-muted-foreground">
                       {new Date(event.dtstart).toLocaleDateString('pt-BR')} às{' '}
                       {new Date(event.dtstart).toLocaleTimeString('pt-BR', { 
@@ -197,7 +199,9 @@ export const CalendarIcsParser: React.FC<CalendarIcsParserProps> = ({
                       })}
                     </div>
                     {event.location && (
-                      <div className="text-muted-foreground">📍 {event.location}</div>
+                      <div className="text-muted-foreground">
+                        📍 <PrivateData type="address">{event.location}</PrivateData>
+                      </div>
                     )}
                   </div>
                 ))}

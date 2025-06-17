@@ -1,147 +1,87 @@
-
-import React from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import React from "react"
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-} from "@/components/ui/sidebar";
-import {
-  BarChart3,
-  Building2,
-  FileText,
-  Users,
-  TrendingUp,
-  Settings,
-  FolderOpen,
-  Heart,
-  LayoutDashboard,
-  LogIn,
-  LogOut,
-  BookOpen,
-} from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+  navigationMenuTriggerStyle,
+} from "@/components/ui/navigation-menu"
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { Sidebar } from "@/components/ui/sidebar"
+import { useAuth } from "@/hooks/useAuth"
+import { Link } from "react-router-dom"
+import { Home, Settings, Users, ContactIcon } from 'lucide-react';
 
-const menuItems = [
-  {
-    title: "Dashboard",
-    url: "/",
-    icon: LayoutDashboard,
-  },
-  {
-    title: "Oportunidades",
-    url: "/oportunidades",
-    icon: TrendingUp,
-  },
-  {
-    title: "Dashboard Oportunidades",
-    url: "/oportunidades-dashboard",
-    icon: BarChart3,
-  },
-  {
-    title: "Wishlist & Networking",
-    url: "/wishlist",
-    icon: Heart,
-  },
-  {
-    title: "Diário",
-    url: "/diario",
-    icon: BookOpen,
-  },
-  {
-    title: "Indicadores",
-    url: "/indicadores",
-    icon: BarChart3,
-  },
-  {
-    title: "Empresas",
-    url: "/empresas",
-    icon: Building2,
-  },
-  {
-    title: "OnePager",
-    url: "/onepager",
-    icon: FileText,
-  },
-  {
-    title: "Repositório",
-    url: "/repositorio",
-    icon: FolderOpen,
-  },
-  {
-    title: "Quadrante",
-    url: "/quadrante",
-    icon: Users,
-  },
-  {
-    title: "Admin",
-    url: "/admin",
-    icon: Settings,
-  },
-];
-
-export const AppSidebar: React.FC = () => {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const { isAuthenticated, logout, loading } = useAuth();
-
-  // Handler para logout
-  const handleLogout = async () => {
-    await logout();
-    navigate("/login");
-  };
+export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const { user } = useAuth();
+  
+  const navigationItems = [
+    {
+      title: "Dashboard",
+      url: "/",
+      icon: Home,
+      description: "Visão geral do sistema",
+      adminOnly: false
+    },
+    {
+      title: "Usuários",
+      url: "/usuarios",
+      icon: Users,
+      description: "Gerenciamento de usuários",
+      adminOnly: true
+    },
+    {
+      title: "Eventos",
+      url: "/eventos",
+      icon: ContactIcon,
+      description: "Gestão de eventos e contatos",
+      adminOnly: true
+    },
+    {
+      title: "Configurações",
+      url: "/configuracoes",
+      icon: Settings,
+      description: "Ajustes gerais do sistema",
+      adminOnly: true
+    },
+  ];
 
   return (
-    <Sidebar>
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Menu Principal</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {menuItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={
-                      location.pathname === item.url ||
-                      location.pathname.startsWith(item.url + "/")
-                    }
-                  >
-                    <Link to={item.url}>
-                      <item.icon />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-              {/* Login/Logout */}
-              <SidebarMenuItem>
-                {isAuthenticated ? (
-                  <SidebarMenuButton onClick={handleLogout} isActive={false}>
-                    <LogOut />
-                    <span>Logout</span>
-                  </SidebarMenuButton>
-                ) : (
-                  <SidebarMenuButton
-                    asChild
-                    isActive={location.pathname === "/login"}
-                  >
-                    <Link to="/login">
-                      <LogIn />
-                      <span>Login</span>
-                    </Link>
-                  </SidebarMenuButton>
-                )}
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
+    <Sidebar {...props}>
+      <Sidebar.Header>
+        <Link to="/" className="flex items-center space-x-2">
+          <span className="font-bold text-xl">A<span className="text-blue-500">&</span>eight</span>
+        </Link>
+      </Sidebar.Header>
+      <Sidebar.Content>
+        <NavigationMenu>
+          <NavigationMenuList>
+            {navigationItems.map((item) => {
+              if (item.adminOnly && user?.papel !== 'admin') {
+                return null;
+              }
+
+              return (
+                <NavigationMenuItem key={item.url}>
+                  <Link to={item.url} className="outline-none">
+                    <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                      <item.icon className="mr-2 h-4 w-4" />
+                      {item.title}
+                    </NavigationMenuLink>
+                  </Link>
+                </NavigationMenuItem>
+              );
+            })}
+          </NavigationMenuList>
+        </NavigationMenu>
+      </Sidebar.Content>
+      <Sidebar.Footer>
+        <p className="text-xs text-gray-500">
+          &copy; {new Date().getFullYear()} A&eight Partners
+        </p>
+      </Sidebar.Footer>
     </Sidebar>
-  );
-};
+  )
+}
