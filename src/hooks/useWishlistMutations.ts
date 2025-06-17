@@ -3,7 +3,7 @@ import {
   useEmpresaClienteMutations,
   useWishlistItemMutations,
   useApresentacaoMutations,
-} from "./useWishlistMutations";
+} from "./useWishlistMutations/index";
 
 export const useWishlistMutations = (
   fetchEmpresasClientes: () => Promise<void>,
