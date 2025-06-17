@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -13,12 +14,27 @@ const LoginForm: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  console.log('LoginForm renderizado - authError:', authError);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('handleLogin chamado com:', { email, senha: '***' });
+    
+    if (!email || !senha) {
+      toast({
+        title: "Erro",
+        description: "Por favor, preencha email e senha",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
+      console.log('Tentando fazer login...');
       const success = await login(email, senha);
+      console.log('Resultado do login:', success);
 
       if (success) {
         toast({
@@ -26,10 +42,23 @@ const LoginForm: React.FC = () => {
           description: "Redirecionando...",
           variant: "default",
         });
-        // O redirecionamento será feito automaticamente pelo useAuth através do LoginPage
+        console.log('Login bem-sucedido, redirecionando...');
+        navigate("/");
+      } else {
+        console.log('Login falhou');
+        toast({
+          title: "Erro no login",
+          description: authError || "Falha na autenticação",
+          variant: "destructive",
+        });
       }
     } catch (error) {
       console.error("Erro durante login:", error);
+      toast({
+        title: "Erro",
+        description: "Erro interno durante o login",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -60,6 +89,7 @@ const LoginForm: React.FC = () => {
           <strong>Exclusivo para integrantes e parceiros do Grupo A&eight</strong>
         </div>
       </div>
+      
       <form className="login-form" autoComplete="on" onSubmit={handleLogin}>
         <label htmlFor="email" style={{
           display: 'block',
@@ -79,6 +109,7 @@ const LoginForm: React.FC = () => {
           onChange={(e) => setEmail(e.target.value)}
           disabled={loading}
         />
+        
         <label htmlFor="senha" style={{
           display: 'block',
           textAlign: 'left',
@@ -97,6 +128,7 @@ const LoginForm: React.FC = () => {
           onChange={(e) => setSenha(e.target.value)}
           disabled={loading}
         />
+        
         <Button
           type="submit"
           className="w-full mt-4 text-lg font-bold"
@@ -106,14 +138,17 @@ const LoginForm: React.FC = () => {
           {loading ? 'Entrando...' : 'Entrar'}
         </Button>
       </form>
+      
       {authError && (
         <div className="mt-4 text-red-600 font-medium text-center">
           {authError}
         </div>
       )}
+      
       <div className="mt-6 text-sm text-slate-500">
         Acesso restrito aos integrantes do Grupo A&eight e parceiros autorizados.
       </div>
+      
       <footer style={{ marginTop: 32, fontSize: 12, color: '#888' }}>
         Desenvolvido por Thiago Rotondo
       </footer>
