@@ -1,4 +1,3 @@
-
 import React from "react";
 import {
   ResponsiveContainer,
@@ -11,6 +10,7 @@ import {
   Bar
 } from "recharts";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { APP_CONFIG } from "@/lib/constants";
 
 // Permite tanto array quanto objeto agrupado (protege contra erro fatal)
 function normalizeChartData(chartData: any, periodo: "mes" | "quarter") {
@@ -62,7 +62,7 @@ export const OportunidadesChart: React.FC<OportunidadesChartProps> = ({ chartDat
           Gráfico de Oportunidades ({periodo === "mes" ? "Mensal" : "Quarter"})
         </CardTitle>
       </CardHeader>
-      <CardContent style={{ height: 400 }}>
+      <CardContent style={{ height: APP_CONFIG.DEFAULTS.CARD_HEIGHT }}>
         <ResponsiveContainer width="100%" height="100%">
           <ReBarChart data={data}>
             <CartesianGrid strokeDasharray="3 3" />
@@ -70,8 +70,8 @@ export const OportunidadesChart: React.FC<OportunidadesChartProps> = ({ chartDat
             <YAxis />
             <Tooltip />
             <Legend />
-            <Bar dataKey="enviadas" fill="#0088fe" name="Enviadas" />
-            <Bar dataKey="recebidas" fill="#00c49f" name="Recebidas" />
+            <Bar dataKey="enviadas" fill={APP_CONFIG.CHART_COLORS.PRIMARY} name="Enviadas" />
+            <Bar dataKey="recebidas" fill={APP_CONFIG.CHART_COLORS.SECONDARY} name="Recebidas" />
           </ReBarChart>
         </ResponsiveContainer>
       </CardContent>

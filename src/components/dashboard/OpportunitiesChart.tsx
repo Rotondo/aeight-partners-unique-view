@@ -4,6 +4,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { useOportunidades } from '@/components/oportunidades/OportunidadesContext';
 import { format, parseISO, startOfMonth, endOfMonth, eachMonthOfInterval, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { APP_CONFIG } from '@/lib/constants';
 
 interface OpportunitiesChartProps {
   stats: any;
@@ -56,7 +57,7 @@ export const OpportunitiesChart: React.FC<OpportunitiesChartProps> = ({
   }
 
   return (
-    <div className="h-[300px]">
+    <div style={{ height: APP_CONFIG.DEFAULTS.CHART_HEIGHT }}>
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={monthlyData}>
           <CartesianGrid strokeDasharray="3 3" />
@@ -64,10 +65,10 @@ export const OpportunitiesChart: React.FC<OpportunitiesChartProps> = ({
           <YAxis />
           <Tooltip />
           <Legend />
-          <Bar dataKey="total" fill="#8b5cf6" name="Total" />
-          <Bar dataKey="ganhas" fill="#10b981" name="Ganhas" />
-          <Bar dataKey="perdidas" fill="#ef4444" name="Perdidas" />
-          <Bar dataKey="emAndamento" fill="#f59e0b" name="Em Andamento" />
+          <Bar dataKey="total" fill={APP_CONFIG.CHART_COLORS.PURPLE} name="Total" />
+          <Bar dataKey="ganhas" fill={APP_CONFIG.CHART_COLORS.SUCCESS} name="Ganhas" />
+          <Bar dataKey="perdidas" fill={APP_CONFIG.CHART_COLORS.DANGER} name="Perdidas" />
+          <Bar dataKey="emAndamento" fill={APP_CONFIG.CHART_COLORS.WARNING} name="Em Andamento" />
         </BarChart>
       </ResponsiveContainer>
     </div>
