@@ -1,5 +1,5 @@
-
-import React, { useState, useEffect } from "react";
+import React from "react";
+import { DemoModeIndicator } from "@/components/privacy/DemoModeIndicator";
 import { supabase } from "@/lib/supabase";
 import {
   Card,
@@ -283,8 +283,15 @@ const EmpresasPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Empresas</h1>
+      <DemoModeIndicator />
+      
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Gestão de Empresas</h1>
+          <p className="text-muted-foreground">
+            Gerencie empresas do grupo e parceiros estratégicos
+          </p>
+        </div>
         <div className="flex items-center gap-2">
           <Button onClick={exportToCSV} variant="outline" size="sm">
             <Download className="h-4 w-4 mr-2" />
