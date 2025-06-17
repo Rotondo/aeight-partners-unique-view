@@ -297,13 +297,13 @@ const DashboardPage: React.FC = () => {
 
       <DashboardFilters
         tipoFiltro={tipoFiltro}
-        setTipoFiltro={setTipoFiltro}
+        setTipoFiltro={(value: string) => setTipoFiltro(value as "intra" | "extra" | "all")}
         statusFiltro={statusFiltro}
-        setStatusFiltro={setStatusFiltro}
+        setStatusFiltro={(value: string) => setStatusFiltro(value as "ganho" | "perdido" | "all" | "andamento")}
         periodo={periodo}
-        setPeriodo={setPeriodo}
+        setPeriodo={(value: string) => setPeriodo(value as "mes" | "quarter")}
         empresaFiltroType={empresaFiltroType}
-        setEmpresaFiltroType={setEmpresaFiltroType}
+        setEmpresaFiltroType={(value: string) => setEmpresaFiltroType(value as "remetente" | "destinatario" | "all")}
         empresaFiltro={empresaFiltro}
         setEmpresaFiltro={setEmpresaFiltro}
         empresas={empresas}

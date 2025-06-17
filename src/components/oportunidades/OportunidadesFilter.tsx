@@ -363,7 +363,7 @@ export const OportunidadesFilter: React.FC = () => {
                   onValueChange={(value) =>
                     setTempFilters({
                       ...tempFilters,
-                      valorStatus: value === "all" ? undefined : value,
+                      valorStatus: value === "all" ? undefined : (value as "all" | "com_valor" | "sem_valor"),
                     })
                   }
                 >

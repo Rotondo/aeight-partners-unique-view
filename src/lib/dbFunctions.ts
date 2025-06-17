@@ -1,4 +1,3 @@
-
 import { supabase } from './supabase';
 import { format } from 'date-fns';
 import { StatusOportunidade } from '@/types';
@@ -16,7 +15,6 @@ export const getMatrizIntragrupo = async (
   status: StatusOportunidade | null
 ) => {
   try {
-    // First fetch the base data without joins to prevent stack depth issues
     let query = supabase.from('oportunidades').select('id, empresa_origem_id, empresa_destino_id, status');
     
     if (dataInicio) {
@@ -34,7 +32,6 @@ export const getMatrizIntragrupo = async (
     const { data: oportunidades, error } = await query;
     if (error) throw error;
 
-    // Fetch all relevant empresas in one go
     const empresaIds = new Set<string>();
     oportunidades?.forEach(op => {
       if (op.empresa_origem_id) empresaIds.add(op.empresa_origem_id);
@@ -48,13 +45,11 @@ export const getMatrizIntragrupo = async (
     
     if (empresasError) throw empresasError;
 
-    // Create a map for quick lookup
     const empresasMap = new Map();
     empresas?.forEach(empresa => {
       empresasMap.set(empresa.id, empresa);
     });
 
-    // Filter and transform the data
     let processedData = oportunidades
       ?.filter(op => {
         const origem = empresasMap.get(op.empresa_origem_id);
@@ -84,7 +79,6 @@ export const getMatrizIntragrupo = async (
         };
       });
 
-    // Group by origem and destino
     const grouped = processedData?.reduce((acc: any, curr: any) => {
       const key = `${curr.origem}-${curr.destino}`;
       if (!acc[key]) {
@@ -113,8 +107,6 @@ export const getMatrizParcerias = async (
   status: StatusOportunidade | null
 ) => {
   try {
-    // Use the same pattern as getMatrizIntragrupo for optimization
-    // First fetch the base data without joins
     let query = supabase.from('oportunidades').select('id, empresa_origem_id, empresa_destino_id, status');
     
     if (dataInicio) {
@@ -132,7 +124,6 @@ export const getMatrizParcerias = async (
     const { data: oportunidades, error } = await query;
     if (error) throw error;
 
-    // Fetch all relevant empresas in one go
     const empresaIds = new Set<string>();
     oportunidades?.forEach(op => {
       if (op.empresa_origem_id) empresaIds.add(op.empresa_origem_id);
@@ -146,13 +137,11 @@ export const getMatrizParcerias = async (
     
     if (empresasError) throw empresasError;
 
-    // Create a map for quick lookup
     const empresasMap = new Map();
     empresas?.forEach(empresa => {
       empresasMap.set(empresa.id, empresa);
     });
 
-    // Filter and transform the data - for parcerias, at least one side is a parceiro
     let processedData = oportunidades
       ?.filter(op => {
         const origem = empresasMap.get(op.empresa_origem_id);
@@ -182,7 +171,6 @@ export const getMatrizParcerias = async (
         };
       });
 
-    // Group by origem and destino
     const grouped = processedData?.reduce((acc: any, curr: any) => {
       const key = `${curr.origem}-${curr.destino}`;
       if (!acc[key]) {
@@ -210,7 +198,6 @@ export const getQualidadeIndicacoes = async (
   empresaId: string | null
 ) => {
   try {
-    // Same optimization pattern
     let query = supabase
       .from('oportunidades')
       .select('id, empresa_origem_id, empresa_destino_id, status');
@@ -226,7 +213,6 @@ export const getQualidadeIndicacoes = async (
     const { data: oportunidades, error } = await query;
     if (error) throw error;
     
-    // Apply empresa filter if needed
     let filteredOportunidades = oportunidades;
     if (empresaId) {
       filteredOportunidades = oportunidades.filter(op => 
@@ -234,7 +220,6 @@ export const getQualidadeIndicacoes = async (
       );
     }
 
-    // Fetch all relevant empresas in one go
     const empresaIds = new Set<string>();
     filteredOportunidades.forEach(op => {
       if (op.empresa_origem_id) empresaIds.add(op.empresa_origem_id);
@@ -248,13 +233,11 @@ export const getQualidadeIndicacoes = async (
     
     if (empresasError) throw empresasError;
 
-    // Create a map for quick lookup
     const empresasMap = new Map();
     empresas?.forEach(empresa => {
       empresasMap.set(empresa.id, empresa);
     });
 
-    // Process data with empresa names
     const processedData = filteredOportunidades.map(op => {
       const origem = empresasMap.get(op.empresa_origem_id);
       const destino = empresasMap.get(op.empresa_destino_id);
@@ -266,7 +249,6 @@ export const getQualidadeIndicacoes = async (
       };
     });
 
-    // Group by origen, destino and status
     const grouped = processedData.reduce((acc: any, curr: any) => {
       const key = `${curr.origem}-${curr.destino}-${curr.status}`;
       if (!acc[key]) {
@@ -296,7 +278,6 @@ export const getBalancoGrupoParcerias = async (
   status: StatusOportunidade | null
 ) => {
   try {
-    // Optimize the query
     let query = supabase
       .from('oportunidades')
       .select('id, empresa_origem_id, empresa_destino_id, status');
@@ -316,7 +297,6 @@ export const getBalancoGrupoParcerias = async (
     const { data: oportunidades, error } = await query;
     if (error) throw error;
 
-    // Apply empresa filter if needed
     let filteredOportunidades = oportunidades;
     if (empresaId) {
       filteredOportunidades = oportunidades.filter(op => 
@@ -324,7 +304,6 @@ export const getBalancoGrupoParcerias = async (
       );
     }
 
-    // Fetch all relevant empresas in one go
     const empresaIds = new Set<string>();
     filteredOportunidades.forEach(op => {
       if (op.empresa_origem_id) empresaIds.add(op.empresa_origem_id);
@@ -338,13 +317,11 @@ export const getBalancoGrupoParcerias = async (
     
     if (empresasError) throw empresasError;
 
-    // Create a map for quick lookup
     const empresasMap = new Map();
     empresas?.forEach(empresa => {
       empresasMap.set(empresa.id, empresa);
     });
 
-    // Count sent from group to partners and received by group from partners
     let enviadas = 0;
     let recebidas = 0;
 
@@ -378,7 +355,6 @@ export const getRankingParceirosEnviadas = async (
   status: StatusOportunidade | null
 ) => {
   try {
-    // Similar optimization approach
     let query = supabase
       .from('oportunidades')
       .select('id, empresa_origem_id, empresa_destino_id, status');
@@ -398,7 +374,6 @@ export const getRankingParceirosEnviadas = async (
     const { data: oportunidades, error } = await query;
     if (error) throw error;
 
-    // Fetch all relevant empresas in one go
     const empresaIds = new Set<string>();
     oportunidades?.forEach(op => {
       if (op.empresa_origem_id) empresaIds.add(op.empresa_origem_id);
@@ -412,13 +387,11 @@ export const getRankingParceirosEnviadas = async (
     
     if (empresasError) throw empresasError;
 
-    // Create a map for quick lookup
     const empresasMap = new Map();
     empresas?.forEach(empresa => {
       empresasMap.set(empresa.id, empresa);
     });
 
-    // Filter: origin = partner, destination = intragroup
     const filteredData = oportunidades?.filter(op => {
       const origem = empresasMap.get(op.empresa_origem_id);
       const destino = empresasMap.get(op.empresa_destino_id);
@@ -429,7 +402,6 @@ export const getRankingParceirosEnviadas = async (
       parceiro_nome: empresasMap.get(op.empresa_origem_id)?.nome
     }));
 
-    // Group by partner
     const grouped = filteredData?.reduce((acc: any, curr: any) => {
       if (!curr.parceiro_nome) return acc;
       
@@ -457,7 +429,6 @@ export const getRankingParceirosRecebidas = async (
   status: StatusOportunidade | null
 ) => {
   try {
-    // Same optimization pattern
     let query = supabase
       .from('oportunidades')
       .select('id, empresa_origem_id, empresa_destino_id, status');
@@ -477,7 +448,6 @@ export const getRankingParceirosRecebidas = async (
     const { data: oportunidades, error } = await query;
     if (error) throw error;
 
-    // Fetch all relevant empresas in one go
     const empresaIds = new Set<string>();
     oportunidades?.forEach(op => {
       if (op.empresa_origem_id) empresaIds.add(op.empresa_origem_id);
@@ -491,13 +461,11 @@ export const getRankingParceirosRecebidas = async (
     
     if (empresasError) throw empresasError;
 
-    // Create a map for quick lookup
     const empresasMap = new Map();
     empresas?.forEach(empresa => {
       empresasMap.set(empresa.id, empresa);
     });
 
-    // Filter: origin = intragroup, destination = partner
     const filteredData = oportunidades?.filter(op => {
       const origem = empresasMap.get(op.empresa_origem_id);
       const destino = empresasMap.get(op.empresa_destino_id);
@@ -508,7 +476,6 @@ export const getRankingParceirosRecebidas = async (
       parceiro_nome: empresasMap.get(op.empresa_destino_id)?.nome
     }));
 
-    // Group by partner
     const grouped = filteredData?.reduce((acc: any, curr: any) => {
       if (!curr.parceiro_nome) return acc;
       
@@ -536,7 +503,6 @@ export const getStatusDistribution = async (
   empresaId: string | null
 ) => {
   try {
-    // Optimize the query
     let query = supabase
       .from('oportunidades')
       .select('id, status, empresa_origem_id, empresa_destino_id');
@@ -552,7 +518,6 @@ export const getStatusDistribution = async (
     const { data: oportunidades, error } = await query;
     if (error) throw error;
 
-    // Apply empresa filter if needed
     let filteredData = oportunidades;
     if (empresaId) {
       filteredData = oportunidades.filter(op => 
@@ -560,7 +525,6 @@ export const getStatusDistribution = async (
       );
     }
 
-    // Group by status
     const grouped = filteredData.reduce((acc: any, curr: any) => {
       if (!acc[curr.status]) {
         acc[curr.status] = {

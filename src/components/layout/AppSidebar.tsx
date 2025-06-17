@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
@@ -22,6 +23,7 @@ import {
   LayoutDashboard,
   LogIn,
   LogOut,
+  BookOpen,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -45,6 +47,11 @@ const menuItems = [
     title: "Wishlist & Networking",
     url: "/wishlist",
     icon: Heart,
+  },
+  {
+    title: "Diário",
+    url: "/diario",
+    icon: BookOpen,
   },
   {
     title: "Indicadores",

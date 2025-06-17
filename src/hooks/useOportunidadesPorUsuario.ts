@@ -1,3 +1,4 @@
+
 import { useMemo } from "react";
 import { Oportunidade, Usuario } from "@/types";
 
@@ -15,10 +16,10 @@ export function useOportunidadesPorUsuario(
   return useMemo(() => {
     return usuarios.map((usuario) => {
       const enviadas = oportunidadesFiltradas.filter(
-        (op) => op.usuario_origem_id === usuario.id
+        (op) => op.usuario_origem_id === usuario.id || op.usuario_envio_id === usuario.id
       ).length;
       const recebidas = oportunidadesFiltradas.filter(
-        (op) => op.usuario_destino_id === usuario.id
+        (op) => op.usuario_destino_id === usuario.id || op.usuario_recebe_id === usuario.id
       ).length;
       return {
         usuarioId: usuario.id,

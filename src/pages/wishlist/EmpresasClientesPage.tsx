@@ -383,7 +383,7 @@ const EmpresasClientesPage: React.FC = () => {
               <div>
                 <label className="block font-medium mb-1">Cliente</label>
                 <Input
-                  as="select"
+                  type="text"
                   value={empresaCliente}
                   onChange={(e) => setEmpresaCliente(e.target.value)}
                   disabled={modalType === "editar"}
