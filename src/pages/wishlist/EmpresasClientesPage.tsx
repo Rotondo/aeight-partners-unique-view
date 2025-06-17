@@ -1,34 +1,18 @@
+
 import React, { useState, useEffect } from "react";
-import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useWishlist } from "@/contexts/WishlistContext";
-import {
-  Plus,
-  Search,
-  Building2,
-  Loader2,
-  Edit2,
-  ArrowRight,
-  MoreVertical,
-  TrendingUp,
-} from "lucide-react";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { Plus, Search, Building2, TrendingUp } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import { MultiSelect } from "@/components/ui/MultiSelect";
-import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
-import {
-  Tooltip,
-  TooltipTrigger,
-  TooltipContent,
-  TooltipProvider,
-} from "@/components/ui/tooltip";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ParceiroRelevanceCard from "@/components/wishlist/ParceiroRelevanceCard";
 import { useParceiroRelevance } from "@/hooks/useParceiroRelevance";
+import ClientesVinculadosTable from "@/components/wishlist/ClientesVinculadosTable";
+import ClientesNaoVinculadosTable from "@/components/wishlist/ClientesNaoVinculadosTable";
+import ClienteFormModal from "@/components/wishlist/ClienteFormModal";
+import ApresentacaoModal from "@/components/wishlist/ApresentacaoModal";
+import ClientesStats from "@/components/wishlist/ClientesStats";
 
 type EmpresaOption = {
   id: string;
@@ -64,19 +48,16 @@ const EmpresasClientesPage: React.FC = () => {
   const [apresentacaoObs, setApresentacaoObs] = useState("");
 
   // Form state
-  const [empresas, setEmpresas] = useState<EmpresaOption[]>([]);
   const [empresasClientesOptions, setEmpresasClientesOptions] = useState<EmpresaOption[]>([]);
   const [empresasParceiros, setEmpresasParceiros] = useState<EmpresaOption[]>([]);
   const [parceirosSelecionados, setParceirosSelecionados] = useState<string[]>([]);
   const [empresaCliente, setEmpresaCliente] = useState<string>("");
   const [observacoes, setObservacoes] = useState("");
-  const [criandoNovoCliente, setCriandoNovoCliente] = useState(false);
-  const [novoClienteNome, setNovoClienteNome] = useState("");
 
-  // Estado para todas as empresas do tipo cliente (para exibir clientes não vinculados)
+  // Estado para todas as empresas do tipo cliente
   const [empresasClientesAll, setEmpresasClientesAll] = useState<EmpresaOption[]>([]);
 
-  // Buscar empresas para o formulário e ALL clientes para exibição
+  // Buscar empresas para o formulário
   useEffect(() => {
     const fetchEmpresas = async () => {
       const { data, error } = await supabase
@@ -85,7 +66,6 @@ const EmpresasClientesPage: React.FC = () => {
         .order("nome");
 
       if (!error && data) {
-        setEmpresas(data);
         setEmpresasClientesOptions(
           data.filter((e: EmpresaOption) => e.tipo === "cliente")
         );
@@ -103,83 +83,14 @@ const EmpresasClientesPage: React.FC = () => {
     fetchEmpresas();
   }, []);
 
-  // Atualiza empresas para select ao abrir modal (mantendo lógica original)
-  useEffect(() => {
-    if (!modalOpen) return;
-    const fetchEmpresas = async () => {
-      const { data, error } = await supabase
-        .from("empresas")
-        .select("id,nome,tipo")
-        .order("nome");
-
-      if (!error && data) {
-        setEmpresas(data);
-        setEmpresasClientesOptions(
-          data.filter((e: EmpresaOption) => e.tipo === "cliente")
-        );
-        setEmpresasParceiros(
-          data.filter(
-            (e: EmpresaOption) =>
-              e.tipo === "parceiro" || e.tipo === "intragrupo"
-          )
-        );
-      }
-    };
-    fetchEmpresas();
-  }, [modalOpen]);
-
-  // Handler: criar novo cliente rapidamente
-  const handleCriarNovoCliente = async () => {
-    if (!novoClienteNome.trim()) return;
-    setCriandoNovoCliente(true);
-    const existe = empresasClientesOptions.find(
-      (c) =>
-        c.nome.trim().toLowerCase() === novoClienteNome.trim().toLowerCase()
-    );
-    let clienteId = "";
-    if (existe) {
-      clienteId = existe.id;
-    } else {
-      const { data, error } = await supabase
-        .from("empresas")
-        .insert({
-          nome: novoClienteNome.trim(),
-          tipo: "cliente",
-          status: true,
-        })
-        .select("id")
-        .single();
-      if (!error && data) {
-        clienteId = data.id;
-        setEmpresasClientesOptions((prev) => [
-          ...prev,
-          { id: data.id, nome: novoClienteNome.trim(), tipo: "cliente" },
-        ]);
-        setEmpresas((prev) => [
-          ...prev,
-          { id: data.id, nome: novoClienteNome.trim(), tipo: "cliente" },
-        ]);
-        setEmpresasClientesAll((prev) => [
-          ...prev,
-          { id: data.id, nome: novoClienteNome.trim(), tipo: "cliente" },
-        ]);
-      }
-    }
-    if (clienteId) setEmpresaCliente(clienteId);
-    setNovoClienteNome("");
-    setCriandoNovoCliente(false);
-  };
-
   const resetModal = () => {
     setParceirosSelecionados([]);
     setEmpresaCliente("");
     setObservacoes("");
-    setNovoClienteNome("");
     setEditRelacionamentoId(null);
     setModalType("novo");
   };
 
-  // Retorna IDs de todos os parceiros já vinculados ao cliente selecionado
   const parceirosJaVinculadosAoCliente = (clienteId: string) =>
     empresasClientes
       .filter((v) => v.empresa_cliente_id === clienteId)
@@ -190,14 +101,12 @@ const EmpresasClientesPage: React.FC = () => {
     setModalLoading(true);
 
     if (modalType === "editar" && editRelacionamentoId) {
-      // Editar relacionamento individual
       await updateEmpresaCliente(editRelacionamentoId, {
         empresa_proprietaria_id: parceirosSelecionados[0],
         empresa_cliente_id: empresaCliente,
         observacoes,
       });
     } else {
-      // Criar múltiplos vínculos: para cada parceiro selecionado, cria um vínculo com o cliente escolhido
       const jaVinculados = parceirosJaVinculadosAoCliente(empresaCliente);
       const novosParceiros = parceirosSelecionados.filter(
         (id) => !jaVinculados.includes(id)
@@ -218,44 +127,13 @@ const EmpresasClientesPage: React.FC = () => {
     setModalOpen(false);
     resetModal();
     fetchEmpresasClientes();
-    refreshRelevance(); // Atualizar dados de relevância
+    refreshRelevance();
   };
 
-  // Garante que o cliente do relacionamento está em empresasClientesOptions ao abrir o modal
-  useEffect(() => {
-    if (!modalOpen || !empresaCliente) return;
-    // Já existe no select? (evita duplicidade)
-    const existe = empresasClientesOptions.some((c) => c.id === empresaCliente);
-    if (!existe) {
-      // Tenta pegar o nome do cliente do relacionamento (vinculado)
-      let nome = "";
-      // Se modalType === editar, tente pegar da linha do relacionamento
-      if (modalType === "editar") {
-        const relacionamento = empresasClientes.find(
-          (rel) => rel.empresa_cliente_id === empresaCliente
-        );
-        if (relacionamento && relacionamento.empresa_cliente?.nome) {
-          nome = relacionamento.empresa_cliente.nome;
-        }
-      }
-      // Se modalType === novo, tente pegar da lista de todas empresas (cliente não vinculado)
-      if (!nome) {
-        const cliente = empresasClientesAll.find((c) => c.id === empresaCliente);
-        if (cliente) nome = cliente.nome;
-      }
-      if (nome) {
-        setEmpresasClientesOptions((prev) => [
-          ...prev,
-          { id: empresaCliente, nome, tipo: "cliente" },
-        ]);
-      }
-    }
-  }, [modalOpen, empresaCliente, empresasClientes, empresasClientesAll, empresasClientesOptions, modalType]);
-
-  // handleEditar: Adiciona cliente ao select se não existir
   const handleEditar = (relacionamento: any) => {
     const clienteId = relacionamento.empresa_cliente_id;
     const nome = relacionamento.empresa_cliente?.nome;
+    
     if (
       clienteId &&
       nome &&
@@ -266,6 +144,7 @@ const EmpresasClientesPage: React.FC = () => {
         { id: clienteId, nome, tipo: "cliente" },
       ]);
     }
+    
     setModalType("editar");
     setEditRelacionamentoId(relacionamento.id);
     setParceirosSelecionados([relacionamento.empresa_proprietaria_id]);
@@ -279,16 +158,6 @@ const EmpresasClientesPage: React.FC = () => {
     setModalApresentacaoOpen(true);
   };
 
-  // Para o multi-select: filtrar parceiros já vinculados ao cliente selecionado
-  const parceirosDisponiveis = empresaCliente
-    ? empresasParceiros.filter(
-        (parceiro) =>
-          !parceirosJaVinculadosAoCliente(empresaCliente).includes(parceiro.id) ||
-          parceirosSelecionados.includes(parceiro.id) // Permitir manter selecionados no modo edição
-      )
-    : empresasParceiros;
-
-  // Handler para solicitar apresentação (exemplo simplificado)
   const handleSubmitApresentacao = async (e: React.FormEvent) => {
     e.preventDefault();
     setApresentacaoLoading(true);
@@ -303,7 +172,7 @@ const EmpresasClientesPage: React.FC = () => {
         setModalApresentacaoOpen(false);
         setApresentacaoCliente(null);
         setApresentacaoObs("");
-        refreshRelevance(); // Atualizar dados de relevância
+        refreshRelevance();
       }
     } catch (error) {
       console.error("Erro ao solicitar apresentação:", error);
@@ -312,7 +181,27 @@ const EmpresasClientesPage: React.FC = () => {
     }
   };
 
-  // DEFINE AS VARIÁVEIS DE FILTRO PARA USO NO JSX
+  const handleVincularCliente = (cliente: EmpresaOption) => {
+    if (
+      cliente.id &&
+      cliente.nome &&
+      !empresasClientesOptions.some((e) => e.id === cliente.id)
+    ) {
+      setEmpresasClientesOptions((prev) => [
+        ...prev,
+        {
+          id: cliente.id,
+          nome: cliente.nome,
+          tipo: "cliente",
+        },
+      ]);
+    }
+    setEmpresaCliente(cliente.id);
+    setModalOpen(true);
+    setModalType("novo");
+  };
+
+  // Filtros
   const filteredClientesVinculados = empresasClientes.filter(
     (cliente) =>
       cliente.empresa_cliente?.nome
@@ -326,6 +215,7 @@ const EmpresasClientesPage: React.FC = () => {
   const clientesVinculadosIds = new Set(
     empresasClientes.map((c) => c.empresa_cliente_id)
   );
+  
   const filteredClientesNaoVinculados = empresasClientesAll.filter(
     (cliente) =>
       !clientesVinculadosIds.has(cliente.id) &&
@@ -359,163 +249,15 @@ const EmpresasClientesPage: React.FC = () => {
             Gerencie a base de clientes e veja a relevância de cada parceiro
           </p>
         </div>
-        <Dialog
-          open={modalOpen}
-          onOpenChange={(o) => {
-            setModalOpen(o);
-            if (!o) resetModal();
+        <Button
+          onClick={() => {
+            setModalOpen(true);
+            setModalType("novo");
           }}
         >
-          <Button
-            onClick={() => {
-              setModalOpen(true);
-              setModalType("novo");
-            }}
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Adicionar Cliente
-          </Button>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>
-                {modalType === "editar"
-                  ? "Editar Relacionamento"
-                  : "Novo Relacionamento Parceiro-Cliente"}
-              </DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block font-medium mb-1">
-                  Parceiro(s) / Proprietário(s)
-                </label>
-                <MultiSelect
-                  options={parceirosDisponiveis.map((p) => ({
-                    value: p.id,
-                    label: p.nome,
-                  }))}
-                  values={parceirosSelecionados}
-                  onChange={setParceirosSelecionados}
-                  disabled={modalType === "editar"}
-                  placeholder="Selecione um ou mais parceiros proprietários"
-                />
-              </div>
-              <div>
-                <label className="block font-medium mb-1">Cliente</label>
-                <select
-                  value={empresaCliente}
-                  onChange={(e) => setEmpresaCliente(e.target.value)}
-                  disabled={modalType === "editar"}
-                  className="w-full px-3 py-2 border border-input bg-background rounded-md"
-                >
-                  <option value="" disabled>
-                    Selecione cliente
-                  </option>
-                  {empresasClientesOptions.map((e) => (
-                    <option key={e.id} value={e.id}>
-                      {e.nome}
-                    </option>
-                  ))}
-                </select>
-                <div className="flex mt-2 gap-2">
-                  <Input
-                    placeholder="Novo cliente"
-                    value={novoClienteNome}
-                    onChange={(e) => setNovoClienteNome(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        handleCriarNovoCliente();
-                      }
-                    }}
-                    disabled={criandoNovoCliente}
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleCriarNovoCliente}
-                    disabled={criandoNovoCliente || !novoClienteNome.trim()}
-                  >
-                    {criandoNovoCliente && (
-                      <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                    )}
-                    Adicionar
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  O cliente será criado e vinculado à base Aeight.
-                </p>
-              </div>
-              <div>
-                <label className="block font-medium mb-1">
-                  Observações (opcional)
-                </label>
-                <Input
-                  value={observacoes}
-                  onChange={(e) => setObservacoes(e.target.value)}
-                  placeholder="Observações sobre o relacionamento"
-                />
-              </div>
-              <div className="flex justify-end">
-                <Button
-                  type="submit"
-                  disabled={
-                    modalLoading ||
-                    parceirosSelecionados.length === 0 ||
-                    !empresaCliente
-                  }
-                >
-                  {modalLoading && (
-                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                  )}
-                  {modalType === "editar"
-                    ? "Salvar Alterações"
-                    : "Criar Relacionamento(s)"}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
-        
-        {/* Modal Solicitar Apresentação */}
-        <Dialog
-          open={modalApresentacaoOpen}
-          onOpenChange={setModalApresentacaoOpen}
-        >
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Solicitar Apresentação</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmitApresentacao} className="space-y-4">
-              <div>
-                <div className="font-medium mb-2">
-                  Cliente:{" "}
-                  <span className="font-normal">
-                    {apresentacaoCliente?.empresa_cliente?.nome}
-                  </span>
-                </div>
-                <div className="font-medium mb-2">
-                  Proprietário:{" "}
-                  <span className="font-normal">
-                    {apresentacaoCliente?.empresa_proprietaria?.nome}
-                  </span>
-                </div>
-                <Input
-                  placeholder="Observações para a apresentação"
-                  value={apresentacaoObs}
-                  onChange={(e) => setApresentacaoObs(e.target.value)}
-                />
-              </div>
-              <div className="flex justify-end">
-                <Button type="submit" disabled={apresentacaoLoading}>
-                  {apresentacaoLoading && (
-                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                  )}
-                  Solicitar Apresentação
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+          <Plus className="mr-2 h-4 w-4" />
+          Adicionar Cliente
+        </Button>
       </div>
 
       {/* Tabs Navigation */}
@@ -549,221 +291,18 @@ const EmpresasClientesPage: React.FC = () => {
         </div>
 
         <TabsContent value="clientes" className="space-y-6">
-          {/* Stats */}
-          <div className="grid gap-2 md:grid-cols-3">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between py-3">
-                <CardTitle className="text-xs font-medium">
-                  Total de Clientes Vinculados
-                </CardTitle>
-                <Building2 className="h-4 w-4 text-muted-foreground" />
-                <span className="text-xl font-bold">
-                  {empresasClientes.length}
-                </span>
-              </CardHeader>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between py-3">
-                <CardTitle className="text-xs font-medium">
-                  Proprietários Únicos
-                </CardTitle>
-                <Building2 className="h-4 w-4 text-muted-foreground" />
-                <span className="text-xl font-bold">
-                  {new Set(
-                    empresasClientes.map((c) => c.empresa_proprietaria_id)
-                  ).size}
-                </span>
-              </CardHeader>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between py-3">
-                <CardTitle className="text-xs font-medium">
-                  Relacionamentos Ativos
-                </CardTitle>
-                <Badge variant="outline" className="ml-2">
-                  Ativo
-                </Badge>
-                <span className="text-xl font-bold">
-                  {empresasClientes.filter((c) => c.status).length}
-                </span>
-              </CardHeader>
-            </Card>
-          </div>
-
-          {/* Lista de clientes vinculados */}
-          <div className="overflow-x-auto rounded-md border bg-background shadow-sm mt-2">
-            <table className="min-w-full text-sm align-middle">
-              <thead>
-                <tr className="border-b text-muted-foreground">
-                  <th className="px-3 py-2 text-left font-medium">Cliente</th>
-                  <th className="px-3 py-2 text-left font-medium">Proprietário</th>
-                  <th className="px-3 py-2 text-left font-medium">Status</th>
-                  <th className="px-3 py-2 text-left font-medium">Desde</th>
-                  <th className="px-3 py-2 text-left font-medium">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredClientesVinculados.map((cliente) => (
-                  <tr
-                    key={cliente.id}
-                    className="border-b hover:bg-muted/50 transition"
-                  >
-                    <td className="px-3 py-2 font-medium whitespace-nowrap">
-                      {cliente.empresa_cliente?.nome}
-                    </td>
-                    <td className="px-3 py-2">
-                      {cliente.empresa_proprietaria?.nome}
-                    </td>
-                    <td className="px-3 py-2">
-                      <Badge
-                        variant={cliente.status ? "default" : "secondary"}
-                      >
-                        {cliente.status ? "Ativo" : "Inativo"}
-                      </Badge>
-                    </td>
-                    <td className="px-3 py-2 whitespace-nowrap">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span>
-                              {format(
-                                new Date(cliente.data_relacionamento),
-                                "dd/MM/yyyy",
-                                { locale: ptBR }
-                              )}
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            Relacionamento desde{" "}
-                            {format(
-                              new Date(cliente.data_relacionamento),
-                              "dd 'de' MMMM 'de' yyyy",
-                              { locale: ptBR }
-                            )}
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </td>
-                    <td className="px-3 py-2">
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="p-1 h-8 w-8"
-                          >
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent align="end" className="w-36 p-1 flex flex-col gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="justify-start w-full"
-                            onClick={() => handleEditar(cliente)}
-                          >
-                            <Edit2 className="h-4 w-4 mr-2" /> Editar
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="justify-start w-full"
-                            onClick={() => handleSolicitarApresentacao(cliente)}
-                          >
-                            <ArrowRight className="h-4 w-4 mr-2" /> Solicitar Apresentação
-                          </Button>
-                        </PopoverContent>
-                      </Popover>
-                    </td>
-                  </tr>
-                ))}
-                
-                {/* Clientes NÃO vinculados */}
-                {filteredClientesNaoVinculados.map((cliente) => (
-                  <tr
-                    key={cliente.id}
-                    className="border-b hover:bg-muted/40"
-                  >
-                    <td className="px-3 py-2 font-medium">{cliente.nome}</td>
-                    <td className="px-3 py-2">
-                      <span className="italic text-muted-foreground">
-                        Sem proprietário
-                      </span>
-                    </td>
-                    <td className="px-3 py-2">
-                      <Badge variant="secondary">Não vinculado</Badge>
-                    </td>
-                    <td className="px-3 py-2">-</td>
-                    <td className="px-3 py-2">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                if (
-                                  cliente.id &&
-                                  cliente.nome &&
-                                  !empresasClientesOptions.some(
-                                    (e) => e.id === cliente.id
-                                  )
-                                ) {
-                                  setEmpresasClientesOptions((prev) => [
-                                    ...prev,
-                                    {
-                                      id: cliente.id,
-                                      nome: cliente.nome,
-                                      tipo: "cliente",
-                                    },
-                                  ]);
-                                }
-                                setEmpresaCliente(cliente.id);
-                                setModalOpen(true);
-                                setModalType("novo");
-                              }}
-                            >
-                              Vincular
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            Vincular este cliente a um ou mais parceiros
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </td>
-                  </tr>
-                ))}
-                
-                {/* Caso nenhum cliente exibido */}
-                {filteredClientesVinculados.length +
-                  filteredClientesNaoVinculados.length === 0 && (
-                  <tr>
-                    <td colSpan={5} className="py-12 text-center text-muted-foreground">
-                      <Building2 className="h-12 w-12 mx-auto mb-2 text-muted-foreground" />
-                      <div className="text-lg font-semibold mb-1">
-                        Nenhum cliente encontrado
-                      </div>
-                      <div className="mb-4">
-                        {searchTerm
-                          ? "Tente ajustar os filtros de busca"
-                          : "Adicione o primeiro cliente à base"}
-                      </div>
-                      <Button
-                        onClick={() => {
-                          setModalOpen(true);
-                          setModalType("novo");
-                        }}
-                      >
-                        <Plus className="mr-2 h-4 w-4" />
-                        Adicionar Cliente
-                      </Button>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+          <ClientesStats empresasClientes={empresasClientes} />
+          
+          <ClientesVinculadosTable
+            clientesVinculados={filteredClientesVinculados}
+            onEditar={handleEditar}
+            onSolicitarApresentacao={handleSolicitarApresentacao}
+          />
+          
+          <ClientesNaoVinculadosTable
+            clientesNaoVinculados={filteredClientesNaoVinculados}
+            onVincular={handleVincularCliente}
+          />
         </TabsContent>
 
         <TabsContent value="relevancia" className="space-y-6">
@@ -781,7 +320,6 @@ const EmpresasClientesPage: React.FC = () => {
                   key={parceiro.id}
                   parceiro={parceiro}
                   onClick={() => {
-                    // Aqui poderia abrir um modal com detalhes do parceiro
                     console.log("Ver detalhes do parceiro:", parceiro.nome);
                   }}
                 />
@@ -804,6 +342,39 @@ const EmpresasClientesPage: React.FC = () => {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Modals */}
+      <ClienteFormModal
+        isOpen={modalOpen}
+        onClose={() => {
+          setModalOpen(false);
+          resetModal();
+        }}
+        modalType={modalType}
+        editRelacionamentoId={editRelacionamentoId}
+        parceirosSelecionados={parceirosSelecionados}
+        setParceirosSelecionados={setParceirosSelecionados}
+        empresaCliente={empresaCliente}
+        setEmpresaCliente={setEmpresaCliente}
+        observacoes={observacoes}
+        setObservacoes={setObservacoes}
+        onSubmit={handleSubmit}
+        modalLoading={modalLoading}
+        empresasClientesOptions={empresasClientesOptions}
+        setEmpresasClientesOptions={setEmpresasClientesOptions}
+        empresasParceiros={empresasParceiros}
+        parceirosJaVinculadosAoCliente={parceirosJaVinculadosAoCliente}
+      />
+
+      <ApresentacaoModal
+        isOpen={modalApresentacaoOpen}
+        onClose={() => setModalApresentacaoOpen(false)}
+        apresentacaoCliente={apresentacaoCliente}
+        apresentacaoObs={apresentacaoObs}
+        setApresentacaoObs={setApresentacaoObs}
+        onSubmit={handleSubmitApresentacao}
+        loading={apresentacaoLoading}
+      />
     </div>
   );
 };
