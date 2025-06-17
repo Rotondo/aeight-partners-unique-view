@@ -104,6 +104,141 @@ export type Database = {
           },
         ]
       }
+      diario_agenda_eventos: {
+        Row: {
+          created_at: string
+          description: string | null
+          end: string
+          external_id: string | null
+          id: string
+          partner_id: string | null
+          source: string
+          start: string
+          status: Database["public"]["Enums"]["diario_event_status"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          end: string
+          external_id?: string | null
+          id?: string
+          partner_id?: string | null
+          source: string
+          start: string
+          status?: Database["public"]["Enums"]["diario_event_status"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          end?: string
+          external_id?: string | null
+          id?: string
+          partner_id?: string | null
+          source?: string
+          start?: string
+          status?: Database["public"]["Enums"]["diario_event_status"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      diario_crm_acoes: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          metadata: Json | null
+          next_step_date: string | null
+          partner_id: string | null
+          type: Database["public"]["Enums"]["crm_action_type"]
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          next_step_date?: string | null
+          partner_id?: string | null
+          type: Database["public"]["Enums"]["crm_action_type"]
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          next_step_date?: string | null
+          partner_id?: string | null
+          type?: Database["public"]["Enums"]["crm_action_type"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      diario_ia_sugestoes: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          field: string
+          id: string
+          status: Database["public"]["Enums"]["ia_suggestion_status"]
+          suggestion: string
+          target_id: string | null
+          target_type: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          field: string
+          id?: string
+          status?: Database["public"]["Enums"]["ia_suggestion_status"]
+          suggestion: string
+          target_id?: string | null
+          target_type: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          field?: string
+          id?: string
+          status?: Database["public"]["Enums"]["ia_suggestion_status"]
+          suggestion?: string
+          target_id?: string | null
+          target_type?: string
+        }
+        Relationships: []
+      }
+      diario_resumos: {
+        Row: {
+          content: string | null
+          export_url: string | null
+          generated_at: string
+          id: string
+          period: Database["public"]["Enums"]["diario_period"]
+        }
+        Insert: {
+          content?: string | null
+          export_url?: string | null
+          generated_at?: string
+          id?: string
+          period: Database["public"]["Enums"]["diario_period"]
+        }
+        Update: {
+          content?: string | null
+          export_url?: string | null
+          generated_at?: string
+          id?: string
+          period?: Database["public"]["Enums"]["diario_period"]
+        }
+        Relationships: []
+      }
       empresa_categoria: {
         Row: {
           categoria_id: string
@@ -806,6 +941,11 @@ export type Database = {
     Enums: {
       company_size: "PP" | "P" | "M" | "G" | "GG"
       company_type: "intragrupo" | "parceiro" | "cliente"
+      crm_action_type: "audio" | "video" | "text"
+      diario_event_status: "scheduled" | "synced" | "completed" | "canceled"
+      diario_period: "week" | "month" | "quarter"
+      fonte_integracao: "manual" | "google" | "outlook"
+      ia_suggestion_status: "pending" | "approved" | "rejected" | "edited"
       opportunity_status:
         | "em_contato"
         | "negociando"
@@ -814,7 +954,18 @@ export type Database = {
         | "Contato"
         | "Apresentado"
         | "Sem contato"
+      status_acao_crm: "pendente" | "em_andamento" | "concluida" | "cancelada"
+      status_evento: "agendado" | "realizado" | "cancelado" | "reagendado"
+      status_sugestao_ia: "pendente" | "em_revisao" | "aprovada" | "rejeitada"
+      tipo_acao_crm: "audio" | "video" | "texto"
       tipo_empresa: "grupo" | "parceiro" | "cliente" | "intragrupo"
+      tipo_evento_agenda:
+        | "reuniao"
+        | "call"
+        | "apresentacao"
+        | "follow_up"
+        | "outro"
+      tipo_resumo: "semanal" | "mensal" | "trimestral"
       user_role: "admin" | "user" | "manager"
     }
     CompositeTypes: {
@@ -933,6 +1084,11 @@ export const Constants = {
     Enums: {
       company_size: ["PP", "P", "M", "G", "GG"],
       company_type: ["intragrupo", "parceiro", "cliente"],
+      crm_action_type: ["audio", "video", "text"],
+      diario_event_status: ["scheduled", "synced", "completed", "canceled"],
+      diario_period: ["week", "month", "quarter"],
+      fonte_integracao: ["manual", "google", "outlook"],
+      ia_suggestion_status: ["pending", "approved", "rejected", "edited"],
       opportunity_status: [
         "em_contato",
         "negociando",
@@ -942,7 +1098,19 @@ export const Constants = {
         "Apresentado",
         "Sem contato",
       ],
+      status_acao_crm: ["pendente", "em_andamento", "concluida", "cancelada"],
+      status_evento: ["agendado", "realizado", "cancelado", "reagendado"],
+      status_sugestao_ia: ["pendente", "em_revisao", "aprovada", "rejeitada"],
+      tipo_acao_crm: ["audio", "video", "texto"],
       tipo_empresa: ["grupo", "parceiro", "cliente", "intragrupo"],
+      tipo_evento_agenda: [
+        "reuniao",
+        "call",
+        "apresentacao",
+        "follow_up",
+        "outro",
+      ],
+      tipo_resumo: ["semanal", "mensal", "trimestral"],
       user_role: ["admin", "user", "manager"],
     },
   },
