@@ -24,7 +24,8 @@ import {
   Building2, 
   Settings,
   PanelLeft,
-  Archive
+  Archive,
+  FolderOpen
 } from 'lucide-react';
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
@@ -78,6 +79,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       url: "/quadrante",
       icon: Archive,
       description: "Análise por quadrantes",
+      adminOnly: false
+    },
+    {
+      title: "Repositório",
+      url: "/repositorio",
+      icon: FolderOpen,
+      description: "Repositório de materiais",
       adminOnly: false
     },
     {

@@ -17,6 +17,7 @@ import EmpresasPage from './pages/empresas/EmpresasPage';
 import OnePagerPage from './pages/onepager';
 import QuadrantePage from './pages/quadrante/QuadrantePage';
 import AdminPage from './pages/admin';
+import RepositorioPage from './pages/repositorio/RepositorioPage';
 
 function App() {
   return (
@@ -72,6 +73,13 @@ function App() {
                 <PrivateRoute>
                   <MainLayout>
                     <QuadrantePage />
+                  </MainLayout>
+                </PrivateRoute>
+              } />
+              <Route path="/repositorio" element={
+                <PrivateRoute>
+                  <MainLayout>
+                    <RepositorioPage />
                   </MainLayout>
                 </PrivateRoute>
               } />
