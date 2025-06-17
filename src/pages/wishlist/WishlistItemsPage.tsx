@@ -17,15 +17,15 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useWishlist } from "@/contexts/WishlistContext";
-import { Plus, Search, Heart, Calendar, Star, Loader2, CheckCircle, XCircle, Handshake } from "lucide-react";
+import { Plus, Search, Heart, Calendar, Star, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { WishlistStatus, WishlistItem } from "@/types";
 import { supabase } from "@/lib/supabase";
 import { toast } from "@/hooks/use-toast";
 
+// Tipo auxiliar para empresas
 type EmpresaOption = {
   id: string;
   nome: string;
@@ -39,17 +39,10 @@ function toSafeNumber(val: unknown, fallback = 3): number {
   return typeof val === "number" && !isNaN(val) ? val : fallback;
 }
 
+// Busca o nome do cliente pelo id no array de opções
 function getClienteNomePorId(id: string, clientes: EmpresaOption[]) {
   return clientes.find((c) => c.id === id)?.nome || "";
 }
-
-const statusActions: Record<WishlistStatus, { approve?: boolean; reject?: boolean; facilitate?: boolean }> = {
-  pendente: { approve: true, reject: true, facilitate: false },
-  em_andamento: { approve: false, reject: false, facilitate: true },
-  aprovado: { approve: false, reject: false, facilitate: true },
-  rejeitado: {},
-  convertido: {},
-};
 
 const WishlistItemsPage: React.FC = () => {
   const {
@@ -58,7 +51,6 @@ const WishlistItemsPage: React.FC = () => {
     fetchWishlistItems,
     addWishlistItem,
     updateWishlistItem,
-    deleteWishlistItem,
   } = useWishlist();
 
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -69,18 +61,6 @@ const WishlistItemsPage: React.FC = () => {
   const [modalLoading, setModalLoading] = useState(false);
   const [editingItem, setEditingItem] = useState<WishlistItem | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
-
-  // Aprovar/rejeitar state
-  const [approveDialogOpen, setApproveDialogOpen] = useState(false);
-  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
-  const [itemToApprove, setItemToApprove] = useState<WishlistItem | null>(null);
-  const [itemToReject, setItemToReject] = useState<WishlistItem | null>(null);
-  const [rejectionReason, setRejectionReason] = useState("");
-  const [rejectionLoading, setRejectionLoading] = useState(false);
-
-  // Facilitar
-  const [facilitateDialogOpen, setFacilitateDialogOpen] = useState(false);
-  const [itemToFacilitate, setItemToFacilitate] = useState<WishlistItem | null>(null);
 
   // Form state
   const [empresas, setEmpresas] = useState<EmpresaOption[]>([]);
@@ -122,7 +102,7 @@ const WishlistItemsPage: React.FC = () => {
       }
     };
     fetchEmpresas();
-  }, [modalOpen]);
+  }, [modalOpen, toast]);
 
   // Preencher formulário ao editar
   useEffect(() => {
@@ -140,6 +120,7 @@ const WishlistItemsPage: React.FC = () => {
     // eslint-disable-next-line
   }, [editingItem]);
 
+  // Sempre que empresaDesejada mudar, atualize o nome (fallback para quando muda no select)
   useEffect(() => {
     if (empresaDesejada) {
       setEmpresaDesejadaNome(getClienteNomePorId(empresaDesejada, empresasClientes));
@@ -148,6 +129,7 @@ const WishlistItemsPage: React.FC = () => {
     }
   }, [empresaDesejada, empresasClientes]);
 
+  // Função para garantir que o cliente recém-criado esteja no array antes de selecionar
   const handleCriarNovoCliente = async () => {
     if (!novoClienteNome.trim()) return;
     setCriandoNovoCliente(true);
@@ -255,95 +237,7 @@ const WishlistItemsPage: React.FC = () => {
     }
   };
 
-  // Aprovação
-  const handleApprove = async () => {
-    if (!itemToApprove) return;
-    setApproveDialogOpen(false);
-    try {
-      await updateWishlistItem(itemToApprove.id, {
-        status: "aprovado",
-        data_resposta: new Date().toISOString(),
-      });
-      toast({
-        title: "Solicitação aprovada!",
-        description: "A solicitação foi aprovada com sucesso.",
-      });
-      fetchWishlistItems();
-    } catch (err: any) {
-      toast({
-        title: "Erro ao aprovar",
-        description: err?.message || "Erro inesperado",
-        variant: "destructive",
-      });
-    }
-    setItemToApprove(null);
-  };
-
-  // Rejeição
-  const handleReject = async () => {
-    if (!itemToReject) return;
-    setRejectionLoading(true);
-    try {
-      await updateWishlistItem(itemToReject.id, {
-        status: "rejeitado",
-        data_resposta: new Date().toISOString(),
-        observacoes: rejectionReason,
-      });
-      toast({
-        title: "Solicitação rejeitada!",
-        description: "A solicitação foi rejeitada.",
-      });
-      fetchWishlistItems();
-    } catch (err: any) {
-      toast({
-        title: "Erro ao rejeitar",
-        description: err?.message || "Erro inesperado",
-        variant: "destructive",
-      });
-    }
-    setRejectionLoading(false);
-    setRejectDialogOpen(false);
-    setItemToReject(null);
-    setRejectionReason("");
-  };
-
-  // Facilitar apresentação
-  const handleFacilitate = async () => {
-    setFacilitateDialogOpen(false);
-    toast({
-      title: "Fluxo de facilitação",
-      description: "Redirecione para o fluxo de facilitação de apresentação.",
-    });
-    setItemToFacilitate(null);
-  };
-
-  // Excluir item
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [itemToDelete, setItemToDelete] = useState<WishlistItem | null>(null);
-
-  const handleDelete = async () => {
-    if (!itemToDelete) return;
-    try {
-      await deleteWishlistItem(itemToDelete.id);
-      toast({
-        title: "Item excluído",
-        description: "Solicitação removida da wishlist.",
-      });
-      fetchWishlistItems();
-    } catch (err: any) {
-      toast({
-        title: "Erro ao excluir",
-        description: err?.message || "Erro inesperado",
-        variant: "destructive",
-      });
-    }
-    setDeleteDialogOpen(false);
-    setItemToDelete(null);
-  };
-
-  // Defensive .map for wishlistItems and filteredItems
-  const safeWishlistItems = Array.isArray(wishlistItems) ? wishlistItems : [];
-  const filteredItems = safeWishlistItems.filter((item) => {
+  const filteredItems = wishlistItems.filter((item) => {
     const matchesSearch =
       (item.empresa_interessada?.nome || "")
         .toLowerCase()
@@ -475,7 +369,7 @@ const WishlistItemsPage: React.FC = () => {
                     <SelectValue placeholder="Selecione empresa (parceiro/intragrupo)" />
                   </SelectTrigger>
                   <SelectContent>
-                    {(empresasParceiros ?? []).map((e) => (
+                    {empresasParceiros.map((e) => (
                       <SelectItem key={e.id} value={e.id}>
                         {e.nome}
                       </SelectItem>
@@ -500,7 +394,7 @@ const WishlistItemsPage: React.FC = () => {
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    {(empresasClientes ?? []).map((e) => (
+                    {empresasClientes.map((e) => (
                       <SelectItem key={e.id} value={e.id}>
                         {e.nome}
                       </SelectItem>
@@ -548,7 +442,7 @@ const WishlistItemsPage: React.FC = () => {
                     <SelectValue placeholder="Selecione proprietário" />
                   </SelectTrigger>
                   <SelectContent>
-                    {(empresasParceiros ?? []).map((e) => (
+                    {empresasParceiros.map((e) => (
                       <SelectItem key={e.id} value={e.id}>
                         {e.nome}
                       </SelectItem>
@@ -654,7 +548,7 @@ const WishlistItemsPage: React.FC = () => {
             <Heart className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{safeWishlistItems.length}</div>
+            <div className="text-2xl font-bold">{wishlistItems.length}</div>
           </CardContent>
         </Card>
 
@@ -662,12 +556,12 @@ const WishlistItemsPage: React.FC = () => {
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Pendentes</CardTitle>
             <Badge variant="secondary">
-              {safeWishlistItems.filter((i) => i.status === "pendente").length}
+              {wishlistItems.filter((i) => i.status === "pendente").length}
             </Badge>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {safeWishlistItems.filter((i) => i.status === "pendente").length}
+              {wishlistItems.filter((i) => i.status === "pendente").length}
             </div>
           </CardContent>
         </Card>
@@ -676,12 +570,12 @@ const WishlistItemsPage: React.FC = () => {
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Aprovados</CardTitle>
             <Badge variant="default">
-              {safeWishlistItems.filter((i) => i.status === "aprovado").length}
+              {wishlistItems.filter((i) => i.status === "aprovado").length}
             </Badge>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {safeWishlistItems.filter((i) => i.status === "aprovado").length}
+              {wishlistItems.filter((i) => i.status === "aprovado").length}
             </div>
           </CardContent>
         </Card>
@@ -690,12 +584,12 @@ const WishlistItemsPage: React.FC = () => {
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Convertidos</CardTitle>
             <Badge variant="default">
-              {safeWishlistItems.filter((i) => i.status === "convertido").length}
+              {wishlistItems.filter((i) => i.status === "convertido").length}
             </Badge>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {safeWishlistItems.filter((i) => i.status === "convertido").length}
+              {wishlistItems.filter((i) => i.status === "convertido").length}
             </div>
           </CardContent>
         </Card>
@@ -703,7 +597,7 @@ const WishlistItemsPage: React.FC = () => {
 
       {/* Lista de Items */}
       <div className="grid gap-4">
-        {(filteredItems ?? []).map((item) => (
+        {filteredItems.map((item) => (
           <Card key={item.id}>
             <CardHeader>
               <div className="flex justify-between items-start">
@@ -758,43 +652,16 @@ const WishlistItemsPage: React.FC = () => {
                 <div className="flex justify-end gap-2 pt-2">
                   {item.status === "pendente" && (
                     <>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setItemToApprove(item);
-                          setApproveDialogOpen(true);
-                        }}
-                        title="Aprovar solicitação"
-                      >
-                        <CheckCircle className="mr-1 h-4 w-4 text-green-600" />
+                      <Button variant="outline" size="sm">
                         Aprovar
                       </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setItemToReject(item);
-                          setRejectDialogOpen(true);
-                        }}
-                        title="Rejeitar solicitação"
-                      >
-                        <XCircle className="mr-1 h-4 w-4 text-destructive" />
+                      <Button variant="outline" size="sm">
                         Rejeitar
                       </Button>
                     </>
                   )}
-                  {(item.status === "aprovado" || item.status === "em_andamento") && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setItemToFacilitate(item);
-                        setFacilitateDialogOpen(true);
-                      }}
-                      title="Facilitar Apresentação"
-                    >
-                      <Handshake className="mr-1 h-4 w-4 text-blue-600" />
+                  {item.status === "aprovado" && (
+                    <Button variant="outline" size="sm">
                       Facilitar Apresentação
                     </Button>
                   )}
@@ -808,23 +675,12 @@ const WishlistItemsPage: React.FC = () => {
                   >
                     Editar
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setItemToDelete(item);
-                      setDeleteDialogOpen(true);
-                    }}
-                    title="Excluir item"
-                  >
-                    Excluir
-                  </Button>
                 </div>
               </div>
             </CardContent>
           </Card>
         ))}
-        {(filteredItems ?? []).length === 0 && (
+        {filteredItems.length === 0 && (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
               <Heart className="h-12 w-12 text-muted-foreground mb-4" />
@@ -849,67 +705,6 @@ const WishlistItemsPage: React.FC = () => {
           </Card>
         )}
       </div>
-
-      {/* Aprovar Dialog */}
-      <ConfirmDialog
-        open={approveDialogOpen}
-        onOpenChange={setApproveDialogOpen}
-        title="Aprovar Solicitação"
-        description="Deseja realmente aprovar esta solicitação de wishlist?"
-        onConfirm={handleApprove}
-        confirmText="Aprovar"
-        cancelText="Cancelar"
-      />
-      {/* Rejeitar Dialog */}
-      <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Rejeitar Solicitação</DialogTitle>
-            <DialogDescription>
-              Deseja realmente rejeitar esta solicitação? Informe o motivo da rejeição.
-            </DialogDescription>
-          </DialogHeader>
-          <Input
-            placeholder="Motivo da rejeição"
-            value={rejectionReason}
-            onChange={(e) => setRejectionReason(e.target.value)}
-            autoFocus
-          />
-          <div className="flex justify-end gap-2 mt-4">
-            <Button variant="secondary" onClick={() => setRejectDialogOpen(false)}>
-              Cancelar
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleReject}
-              disabled={rejectionLoading || !rejectionReason.trim()}
-            >
-              {rejectionLoading && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
-              Rejeitar
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-      {/* Facilitar Dialog */}
-      <ConfirmDialog
-        open={facilitateDialogOpen}
-        onOpenChange={setFacilitateDialogOpen}
-        title="Facilitar Apresentação"
-        description="Você será direcionado para o fluxo de facilitação de apresentação deste item. Deseja prosseguir?"
-        onConfirm={handleFacilitate}
-        confirmText="Prosseguir"
-        cancelText="Cancelar"
-      />
-      {/* Excluir Dialog */}
-      <ConfirmDialog
-        open={deleteDialogOpen}
-        onOpenChange={setDeleteDialogOpen}
-        title="Excluir Solicitação"
-        description="Tem certeza que deseja excluir esta solicitação? Esta ação não poderá ser desfeita."
-        onConfirm={handleDelete}
-        confirmText="Excluir"
-        cancelText="Cancelar"
-      />
     </div>
   );
 };

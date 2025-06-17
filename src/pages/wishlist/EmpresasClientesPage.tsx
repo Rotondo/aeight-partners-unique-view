@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useWishlist } from "@/contexts/WishlistContext";
 import {
   Plus,
@@ -14,7 +13,6 @@ import {
   Edit2,
   ArrowRight,
   MoreVertical,
-  Trash2,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -27,7 +25,6 @@ import {
   TooltipContent,
   TooltipProvider,
 } from "@/components/ui/tooltip";
-import { toast } from "@/hooks/use-toast";
 
 type EmpresaOption = {
   id: string;
@@ -42,7 +39,6 @@ const EmpresasClientesPage: React.FC = () => {
     fetchEmpresasClientes,
     addEmpresaCliente,
     updateEmpresaCliente,
-    deleteEmpresaCliente,
     solicitarApresentacao,
   } = useWishlist();
   const [searchTerm, setSearchTerm] = useState("");
@@ -58,10 +54,6 @@ const EmpresasClientesPage: React.FC = () => {
   const [apresentacaoCliente, setApresentacaoCliente] = useState<any | null>(null);
   const [apresentacaoLoading, setApresentacaoLoading] = useState(false);
   const [apresentacaoObs, setApresentacaoObs] = useState("");
-
-  // Exclusão
-  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
-  const [relacionamentoToDelete, setRelacionamentoToDelete] = useState<any | null>(null);
 
   // Form state
   const [empresas, setEmpresas] = useState<EmpresaOption[]>([]);
@@ -190,14 +182,11 @@ const EmpresasClientesPage: React.FC = () => {
     setModalLoading(true);
 
     if (modalType === "editar" && editRelacionamentoId) {
+      // Editar relacionamento individual
       await updateEmpresaCliente(editRelacionamentoId, {
         empresa_proprietaria_id: parceirosSelecionados[0],
         empresa_cliente_id: empresaCliente,
         observacoes,
-      });
-      toast({
-        title: "Relacionamento atualizado",
-        description: "O relacionamento foi salvo com sucesso.",
       });
     } else {
       // Criar múltiplos vínculos: para cada parceiro selecionado, cria um vínculo com o cliente escolhido
@@ -216,10 +205,6 @@ const EmpresasClientesPage: React.FC = () => {
           })
         )
       );
-      toast({
-        title: "Relacionamento criado",
-        description: "Relacionamento(s) parceiro-cliente criado(s) com sucesso.",
-      });
     }
     setModalLoading(false);
     setModalOpen(false);
@@ -230,9 +215,12 @@ const EmpresasClientesPage: React.FC = () => {
   // Garante que o cliente do relacionamento está em empresasClientesOptions ao abrir o modal
   useEffect(() => {
     if (!modalOpen || !empresaCliente) return;
+    // Já existe no select? (evita duplicidade)
     const existe = empresasClientesOptions.some((c) => c.id === empresaCliente);
     if (!existe) {
+      // Tenta pegar o nome do cliente do relacionamento (vinculado)
       let nome = "";
+      // Se modalType === editar, tente pegar da linha do relacionamento
       if (modalType === "editar") {
         const relacionamento = empresasClientes.find(
           (rel) => rel.empresa_cliente_id === empresaCliente
@@ -241,6 +229,7 @@ const EmpresasClientesPage: React.FC = () => {
           nome = relacionamento.empresa_cliente.nome;
         }
       }
+      // Se modalType === novo, tente pegar da lista de todas empresas (cliente não vinculado)
       if (!nome) {
         const cliente = empresasClientesAll.find((c) => c.id === empresaCliente);
         if (cliente) nome = cliente.nome;
@@ -281,33 +270,12 @@ const EmpresasClientesPage: React.FC = () => {
     setModalApresentacaoOpen(true);
   };
 
-  // Exclusão de relacionamento
-  const handleDeleteRelacionamento = async () => {
-    if (!relacionamentoToDelete) return;
-    try {
-      await deleteEmpresaCliente(relacionamentoToDelete.id);
-      toast({
-        title: "Relacionamento excluído",
-        description: "O relacionamento foi removido com sucesso.",
-      });
-      fetchEmpresasClientes();
-    } catch (err: any) {
-      toast({
-        title: "Erro ao excluir",
-        description: err?.message || "Erro inesperado",
-        variant: "destructive",
-      });
-    }
-    setConfirmDeleteOpen(false);
-    setRelacionamentoToDelete(null);
-  };
-
   // Para o multi-select: filtrar parceiros já vinculados ao cliente selecionado
   const parceirosDisponiveis = empresaCliente
     ? empresasParceiros.filter(
         (parceiro) =>
           !parceirosJaVinculadosAoCliente(empresaCliente).includes(parceiro.id) ||
-          parceirosSelecionados.includes(parceiro.id)
+          parceirosSelecionados.includes(parceiro.id) // Permitir manter selecionados no modo edição
       )
     : empresasParceiros;
 
@@ -325,10 +293,6 @@ const EmpresasClientesPage: React.FC = () => {
       setModalApresentacaoOpen(false);
       setApresentacaoCliente(null);
       setApresentacaoObs("");
-      toast({
-        title: "Solicitação enviada",
-        description: "Apresentação solicitada com sucesso.",
-      });
     }
     setApresentacaoLoading(false);
   };
@@ -589,7 +553,7 @@ const EmpresasClientesPage: React.FC = () => {
         </Card>
       </div>
 
-      {/* Lista de clientes vinculados */}
+      {/* Minimalista: Lista de clientes vinculados (estilo table/lista) */}
       <div className="overflow-x-auto rounded-md border bg-background shadow-sm mt-2">
         <table className="min-w-full text-sm align-middle">
           <thead>
@@ -603,7 +567,10 @@ const EmpresasClientesPage: React.FC = () => {
           </thead>
           <tbody>
             {filteredClientesVinculados.map((cliente) => (
-              <tr key={cliente.id} className="border-b hover:bg-muted/50 transition">
+              <tr
+                key={cliente.id}
+                className="border-b hover:bg-muted/50 transition"
+              >
                 <td className="px-3 py-2 font-medium whitespace-nowrap">
                   {cliente.empresa_cliente?.nome}
                 </td>
@@ -611,7 +578,9 @@ const EmpresasClientesPage: React.FC = () => {
                   {cliente.empresa_proprietaria?.nome}
                 </td>
                 <td className="px-3 py-2">
-                  <Badge variant={cliente.status ? "default" : "secondary"}>
+                  <Badge
+                    variant={cliente.status ? "default" : "secondary"}
+                  >
                     {cliente.status ? "Ativo" : "Inativo"}
                   </Badge>
                 </td>
@@ -645,19 +614,16 @@ const EmpresasClientesPage: React.FC = () => {
                         variant="ghost"
                         size="icon"
                         className="p-1 h-8 w-8"
-                        aria-label="Mais ações"
-                        title="Mais ações"
                       >
                         <MoreVertical className="h-4 w-4" />
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent align="end" className="w-40 p-1 flex flex-col gap-1">
+                    <PopoverContent align="end" className="w-36 p-1 flex flex-col gap-1">
                       <Button
                         variant="ghost"
                         size="sm"
                         className="justify-start w-full"
                         onClick={() => handleEditar(cliente)}
-                        title="Editar relacionamento"
                       >
                         <Edit2 className="h-4 w-4 mr-2" /> Editar
                       </Button>
@@ -666,21 +632,8 @@ const EmpresasClientesPage: React.FC = () => {
                         size="sm"
                         className="justify-start w-full"
                         onClick={() => handleSolicitarApresentacao(cliente)}
-                        title="Solicitar apresentação"
                       >
                         <ArrowRight className="h-4 w-4 mr-2" /> Solicitar Apresentação
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="justify-start w-full"
-                        onClick={() => {
-                          setRelacionamentoToDelete(cliente);
-                          setConfirmDeleteOpen(true);
-                        }}
-                        title="Excluir relacionamento"
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" /> Excluir
                       </Button>
                     </PopoverContent>
                   </Popover>
@@ -689,7 +642,10 @@ const EmpresasClientesPage: React.FC = () => {
             ))}
             {/* Clientes NÃO vinculados */}
             {filteredClientesNaoVinculados.map((cliente) => (
-              <tr key={cliente.id} className="border-b hover:bg-muted/40">
+              <tr
+                key={cliente.id}
+                className="border-b hover:bg-muted/40"
+              >
                 <td className="px-3 py-2 font-medium">{cliente.nome}</td>
                 <td className="px-3 py-2">
                   <span className="italic text-muted-foreground">
@@ -741,7 +697,8 @@ const EmpresasClientesPage: React.FC = () => {
               </tr>
             ))}
             {/* Caso nenhum cliente exibido */}
-            {filteredClientesVinculados.length + filteredClientesNaoVinculados.length === 0 && (
+            {filteredClientesVinculados.length +
+              filteredClientesNaoVinculados.length === 0 && (
               <tr>
                 <td colSpan={5} className="py-12 text-center text-muted-foreground">
                   <Building2 className="h-12 w-12 mx-auto mb-2 text-muted-foreground" />
@@ -768,17 +725,6 @@ const EmpresasClientesPage: React.FC = () => {
           </tbody>
         </table>
       </div>
-
-      {/* Excluir relacionamento */}
-      <ConfirmDialog
-        open={confirmDeleteOpen}
-        onOpenChange={setConfirmDeleteOpen}
-        title="Excluir Relacionamento"
-        description="Tem certeza que deseja excluir este relacionamento? Esta ação não poderá ser desfeita."
-        onConfirm={handleDeleteRelacionamento}
-        confirmText="Excluir"
-        cancelText="Cancelar"
-      />
     </div>
   );
 };

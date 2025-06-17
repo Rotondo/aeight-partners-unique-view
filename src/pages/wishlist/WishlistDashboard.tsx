@@ -1,100 +1,15 @@
-import React, { useMemo } from "react";
+
+import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useWishlist } from "@/contexts/WishlistContext";
-import { Heart, Users, Presentation, TrendingUp, Plus, CheckCircle, CornerUpRight } from "lucide-react";
+import { Heart, Users, Presentation, TrendingUp, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { formatDistanceToNowStrict, parseISO } from "date-fns";
-import { ptBR } from "date-fns/locale";
 
 const WishlistDashboard: React.FC = () => {
-  const { stats, loading, wishlistItems, apresentacoes } = useWishlist();
+  const { stats, loading } = useWishlist();
   const navigate = useNavigate();
-
-  // Atividade recente dinâmica baseada nas últimas ações reais
-  const recentActivities = useMemo(() => {
-    // Busca últimas 5 atividades relevantes: criação/edição de wishlist, aprovação, apresentação criada/realizada/conversão
-    const activities: Array<{
-      type: "wishlist" | "apresentacao" | "conversao";
-      title: string;
-      description: string;
-      date: string;
-      icon: React.ReactNode;
-    }> = [];
-
-    // Últimas solicitações de wishlist criadas
-    wishlistItems
-      .slice(0, 5)
-      .forEach((item) => {
-        activities.push({
-          type: "wishlist",
-          title: "Nova solicitação de apresentação",
-          description: `${item.empresa_interessada?.nome || "Empresa"} interessada em ${item.empresa_desejada?.nome || "cliente"} (${item.empresa_proprietaria?.nome || "proprietário"})`,
-          date: item.created_at,
-          icon: <Heart className="h-4 w-4 text-pink-500" />,
-        });
-        if (item.status === "aprovado" && item.updated_at !== item.created_at) {
-          activities.push({
-            type: "wishlist",
-            title: "Solicitação aprovada",
-            description: `Solicitação para ${item.empresa_desejada?.nome || "cliente"} aprovada`,
-            date: item.updated_at,
-            icon: <CheckCircle className="h-4 w-4 text-green-600" />,
-          });
-        }
-        if (item.status === "convertido" && item.updated_at !== item.created_at) {
-          activities.push({
-            type: "conversao",
-            title: "Solicitação convertida em oportunidade",
-            description: `Solicitação para ${item.empresa_desejada?.nome || "cliente"} convertida`,
-            date: item.updated_at,
-            icon: <CornerUpRight className="h-4 w-4 text-blue-600" />,
-          });
-        }
-      });
-
-    // Últimas apresentações
-    apresentacoes
-      .forEach((a) => {
-        activities.push({
-          type: "apresentacao",
-          title: a.status_apresentacao === "realizada"
-            ? "Apresentação realizada"
-            : "Apresentação registrada",
-          description:
-            a.wishlist_item?.empresa_interessada?.nome +
-            " → " +
-            a.wishlist_item?.empresa_desejada?.nome +
-            (a.converteu_oportunidade ? " (convertida em oportunidade)" : ""),
-          date: a.created_at,
-          icon: <Presentation className="h-4 w-4 text-purple-500" />,
-        });
-        if (a.status_apresentacao === "realizada" && a.updated_at !== a.created_at) {
-          activities.push({
-            type: "apresentacao",
-            title: "Apresentação marcada como realizada",
-            description: a.wishlist_item?.empresa_interessada?.nome +
-              " → " +
-              a.wishlist_item?.empresa_desejada?.nome,
-            date: a.updated_at,
-            icon: <CheckCircle className="h-4 w-4 text-green-600" />,
-          });
-        }
-        if (a.converteu_oportunidade && a.updated_at !== a.created_at) {
-          activities.push({
-            type: "conversao",
-            title: "Apresentação convertida em oportunidade",
-            description: a.wishlist_item?.empresa_desejada?.nome,
-            date: a.updated_at,
-            icon: <CornerUpRight className="h-4 w-4 text-blue-600" />,
-          });
-        }
-      });
-
-    activities.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
-    return activities.slice(0, 5);
-  }, [wishlistItems, apresentacoes]);
 
   if (loading) {
     return (
@@ -125,10 +40,6 @@ const WishlistDashboard: React.FC = () => {
           <Button onClick={() => navigate("/wishlist/items")}>
             <Plus className="mr-2 h-4 w-4" />
             Nova Solicitação
-          </Button>
-          <Button onClick={() => navigate("/wishlist/apresentacoes")} variant="outline">
-            <Presentation className="mr-2 h-4 w-4" />
-            Apresentações
           </Button>
         </div>
       </div>
@@ -192,8 +103,8 @@ const WishlistDashboard: React.FC = () => {
 
       {/* Quick Actions */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <Card className="cursor-pointer hover:shadow-md transition-shadow"
-          onClick={() => navigate("/wishlist/clientes")}>
+        <Card className="cursor-pointer hover:shadow-md transition-shadow" 
+              onClick={() => navigate("/wishlist/clientes")}>
           <CardHeader>
             <CardTitle className="text-lg">Base de Clientes</CardTitle>
             <CardDescription>
@@ -208,8 +119,8 @@ const WishlistDashboard: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card className="cursor-pointer hover:shadow-md transition-shadow"
-          onClick={() => navigate("/wishlist/items")}>
+        <Card className="cursor-pointer hover:shadow-md transition-shadow" 
+              onClick={() => navigate("/wishlist/items")}>
           <CardHeader>
             <CardTitle className="text-lg">Wishlist Items</CardTitle>
             <CardDescription>
@@ -224,8 +135,8 @@ const WishlistDashboard: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card className="cursor-pointer hover:shadow-md transition-shadow"
-          onClick={() => navigate("/wishlist/apresentacoes")}>
+        <Card className="cursor-pointer hover:shadow-md transition-shadow" 
+              onClick={() => navigate("/wishlist/apresentacoes")}>
           <CardHeader>
             <CardTitle className="text-lg">Apresentações</CardTitle>
             <CardDescription>
@@ -251,32 +162,28 @@ const WishlistDashboard: React.FC = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {recentActivities.length === 0 && (
-              <div className="text-sm text-muted-foreground">Nenhuma atividade recente encontrada.</div>
-            )}
-            {recentActivities.map((activity, idx) => (
-              <div className="flex items-center" key={idx}>
-                <div className="mr-2">{activity.icon}</div>
-                <div className="ml-2 space-y-1">
-                  <p className="text-sm font-medium leading-none">
-                    {activity.title}
-                  </p>
-                  <p className="text-sm text-muted-foreground line-clamp-1">
-                    {activity.description}
-                  </p>
-                </div>
-                <div className="ml-auto text-sm text-muted-foreground whitespace-nowrap">
-                  {activity.date
-                    ? formatDistanceToNowStrict(
-                        typeof activity.date === "string"
-                          ? parseISO(activity.date)
-                          : activity.date,
-                        { addSuffix: true, locale: ptBR }
-                      )
-                    : ""}
-                </div>
+            <div className="flex items-center">
+              <div className="ml-4 space-y-1">
+                <p className="text-sm font-medium leading-none">
+                  Nova solicitação de apresentação
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  B8one interessada em cliente da Blip
+                </p>
               </div>
-            ))}
+              <div className="ml-auto text-sm text-muted-foreground">2h atrás</div>
+            </div>
+            <div className="flex items-center">
+              <div className="ml-4 space-y-1">
+                <p className="text-sm font-medium leading-none">
+                  Apresentação realizada
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Empresa facilitada pela Blip converteu em oportunidade
+                </p>
+              </div>
+              <div className="ml-auto text-sm text-muted-foreground">1d atrás</div>
+            </div>
           </div>
         </CardContent>
       </Card>
