@@ -523,7 +523,7 @@ const EmpresasPage: React.FC = () => {
           <DialogHeader>
             <DialogTitle>
               Detalhes da Empresa:{' '}
-              <PrivateData type="placeholder" placeholder="[Nome da Empresa]">
+              <PrivateData type="company">
                 {selectedEmpresa?.nome}
               </PrivateData>
             </DialogTitle>
@@ -532,7 +532,7 @@ const EmpresasPage: React.FC = () => {
             <div className="space-y-2">
               <div>
                 <strong>Nome:</strong>{' '}
-                <PrivateData type="placeholder" placeholder="[Nome da Empresa]">
+                <PrivateData type="company">
                   {selectedEmpresa.nome}
                 </PrivateData>
               </div>
@@ -638,7 +638,7 @@ const EmpresasTable = ({
           empresas.map((empresa) => (
             <TableRow key={empresa.id}>
               <TableCell className="font-medium">
-                <PrivateData type="placeholder" placeholder="[Nome da Empresa]">
+                <PrivateData type="company">
                   {empresa.nome}
                 </PrivateData>
               </TableCell>

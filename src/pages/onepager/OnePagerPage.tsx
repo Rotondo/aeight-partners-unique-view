@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
@@ -238,11 +239,11 @@ const OnePagerPage: React.FC = () => {
                   <div className="text-center p-6">
                     <span className="text-gray-400 text-lg">
                       OnePager não encontrado para{' '}
-                      <PrivateData type="placeholder" placeholder="[Parceiro]">
+                      <PrivateData type="company">
                         {selectedParceiro.nome}
                       </PrivateData>
                       {' '}na categoria{' '}
-                      <PrivateData type="placeholder" placeholder="[Categoria]">
+                      <PrivateData type="generic">
                         {selectedCategoria?.nome}
                       </PrivateData>
                     </span>
@@ -267,7 +268,7 @@ const OnePagerPage: React.FC = () => {
                   {selectedParceiro ? (
                     <>
                       OnePager:{' '}
-                      <PrivateData type="placeholder" placeholder="[Parceiro]">
+                      <PrivateData type="company">
                         {selectedParceiro.nome}
                       </PrivateData>
                     </>

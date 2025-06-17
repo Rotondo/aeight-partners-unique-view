@@ -8,7 +8,7 @@ interface EventosContextType {
   eventos: EventoWithContatos[];
   eventoAtivo: EventoWithContatos | null;
   loading: boolean;
-  createEvento: (evento: Partial<Evento>) => Promise<void>;
+  createEvento: (evento: Omit<Evento, 'id' | 'created_at' | 'updated_at' | 'usuario_responsavel_id'>) => Promise<void>;
   updateEvento: (id: string, evento: Partial<Evento>) => Promise<void>;
   deleteEvento: (id: string) => Promise<void>;
   setEventoAtivo: (evento: EventoWithContatos | null) => void;
@@ -68,13 +68,17 @@ export const EventosProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
-  const createEvento = async (evento: Partial<Evento>) => {
+  const createEvento = async (evento: Omit<Evento, 'id' | 'created_at' | 'updated_at' | 'usuario_responsavel_id'>) => {
     if (!user) return;
 
     const { data, error } = await supabase
       .from('eventos')
       .insert({
-        ...evento,
+        nome: evento.nome,
+        data_inicio: evento.data_inicio,
+        data_fim: evento.data_fim,
+        local: evento.local,
+        descricao: evento.descricao,
         usuario_responsavel_id: user.id,
         status: evento.status || 'planejado'
       })
