@@ -17,7 +17,7 @@ import { Toaster } from "@/components/ui/toaster";
 import OportunidadesDashboardPage from "@/pages/oportunidades-dashboard";
 import RepositorioPage from "@/pages/repositorio/RepositorioPage";
 import WishlistPage from "@/pages/wishlist/WishlistPage";
-import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import PrivateRoute from "@/components/auth/PrivateRoute";
 
 const App: React.FC = () => (
   <Router>
@@ -29,9 +29,9 @@ const App: React.FC = () => (
             <Route
               path="/"
               element={
-                <ProtectedRoute>
+                <PrivateRoute>
                   <MainLayout />
-                </ProtectedRoute>
+                </PrivateRoute>
               }
             >
               <Route index element={<DashboardPage />} />
