@@ -179,7 +179,7 @@ export const AgendaProvider: React.FC<AgendaProviderProps> = ({ children }) => {
       
       await new Promise(resolve => setTimeout(resolve, 2000));
       
-      await loadAgendaEventos();
+      await fetchEventos();
       toast({
         title: "Sucesso",
         description: "Sincronização com Google Calendar concluída"
@@ -205,7 +205,7 @@ export const AgendaProvider: React.FC<AgendaProviderProps> = ({ children }) => {
       
       await new Promise(resolve => setTimeout(resolve, 2000));
       
-      await loadAgendaEventos();
+      await fetchEventos();
       toast({
         title: "Sucesso",
         description: "Sincronização com Outlook Calendar concluída"
