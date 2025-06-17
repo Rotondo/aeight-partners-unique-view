@@ -16,6 +16,15 @@ interface EventoFormModalProps {
   evento?: Partial<Evento>;
 }
 
+type EventoFormData = {
+  nome: string;
+  data_inicio: string;
+  data_fim?: string;
+  local?: string;
+  descricao?: string;
+  status: 'planejado' | 'em_andamento' | 'finalizado' | 'cancelado';
+};
+
 export const EventoFormModal: React.FC<EventoFormModalProps> = ({
   open,
   onClose,
@@ -31,29 +40,54 @@ export const EventoFormModal: React.FC<EventoFormModalProps> = ({
     setValue,
     watch,
     formState: { errors, isSubmitting }
-  } = useForm<Partial<Evento>>({
-    defaultValues: evento || {
+  } = useForm<EventoFormData>({
+    defaultValues: {
+      nome: '',
+      data_inicio: new Date().toISOString().slice(0, 16),
+      data_fim: '',
+      local: '',
+      descricao: '',
       status: 'planejado'
     }
   });
 
   React.useEffect(() => {
     if (evento) {
-      reset(evento);
+      reset({
+        nome: evento.nome || '',
+        data_inicio: evento.data_inicio || new Date().toISOString().slice(0, 16),
+        data_fim: evento.data_fim || '',
+        local: evento.local || '',
+        descricao: evento.descricao || '',
+        status: evento.status || 'planejado'
+      });
     } else {
       reset({
-        status: 'planejado',
-        data_inicio: new Date().toISOString().slice(0, 16)
+        nome: '',
+        data_inicio: new Date().toISOString().slice(0, 16),
+        data_fim: '',
+        local: '',
+        descricao: '',
+        status: 'planejado'
       });
     }
   }, [evento, reset]);
 
-  const onSubmit = async (data: Partial<Evento>) => {
+  const onSubmit = async (data: EventoFormData) => {
     try {
       if (isEditing && evento?.id) {
         await updateEvento(evento.id, data);
       } else {
-        await createEvento(data);
+        // Ensure required fields are present for creation
+        const eventoData = {
+          nome: data.nome,
+          data_inicio: data.data_inicio,
+          data_fim: data.data_fim || undefined,
+          local: data.local || undefined,
+          descricao: data.descricao || undefined,
+          status: data.status
+        };
+        await createEvento(eventoData);
       }
       onClose();
       reset();
