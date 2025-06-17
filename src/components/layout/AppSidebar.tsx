@@ -1,16 +1,20 @@
 
 import React from "react"
 import {
-  NavigationMenu,
-  NavigationMenuItem,
-  NavigationMenuLink,
-  NavigationMenuList,
-  navigationMenuTriggerStyle,
-} from "@/components/ui/navigation-menu"
-import { Sidebar } from "@/components/ui/sidebar"
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+} from "@/components/ui/sidebar"
 import { useAuth } from "@/hooks/useAuth"
 import { Link } from "react-router-dom"
-import { Home, Settings, Users, ContactIcon } from 'lucide-react';
+import { Home, Users, ContactIcon, BookOpen } from 'lucide-react';
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { user } = useAuth();
@@ -26,7 +30,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     {
       title: "Diário",
       url: "/diario",
-      icon: Users,
+      icon: BookOpen,
       description: "Gestão de atividades diárias",
       adminOnly: false
     },
@@ -48,40 +52,47 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   return (
     <Sidebar {...props}>
-      <div className="p-4">
-        <Link to="/" className="flex items-center space-x-2">
-          <span className="font-bold text-xl">A<span className="text-blue-500">&</span>eight</span>
-        </Link>
-      </div>
+      <SidebarHeader>
+        <div className="p-4">
+          <Link to="/" className="flex items-center space-x-2">
+            <span className="font-bold text-xl">A<span className="text-blue-500">&</span>eight</span>
+          </Link>
+        </div>
+      </SidebarHeader>
       
-      <div className="px-4 pb-4">
-        <NavigationMenu orientation="vertical">
-          <NavigationMenuList className="flex-col space-x-0 space-y-1">
-            {navigationItems.map((item) => {
-              if (item.adminOnly && user?.papel !== 'admin') {
-                return null;
-              }
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupLabel>Navegação</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {navigationItems.map((item) => {
+                if (item.adminOnly && user?.papel !== 'admin') {
+                  return null;
+                }
 
-              return (
-                <NavigationMenuItem key={item.url} className="w-full">
-                  <Link to={item.url} className="outline-none w-full">
-                    <NavigationMenuLink className={`${navigationMenuTriggerStyle()} w-full justify-start`}>
-                      <item.icon className="mr-2 h-4 w-4" />
-                      {item.title}
-                    </NavigationMenuLink>
-                  </Link>
-                </NavigationMenuItem>
-              );
-            })}
-          </NavigationMenuList>
-        </NavigationMenu>
-      </div>
+                return (
+                  <SidebarMenuItem key={item.url}>
+                    <SidebarMenuButton asChild>
+                      <Link to={item.url}>
+                        <item.icon className="mr-2 h-4 w-4" />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
       
-      <div className="mt-auto p-4">
-        <p className="text-xs text-gray-500">
-          &copy; {new Date().getFullYear()} A&eight Partners
-        </p>
-      </div>
+      <SidebarFooter>
+        <div className="p-4">
+          <p className="text-xs text-gray-500">
+            &copy; {new Date().getFullYear()} A&eight Partners
+          </p>
+        </div>
+      </SidebarFooter>
     </Sidebar>
   )
 }
