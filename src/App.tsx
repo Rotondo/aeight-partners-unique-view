@@ -1,4 +1,3 @@
-
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import MainLayout from "@/components/layout/MainLayout";
@@ -18,6 +17,7 @@ import { Toaster } from "@/components/ui/toaster";
 import OportunidadesDashboardPage from "@/pages/oportunidades-dashboard";
 import RepositorioPage from "@/pages/repositorio/RepositorioPage";
 import WishlistPage from "@/pages/wishlist/WishlistPage";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 
 const App: React.FC = () => (
   <Router>
@@ -29,10 +29,11 @@ const App: React.FC = () => (
             <Route
               path="/"
               element={
-                <MainLayout />
+                <ProtectedRoute>
+                  <MainLayout />
+                </ProtectedRoute>
               }
             >
-              {/* Rotas internas agora abertas, sem proteção */}
               <Route index element={<DashboardPage />} />
               <Route path="oportunidades" element={<OportunidadesPage />} />
               <Route path="oportunidades-dashboard" element={<OportunidadesDashboardPage />} />
