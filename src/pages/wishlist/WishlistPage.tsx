@@ -14,7 +14,7 @@ const WishlistPage: React.FC = () => {
         <Routes>
           <Route index element={<WishlistDashboard />} />
           <Route path="clientes" element={<EmpresasClientesPage />} />
-          <Route path="items" element={<WishlistItemsPage />} />
+          <Route path="itens" element={<WishlistItemsPage />} />
           <Route path="apresentacoes" element={<ApresentacoesPage />} />
         </Routes>
       </div>

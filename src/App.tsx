@@ -53,7 +53,7 @@ function App() {
                       <Route path="oportunidades-dashboard" element={<OportunidadesDashboard />} />
                       <Route path="quadrante" element={<QuadrantePage />} />
                       <Route path="repositorio" element={<RepositorioPage />} />
-                      <Route path="wishlist" element={<WishlistPage />} />
+                      <Route path="wishlist/*" element={<WishlistPage />} />
                       <Route path="diario" element={<DiarioPage />} />
                       <Route path="admin" element={<AdminPage />} />
                     </Route>

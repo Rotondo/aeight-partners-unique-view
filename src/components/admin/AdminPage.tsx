@@ -9,6 +9,7 @@ import { IndicadoresList } from "@/components/admin/IndicadoresList";
 import { OnePagerList } from "@/components/admin/OnePagerList";
 import { ClientesList } from "@/components/admin/ClientesList";
 import { ApiWebhooksDocs } from "@/components/admin/ApiWebhooksDocs";
+import { IAConfigSection } from "@/components/admin/IAConfigSection";
 import { useAuth } from "@/hooks/useAuth";
 
 export const AdminPage: React.FC = () => {
@@ -44,6 +45,7 @@ export const AdminPage: React.FC = () => {
           <TabsTrigger value="usuarios">Usuários</TabsTrigger>
           <TabsTrigger value="indicadores">Indicadores</TabsTrigger>
           <TabsTrigger value="onepagers">OnePagers</TabsTrigger>
+          <TabsTrigger value="ia-config">Configuração IA</TabsTrigger>
           <TabsTrigger value="api">API & Webhooks</TabsTrigger>
         </TabsList>
         
@@ -73,6 +75,10 @@ export const AdminPage: React.FC = () => {
         
         <TabsContent value="onepagers">
           <OnePagerList />
+        </TabsContent>
+        
+        <TabsContent value="ia-config">
+          <IAConfigSection />
         </TabsContent>
         
         <TabsContent value="api">

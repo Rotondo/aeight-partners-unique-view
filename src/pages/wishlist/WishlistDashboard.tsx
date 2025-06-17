@@ -8,8 +8,57 @@ import { Heart, Users, Presentation, TrendingUp, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const WishlistDashboard: React.FC = () => {
-  const { stats, loading } = useWishlist();
+  const { stats, loading, apresentacoes, wishlistItems } = useWishlist();
   const navigate = useNavigate();
+
+  // Buscar atividades recentes reais
+  const getRecentActivities = () => {
+    const activities = [];
+    
+    // Adicionar wishlist items recentes
+    const recentWishlistItems = wishlistItems
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .slice(0, 3);
+    
+    recentWishlistItems.forEach(item => {
+      activities.push({
+        type: 'wishlist',
+        message: `Nova solicitação de apresentação`,
+        detail: `${item.empresa_interessada?.nome} interessada em cliente da ${item.empresa_proprietaria?.nome}`,
+        time: new Date(item.created_at)
+      });
+    });
+
+    // Adicionar apresentações recentes
+    const recentApresentacoes = apresentacoes
+      .filter(a => a.converteu_oportunidade)
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .slice(0, 2);
+
+    recentApresentacoes.forEach(apresentacao => {
+      activities.push({
+        type: 'apresentacao',
+        message: 'Apresentação realizada',
+        detail: `Empresa facilitada pela ${apresentacao.empresa_facilitadora?.nome} converteu em oportunidade`,
+        time: new Date(apresentacao.created_at)
+      });
+    });
+
+    return activities
+      .sort((a, b) => b.time.getTime() - a.time.getTime())
+      .slice(0, 5);
+  };
+
+  const formatTimeAgo = (date: Date) => {
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffHours / 24);
+    
+    if (diffDays > 0) return `${diffDays}d atrás`;
+    if (diffHours > 0) return `${diffHours}h atrás`;
+    return 'Agora mesmo';
+  };
 
   if (loading) {
     return (
@@ -22,6 +71,8 @@ const WishlistDashboard: React.FC = () => {
     );
   }
 
+  const recentActivities = getRecentActivities();
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -33,11 +84,11 @@ const WishlistDashboard: React.FC = () => {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button onClick={() => navigate("/wishlist/clientes")} variant="outline">
+          <Button onClick={() => navigate("clientes")} variant="outline">
             <Users className="mr-2 h-4 w-4" />
             Gerenciar Clientes
           </Button>
-          <Button onClick={() => navigate("/wishlist/items")}>
+          <Button onClick={() => navigate("itens")}>
             <Plus className="mr-2 h-4 w-4" />
             Nova Solicitação
           </Button>
@@ -54,7 +105,7 @@ const WishlistDashboard: React.FC = () => {
           <CardContent>
             <div className="text-2xl font-bold">{stats?.totalSolicitacoes || 0}</div>
             <p className="text-xs text-muted-foreground">
-              +20% desde o mês passado
+              Total de itens na wishlist
             </p>
           </CardContent>
         </Card>
@@ -104,7 +155,7 @@ const WishlistDashboard: React.FC = () => {
       {/* Quick Actions */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <Card className="cursor-pointer hover:shadow-md transition-shadow" 
-              onClick={() => navigate("/wishlist/clientes")}>
+              onClick={() => navigate("clientes")}>
           <CardHeader>
             <CardTitle className="text-lg">Base de Clientes</CardTitle>
             <CardDescription>
@@ -120,9 +171,9 @@ const WishlistDashboard: React.FC = () => {
         </Card>
 
         <Card className="cursor-pointer hover:shadow-md transition-shadow" 
-              onClick={() => navigate("/wishlist/items")}>
+              onClick={() => navigate("itens")}>
           <CardHeader>
-            <CardTitle className="text-lg">Wishlist Items</CardTitle>
+            <CardTitle className="text-lg">Wishlist Itens</CardTitle>
             <CardDescription>
               Visualize e gerencie todas as solicitações de interesse
             </CardDescription>
@@ -136,7 +187,7 @@ const WishlistDashboard: React.FC = () => {
         </Card>
 
         <Card className="cursor-pointer hover:shadow-md transition-shadow" 
-              onClick={() => navigate("/wishlist/apresentacoes")}>
+              onClick={() => navigate("apresentacoes")}>
           <CardHeader>
             <CardTitle className="text-lg">Apresentações</CardTitle>
             <CardDescription>
@@ -152,7 +203,7 @@ const WishlistDashboard: React.FC = () => {
         </Card>
       </div>
 
-      {/* Recent Activity */}
+      {/* Recent Activity - Agora com dados reais */}
       <Card>
         <CardHeader>
           <CardTitle>Atividade Recente</CardTitle>
@@ -162,28 +213,29 @@ const WishlistDashboard: React.FC = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div className="flex items-center">
-              <div className="ml-4 space-y-1">
-                <p className="text-sm font-medium leading-none">
-                  Nova solicitação de apresentação
-                </p>
+            {recentActivities.length > 0 ? (
+              recentActivities.map((activity, index) => (
+                <div key={index} className="flex items-center">
+                  <div className="ml-4 space-y-1">
+                    <p className="text-sm font-medium leading-none">
+                      {activity.message}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {activity.detail}
+                    </p>
+                  </div>
+                  <div className="ml-auto text-sm text-muted-foreground">
+                    {formatTimeAgo(activity.time)}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-4">
                 <p className="text-sm text-muted-foreground">
-                  B8one interessada em cliente da Blip
+                  Nenhuma atividade recente encontrada
                 </p>
               </div>
-              <div className="ml-auto text-sm text-muted-foreground">2h atrás</div>
-            </div>
-            <div className="flex items-center">
-              <div className="ml-4 space-y-1">
-                <p className="text-sm font-medium leading-none">
-                  Apresentação realizada
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Empresa facilitada pela Blip converteu em oportunidade
-                </p>
-              </div>
-              <div className="ml-auto text-sm text-muted-foreground">1d atrás</div>
-            </div>
+            )}
           </div>
         </CardContent>
       </Card>
