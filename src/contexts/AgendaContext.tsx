@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/lib/supabase';
 import type { AgendaEvento } from '@/types/diario';
 
 interface AgendaContextType {
@@ -12,6 +13,7 @@ interface AgendaContextType {
   
   // Ações
   setSelectedDate: (date: Date) => void;
+  fetchEventos: () => Promise<void>;
   createEvento: (evento: Partial<AgendaEvento>) => Promise<void>;
   updateEvento: (id: string, evento: Partial<AgendaEvento>) => Promise<void>;
   deleteEvento: (id: string) => Promise<void>;
@@ -35,33 +37,48 @@ export const AgendaProvider: React.FC<AgendaProviderProps> = ({ children }) => {
 
   useEffect(() => {
     if (isAdmin) {
-      loadAgendaEventos();
+      fetchEventos();
     }
   }, [isAdmin, selectedDate]);
 
-  const loadAgendaEventos = async () => {
+  const fetchEventos = async () => {
     if (!isAdmin) return;
     
     setLoadingEventos(true);
     try {
-      // Mock data - substituir por chamada real do Supabase
-      const mockEventos: AgendaEvento[] = [
-        {
-          id: '1',
-          titulo: 'Reunião de Alinhamento',
-          descricao: 'Reunião semanal com equipe',
-          data_inicio: new Date().toISOString(),
-          data_fim: new Date(Date.now() + 3600000).toISOString(),
-          tipo: 'reuniao',
-          status: 'agendado',
-          usuario_responsavel_id: user?.id || '',
-          fonte_integracao: 'manual',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }
-      ];
+      const startOfDay = new Date(selectedDate);
+      startOfDay.setHours(0, 0, 0, 0);
       
-      setAgendaEventos(mockEventos);
+      const endOfDay = new Date(selectedDate);
+      endOfDay.setHours(23, 59, 59, 999);
+
+      const { data, error } = await supabase
+        .from('diario_agenda_eventos')
+        .select('*')
+        .gte('start', startOfDay.toISOString())
+        .lte('start', endOfDay.toISOString())
+        .order('start', { ascending: true });
+
+      if (error) throw error;
+
+      // Transform data to match AgendaEvento interface
+      const eventos: AgendaEvento[] = (data || []).map(evento => ({
+        id: evento.id,
+        titulo: evento.title,
+        descricao: evento.description,
+        data_inicio: evento.start,
+        data_fim: evento.end,
+        tipo: 'reuniao', // Default type since we're using simplified schema
+        status: evento.status === 'scheduled' ? 'agendado' : 
+                evento.status === 'completed' ? 'realizado' : 'agendado',
+        usuario_responsavel_id: user?.id || '',
+        fonte_integracao: evento.source === 'google' ? 'google' : 
+                         evento.source === 'outlook' ? 'outlook' : 'manual',
+        created_at: evento.created_at,
+        updated_at: evento.updated_at
+      }));
+      
+      setAgendaEventos(eventos);
     } catch (error) {
       console.error('Erro ao carregar eventos da agenda:', error);
       toast({
@@ -208,6 +225,7 @@ export const AgendaProvider: React.FC<AgendaProviderProps> = ({ children }) => {
     loadingEventos,
     selectedDate,
     setSelectedDate,
+    fetchEventos,
     createEvento,
     updateEvento,
     deleteEvento,

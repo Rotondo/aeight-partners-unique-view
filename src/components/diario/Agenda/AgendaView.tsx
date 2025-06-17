@@ -150,7 +150,7 @@ export const AgendaView: React.FC = () => {
         <Card>
           <CardContent className="pt-6">
             <div className="text-2xl font-bold text-center text-green-600">
-              {agendaEventos.filter(e => e.status === 'completed').length}
+              {agendaEventos.filter(e => e.status === 'realizado').length}
             </div>
             <p className="text-center text-muted-foreground">Realizados</p>
           </CardContent>
@@ -159,7 +159,7 @@ export const AgendaView: React.FC = () => {
         <Card>
           <CardContent className="pt-6">
             <div className="text-2xl font-bold text-center text-blue-600">
-              {agendaEventos.filter(e => e.status === 'scheduled').length}
+              {agendaEventos.filter(e => e.status === 'agendado').length}
             </div>
             <p className="text-center text-muted-foreground">Agendados</p>
           </CardContent>
