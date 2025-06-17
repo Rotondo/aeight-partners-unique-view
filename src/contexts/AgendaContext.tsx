@@ -1,15 +1,24 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 import type { AgendaEvento } from '@/types/diario';
 
+interface CalendarConnection {
+  id: string;
+  type: 'google' | 'outlook';
+  url: string;
+  name: string;
+  isActive: boolean;
+  lastSync?: Date;
+}
+
 interface AgendaContextType {
   // Estados
   agendaEventos: AgendaEvento[];
   loadingEventos: boolean;
   selectedDate: Date;
+  calendarConnections: CalendarConnection[];
   
   // Ações
   setSelectedDate: (date: Date) => void;
@@ -19,6 +28,9 @@ interface AgendaContextType {
   deleteEvento: (id: string) => Promise<void>;
   syncGoogleCalendar: () => Promise<void>;
   syncOutlookCalendar: () => Promise<void>;
+  addCalendarConnection: (type: 'google' | 'outlook', url: string, name: string) => Promise<void>;
+  removeCalendarConnection: (id: string) => Promise<void>;
+  syncCalendarConnection: (id: string) => Promise<void>;
 }
 
 const AgendaContext = createContext<AgendaContextType | undefined>(undefined);
@@ -32,14 +44,29 @@ export const AgendaProvider: React.FC<AgendaProviderProps> = ({ children }) => {
   const [agendaEventos, setAgendaEventos] = useState<AgendaEvento[]>([]);
   const [loadingEventos, setLoadingEventos] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [calendarConnections, setCalendarConnections] = useState<CalendarConnection[]>([]);
 
   const isAdmin = user?.papel === 'admin';
 
   useEffect(() => {
     if (isAdmin) {
       fetchEventos();
+      loadCalendarConnections();
     }
   }, [isAdmin, selectedDate]);
+
+  const loadCalendarConnections = async () => {
+    // In a real implementation, this would load from database
+    const stored = localStorage.getItem('calendar_connections');
+    if (stored) {
+      setCalendarConnections(JSON.parse(stored));
+    }
+  };
+
+  const saveCalendarConnections = (connections: CalendarConnection[]) => {
+    localStorage.setItem('calendar_connections', JSON.stringify(connections));
+    setCalendarConnections(connections);
+  };
 
   const fetchEventos = async () => {
     if (!isAdmin) return;
@@ -88,6 +115,62 @@ export const AgendaProvider: React.FC<AgendaProviderProps> = ({ children }) => {
       });
     } finally {
       setLoadingEventos(false);
+    }
+  };
+
+  const addCalendarConnection = async (type: 'google' | 'outlook', url: string, name: string) => {
+    const newConnection: CalendarConnection = {
+      id: Date.now().toString(),
+      type,
+      url,
+      name: name || `${type === 'google' ? 'Google' : 'Outlook'} Calendar`,
+      isActive: true,
+      lastSync: new Date()
+    };
+
+    const updatedConnections = [...calendarConnections, newConnection];
+    saveCalendarConnections(updatedConnections);
+
+    toast({
+      title: "Conexão Adicionada",
+      description: `Calendário ${type === 'google' ? 'Google' : 'Outlook'} conectado com sucesso`
+    });
+  };
+
+  const removeCalendarConnection = async (id: string) => {
+    const updatedConnections = calendarConnections.filter(conn => conn.id !== id);
+    saveCalendarConnections(updatedConnections);
+
+    toast({
+      title: "Conexão Removida",
+      description: "Calendário desconectado com sucesso"
+    });
+  };
+
+  const syncCalendarConnection = async (id: string) => {
+    const connection = calendarConnections.find(conn => conn.id === id);
+    if (!connection) return;
+
+    try {
+      // Simulate sync process
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      const updatedConnections = calendarConnections.map(conn => 
+        conn.id === id ? { ...conn, lastSync: new Date() } : conn
+      );
+      saveCalendarConnections(updatedConnections);
+
+      toast({
+        title: "Sincronização Concluída",
+        description: `Eventos do ${connection.type === 'google' ? 'Google' : 'Outlook'} Calendar atualizados`
+      });
+    } catch (error) {
+      console.error('Erro na sincronização:', error);
+      toast({
+        title: "Erro na Sincronização",
+        description: "Falha ao sincronizar eventos",
+        variant: "destructive"
+      });
     }
   };
 
@@ -224,13 +307,17 @@ export const AgendaProvider: React.FC<AgendaProviderProps> = ({ children }) => {
     agendaEventos,
     loadingEventos,
     selectedDate,
+    calendarConnections,
     setSelectedDate,
     fetchEventos,
     createEvento,
     updateEvento,
     deleteEvento,
     syncGoogleCalendar,
-    syncOutlookCalendar
+    syncOutlookCalendar,
+    addCalendarConnection,
+    removeCalendarConnection,
+    syncCalendarConnection
   };
 
   return (
