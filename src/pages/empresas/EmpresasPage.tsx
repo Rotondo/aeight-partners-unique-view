@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { DemoModeIndicator } from "@/components/privacy/DemoModeIndicator";
 import { supabase } from "@/lib/supabase";
 import {
