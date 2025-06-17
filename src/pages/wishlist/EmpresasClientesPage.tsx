@@ -13,6 +13,7 @@ import {
   Edit2,
   ArrowRight,
   MoreVertical,
+  TrendingUp,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -25,6 +26,9 @@ import {
   TooltipContent,
   TooltipProvider,
 } from "@/components/ui/tooltip";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import ParceiroRelevanceCard from "@/components/wishlist/ParceiroRelevanceCard";
+import { useParceiroRelevance } from "@/hooks/useParceiroRelevance";
 
 type EmpresaOption = {
   id: string;
@@ -41,7 +45,11 @@ const EmpresasClientesPage: React.FC = () => {
     updateEmpresaCliente,
     solicitarApresentacao,
   } = useWishlist();
+  
+  const { parceiros, loading: loadingRelevance, refresh: refreshRelevance } = useParceiroRelevance();
+  
   const [searchTerm, setSearchTerm] = useState("");
+  const [activeTab, setActiveTab] = useState("clientes");
 
   // Modal states
   const [modalOpen, setModalOpen] = useState(false);
@@ -210,6 +218,7 @@ const EmpresasClientesPage: React.FC = () => {
     setModalOpen(false);
     resetModal();
     fetchEmpresasClientes();
+    refreshRelevance(); // Atualizar dados de relevância
   };
 
   // Garante que o cliente do relacionamento está em empresasClientesOptions ao abrir o modal
@@ -283,18 +292,24 @@ const EmpresasClientesPage: React.FC = () => {
   const handleSubmitApresentacao = async (e: React.FormEvent) => {
     e.preventDefault();
     setApresentacaoLoading(true);
-    if (apresentacaoCliente && solicitarApresentacao) {
-      await solicitarApresentacao({
-        empresa_cliente_id: apresentacaoCliente.empresa_cliente_id,
-        empresa_proprietaria_id: apresentacaoCliente.empresa_proprietaria_id,
-        relacionamento_id: apresentacaoCliente.id,
-        observacoes: apresentacaoObs,
-      });
-      setModalApresentacaoOpen(false);
-      setApresentacaoCliente(null);
-      setApresentacaoObs("");
+    try {
+      if (apresentacaoCliente && solicitarApresentacao) {
+        await solicitarApresentacao({
+          empresa_cliente_id: apresentacaoCliente.empresa_cliente_id,
+          empresa_proprietaria_id: apresentacaoCliente.empresa_proprietaria_id,
+          relacionamento_id: apresentacaoCliente.id,
+          observacoes: apresentacaoObs,
+        });
+        setModalApresentacaoOpen(false);
+        setApresentacaoCliente(null);
+        setApresentacaoObs("");
+        refreshRelevance(); // Atualizar dados de relevância
+      }
+    } catch (error) {
+      console.error("Erro ao solicitar apresentação:", error);
+    } finally {
+      setApresentacaoLoading(false);
     }
-    setApresentacaoLoading(false);
   };
 
   // DEFINE AS VARIÁVEIS DE FILTRO PARA USO NO JSX
@@ -317,6 +332,10 @@ const EmpresasClientesPage: React.FC = () => {
       cliente.nome.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const filteredParceiros = parceiros.filter((parceiro) =>
+    parceiro.nome.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   if (loadingEmpresasClientes) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -334,10 +353,10 @@ const EmpresasClientesPage: React.FC = () => {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight mb-1">
-            Base de Clientes
+            Base de Clientes & Relevância de Parceiros
           </h1>
           <p className="text-muted-foreground text-sm">
-            Gerencie a base de clientes de cada parceiro
+            Gerencie a base de clientes e veja a relevância de cada parceiro
           </p>
         </div>
         <Dialog
@@ -456,6 +475,7 @@ const EmpresasClientesPage: React.FC = () => {
             </form>
           </DialogContent>
         </Dialog>
+        
         {/* Modal Solicitar Apresentação */}
         <Dialog
           open={modalApresentacaoOpen}
@@ -498,232 +518,292 @@ const EmpresasClientesPage: React.FC = () => {
         </Dialog>
       </div>
 
-      {/* Search */}
-      <div className="flex items-center space-x-2 mt-2">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por empresa ou proprietário..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-8"
-          />
+      {/* Tabs Navigation */}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="clientes" className="flex items-center gap-2">
+            <Building2 className="h-4 w-4" />
+            Base de Clientes
+          </TabsTrigger>
+          <TabsTrigger value="relevancia" className="flex items-center gap-2">
+            <TrendingUp className="h-4 w-4" />
+            Relevância dos Parceiros
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Search */}
+        <div className="flex items-center space-x-2 mt-4">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder={
+                activeTab === "clientes" 
+                  ? "Buscar por empresa ou proprietário..." 
+                  : "Buscar parceiros..."
+              }
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-8"
+            />
+          </div>
         </div>
-      </div>
 
-      {/* Stats */}
-      <div className="grid gap-2 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between py-3">
-            <CardTitle className="text-xs font-medium">
-              Total de Clientes Vinculados
-            </CardTitle>
-            <Building2 className="h-4 w-4 text-muted-foreground" />
-            <span className="text-xl font-bold">
-              {empresasClientes.length}
-            </span>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between py-3">
-            <CardTitle className="text-xs font-medium">
-              Proprietários Únicos
-            </CardTitle>
-            <Building2 className="h-4 w-4 text-muted-foreground" />
-            <span className="text-xl font-bold">
-              {new Set(
-                empresasClientes.map((c) => c.empresa_proprietaria_id)
-              ).size}
-            </span>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between py-3">
-            <CardTitle className="text-xs font-medium">
-              Relacionamentos Ativos
-            </CardTitle>
-            <Badge variant="outline" className="ml-2">
-              Ativo
-            </Badge>
-            <span className="text-xl font-bold">
-              {empresasClientes.filter((c) => c.status).length}
-            </span>
-          </CardHeader>
-        </Card>
-      </div>
+        <TabsContent value="clientes" className="space-y-6">
+          {/* Stats */}
+          <div className="grid gap-2 md:grid-cols-3">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between py-3">
+                <CardTitle className="text-xs font-medium">
+                  Total de Clientes Vinculados
+                </CardTitle>
+                <Building2 className="h-4 w-4 text-muted-foreground" />
+                <span className="text-xl font-bold">
+                  {empresasClientes.length}
+                </span>
+              </CardHeader>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between py-3">
+                <CardTitle className="text-xs font-medium">
+                  Proprietários Únicos
+                </CardTitle>
+                <Building2 className="h-4 w-4 text-muted-foreground" />
+                <span className="text-xl font-bold">
+                  {new Set(
+                    empresasClientes.map((c) => c.empresa_proprietaria_id)
+                  ).size}
+                </span>
+              </CardHeader>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between py-3">
+                <CardTitle className="text-xs font-medium">
+                  Relacionamentos Ativos
+                </CardTitle>
+                <Badge variant="outline" className="ml-2">
+                  Ativo
+                </Badge>
+                <span className="text-xl font-bold">
+                  {empresasClientes.filter((c) => c.status).length}
+                </span>
+              </CardHeader>
+            </Card>
+          </div>
 
-      {/* Minimalista: Lista de clientes vinculados (estilo table/lista) */}
-      <div className="overflow-x-auto rounded-md border bg-background shadow-sm mt-2">
-        <table className="min-w-full text-sm align-middle">
-          <thead>
-            <tr className="border-b text-muted-foreground">
-              <th className="px-3 py-2 text-left font-medium">Cliente</th>
-              <th className="px-3 py-2 text-left font-medium">Proprietário</th>
-              <th className="px-3 py-2 text-left font-medium">Status</th>
-              <th className="px-3 py-2 text-left font-medium">Desde</th>
-              <th className="px-3 py-2 text-left font-medium">Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredClientesVinculados.map((cliente) => (
-              <tr
-                key={cliente.id}
-                className="border-b hover:bg-muted/50 transition"
-              >
-                <td className="px-3 py-2 font-medium whitespace-nowrap">
-                  {cliente.empresa_cliente?.nome}
-                </td>
-                <td className="px-3 py-2">
-                  {cliente.empresa_proprietaria?.nome}
-                </td>
-                <td className="px-3 py-2">
-                  <Badge
-                    variant={cliente.status ? "default" : "secondary"}
+          {/* Lista de clientes vinculados */}
+          <div className="overflow-x-auto rounded-md border bg-background shadow-sm mt-2">
+            <table className="min-w-full text-sm align-middle">
+              <thead>
+                <tr className="border-b text-muted-foreground">
+                  <th className="px-3 py-2 text-left font-medium">Cliente</th>
+                  <th className="px-3 py-2 text-left font-medium">Proprietário</th>
+                  <th className="px-3 py-2 text-left font-medium">Status</th>
+                  <th className="px-3 py-2 text-left font-medium">Desde</th>
+                  <th className="px-3 py-2 text-left font-medium">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredClientesVinculados.map((cliente) => (
+                  <tr
+                    key={cliente.id}
+                    className="border-b hover:bg-muted/50 transition"
                   >
-                    {cliente.status ? "Ativo" : "Inativo"}
-                  </Badge>
-                </td>
-                <td className="px-3 py-2 whitespace-nowrap">
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span>
-                          {format(
-                            new Date(cliente.data_relacionamento),
-                            "dd/MM/yyyy",
-                            { locale: ptBR }
-                          )}
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        Relacionamento desde{" "}
-                        {format(
-                          new Date(cliente.data_relacionamento),
-                          "dd 'de' MMMM 'de' yyyy",
-                          { locale: ptBR }
-                        )}
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </td>
-                <td className="px-3 py-2">
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="p-1 h-8 w-8"
+                    <td className="px-3 py-2 font-medium whitespace-nowrap">
+                      {cliente.empresa_cliente?.nome}
+                    </td>
+                    <td className="px-3 py-2">
+                      {cliente.empresa_proprietaria?.nome}
+                    </td>
+                    <td className="px-3 py-2">
+                      <Badge
+                        variant={cliente.status ? "default" : "secondary"}
                       >
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent align="end" className="w-36 p-1 flex flex-col gap-1">
+                        {cliente.status ? "Ativo" : "Inativo"}
+                      </Badge>
+                    </td>
+                    <td className="px-3 py-2 whitespace-nowrap">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span>
+                              {format(
+                                new Date(cliente.data_relacionamento),
+                                "dd/MM/yyyy",
+                                { locale: ptBR }
+                              )}
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            Relacionamento desde{" "}
+                            {format(
+                              new Date(cliente.data_relacionamento),
+                              "dd 'de' MMMM 'de' yyyy",
+                              { locale: ptBR }
+                            )}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </td>
+                    <td className="px-3 py-2">
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="p-1 h-8 w-8"
+                          >
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent align="end" className="w-36 p-1 flex flex-col gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="justify-start w-full"
+                            onClick={() => handleEditar(cliente)}
+                          >
+                            <Edit2 className="h-4 w-4 mr-2" /> Editar
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="justify-start w-full"
+                            onClick={() => handleSolicitarApresentacao(cliente)}
+                          >
+                            <ArrowRight className="h-4 w-4 mr-2" /> Solicitar Apresentação
+                          </Button>
+                        </PopoverContent>
+                      </Popover>
+                    </td>
+                  </tr>
+                ))}
+                
+                {/* Clientes NÃO vinculados */}
+                {filteredClientesNaoVinculados.map((cliente) => (
+                  <tr
+                    key={cliente.id}
+                    className="border-b hover:bg-muted/40"
+                  >
+                    <td className="px-3 py-2 font-medium">{cliente.nome}</td>
+                    <td className="px-3 py-2">
+                      <span className="italic text-muted-foreground">
+                        Sem proprietário
+                      </span>
+                    </td>
+                    <td className="px-3 py-2">
+                      <Badge variant="secondary">Não vinculado</Badge>
+                    </td>
+                    <td className="px-3 py-2">-</td>
+                    <td className="px-3 py-2">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                if (
+                                  cliente.id &&
+                                  cliente.nome &&
+                                  !empresasClientesOptions.some(
+                                    (e) => e.id === cliente.id
+                                  )
+                                ) {
+                                  setEmpresasClientesOptions((prev) => [
+                                    ...prev,
+                                    {
+                                      id: cliente.id,
+                                      nome: cliente.nome,
+                                      tipo: "cliente",
+                                    },
+                                  ]);
+                                }
+                                setEmpresaCliente(cliente.id);
+                                setModalOpen(true);
+                                setModalType("novo");
+                              }}
+                            >
+                              Vincular
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            Vincular este cliente a um ou mais parceiros
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </td>
+                  </tr>
+                ))}
+                
+                {/* Caso nenhum cliente exibido */}
+                {filteredClientesVinculados.length +
+                  filteredClientesNaoVinculados.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="py-12 text-center text-muted-foreground">
+                      <Building2 className="h-12 w-12 mx-auto mb-2 text-muted-foreground" />
+                      <div className="text-lg font-semibold mb-1">
+                        Nenhum cliente encontrado
+                      </div>
+                      <div className="mb-4">
+                        {searchTerm
+                          ? "Tente ajustar os filtros de busca"
+                          : "Adicione o primeiro cliente à base"}
+                      </div>
                       <Button
-                        variant="ghost"
-                        size="sm"
-                        className="justify-start w-full"
-                        onClick={() => handleEditar(cliente)}
+                        onClick={() => {
+                          setModalOpen(true);
+                          setModalType("novo");
+                        }}
                       >
-                        <Edit2 className="h-4 w-4 mr-2" /> Editar
+                        <Plus className="mr-2 h-4 w-4" />
+                        Adicionar Cliente
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="justify-start w-full"
-                        onClick={() => handleSolicitarApresentacao(cliente)}
-                      >
-                        <ArrowRight className="h-4 w-4 mr-2" /> Solicitar Apresentação
-                      </Button>
-                    </PopoverContent>
-                  </Popover>
-                </td>
-              </tr>
-            ))}
-            {/* Clientes NÃO vinculados */}
-            {filteredClientesNaoVinculados.map((cliente) => (
-              <tr
-                key={cliente.id}
-                className="border-b hover:bg-muted/40"
-              >
-                <td className="px-3 py-2 font-medium">{cliente.nome}</td>
-                <td className="px-3 py-2">
-                  <span className="italic text-muted-foreground">
-                    Sem proprietário
-                  </span>
-                </td>
-                <td className="px-3 py-2">
-                  <Badge variant="secondary">Não vinculado</Badge>
-                </td>
-                <td className="px-3 py-2">-</td>
-                <td className="px-3 py-2">
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            if (
-                              cliente.id &&
-                              cliente.nome &&
-                              !empresasClientesOptions.some(
-                                (e) => e.id === cliente.id
-                              )
-                            ) {
-                              setEmpresasClientesOptions((prev) => [
-                                ...prev,
-                                {
-                                  id: cliente.id,
-                                  nome: cliente.nome,
-                                  tipo: "cliente",
-                                },
-                              ]);
-                            }
-                            setEmpresaCliente(cliente.id);
-                            setModalOpen(true);
-                            setModalType("novo");
-                          }}
-                        >
-                          Vincular
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        Vincular este cliente a um ou mais parceiros
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </td>
-              </tr>
-            ))}
-            {/* Caso nenhum cliente exibido */}
-            {filteredClientesVinculados.length +
-              filteredClientesNaoVinculados.length === 0 && (
-              <tr>
-                <td colSpan={5} className="py-12 text-center text-muted-foreground">
-                  <Building2 className="h-12 w-12 mx-auto mb-2 text-muted-foreground" />
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="relevancia" className="space-y-6">
+          {loadingRelevance ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+                <p className="mt-4 text-muted-foreground">Calculando relevância...</p>
+              </div>
+            </div>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {filteredParceiros.map((parceiro) => (
+                <ParceiroRelevanceCard
+                  key={parceiro.id}
+                  parceiro={parceiro}
+                  onClick={() => {
+                    // Aqui poderia abrir um modal com detalhes do parceiro
+                    console.log("Ver detalhes do parceiro:", parceiro.nome);
+                  }}
+                />
+              ))}
+              
+              {filteredParceiros.length === 0 && (
+                <div className="col-span-full py-12 text-center text-muted-foreground">
+                  <TrendingUp className="h-12 w-12 mx-auto mb-2 text-muted-foreground" />
                   <div className="text-lg font-semibold mb-1">
-                    Nenhum cliente encontrado
+                    Nenhum parceiro encontrado
                   </div>
-                  <div className="mb-4">
+                  <div>
                     {searchTerm
                       ? "Tente ajustar os filtros de busca"
-                      : "Adicione o primeiro cliente à base"}
+                      : "Aguarde o cálculo da relevância dos parceiros"}
                   </div>
-                  <Button
-                    onClick={() => {
-                      setModalOpen(true);
-                      setModalType("novo");
-                    }}
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-                    Adicionar Cliente
-                  </Button>
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+                </div>
+              )}
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

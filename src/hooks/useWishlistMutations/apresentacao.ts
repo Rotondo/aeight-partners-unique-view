@@ -113,31 +113,65 @@ export const useApresentacaoMutations = (
     observacoes?: string;
   }): Promise<void> => {
     try {
-      const { error } = await supabase.from("wishlist_apresentacoes").insert({
-        empresa_facilitadora_id: empresa_proprietaria_id,
-        wishlist_item_id: relacionamento_id,
-        data_apresentacao: new Date().toISOString(),
-        tipo_apresentacao: 'reuniao',
-        status_apresentacao: 'pendente',
-        converteu_oportunidade: false,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        feedback: observacoes || null
-      });
+      // Primeiro, verificar se já existe um wishlist_item para essa combinação
+      const { data: existingWishlistItem } = await supabase
+        .from("wishlist_items")
+        .select("id")
+        .eq("empresa_desejada_id", empresa_cliente_id)
+        .eq("empresa_proprietaria_id", empresa_proprietaria_id)
+        .eq("status", "pendente")
+        .maybeSingle();
+
+      let wishlistItemId = existingWishlistItem?.id;
+
+      // Se não existe, criar um novo wishlist_item
+      if (!wishlistItemId) {
+        const { data: newWishlistItem, error: wishlistError } = await supabase
+          .from("wishlist_items")
+          .insert({
+            empresa_interessada_id: empresa_proprietaria_id, // Quem quer a apresentação
+            empresa_desejada_id: empresa_cliente_id, // Cliente que queremos conhecer
+            empresa_proprietaria_id: empresa_proprietaria_id, // Quem pode fazer a apresentação
+            motivo: "Solicitação de apresentação via base de clientes",
+            observacoes: observacoes || null,
+            status: "pendente",
+            data_solicitacao: new Date().toISOString(),
+            prioridade: 3
+          })
+          .select("id")
+          .single();
+
+        if (wishlistError) throw wishlistError;
+        wishlistItemId = newWishlistItem.id;
+      }
+
+      // Agora criar a apresentação como solicitação
+      const { error: apresentacaoError } = await supabase
+        .from("wishlist_apresentacoes")
+        .insert({
+          wishlist_item_id: wishlistItemId,
+          empresa_facilitadora_id: empresa_proprietaria_id,
+          data_apresentacao: new Date().toISOString(),
+          tipo_apresentacao: 'reuniao',
+          status_apresentacao: 'pendente',
+          tipo_solicitacao: 'solicitacao',
+          converteu_oportunidade: false,
+          feedback: observacoes || null
+        });
       
-      if (error) throw error;
+      if (apresentacaoError) throw apresentacaoError;
       
       toast({
         title: "Solicitação enviada",
-        description: "Apresentação solicitada com sucesso",
+        description: "Solicitação de apresentação criada com sucesso",
       });
       
-      await fetchApresentacoes();
+      await Promise.all([fetchApresentacoes(), fetchWishlistItems()]);
     } catch (error) {
       console.error("Erro ao solicitar apresentação:", error);
       toast({
         title: "Erro",
-        description: "Erro ao solicitar apresentação",
+        description: "Erro ao solicitar apresentação. Tente novamente.",
         variant: "destructive",
       });
       throw error;

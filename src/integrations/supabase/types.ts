@@ -808,6 +808,7 @@ export type Database = {
           oportunidade_id: string | null
           status_apresentacao: string | null
           tipo_apresentacao: string | null
+          tipo_solicitacao: string | null
           updated_at: string
           wishlist_item_id: string
         }
@@ -821,6 +822,7 @@ export type Database = {
           oportunidade_id?: string | null
           status_apresentacao?: string | null
           tipo_apresentacao?: string | null
+          tipo_solicitacao?: string | null
           updated_at?: string
           wishlist_item_id: string
         }
@@ -834,6 +836,7 @@ export type Database = {
           oportunidade_id?: string | null
           status_apresentacao?: string | null
           tipo_apresentacao?: string | null
+          tipo_solicitacao?: string | null
           updated_at?: string
           wishlist_item_id?: string
         }
