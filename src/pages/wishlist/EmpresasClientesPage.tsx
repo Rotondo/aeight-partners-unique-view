@@ -382,12 +382,11 @@ const EmpresasClientesPage: React.FC = () => {
               </div>
               <div>
                 <label className="block font-medium mb-1">Cliente</label>
-                <Input
-                  type="text"
+                <select
                   value={empresaCliente}
                   onChange={(e) => setEmpresaCliente(e.target.value)}
                   disabled={modalType === "editar"}
-                  className="w-full"
+                  className="w-full px-3 py-2 border border-input bg-background rounded-md"
                 >
                   <option value="" disabled>
                     Selecione cliente
@@ -397,7 +396,7 @@ const EmpresasClientesPage: React.FC = () => {
                       {e.nome}
                     </option>
                   ))}
-                </Input>
+                </select>
                 <div className="flex mt-2 gap-2">
                   <Input
                     placeholder="Novo cliente"
