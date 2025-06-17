@@ -10,6 +10,13 @@ import { AuthProvider } from './hooks/useAuth';
 import WishlistPage from './pages/wishlist/WishlistPage';
 import DiarioPage from './pages/diario';
 import EventosPage from './pages/eventos/EventosPage';
+import OportunidadesPageContainer from './pages/oportunidades';
+import OportunidadesDashboardPage from './pages/oportunidades-dashboard';
+import IndicadoresPage from './pages/indicadores/IndicadoresPage';
+import EmpresasPage from './pages/empresas/EmpresasPage';
+import OnePagerPage from './pages/onepager';
+import QuadrantePage from './pages/quadrante/QuadrantePage';
+import AdminPage from './pages/admin';
 
 function App() {
   return (
@@ -23,6 +30,48 @@ function App() {
                 <PrivateRoute>
                   <MainLayout>
                     <Index />
+                  </MainLayout>
+                </PrivateRoute>
+              } />
+              <Route path="/oportunidades" element={
+                <PrivateRoute>
+                  <MainLayout>
+                    <OportunidadesPageContainer />
+                  </MainLayout>
+                </PrivateRoute>
+              } />
+              <Route path="/oportunidades-dashboard" element={
+                <PrivateRoute>
+                  <MainLayout>
+                    <OportunidadesDashboardPage />
+                  </MainLayout>
+                </PrivateRoute>
+              } />
+              <Route path="/indicadores" element={
+                <PrivateRoute>
+                  <MainLayout>
+                    <IndicadoresPage />
+                  </MainLayout>
+                </PrivateRoute>
+              } />
+              <Route path="/empresas" element={
+                <PrivateRoute>
+                  <MainLayout>
+                    <EmpresasPage />
+                  </MainLayout>
+                </PrivateRoute>
+              } />
+              <Route path="/onepager" element={
+                <PrivateRoute>
+                  <MainLayout>
+                    <OnePagerPage />
+                  </MainLayout>
+                </PrivateRoute>
+              } />
+              <Route path="/quadrante" element={
+                <PrivateRoute>
+                  <MainLayout>
+                    <QuadrantePage />
                   </MainLayout>
                 </PrivateRoute>
               } />
@@ -44,6 +93,13 @@ function App() {
                 <PrivateRoute>
                   <MainLayout>
                     <EventosPage />
+                  </MainLayout>
+                </PrivateRoute>
+              } />
+              <Route path="/admin" element={
+                <PrivateRoute>
+                  <MainLayout>
+                    <AdminPage />
                   </MainLayout>
                 </PrivateRoute>
               } />

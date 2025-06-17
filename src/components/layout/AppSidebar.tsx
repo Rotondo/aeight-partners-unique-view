@@ -14,7 +14,18 @@ import {
 } from "@/components/ui/sidebar"
 import { useAuth } from "@/hooks/useAuth"
 import { Link } from "react-router-dom"
-import { Home, Users, ContactIcon, BookOpen } from 'lucide-react';
+import { 
+  Home, 
+  Users, 
+  ContactIcon, 
+  BookOpen, 
+  BarChart2, 
+  Activity, 
+  Building2, 
+  Settings,
+  PanelLeft,
+  Archive
+} from 'lucide-react';
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { user } = useAuth();
@@ -28,11 +39,53 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       adminOnly: false
     },
     {
+      title: "Oportunidades",
+      url: "/oportunidades",
+      icon: Users,
+      description: "Gestão de oportunidades",
+      adminOnly: false
+    },
+    {
+      title: "Dashboard de Oportunidades",
+      url: "/oportunidades-dashboard",
+      icon: BarChart2,
+      description: "Dashboards e métricas",
+      adminOnly: false
+    },
+    {
+      title: "Indicadores",
+      url: "/indicadores",
+      icon: Activity,
+      description: "Indicadores de performance",
+      adminOnly: false
+    },
+    {
+      title: "Empresas",
+      url: "/empresas",
+      icon: Building2,
+      description: "Gestão de empresas",
+      adminOnly: false
+    },
+    {
+      title: "One Pager",
+      url: "/onepager",
+      icon: PanelLeft,
+      description: "Documentos one pager",
+      adminOnly: false
+    },
+    {
+      title: "Quadrante",
+      url: "/quadrante",
+      icon: Archive,
+      description: "Análise por quadrantes",
+      adminOnly: false
+    },
+    {
       title: "Diário",
       url: "/diario",
       icon: BookOpen,
       description: "Gestão de atividades diárias",
-      adminOnly: false
+      adminOnly: true
     },
     {
       title: "Wishlist",
@@ -46,6 +99,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       url: "/eventos",
       icon: ContactIcon,
       description: "Gestão de eventos e contatos",
+      adminOnly: true
+    },
+    {
+      title: "Admin",
+      url: "/admin",
+      icon: Settings,
+      description: "Administração do sistema",
       adminOnly: true
     },
   ];
