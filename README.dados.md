@@ -1002,4 +1002,4 @@ ORDER BY t.typname, e.enumsortorder;
 
 ---
 
-> **Banco de Dados Aeight Partners** - Estrutura robusta, segura e preparada para escala com auditoria completa e performance otimizada.
+> **Banco de Dados Rotondo Partners** - Estrutura robusta, segura e preparada para escala com auditoria completa e performance otimizada.
