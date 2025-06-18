@@ -16,6 +16,17 @@ export const DiarioCalendar: React.FC = () => {
   const [viewMode, setViewMode] = useState<'week' | 'day'>('week');
   const [showEventForm, setShowEventForm] = useState(false);
 
+  // CORREÇÃO: Debug da agenda para identificar problemas
+  console.log('[DiarioCalendar] Eventos carregados:', agendaEventos.length);
+  console.log('[DiarioCalendar] Data selecionada:', selectedDate);
+  console.log('[DiarioCalendar] Eventos detalhados:', agendaEventos.map(e => ({
+    id: e.id,
+    title: e.title,
+    start: e.start,
+    status: e.status,
+    date: new Date(e.start).toLocaleDateString('pt-BR')
+  })));
+
   const getEventTypeColor = (tipo?: string) => {
     switch (tipo) {
       case 'proximo_passo_crm': return 'bg-orange-100 text-orange-800 border-orange-200';
@@ -40,9 +51,25 @@ export const DiarioCalendar: React.FC = () => {
   };
 
   const getEventsForDate = (date: Date) => {
-    return agendaEventos.filter(evento => 
-      isSameDay(new Date(evento.start), date)
-    );
+    const eventos = agendaEventos.filter(evento => {
+      const eventoDate = new Date(evento.start);
+      const isSame = isSameDay(eventoDate, date);
+      
+      // Debug para identificar problemas
+      if (isSame) {
+        console.log('[DiarioCalendar] Evento encontrado para data:', {
+          date: format(date, 'dd/MM/yyyy'),
+          evento: evento.title,
+          start: evento.start,
+          status: evento.status
+        });
+      }
+      
+      return isSame;
+    });
+    
+    console.log(`[DiarioCalendar] Eventos para ${format(date, 'dd/MM/yyyy')}:`, eventos.length);
+    return eventos;
   };
 
   const navigateWeek = (direction: 'prev' | 'next') => {
@@ -83,6 +110,7 @@ export const DiarioCalendar: React.FC = () => {
                   <div 
                     key={evento.id}
                     className={`text-xs p-1 rounded border ${getEventTypeColor(evento.event_type)}`}
+                    title={`${evento.title} - ${evento.status}`}
                   >
                     <div className="flex items-center gap-1">
                       <span>{getStatusIcon(evento.status)}</span>
@@ -96,6 +124,12 @@ export const DiarioCalendar: React.FC = () => {
                     +{dayEvents.length - 3} mais
                   </div>
                 )}
+                
+                {dayEvents.length === 0 && (
+                  <div className="text-xs text-gray-400 italic">
+                    Sem eventos
+                  </div>
+                )}
               </div>
             </div>
           );
@@ -107,12 +141,20 @@ export const DiarioCalendar: React.FC = () => {
   const renderDayView = () => {
     const dayEvents = getEventsForDate(selectedDate);
     
+    console.log('[DiarioCalendar] Renderizando dia:', {
+      date: format(selectedDate, 'dd/MM/yyyy'),
+      events: dayEvents.length
+    });
+    
     return (
       <div className="space-y-3">
         {dayEvents.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>Nenhum evento para este dia</p>
+            <p>Nenhum evento para {format(selectedDate, 'dd/MM/yyyy')}</p>
+            <p className="text-sm text-gray-500 mt-2">
+              Total de eventos no sistema: {agendaEventos.length}
+            </p>
           </div>
         ) : (
           dayEvents.map((evento) => (
@@ -125,6 +167,9 @@ export const DiarioCalendar: React.FC = () => {
                       <h4 className="font-semibold">{evento.title}</h4>
                       <Badge className={getEventTypeColor(evento.event_type)}>
                         {evento.event_type?.replace('_', ' ') || 'evento'}
+                      </Badge>
+                      <Badge variant="outline" className="text-xs">
+                        {evento.status}
                       </Badge>
                     </div>
                     
@@ -168,7 +213,7 @@ export const DiarioCalendar: React.FC = () => {
                 Calendário do Diário
               </CardTitle>
               <p className="text-sm text-muted-foreground">
-                {format(selectedDate, "MMMM 'de' yyyy", { locale: ptBR })}
+                {format(selectedDate, "MMMM 'de' yyyy", { locale: ptBR })} - {agendaEventos.length} eventos total
               </p>
             </div>
             

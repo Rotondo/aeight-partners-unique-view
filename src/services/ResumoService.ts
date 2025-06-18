@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { DiarioResumo, TipoResumo } from '@/types/diario';
 
@@ -16,23 +15,35 @@ export class ResumoService {
     userId: string
   ): Promise<DiarioResumo | null> {
     try {
+      console.log('[ResumoService] Gerando resumo:', { tipo, periodoInicio, periodoFim });
+      
       // 1. Contar eventos no período
       const { data: eventos, error: eventosError } = await supabase
         .from('diario_agenda_eventos')
-        .select('id, title, description, status, partner_id')
+        .select('id, title, description, status, partner_id, start, end')
         .gte('start', periodoInicio)
         .lte('start', periodoFim);
 
-      if (eventosError) throw eventosError;
+      if (eventosError) {
+        console.error('[ResumoService] Erro ao buscar eventos:', eventosError);
+        throw eventosError;
+      }
+
+      console.log('[ResumoService] Eventos encontrados:', eventos?.length || 0);
 
       // 2. Contar ações CRM no período
       const { data: acoesCrm, error: crmError } = await supabase
         .from('diario_crm_acoes')
-        .select('id, content, metadata, partner_id')
+        .select('id, description, content, metadata, partner_id, status, next_steps')
         .gte('created_at', periodoInicio)
         .lte('created_at', periodoFim);
 
-      if (crmError) throw crmError;
+      if (crmError) {
+        console.error('[ResumoService] Erro ao buscar ações CRM:', crmError);
+        throw crmError;
+      }
+
+      console.log('[ResumoService] Ações CRM encontradas:', acoesCrm?.length || 0);
 
       // 3. Contar parceiros únicos envolvidos
       const parceirosUnicos = new Set();
@@ -43,26 +54,40 @@ export class ResumoService {
         if (acao.partner_id) parceirosUnicos.add(acao.partner_id);
       });
 
-      // 4. Extrair principais realizações (eventos e ações concluídas)
+      console.log('[ResumoService] Parceiros únicos:', parceirosUnicos.size);
+
+      // 4. CORRIGIDO: Extrair principais realizações (incluir eventos agendados e realizados)
       const eventosRealizados = eventos?.filter(e => e.status === 'completed') || [];
-      const acoesConcluidas = acoesCrm?.filter(a => {
-        const metadata = this.parseMetadata(a.metadata);
-        return metadata?.status === 'concluida';
-      }) || [];
+      const eventosAgendados = eventos?.filter(e => e.status === 'scheduled') || [];
+      const acoesConcluidas = acoesCrm?.filter(a => a.status === 'concluida') || [];
+      const acoesEmAndamento = acoesCrm?.filter(a => a.status === 'em_andamento') || [];
 
+      console.log('[ResumoService] Eventos por status:', {
+        realizados: eventosRealizados.length,
+        agendados: eventosAgendados.length,
+        acoesConcluidas: acoesConcluidas.length,
+        acoesEmAndamento: acoesEmAndamento.length
+      });
+
+      // CORRIGIDO: Incluir tanto eventos realizados quanto agendados
       const principaisRealizacoes = [
-        ...eventosRealizados.map(e => e.title || e.description || 'Evento realizado'),
-        ...acoesConcluidas.map(a => {
-          const metadata = this.parseMetadata(a.metadata);
-          return metadata?.description || a.content?.substring(0, 50) + '...' || 'Ação CRM concluída';
-        })
-      ].slice(0, 5); // Limitar a 5 itens
+        ...eventosRealizados.map(e => `✅ ${e.title || e.description || 'Evento realizado'}`),
+        ...eventosAgendados.map(e => `📅 ${e.title || e.description || 'Evento agendado'}`),
+        ...acoesConcluidas.map(a => `✅ ${a.description || a.content?.substring(0, 50) + '...' || 'Ação CRM concluída'}`),
+        ...acoesEmAndamento.map(a => `🔄 ${a.description || a.content?.substring(0, 50) + '...' || 'Ação CRM em andamento'}`)
+      ].slice(0, 10); // Aumentar para 10 itens
 
-      // 5. Extrair próximos passos pendentes
-      const proximosPassos = acoesCrm?.map(acao => {
-        const metadata = this.parseMetadata(acao.metadata);
-        return metadata?.next_steps;
-      }).filter(Boolean).slice(0, 5) || [];
+      // 5. CORRIGIDO: Extrair próximos passos de forma mais robusta
+      const proximosPassos = [
+        // Próximos passos das ações CRM
+        ...acoesCrm?.map(acao => acao.next_steps).filter(Boolean) || [],
+        // Eventos agendados futuros como próximos passos
+        ...eventosAgendados.map(evento => 
+          `📅 ${evento.title} - ${new Date(evento.start).toLocaleDateString('pt-BR')}`
+        )
+      ].slice(0, 8); // Limitar a 8 itens
+
+      console.log('[ResumoService] Próximos passos extraídos:', proximosPassos.length);
 
       // 6. Criar o resumo
       const resumo: DiarioResumo = {
@@ -71,15 +96,28 @@ export class ResumoService {
         periodo_inicio: periodoInicio,
         periodo_fim: periodoFim,
         titulo: `Resumo ${tipo} - ${new Date().toLocaleDateString('pt-BR')}`,
-        conteudo_resumo: this.generateConteudoResumo(eventos?.length || 0, acoesCrm?.length || 0, parceirosUnicos.size),
+        conteudo_resumo: this.generateConteudoResumo(
+          eventos?.length || 0, 
+          acoesCrm?.length || 0, 
+          parceirosUnicos.size,
+          eventosRealizados.length,
+          eventosAgendados.length
+        ),
         total_eventos: eventos?.length || 0,
         total_acoes_crm: acoesCrm?.length || 0,
         total_parceiros_envolvidos: parceirosUnicos.size,
-        principais_realizacoes: principaisRealizacoes.length > 0 ? principaisRealizacoes : ['Nenhuma realização registrada no período'],
+        principais_realizacoes: principaisRealizacoes.length > 0 ? principaisRealizacoes : ['Nenhuma atividade registrada no período'],
         proximos_passos: proximosPassos.length > 0 ? proximosPassos : ['Nenhum próximo passo definido'],
         usuario_gerador_id: userId,
         created_at: new Date().toISOString()
       };
+
+      console.log('[ResumoService] Resumo gerado:', {
+        totalEventos: resumo.total_eventos,
+        totalAcoes: resumo.total_acoes_crm,
+        realizacoes: resumo.principais_realizacoes.length,
+        proximosPassos: resumo.proximos_passos.length
+      });
 
       // 7. Mapear tipo para formato do banco com tipos corretos
       const periodMapping: Record<TipoResumo, "week" | "month" | "quarter"> = {
@@ -97,17 +135,27 @@ export class ResumoService {
             resumo_completo: resumo,
             detalhes_eventos: eventos,
             detalhes_acoes: acoesCrm,
-            criterios_busca: { periodoInicio, periodoFim }
+            criterios_busca: { periodoInicio, periodoFim },
+            debug_info: {
+              eventosRealizados: eventosRealizados.length,
+              eventosAgendados: eventosAgendados.length,
+              acoesConcluidas: acoesConcluidas.length,
+              acoesEmAndamento: acoesEmAndamento.length
+            }
           })
         })
         .select()
         .single();
 
-      if (saveError) throw saveError;
+      if (saveError) {
+        console.error('[ResumoService] Erro ao salvar:', saveError);
+        throw saveError;
+      }
 
+      console.log('[ResumoService] Resumo salvo com sucesso:', savedResumo.id);
       return resumo;
     } catch (error) {
-      console.error('Erro ao gerar resumo:', error);
+      console.error('[ResumoService] Erro ao gerar resumo:', error);
       throw error;
     }
   }
@@ -180,14 +228,34 @@ export class ResumoService {
     return {};
   }
 
-  private static generateConteudoResumo(totalEventos: number, totalAcoes: number, totalParceiros: number): string {
+  private static generateConteudoResumo(
+    totalEventos: number, 
+    totalAcoes: number, 
+    totalParceiros: number,
+    eventosRealizados: number = 0,
+    eventosAgendados: number = 0
+  ): string {
     if (totalEventos === 0 && totalAcoes === 0) {
       return 'Período sem atividades registradas. Considere aumentar o engajamento ou revisar o período selecionado.';
     }
 
-    return `Durante este período foram registrados ${totalEventos} eventos e ${totalAcoes} ações de CRM, ` +
-           `envolvendo ${totalParceiros} parceiros diferentes. ` +
-           (totalEventos > totalAcoes ? 'Foco maior em eventos/reuniões.' : 'Foco maior em ações de follow-up.');
+    let resumo = `Durante este período foram registrados ${totalEventos} eventos `;
+    
+    if (eventosRealizados > 0 || eventosAgendados > 0) {
+      resumo += `(${eventosRealizados} realizados, ${eventosAgendados} agendados) `;
+    }
+    
+    resumo += `e ${totalAcoes} ações de CRM, envolvendo ${totalParceiros} parceiros diferentes. `;
+    
+    if (eventosAgendados > eventosRealizados) {
+      resumo += 'Foco em planejamento e eventos futuros.';
+    } else if (totalEventos > totalAcoes) {
+      resumo += 'Foco maior em eventos/reuniões.';
+    } else {
+      resumo += 'Foco maior em ações de follow-up.';
+    }
+
+    return resumo;
   }
 
   private static createFallbackResumo(item: any): DiarioResumo {
