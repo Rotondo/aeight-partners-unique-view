@@ -1,8 +1,8 @@
 
 import React from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { LoadingScreen } from "@/components/ui/LoadingScreen";
-import { LoginForm } from "./LoginForm";
+import LoadingScreen from "@/components/ui/LoadingScreen";
+import LoginForm from "./LoginForm";
 
 interface PrivateRouteProps {
   children: React.ReactNode;

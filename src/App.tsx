@@ -3,7 +3,7 @@ import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import LoginPage from './pages/auth/LoginPage';
 import Index from './pages/Index';
-import PrivateRoute from './components/auth/PrivateRoute';
+import { PrivateRoute } from './components/auth/PrivateRoute';
 import MainLayout from './components/layout/MainLayout';
 import { PrivacyProvider } from './contexts/PrivacyContext';
 import { AuthProvider } from './hooks/useAuth';
