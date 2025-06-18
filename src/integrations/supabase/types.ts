@@ -1080,8 +1080,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_access_oportunidade: {
+        Args: { oportunidade_id: string }
+        Returns: boolean
+      }
       is_admin: {
         Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      user_belongs_to_empresa: {
+        Args: { empresa_id: string }
         Returns: boolean
       }
     }

@@ -3,6 +3,7 @@ import { Oportunidade, StatusOportunidade, OportunidadesFilterParams, Usuario } 
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
+import { validateUUID, sanitizeString } from "@/utils/inputValidation";
 
 interface OportunidadesContextType {
   oportunidades: Oportunidade[];
@@ -37,7 +38,7 @@ export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ child
 
   const fetchOportunidades = async () => {
     // Se não há usuário autenticado, apenas limpa os dados
-    if (!user || !isValidUUID(user.id)) {
+    if (!user || !validateUUID(user.id)) {
       console.log("Usuário não autenticado ou ID inválido, limpando dados");
       setOportunidades([]);
       setFilteredOportunidades([]);
@@ -94,7 +95,7 @@ export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ child
           usuario_envio_id: item.usuario_envio_id,
           usuario_recebe_id: item.usuario_recebe_id,
           observacoes: item.observacoes,
-          nome_lead: item.nome_lead,
+          nome_lead: sanitizeString(item.nome_lead),
           created_at: item.created_at,
           tipo_relacao: item.empresa_origem?.tipo === "intragrupo" && item.empresa_destino?.tipo === "intragrupo" ? "intra" : "extra",
           isRemetente: item.usuario_envio_id === user?.id,
@@ -103,25 +104,25 @@ export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ child
           empresa_origem: item.empresa_origem
             ? {
                 id: item.empresa_origem.id,
-                nome: item.empresa_origem.nome,
+                nome: sanitizeString(item.empresa_origem.nome),
                 tipo: item.empresa_origem.tipo as "intragrupo" | "parceiro" | "cliente",
                 status: item.empresa_origem.status,
-                descricao: item.empresa_origem.descricao || ""
+                descricao: sanitizeString(item.empresa_origem.descricao) || ""
               }
             : undefined,
           empresa_destino: item.empresa_destino
             ? {
                 id: item.empresa_destino.id,
-                nome: item.empresa_destino.nome,
+                nome: sanitizeString(item.empresa_destino.nome),
                 tipo: item.empresa_destino.tipo as "intragrupo" | "parceiro" | "cliente",
                 status: item.empresa_destino.status,
-                descricao: item.empresa_destino.descricao || ""
+                descricao: sanitizeString(item.empresa_destino.descricao) || ""
               }
             : undefined,
           contato: Array.isArray(item.contato) ? item.contato[0] : item.contato,
           usuario_envio: item.usuario_envio ? {
             id: item.usuario_envio.id,
-            nome: item.usuario_envio.nome,
+            nome: sanitizeString(item.usuario_envio.nome),
             email: item.usuario_envio.email,
             papel: item.usuario_envio.papel,
             ativo: item.usuario_envio.ativo,
@@ -129,7 +130,7 @@ export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ child
           } : undefined,
           usuario_recebe: item.usuario_recebe ? {
             id: item.usuario_recebe.id,
-            nome: item.usuario_recebe.nome,
+            nome: sanitizeString(item.usuario_recebe.nome),
             email: item.usuario_recebe.email,
             papel: item.usuario_recebe.papel,
             ativo: item.usuario_recebe.ativo,
@@ -220,17 +221,19 @@ export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ child
     valorAntigo: any,
     valorNovo: any
   ) => {
-    if (!user || !isValidUUID(user.id)) return;
+    if (!user || !validateUUID(user.id)) return;
     if (valorAntigo === valorNovo) return;
-    const oldValue = valorAntigo !== null ? String(valorAntigo) : null;
-    const newValue = valorNovo !== null ? String(valorNovo) : null;
+    
+    // Sanitize values before storing
+    const oldValue = valorAntigo !== null ? sanitizeString(String(valorAntigo)) : null;
+    const newValue = valorNovo !== null ? sanitizeString(String(valorNovo)) : null;
 
     try {
       await supabase
         .from('historico_oportunidade')
         .insert({
           oportunidade_id: oportunidadeId,
-          campo_alterado: campo,
+          campo_alterado: sanitizeString(campo),
           valor_antigo: oldValue,
           valor_novo: newValue,
           usuario_id: user.id
@@ -241,7 +244,7 @@ export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ child
   };
 
   const createOportunidade = async (oportunidade: Partial<Oportunidade>): Promise<string | null> => {
-    if (!user || !isValidUUID(user.id)) {
+    if (!user || !validateUUID(user.id)) {
       toast({
         title: "Erro",
         description: "Você precisa estar autenticado com um ID válido para criar uma oportunidade.",
@@ -251,6 +254,7 @@ export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ child
     }
 
     try {
+      // Enhanced validation
       if (!oportunidade.empresa_origem_id || !oportunidade.empresa_destino_id) {
         toast({
           title: "Erro",
@@ -259,23 +263,17 @@ export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ child
         });
         return null;
       }
-      if (!isValidUUID(oportunidade.empresa_origem_id)) {
+      
+      if (!validateUUID(oportunidade.empresa_origem_id) || !validateUUID(oportunidade.empresa_destino_id)) {
         toast({
           title: "Erro",
-          description: "ID da empresa de origem é inválido.",
+          description: "IDs das empresas são inválidos.",
           variant: "destructive",
         });
         return null;
       }
-      if (!isValidUUID(oportunidade.empresa_destino_id)) {
-        toast({
-          title: "Erro",
-          description: "ID da empresa de destino é inválido.",
-          variant: "destructive",
-        });
-        return null;
-      }
-      if (oportunidade.contato_id && !isValidUUID(oportunidade.contato_id)) {
+      
+      if (oportunidade.contato_id && !validateUUID(oportunidade.contato_id)) {
         toast({
           title: "Erro",
           description: "ID do contato é inválido.",
@@ -283,7 +281,8 @@ export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ child
         });
         return null;
       }
-      if (oportunidade.usuario_recebe_id && !isValidUUID(oportunidade.usuario_recebe_id)) {
+      
+      if (oportunidade.usuario_recebe_id && !validateUUID(oportunidade.usuario_recebe_id)) {
         toast({
           title: "Erro",
           description: "ID do executivo responsável é inválido.",
@@ -300,11 +299,11 @@ export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ child
         status: oportunidade.status || "em_contato" as StatusOportunidade,
         data_indicacao: oportunidade.data_indicacao || new Date().toISOString(),
         data_fechamento: oportunidade.data_fechamento,
-        motivo_perda: oportunidade.motivo_perda,
+        motivo_perda: sanitizeString(oportunidade.motivo_perda),
         usuario_envio_id: user.id,
         usuario_recebe_id: oportunidade.usuario_recebe_id,
-        observacoes: oportunidade.observacoes,
-        nome_lead: oportunidade.nome_lead || ""
+        observacoes: sanitizeString(oportunidade.observacoes),
+        nome_lead: sanitizeString(oportunidade.nome_lead) || ""
       };
 
       console.log("Criando oportunidade com dados:", newOportunidade);
@@ -336,7 +335,7 @@ export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ child
   };
 
   const updateOportunidade = async (id: string, updates: Partial<Oportunidade>): Promise<boolean> => {
-    if (!user || !isValidUUID(user.id)) {
+    if (!user || !validateUUID(user.id)) {
       toast({
         title: "Erro",
         description: "Você precisa estar autenticado com um ID válido para atualizar uma oportunidade.",
@@ -380,7 +379,7 @@ export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ child
   };
 
   const deleteOportunidade = async (id: string): Promise<boolean> => {
-    if (!user || !isValidUUID(user.id)) {
+    if (!user || !validateUUID(user.id)) {
       toast({
         title: "Erro",
         description: "Você precisa estar autenticado com um ID válido para excluir uma oportunidade.",
