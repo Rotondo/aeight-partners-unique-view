@@ -29,6 +29,9 @@ export const CrmFormAudio: React.FC = () => {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
+  // CORREÇÃO: Filtrar parceiros válidos para evitar IDs vazios
+  const validPartners = partners.filter(partner => partner.id && partner.id.trim() !== '');
+
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -203,7 +206,7 @@ export const CrmFormAudio: React.FC = () => {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="none">Nenhum parceiro</SelectItem>
-            {partners.map((partner) => (
+            {validPartners.map((partner) => (
               <SelectItem key={partner.id} value={partner.id}>
                 {partner.nome}
               </SelectItem>

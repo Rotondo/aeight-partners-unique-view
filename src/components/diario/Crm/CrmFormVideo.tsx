@@ -29,6 +29,9 @@ export const CrmFormVideo: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const previewRef = useRef<HTMLVideoElement | null>(null);
 
+  // CORREÇÃO: Filtrar parceiros válidos para evitar IDs vazios
+  const validPartners = partners.filter(partner => partner.id && partner.id.trim() !== '');
+
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ 
@@ -198,7 +201,7 @@ export const CrmFormVideo: React.FC = () => {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="none">Nenhum parceiro</SelectItem>
-            {partners.map((partner) => (
+            {validPartners.map((partner) => (
               <SelectItem key={partner.id} value={partner.id}>
                 {partner.nome}
               </SelectItem>
