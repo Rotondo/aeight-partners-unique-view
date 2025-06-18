@@ -3,14 +3,14 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Calendar, MapPin, Users, Play, Edit } from 'lucide-react';
+import { Plus, Calendar, MapPin, Users, Play, Edit, Trash2 } from 'lucide-react';
 import { useEventos } from '@/contexts/EventosContext';
 import { EventoFormModal } from './EventoFormModal';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 export const EventosListView: React.FC = () => {
-  const { eventos, loading, setEventoAtivo } = useEventos();
+  const { eventos, loading, setEventoAtivo, deleteEvento } = useEventos();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingEvento, setEditingEvento] = useState<any>(null);
 
@@ -38,6 +38,17 @@ export const EventosListView: React.FC = () => {
 
   const handleStartEvent = (evento: any) => {
     setEventoAtivo(evento);
+  };
+
+  const handleDeleteEvent = async (evento: any) => {
+    if (confirm(`Tem certeza que deseja excluir o evento "${evento.nome}"?`)) {
+      try {
+        await deleteEvento(evento.id);
+      } catch (error) {
+        console.error('Erro ao deletar evento:', error);
+        alert('Erro ao deletar evento. Tente novamente.');
+      }
+    }
   };
 
   if (loading) {
@@ -160,6 +171,14 @@ export const EventosListView: React.FC = () => {
                     onClick={() => setEditingEvento(evento)}
                   >
                     <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleDeleteEvent(evento)}
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                  >
+                    <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
               </CardContent>

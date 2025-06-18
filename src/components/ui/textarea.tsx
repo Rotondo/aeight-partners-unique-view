@@ -1,3 +1,4 @@
+
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { logControlledField } from "@/lib/logControlledField";
@@ -6,9 +7,8 @@ export interface TextareaProps
   extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {}
 
 /**
- * Textarea base reutilizável.
+ * Textarea base reutilizável com proteção aprimorada contra valores undefined.
  * Exige que o dev forneça pelo menos `id` ou `name` para acessibilidade/autofill.
- * Protege para value controlado nunca ser undefined/null e loga em dev.
  * NUNCA repassa children para <textarea>.
  */
 const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
@@ -17,14 +17,19 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
     if (process.env.NODE_ENV !== "production" && !id && !name) {
       // eslint-disable-next-line no-console
       console.warn(
-        "[Textarea] Recomenda-se fornecer pelo menos um 'id' ou 'name' para campos de formulário para garantir acessibilidade e autofill."
+        "[Textarea] Recomenda-se fornecer pelo menos um 'id' ou 'name' para campos de formulário."
       );
     }
 
-    // Protege value controlado
-    const safeValue =
-      value === undefined || value === null ? "" : value;
+    // Proteção robusta para value controlado - NUNCA permitir undefined/null
+    const safeValue = React.useMemo(() => {
+      if (value === undefined || value === null) {
+        return "";
+      }
+      return String(value);
+    }, [value]);
 
+    // Log otimizado apenas em dev
     logControlledField("Textarea", value, { ...props, id, name });
 
     return (

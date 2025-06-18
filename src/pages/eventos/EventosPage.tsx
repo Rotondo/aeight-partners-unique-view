@@ -9,13 +9,14 @@ import { AlertTriangle } from 'lucide-react';
 const EventosPage: React.FC = () => {
   const { user } = useAuth();
 
-  if (!user || user.papel !== 'admin') {
+  // Permitir acesso a usuários autenticados (não apenas admins)
+  if (!user) {
     return (
       <div className="container mx-auto px-4 py-8">
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
-            Acesso negado. Apenas administradores podem acessar o módulo de Eventos.
+            Você precisa estar logado para acessar o módulo de Eventos.
           </AlertDescription>
         </Alert>
       </div>

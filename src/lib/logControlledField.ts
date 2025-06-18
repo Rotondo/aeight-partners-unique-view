@@ -1,6 +1,7 @@
+
 /**
  * Helper para logar problemas de campos controlados (undefined/null) em dev.
- * Exibe nome, id, props e stack trace para facilitar a localização do erro.
+ * Versão otimizada com menos logs excessivos.
  */
 export function logControlledField(
   kind: string,
@@ -11,13 +12,25 @@ export function logControlledField(
     process.env.NODE_ENV === "development" &&
     (value === undefined || value === null)
   ) {
-    // eslint-disable-next-line no-console
-    console.error(
-      `[${kind}] value é ${value} em ${props.name || props.id || "<sem nome>"} props:`,
-      props
-    );
-    // stack trace para saber o ponto de origem
-    // eslint-disable-next-line no-console
-    console.trace();
+    // Log apenas uma vez por componente para evitar spam
+    const componentKey = `${kind}-${props.name || props.id || "unnamed"}`;
+    if (!window.__loggedControlledFields) {
+      window.__loggedControlledFields = new Set();
+    }
+    
+    if (!window.__loggedControlledFields.has(componentKey)) {
+      window.__loggedControlledFields.add(componentKey);
+      // eslint-disable-next-line no-console
+      console.warn(
+        `[${kind}] value é ${value} em ${props.name || props.id || "<sem nome>"}`
+      );
+    }
+  }
+}
+
+// Extend window type for TypeScript
+declare global {
+  interface Window {
+    __loggedControlledFields?: Set<string>;
   }
 }

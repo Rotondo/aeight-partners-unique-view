@@ -19,9 +19,9 @@ interface EventoFormModalProps {
 type EventoFormData = {
   nome: string;
   data_inicio: string;
-  data_fim?: string;
-  local?: string;
-  descricao?: string;
+  data_fim: string;
+  local: string;
+  descricao: string;
   status: 'planejado' | 'em_andamento' | 'finalizado' | 'cancelado';
 };
 
@@ -33,6 +33,16 @@ export const EventoFormModal: React.FC<EventoFormModalProps> = ({
   const { createEvento, updateEvento } = useEventos();
   const isEditing = !!evento?.id;
 
+  // Valores padrão sempre como strings vazias - NUNCA undefined
+  const defaultValues: EventoFormData = {
+    nome: '',
+    data_inicio: new Date().toISOString().slice(0, 16),
+    data_fim: '',
+    local: '',
+    descricao: '', // CRÍTICO: sempre string vazia
+    status: 'planejado'
+  };
+
   const {
     register,
     handleSubmit,
@@ -41,56 +51,34 @@ export const EventoFormModal: React.FC<EventoFormModalProps> = ({
     watch,
     formState: { errors, isSubmitting }
   } = useForm<EventoFormData>({
-    defaultValues: {
-      nome: '',
-      data_inicio: new Date().toISOString().slice(0, 16),
-      data_fim: '',
-      local: '',
-      descricao: '',
-      status: 'planejado'
-    }
+    defaultValues
   });
 
   React.useEffect(() => {
-    if (evento) {
+    if (evento && open) {
+      // Garantir que todos os valores sejam strings, nunca undefined
       reset({
         nome: evento.nome || '',
         data_inicio: evento.data_inicio || new Date().toISOString().slice(0, 16),
         data_fim: evento.data_fim || '',
         local: evento.local || '',
-        descricao: evento.descricao || '',
+        descricao: evento.descricao || '', // CRÍTICO: nunca undefined
         status: evento.status || 'planejado'
       });
-    } else {
-      reset({
-        nome: '',
-        data_inicio: new Date().toISOString().slice(0, 16),
-        data_fim: '',
-        local: '',
-        descricao: '',
-        status: 'planejado'
-      });
+    } else if (open) {
+      reset(defaultValues);
     }
-  }, [evento, reset]);
+  }, [evento, open, reset]);
 
   const onSubmit = async (data: EventoFormData) => {
     try {
       if (isEditing && evento?.id) {
         await updateEvento(evento.id, data);
       } else {
-        // Ensure required fields are present for creation
-        const eventoData = {
-          nome: data.nome,
-          data_inicio: data.data_inicio,
-          data_fim: data.data_fim || undefined,
-          local: data.local || undefined,
-          descricao: data.descricao || undefined,
-          status: data.status
-        };
-        await createEvento(eventoData);
+        await createEvento(data);
       }
       onClose();
-      reset();
+      reset(defaultValues);
     } catch (error) {
       console.error('Erro ao salvar evento:', error);
     }
@@ -98,7 +86,7 @@ export const EventoFormModal: React.FC<EventoFormModalProps> = ({
 
   const handleClose = () => {
     onClose();
-    reset();
+    reset(defaultValues);
   };
 
   return (
