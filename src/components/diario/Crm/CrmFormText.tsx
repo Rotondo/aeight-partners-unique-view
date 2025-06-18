@@ -51,6 +51,9 @@ export const CrmFormText: React.FC = () => {
     }
   };
 
+  // CORREÇÃO: Filtrar parceiros válidos para evitar IDs vazios
+  const validPartners = partners.filter(partner => partner.id && partner.id.trim() !== '');
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {/* Descrição */}
@@ -97,7 +100,7 @@ export const CrmFormText: React.FC = () => {
         />
       </div>
 
-      {/* Parceiro - CORRIGIDO: Agora só mostra parceiros reais */}
+      {/* Parceiro - CORRIGIDO: Agora só mostra parceiros reais com IDs válidos */}
       <div className="space-y-2">
         <Label>Parceiro (Opcional)</Label>
         <Select value={formData.partner_id} onValueChange={(value) => setFormData({ ...formData, partner_id: value })}>
@@ -106,7 +109,7 @@ export const CrmFormText: React.FC = () => {
           </SelectTrigger>
           <SelectContent className="bg-white border border-gray-300 rounded-md shadow-lg z-50">
             <SelectItem value="none">Nenhum parceiro</SelectItem>
-            {partners.map((partner) => (
+            {validPartners.map((partner) => (
               <SelectItem key={partner.id} value={partner.id}>
                 {partner.nome} {partner.tipo === 'intragrupo' ? '(Intragrupo)' : '(Parceiro)'}
               </SelectItem>

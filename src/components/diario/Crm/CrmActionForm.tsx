@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -86,6 +85,9 @@ export const CrmActionForm: React.FC<CrmActionFormProps> = ({ onSuccess }) => {
     const option = comunicacaoOptions.find(opt => opt.value === formData.communication_method);
     return option?.icon || MessageSquare;
   };
+
+  // CORREÇÃO: Filtrar parceiros válidos para evitar IDs vazios
+  const validPartners = partners.filter(partner => partner.id && partner.id.trim() !== '');
 
   return (
     <Card className="border border-gray-200">
@@ -185,7 +187,7 @@ export const CrmActionForm: React.FC<CrmActionFormProps> = ({ onSuccess }) => {
                 </SelectTrigger>
                 <SelectContent className="bg-white border border-gray-300 rounded-md shadow-lg z-50">
                   <SelectItem value="none">Nenhum parceiro</SelectItem>
-                  {partners.map((partner) => (
+                  {validPartners.map((partner) => (
                     <SelectItem key={partner.id} value={partner.id}>
                       {partner.nome}
                     </SelectItem>
