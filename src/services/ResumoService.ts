@@ -81,12 +81,12 @@ export class ResumoService {
         created_at: new Date().toISOString()
       };
 
-      // 7. Mapear tipo para formato do banco
-      const periodMapping: Record<TipoResumo, string> = {
+      // 7. Mapear tipo para formato do banco com tipos corretos
+      const periodMapping: Record<TipoResumo, "week" | "month" | "quarter"> = {
         'semanal': 'week',
         'mensal': 'month',
         'trimestral': 'quarter'
-      };
+      } as const;
 
       // 8. Salvar no banco (usando a tabela existente)
       const { data: savedResumo, error: saveError } = await supabase
