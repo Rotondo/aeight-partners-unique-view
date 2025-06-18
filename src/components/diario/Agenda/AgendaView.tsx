@@ -10,13 +10,13 @@ export const AgendaView: React.FC = () => {
 
   const eventosHoje = agendaEventos.filter(evento => {
     const hoje = new Date();
-    const eventoData = new Date(evento.data_inicio);
+    const eventoData = new Date(evento.start);
     return hoje.toDateString() === eventoData.toDateString();
   });
 
-  const eventosRealizados = agendaEventos.filter(e => e.status === 'realizado');
-  const eventosAgendados = agendaEventos.filter(e => e.status === 'agendado');
-  const proximosPassos = agendaEventos.filter(e => e.tipo === 'proximo_passo_crm');
+  const eventosRealizados = agendaEventos.filter(e => e.status === 'completed');
+  const eventosAgendados = agendaEventos.filter(e => e.status === 'scheduled');
+  const proximosPassos = agendaEventos.filter(e => e.event_type === 'proximo_passo_crm');
 
   return (
     <div className="space-y-6">

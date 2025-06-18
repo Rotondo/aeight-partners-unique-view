@@ -1,7 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { AgendaEvento } from '@/types/diario';
+import { AgendaEvento, TipoEventoAgenda } from '@/types/diario';
 
 interface AgendaContextType {
   agendaEventos: AgendaEvento[];
@@ -69,7 +69,7 @@ export const AgendaProvider: React.FC<AgendaProviderProps> = ({ children }) => {
         partner_id: evento.partner_id,
         source: evento.source,
         external_id: evento.external_id,
-        event_type: 'manual',
+        event_type: 'outro' as TipoEventoAgenda,
         related_crm_action_id: undefined,
         created_at: evento.created_at,
         updated_at: evento.updated_at
@@ -85,7 +85,7 @@ export const AgendaProvider: React.FC<AgendaProviderProps> = ({ children }) => {
         status: 'scheduled' as const,
         partner_id: acao.partner_id,
         source: 'crm_integration',
-        event_type: 'proximo_passo_crm',
+        event_type: 'proximo_passo_crm' as TipoEventoAgenda,
         related_crm_action_id: acao.id,
         created_at: acao.created_at,
         updated_at: acao.created_at

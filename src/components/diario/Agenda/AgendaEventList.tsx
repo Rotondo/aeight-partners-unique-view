@@ -1,41 +1,43 @@
+
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Edit, Trash2, Clock, MapPin, Users } from 'lucide-react';
 import { useAgenda } from '@/contexts/AgendaContext';
-import { TipoEventoAgenda, StatusEvento } from '@/types/diario';
+import { AgendaEvento } from '@/types/diario';
 
-const getTipoEventoBadge = (tipo: TipoEventoAgenda) => {
+const getTipoEventoBadge = (tipo?: string) => {
   const variants = {
     reuniao: 'default',
     call: 'secondary',
     apresentacao: 'outline',
     follow_up: 'destructive',
-    outro: 'secondary'
+    outro: 'secondary',
+    proximo_passo_crm: 'outline'
   } as const;
 
-  return <Badge variant={variants[tipo] || 'default'}>{tipo}</Badge>;
+  return <Badge variant={variants[tipo as keyof typeof variants] || 'default'}>{tipo || 'evento'}</Badge>;
 };
 
-const getStatusEventoBadge = (status: StatusEvento) => {
-  const variants = {
-    agendado: 'default',
-    realizado: 'secondary',
-    cancelado: 'destructive',
-    reagendado: 'outline'
-  } as const;
+const getStatusEventoBadge = (status: string) => {
+  const statusMap = {
+    scheduled: 'agendado',
+    completed: 'realizado',
+    canceled: 'cancelado',
+    synced: 'sincronizado'
+  };
 
   const colors = {
-    agendado: 'bg-blue-100 text-blue-800',
-    realizado: 'bg-green-100 text-green-800',
-    cancelado: 'bg-red-100 text-red-800',
-    reagendado: 'bg-yellow-100 text-yellow-800'
+    scheduled: 'bg-blue-100 text-blue-800',
+    completed: 'bg-green-100 text-green-800',
+    canceled: 'bg-red-100 text-red-800',
+    synced: 'bg-yellow-100 text-yellow-800'
   };
 
   return (
-    <Badge className={colors[status] || 'bg-gray-100 text-gray-800'}>
-      {status}
+    <Badge className={colors[status as keyof typeof colors] || 'bg-gray-100 text-gray-800'}>
+      {statusMap[status as keyof typeof statusMap] || status}
     </Badge>
   );
 };
@@ -73,22 +75,22 @@ export const AgendaEventList: React.FC = () => {
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-2">
-                  <h4 className="font-semibold text-lg">{evento.titulo}</h4>
-                  {getTipoEventoBadge(evento.tipo)}
+                  <h4 className="font-semibold text-lg">{evento.title}</h4>
+                  {getTipoEventoBadge(evento.event_type)}
                   {getStatusEventoBadge(evento.status)}
                 </div>
                 
-                {evento.descricao && (
-                  <p className="text-muted-foreground mb-3">{evento.descricao}</p>
+                {evento.description && (
+                  <p className="text-muted-foreground mb-3">{evento.description}</p>
                 )}
                 
                 <div className="flex items-center gap-4 text-sm text-muted-foreground">
                   <div className="flex items-center gap-1">
                     <Clock className="h-4 w-4" />
-                    {new Date(evento.data_inicio).toLocaleTimeString('pt-BR', { 
+                    {new Date(evento.start).toLocaleTimeString('pt-BR', { 
                       hour: '2-digit', 
                       minute: '2-digit' 
-                    })} - {new Date(evento.data_fim).toLocaleTimeString('pt-BR', { 
+                    })} - {new Date(evento.end).toLocaleTimeString('pt-BR', { 
                       hour: '2-digit', 
                       minute: '2-digit' 
                     })}
@@ -101,18 +103,12 @@ export const AgendaEventList: React.FC = () => {
                     </div>
                   )}
                   
-                  {evento.fonte_integracao !== 'manual' && (
+                  {evento.source !== 'manual' && (
                     <Badge variant="outline" className="text-xs">
-                      {evento.fonte_integracao}
+                      {evento.source}
                     </Badge>
                   )}
                 </div>
-                
-                {evento.observacoes && (
-                  <div className="mt-3 p-2 bg-muted rounded text-sm">
-                    <strong>Observações:</strong> {evento.observacoes}
-                  </div>
-                )}
               </div>
               
               <div className="flex items-center gap-2">

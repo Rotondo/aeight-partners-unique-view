@@ -1,6 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import type { CrmAcao } from '@/types/diario';
+import type { CrmAcao, MetodoComunicacao, StatusAcaoCrm } from '@/types/diario';
 
 /**
  * Service para operações do CRM
@@ -32,13 +32,14 @@ export class CrmService {
         id: acao.id,
         description: acao.content,
         communication_method: this.mapCommunicationMethod(acao.type),
-        status: this.mapStatus(acao.type),
+        status: this.mapStatus(acao.metadata),
         partner_id: acao.partner_id,
         user_id: acao.user_id,
         content: acao.content,
         next_step_date: acao.next_step_date,
-        next_steps: acao.metadata?.next_steps,
-        metadata: acao.metadata,
+        next_steps: typeof acao.metadata === 'object' && acao.metadata ? 
+          (acao.metadata as any).next_steps : undefined,
+        metadata: typeof acao.metadata === 'object' ? acao.metadata as Record<string, any> : {},
         created_at: acao.created_at,
         parceiro: acao.empresas ? {
           id: acao.empresas.id,
@@ -57,6 +58,14 @@ export class CrmService {
    */
   static async createAcao(acao: Partial<CrmAcao>, userId: string): Promise<CrmAcao | null> {
     try {
+      const metadata = {
+        description: acao.description,
+        communication_method: acao.communication_method,
+        status: acao.status,
+        next_steps: acao.next_steps,
+        ...acao.metadata
+      };
+
       const { data, error } = await supabase
         .from('diario_crm_acoes')
         .insert([{
@@ -66,13 +75,7 @@ export class CrmService {
           partner_id: acao.partner_id,
           user_id: userId,
           next_step_date: acao.next_step_date,
-          metadata: {
-            description: acao.description,
-            communication_method: acao.communication_method,
-            status: acao.status,
-            next_steps: acao.next_steps,
-            ...acao.metadata
-          }
+          metadata: metadata
         }])
         .select()
         .single();
@@ -92,7 +95,7 @@ export class CrmService {
         content: data.content,
         next_step_date: data.next_step_date,
         next_steps: acao.next_steps,
-        metadata: data.metadata,
+        metadata: typeof data.metadata === 'object' ? data.metadata as Record<string, any> : {},
         created_at: data.created_at
       } : null;
     } catch (error) {
@@ -106,12 +109,19 @@ export class CrmService {
    */
   static async updateAcao(id: string, updates: Partial<CrmAcao>): Promise<boolean> {
     try {
+      const currentMetadata = updates.metadata || {};
+      const newMetadata = {
+        ...currentMetadata,
+        status: updates.status,
+        next_steps: updates.next_steps
+      };
+
       const { error } = await supabase
         .from('diario_crm_acoes')
         .update({
           content: updates.content,
           next_step_date: updates.next_step_date,
-          metadata: updates.metadata
+          metadata: newMetadata
         })
         .eq('id', id);
 
@@ -184,7 +194,7 @@ export class CrmService {
     };
   }
 
-  private static mapCommunicationMethod(type: string): any {
+  private static mapCommunicationMethod(type: string): MetodoComunicacao {
     switch (type) {
       case 'audio': return 'ligacao';
       case 'video': return 'reuniao_meet';
@@ -193,7 +203,10 @@ export class CrmService {
     }
   }
 
-  private static mapStatus(type: string): any {
-    return 'pendente'; // Default status
+  private static mapStatus(metadata: any): StatusAcaoCrm {
+    if (typeof metadata === 'object' && metadata?.status) {
+      return metadata.status;
+    }
+    return 'pendente';
   }
 }
