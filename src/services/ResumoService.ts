@@ -19,7 +19,7 @@ export class ResumoService {
       // 1. Contar eventos no período
       const { data: eventos, error: eventosError } = await supabase
         .from('diario_agenda_eventos')
-        .select('id, title, description, status')
+        .select('id, title, description, status, partner_id')
         .gte('start', periodoInicio)
         .lte('start', periodoFim);
 
@@ -81,11 +81,18 @@ export class ResumoService {
         created_at: new Date().toISOString()
       };
 
-      // 7. Salvar no banco (usando a tabela existente)
+      // 7. Mapear tipo para formato do banco
+      const periodMapping: Record<TipoResumo, string> = {
+        'semanal': 'week',
+        'mensal': 'month',
+        'trimestral': 'quarter'
+      };
+
+      // 8. Salvar no banco (usando a tabela existente)
       const { data: savedResumo, error: saveError } = await supabase
         .from('diario_resumos')
         .insert({
-          period: tipo,
+          period: periodMapping[tipo],
           content: JSON.stringify({
             resumo_completo: resumo,
             detalhes_eventos: eventos,
