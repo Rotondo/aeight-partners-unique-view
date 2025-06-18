@@ -174,9 +174,11 @@ export type Database = {
           created_at: string
           description: string | null
           end: string
+          event_type: string | null
           external_id: string | null
           id: string
           partner_id: string | null
+          related_crm_action_id: string | null
           source: string
           start: string
           status: Database["public"]["Enums"]["diario_event_status"]
@@ -187,9 +189,11 @@ export type Database = {
           created_at?: string
           description?: string | null
           end: string
+          event_type?: string | null
           external_id?: string | null
           id?: string
           partner_id?: string | null
+          related_crm_action_id?: string | null
           source: string
           start: string
           status?: Database["public"]["Enums"]["diario_event_status"]
@@ -200,45 +204,73 @@ export type Database = {
           created_at?: string
           description?: string | null
           end?: string
+          event_type?: string | null
           external_id?: string | null
           id?: string
           partner_id?: string | null
+          related_crm_action_id?: string | null
           source?: string
           start?: string
           status?: Database["public"]["Enums"]["diario_event_status"]
           title?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_crm_action"
+            columns: ["related_crm_action_id"]
+            isOneToOne: false
+            referencedRelation: "diario_crm_acoes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       diario_crm_acoes: {
         Row: {
+          communication_method:
+            | Database["public"]["Enums"]["metodo_comunicacao"]
+            | null
           content: string
           created_at: string
+          description: string | null
           id: string
           metadata: Json | null
           next_step_date: string | null
+          next_steps: string | null
           partner_id: string | null
+          status: Database["public"]["Enums"]["status_acao_crm_enum"]
           type: Database["public"]["Enums"]["crm_action_type"]
           user_id: string
         }
         Insert: {
+          communication_method?:
+            | Database["public"]["Enums"]["metodo_comunicacao"]
+            | null
           content: string
           created_at?: string
+          description?: string | null
           id?: string
           metadata?: Json | null
           next_step_date?: string | null
+          next_steps?: string | null
           partner_id?: string | null
+          status?: Database["public"]["Enums"]["status_acao_crm_enum"]
           type: Database["public"]["Enums"]["crm_action_type"]
           user_id: string
         }
         Update: {
+          communication_method?:
+            | Database["public"]["Enums"]["metodo_comunicacao"]
+            | null
           content?: string
           created_at?: string
+          description?: string | null
           id?: string
           metadata?: Json | null
           next_step_date?: string | null
+          next_steps?: string | null
           partner_id?: string | null
+          status?: Database["public"]["Enums"]["status_acao_crm_enum"]
           type?: Database["public"]["Enums"]["crm_action_type"]
           user_id?: string
         }
@@ -1061,6 +1093,12 @@ export type Database = {
       diario_period: "week" | "month" | "quarter"
       fonte_integracao: "manual" | "google" | "outlook"
       ia_suggestion_status: "pending" | "approved" | "rejected" | "edited"
+      metodo_comunicacao:
+        | "whatsapp"
+        | "ligacao"
+        | "email"
+        | "encontro"
+        | "reuniao_meet"
       opportunity_status:
         | "em_contato"
         | "negociando"
@@ -1070,6 +1108,11 @@ export type Database = {
         | "Apresentado"
         | "Sem contato"
       status_acao_crm: "pendente" | "em_andamento" | "concluida" | "cancelada"
+      status_acao_crm_enum:
+        | "pendente"
+        | "em_andamento"
+        | "concluida"
+        | "cancelada"
       status_evento: "agendado" | "realizado" | "cancelado" | "reagendado"
       status_sugestao_ia: "pendente" | "em_revisao" | "aprovada" | "rejeitada"
       tipo_acao_crm: "audio" | "video" | "texto"
@@ -1204,6 +1247,13 @@ export const Constants = {
       diario_period: ["week", "month", "quarter"],
       fonte_integracao: ["manual", "google", "outlook"],
       ia_suggestion_status: ["pending", "approved", "rejected", "edited"],
+      metodo_comunicacao: [
+        "whatsapp",
+        "ligacao",
+        "email",
+        "encontro",
+        "reuniao_meet",
+      ],
       opportunity_status: [
         "em_contato",
         "negociando",
@@ -1214,6 +1264,12 @@ export const Constants = {
         "Sem contato",
       ],
       status_acao_crm: ["pendente", "em_andamento", "concluida", "cancelada"],
+      status_acao_crm_enum: [
+        "pendente",
+        "em_andamento",
+        "concluida",
+        "cancelada",
+      ],
       status_evento: ["agendado", "realizado", "cancelado", "reagendado"],
       status_sugestao_ia: ["pendente", "em_revisao", "aprovada", "rejeitada"],
       tipo_acao_crm: ["audio", "video", "texto"],

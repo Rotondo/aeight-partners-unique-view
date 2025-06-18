@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { AgendaService } from './AgendaService';
 import type { CrmAcao, MetodoComunicacao, StatusAcaoCrm } from '@/types/diario';
@@ -43,14 +44,14 @@ export class CrmService {
 
         return {
           id: acao.id,
-          description: acao.content || '',
-          communication_method: this.mapCommunicationMethod(acao.type),
-          status: this.mapStatus(acao.metadata),
+          description: acao.description || '',
+          communication_method: acao.communication_method,
+          status: acao.status,
           partner_id: acao.partner_id,
           user_id: acao.user_id,
           content: acao.content,
           next_step_date: acao.next_step_date,
-          next_steps: this.extractNextSteps(acao.metadata),
+          next_steps: acao.next_steps,
           metadata: this.safeParseMetadata(acao.metadata),
           created_at: acao.created_at,
           parceiro
@@ -76,22 +77,23 @@ export class CrmService {
       }
 
       const metadata = {
-        description: acao.description,
-        communication_method: acao.communication_method,
-        status: acao.status,
-        next_steps: acao.next_steps,
+        created_via: 'form',
         ...acao.metadata
       };
 
       const { data, error } = await supabase
         .from('diario_crm_acoes')
         .insert([{
+          description: acao.description,
           content: acao.content || '',
+          communication_method: acao.communication_method,
+          status: acao.status || 'pendente',
           type: acao.communication_method === 'ligacao' ? 'audio' : 
                 acao.communication_method === 'reuniao_meet' ? 'video' : 'text',
           partner_id: acao.partner_id,
           user_id: userId,
           next_step_date: acao.next_step_date,
+          next_steps: acao.next_steps,
           metadata: metadata
         }])
         .select()
@@ -115,14 +117,14 @@ export class CrmService {
 
       return data ? {
         id: data.id,
-        description: acao.description || '',
-        communication_method: acao.communication_method || 'email',
-        status: acao.status || 'pendente',
+        description: data.description || '',
+        communication_method: data.communication_method,
+        status: data.status,
         partner_id: data.partner_id,
         user_id: data.user_id,
         content: data.content,
         next_step_date: data.next_step_date,
-        next_steps: acao.next_steps,
+        next_steps: data.next_steps,
         metadata: this.safeParseMetadata(data.metadata),
         created_at: data.created_at
       } : null;
@@ -138,18 +140,17 @@ export class CrmService {
   static async updateAcao(id: string, updates: Partial<CrmAcao>): Promise<boolean> {
     try {
       const currentMetadata = updates.metadata || {};
-      const newMetadata = {
-        ...currentMetadata,
-        status: updates.status,
-        next_steps: updates.next_steps
-      };
 
       const { error } = await supabase
         .from('diario_crm_acoes')
         .update({
+          description: updates.description,
           content: updates.content,
+          communication_method: updates.communication_method,
+          status: updates.status,
           next_step_date: updates.next_step_date,
-          metadata: newMetadata
+          next_steps: updates.next_steps,
+          metadata: currentMetadata
         })
         .eq('id', id);
 
@@ -251,37 +252,6 @@ export class CrmService {
       isValid: errors.length === 0,
       errors
     };
-  }
-
-  /**
-   * Mapa o método de comunicação para o formato do CRM
-   */
-  private static mapCommunicationMethod(type: string): MetodoComunicacao {
-    switch (type) {
-      case 'audio': return 'ligacao';
-      case 'video': return 'reuniao_meet';
-      case 'text': return 'email';
-      default: return 'email';
-    }
-  }
-
-  /**
-   * Mapa o status da ação para o formato do CRM
-   */
-  private static mapStatus(metadata: any): StatusAcaoCrm {
-    const parsedMetadata = this.safeParseMetadata(metadata);
-    if (parsedMetadata?.status) {
-      return parsedMetadata.status;
-    }
-    return 'pendente';
-  }
-
-  /**
-   * Extrai os próximos passos da ação
-   */
-  private static extractNextSteps(metadata: any): string | undefined {
-    const parsedMetadata = this.safeParseMetadata(metadata);
-    return parsedMetadata?.next_steps;
   }
 
   /**
