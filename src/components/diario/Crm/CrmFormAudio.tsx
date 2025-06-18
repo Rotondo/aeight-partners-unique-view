@@ -21,7 +21,7 @@ export const CrmFormAudio: React.FC = () => {
     description: '',
     content: '',
     communication_method: 'ligacao' as MetodoComunicacao,
-    partner_id: '',
+    partner_id: 'none',
     status: 'pendente' as StatusAcaoCrm,
     next_steps: ''
   });
@@ -93,7 +93,7 @@ export const CrmFormAudio: React.FC = () => {
         content: formData.content,
         communication_method: formData.communication_method,
         status: formData.status,
-        partner_id: formData.partner_id || undefined,
+        partner_id: formData.partner_id === 'none' ? undefined : formData.partner_id,
         next_steps: formData.next_steps || undefined,
         // arquivo_audio: 'path/to/uploaded/audio.wav' // TODO: Implementar upload
       });
@@ -103,7 +103,7 @@ export const CrmFormAudio: React.FC = () => {
         description: '',
         content: '',
         communication_method: 'ligacao',
-        partner_id: '',
+        partner_id: 'none',
         status: 'pendente',
         next_steps: ''
       });
@@ -202,6 +202,7 @@ export const CrmFormAudio: React.FC = () => {
             <SelectValue placeholder="Selecione um parceiro" />
           </SelectTrigger>
           <SelectContent>
+            <SelectItem value="none">Nenhum parceiro</SelectItem>
             {partners.map((partner) => (
               <SelectItem key={partner.id} value={partner.id}>
                 {partner.nome}
