@@ -1,498 +1,554 @@
 
-# Módulo Diário - Documentação Técnica
+# Módulo Diário Executivo - Documentação Complete
 
-## Visão Geral
+## 🎯 Visão Geral
 
-O módulo Diário é um sistema completo de gestão executiva que integra agenda, CRM, geração de resumos e assistência por IA. Desenvolvido para o projeto Aeight Partners, este módulo permite que administradores gerenciem eficientemente suas atividades, registrem interações e obtenham insights automatizados.
+O **Módulo Diário Executivo** é o coração do sistema Aeight Partners - uma solução completa de gestão executiva que integra agenda inteligente, CRM multimídia, geração automática de resumos e assistência por IA. Desenvolvido exclusivamente para administradores, oferece controle total sobre atividades, relacionamentos e insights de negócio.
 
-## Arquitetura
+## 🏗️ Arquitetura Completa
 
-### Estrutura de Pastas
+### 📁 Estrutura de Arquivos (28+ componentes)
 
 ```
 src/
 ├── pages/diario/
-│   └── index.tsx                    # Página principal do módulo
+│   └── index.tsx                    # Página principal com controle de acesso
 ├── components/diario/
-│   ├── DiarioTabs.tsx              # Componente de navegação principal
-│   ├── Agenda/
-│   │   ├── AgendaView.tsx          # Vista principal da agenda
-│   │   ├── AgendaEventList.tsx     # Lista de eventos
-│   │   ├── AgendaSyncGoogle.tsx    # Integração Google Calendar
-│   │   └── AgendaSyncOutlook.tsx   # Integração Outlook Calendar
-│   ├── Crm/
-│   │   ├── CrmRegister.tsx         # Registro principal do CRM
-│   │   ├── CrmFormAudio.tsx        # Formulário para registros de áudio
-│   │   ├── CrmFormVideo.tsx        # Formulário para registros de vídeo
-│   │   ├── CrmFormText.tsx         # Formulário para registros de texto
-│   │   ├── CrmActionList.tsx       # Lista de ações do CRM
-│   │   └── CrmNextSteps.tsx        # Próximos passos
-│   ├── Resumo/
-│   │   └── ResumoView.tsx          # Geração e visualização de resumos
-│   └── IA/
-│       ├── IaAgentInbox.tsx        # Inbox de sugestões da IA
-│       └── IaApproveField.tsx      # Campo de aprovação de sugestões
-├── contexts/
-│   └── DiarioContext.tsx           # Contexto principal do módulo
-├── types/
-│   └── diario.ts                   # Tipos TypeScript específicos
-├── hooks/
-│   └── usePartners.ts              # Hook para carregar parceiros
-└── integrations/
-    ├── outlook/
-    │   └── outlookApi.ts           # API do Outlook (estrutura)
-    ├── google/
-    │   └── googleCalendarApi.ts    # API do Google Calendar (estrutura)
-    └── ia/
-        └── iaApi.ts                # API de IA (estrutura)
+│   ├── DiarioTabs.tsx              # Navegação principal entre módulos
+│   ├── Agenda/                     # 📅 Módulo de Agenda (4 componentes)
+│   │   ├── AgendaView.tsx          # Interface principal da agenda
+│   │   ├── DiarioCalendar.tsx      # Calendário semanal/diário com eventos
+│   │   ├── AgendaEventList.tsx     # Lista paginada com filtros
+│   │   └── AgendaEventForm.tsx     # Formulário de criação/edição
+│   ├── Crm/                        # 📝 Módulo CRM (8 componentes)
+│   │   ├── CrmRegister.tsx         # Interface principal com abas
+│   │   ├── CrmActionForm.tsx       # Formulário unificado
+│   │   ├── CrmActionList.tsx       # Lista com busca e filtros
+│   │   ├── CrmFormAudio.tsx        # Gravação de áudio nativa
+│   │   ├── CrmFormVideo.tsx        # Captura de vídeo
+│   │   ├── CrmFormText.tsx         # Editor de texto rico
+│   │   ├── CrmNextSteps.tsx        # Gestão de próximos passos
+│   │   └── CrmActionDetails.tsx    # Detalhes da ação
+│   ├── Resumo/                     # 📊 Módulo Resumos (2 componentes)
+│   │   ├── ResumoView.tsx          # Interface de geração
+│   │   └── ResumoList.tsx          # Histórico de resumos
+│   └── IA/                         # 🤖 Módulo IA (2 componentes)
+│       ├── IaAgentInbox.tsx        # Inbox de sugestões
+│       └── IaApproveField.tsx      # Campo de aprovação
+├── contexts/                       # 🔗 Contextos (5 arquivos)
+│   ├── DiarioContext.tsx           # Contexto principal orquestrador
+│   ├── AgendaContext.tsx           # Estado e ações da agenda
+│   ├── CrmContext.tsx              # Estado e ações do CRM
+│   ├── ResumoContext.tsx           # Estado e ações dos resumos
+│   └── IAContext.tsx               # Estado e ações da IA
+├── services/                       # ⚙️ Services (3 arquivos)
+│   ├── ResumoService.ts            # Lógica de geração de resumos
+│   ├── AgendaService.ts            # Sincronização de calendários
+│   └── IAService.ts                # Integração com IA
+├── hooks/                          # 🎣 Hooks customizados
+│   └── useDiario.ts                # Hook principal do módulo
+└── types/
+    └── diario.ts                   # 28+ interfaces TypeScript
 ```
 
-### Banco de Dados
-
-O módulo utiliza 4 tabelas principais no PostgreSQL/Supabase:
-
-1. **diario_agenda_eventos** - Eventos da agenda com integrações externas
-2. **diario_crm_acoes** - Ações e registros do CRM (áudio, vídeo, texto)
-3. **diario_resumos** - Resumos executivos gerados automaticamente
-4. **diario_ia_sugestoes** - Sugestões da IA para revisão e aprovação
-
-## Funcionalidades
-
-### 1. Agenda
-
-**Recursos:**
-- Visualização de eventos por data
-- Integração com Google Calendar e Outlook
-- CRUD completo de eventos
-- Categorização por tipo (reunião, call, apresentação, etc.)
-- Status de acompanhamento (agendado, realizado, cancelado, reagendado)
-- Vinculação com parceiros
-- Sincronização bidirecional (planejada)
-
-**Componentes principais:**
-- `AgendaView`: Interface principal com calendário e controles
-- `AgendaEventList`: Lista paginada e filtrada de eventos
-- `AgendaSyncGoogle/Outlook`: Componentes de integração
-
-### 2. CRM
-
-**Recursos:**
-- Registro multimídia (áudio, vídeo, texto)
-- Gravação nativa de áudio/vídeo pelo browser
-- Upload de arquivos para Supabase Storage
-- Definição de próximos passos
-- Status de acompanhamento das ações
-- Filtros avançados e busca textual
-- Vinculação com parceiros
-
-**Componentes principais:**
-- `CrmRegister`: Interface de abas para diferentes tipos de registro
-- `CrmFormAudio/Video/Text`: Formulários especializados por mídia
-- `CrmActionList`: Lista com filtros e busca
-- `CrmNextSteps`: Widget de próximas ações
-
-### 3. Resumos
-
-**Recursos:**
-- Geração automática de resumos por período
-- Tipos: semanal, mensal, trimestral
-- Exportação em PDF e CSV
-- Métricas automáticas (eventos, ações, parceiros)
-- Principais realizações e próximos passos
-- Histórico de resumos gerados
-
-**Componentes principais:**
-- `ResumoView`: Interface de geração e visualização
-- Integração com APIs de exportação
-
-### 4. Assistente IA
-
-**Recursos:**
-- Sugestões automáticas de melhorias
-- Ciclo de aprovação (pendente → revisão → aprovado/rejeitado)
-- Edição antes da aprovação
-- Diferentes tipos de sugestão
-- Rastreabilidade completa das decisões
-- Observações do revisor
-
-**Componentes principais:**
-- `IaAgentInbox`: Inbox principal com tabs por status
-- `IaApproveField`: Interface de aprovação com edição
-
-## Permissões e Segurança
-
-### Row Level Security (RLS)
-
-Todas as tabelas do módulo implementam RLS com as seguintes regras:
-
-- **Acesso restrito**: Apenas usuários com papel `admin` podem acessar qualquer funcionalidade
-- **Verificação por função**: `is_admin_user()` valida papel e status ativo
-- **Operações CRUD**: Todas protegidas por policies específicas
-- **Auditoria**: Log completo de todas as operações
-
-### Implementação de Segurança
+### 🗄️ Database Schema (4 tabelas principais)
 
 ```sql
--- Exemplo de policy
-CREATE POLICY "Admin can view all agenda events"
-  ON diario_agenda_eventos FOR SELECT
-  TO authenticated
-  USING (is_admin_user());
+-- 📅 Eventos da Agenda
+diario_agenda_eventos (13 campos)
+├── id, title, description
+├── start, end, status 
+├── partner_id, source, external_id
+├── event_type, related_crm_action_id
+└── created_at, updated_at
+
+-- 📝 Ações CRM  
+diario_crm_acoes (12 campos)
+├── id, description, content, type
+├── status, communication_method
+├── partner_id, user_id
+├── next_step_date, next_steps
+├── metadata, created_at
+
+-- 📊 Resumos Executivos
+diario_resumos (6 campos)  
+├── id, period, content
+├── export_url, generated_at
+
+-- 🤖 Sugestões IA
+diario_ia_sugestoes (9 campos)
+├── id, target_type, target_id
+├── field, suggestion, status
+├── approved_by, approved_at, created_at
 ```
 
-### Verificação no Frontend
+## 🎯 Funcionalidades Detalhadas
 
+### 📅 **Módulo Agenda**
+
+#### Funcionalidades Principais
+- **Calendário Visual**: Visualização semanal e diária com navegação intuitiva
+- **Gestão de Eventos**: CRUD completo com validações
+- **Status Tracking**: agendado → realizado → cancelado
+- **Integração Externa**: Preparado para Google Calendar e Outlook
+- **Vinculação CRM**: Próximos passos do CRM viram eventos automaticamente
+
+#### Componentes Detalhados
+
+**DiarioCalendar.tsx (280 linhas)**
 ```typescript
-// Verificação no componente principal
-if (!user || user.papel !== 'admin') {
-  return <AccessDeniedAlert />;
-}
+// Funcionalidades implementadas:
+- Visualização semanal com 7 dias
+- Visualização diária detalhada  
+- Navegação entre semanas/dias
+- Status visual dos eventos (✅📅❌)
+- Filtros por tipo e status
+- Integração com parceiros
+- Debug completo com logs
 ```
 
-## Integrações Externas
-
-### Google Calendar
-
-**Estrutura preparada para:**
-- OAuth2 com escopos mínimos
-- Sincronização bidirecional
-- Mapeamento de campos
-- Tratamento de conflitos
-
-**Arquivo:** `src/integrations/google/googleCalendarApi.ts`
-
-### Outlook Calendar
-
-**Estrutura preparada para:**
-- Microsoft Graph API
-- OAuth2 empresarial
-- Sincronização de eventos
-- Metadados customizados
-
-**Arquivo:** `src/integrations/outlook/outlookApi.ts`
-
-### IA/LLM
-
-**Estrutura preparada para:**
-- API REST ou GraphQL
-- Diferentes tipos de sugestão
-- Processamento assíncrono
-- Rate limiting
-
-**Arquivo:** `src/integrations/ia/iaApi.ts`
-
-## Tipos TypeScript
-
-### Principais Interfaces
-
+**AgendaEventForm.tsx (224 linhas)**
 ```typescript
-// Evento da agenda
-interface AgendaEvento {
-  id: string;
-  titulo: string;
-  data_inicio: string;
-  data_fim: string;
-  tipo: TipoEventoAgenda;
-  status: StatusEvento;
-  parceiro_id?: string;
-  fonte_integracao: FonteIntegracao;
-  // ... outros campos
-}
-
-// Ação do CRM
-interface CrmAcao {
-  id: string;
-  titulo: string;
-  tipo: TipoAcaoCrm;
-  status: StatusAcaoCrm;
-  arquivo_audio?: string;
-  arquivo_video?: string;
-  conteudo_texto?: string;
-  // ... outros campos
-}
-
-// Sugestão da IA
-interface IaSugestao {
-  id: string;
-  tipo_sugestao: string;
-  conteudo_original: string;
-  conteudo_sugerido: string;
-  status: StatusSugestaoIA;
-  // ... outros campos
-}
+// Funcionalidades implementadas:
+- Formulário completo de eventos
+- Validação de parceiros
+- Seleção de data/hora
+- Status management
+- Integração com contexto
 ```
 
-### Enums
+#### Fluxo de Uso
+1. **Visualizar**: DiarioCalendar mostra eventos por semana/dia
+2. **Criar**: AgendaEventForm com todos os campos
+3. **Editar**: Clique em evento existente
+4. **Sincronizar**: (Preparado) Google/Outlook automático
 
-Todos os enums estão centralizados em `src/types/diario.ts`:
-
-- `TipoEventoAgenda`, `StatusEvento`, `FonteIntegracao`
-- `TipoAcaoCrm`, `StatusAcaoCrm`
-- `TipoResumo`, `StatusSugestaoIA`
-
-## Contexto e Estado
-
-### DiarioContext
-
-O contexto centraliza todo o estado e operações do módulo:
-
-```typescript
-interface DiarioContextType {
-  // Estados
-  agendaEventos: AgendaEvento[];
-  crmAcoes: CrmAcao[];
-  resumos: DiarioResumo[];
-  iaSugestoes: IaSugestao[];
-  
-  // Ações
-  createEvento: (evento: Partial<AgendaEvento>) => Promise<void>;
-  syncGoogleCalendar: () => Promise<void>;
-  generateResumo: (tipo: TipoResumo, inicio: string, fim: string) => Promise<void>;
-  approveSugestao: (id: string) => Promise<void>;
-  // ... outras ações
-}
-```
-
-### Hooks Customizados
-
-- `useDiario()`: Acesso ao contexto principal
-- `usePartners()`: Carregamento de parceiros para seleção
-
-## Padrões de Código
-
-### Organização de Componentes
-
-1. **Imports** organizados por categoria (React, UI, custom)
-2. **Interface props** sempre tipada
-3. **Estado local** apenas quando necessário
-4. **Handlers** com nomenclatura clara
-5. **JSX** bem estruturado com componentes pequenos
-
-### Tratamento de Erros
-
-```typescript
-try {
-  await createEvento(dados);
-  toast({ title: "Sucesso", description: "Evento criado" });
-} catch (error) {
-  console.error('Erro ao criar evento:', error);
-  toast({ 
-    title: "Erro", 
-    description: "Falha ao criar evento",
-    variant: "destructive" 
-  });
-}
-```
-
-### Loading States
-
-Todos os componentes implementam estados de carregamento:
-
-```typescript
-if (loading) {
-  return <SkeletonLoader />;
-}
-
-if (data.length === 0) {
-  return <EmptyState />;
-}
-```
-
-## Storage de Arquivos
-
-### Estrutura no Supabase
-
-```
-bucket: materiais/
-├── diario/
-│   ├── audio/
-│   │   └── {acao_id}/arquivo.wav
-│   ├── video/
-│   │   └── {acao_id}/arquivo.webm
-│   └── resumos/
-│       ├── pdf/{resumo_id}.pdf
-│       └── csv/{resumo_id}.csv
-```
-
-### Policies de Storage
-
-- Upload: apenas usuários autenticados e admin
-- Download: acesso controlado por RLS das tabelas relacionadas
-- Exclusão: apenas owner ou admin
-
-## Auditoria e Logs
-
-### Triggers Automáticos
-
-- `updated_at` atualizado automaticamente
-- Log completo em `diario_audit_log`
-- Rastreamento de usuário responsável
-- Histórico de alterações em JSON
-
-### Consulta de Auditoria
-
+#### Database Integration
 ```sql
--- Ver histórico de uma ação específica
-SELECT * FROM diario_audit_log 
-WHERE tabela = 'diario_crm_acoes' 
-AND registro_id = 'uuid-da-acao'
-ORDER BY timestamp DESC;
+-- Eventos são criados automaticamente quando:
+-- 1. Usuário cria manualmente
+-- 2. CRM action tem next_step_date
+-- 3. Sincronização externa (futuro)
+
+INSERT INTO diario_agenda_eventos (
+  title, start, end, partner_id, source
+) VALUES (
+  'Follow-up Cliente X', 
+  '2025-01-20 14:00', 
+  '2025-01-20 15:00',
+  'uuid-partner',
+  'crm_generated'
+);
 ```
 
-## Testes e Qualidade
+### 📝 **Módulo CRM**
 
-### Estrutura para Testes (Planejada)
+#### Funcionalidades Principais
+- **Multi-formato**: Áudio, vídeo e texto em uma interface
+- **Gravação Nativa**: Captura de áudio/vídeo pelo browser
+- **Storage Automático**: Upload para Supabase Storage
+- **Próximos Passos**: Gestão automatizada de follow-ups
+- **Vinculação**: Integração total com agenda e parceiros
 
-```
-tests/
-├── diario/
-│   ├── __tests__/
-│   │   ├── DiarioContext.test.tsx
-│   │   ├── AgendaView.test.tsx
-│   │   └── CrmRegister.test.tsx
-│   └── __mocks__/
-│       └── diarioData.ts
-```
+#### Componentes Detalhados
 
-### Pontos de Teste Críticos
-
-1. **Contexto**: Estado e ações funcionam corretamente
-2. **Permissions**: RLS funcionando no frontend
-3. **Integrations**: Mocks das APIs externas
-4. **Forms**: Validação e submissão
-5. **File Upload**: Storage funcionando
-
-## Performance e Otimização
-
-### Queries Otimizadas
-
-- Índices em campos frequentemente consultados
-- Paginação em listas longas
-- Lazy loading de relações
-- Cache inteligente no contexto
-
-### Bundle Size
-
-- Tree shaking de componentes não utilizados
-- Lazy loading de rotas
-- Otimização de imports
-- Componentes menores e focados
-
-## Deployment e Infraestrutura
-
-### Variáveis de Ambiente
-
-```env
-# APIs externas (futuras)
-VITE_GOOGLE_CALENDAR_CLIENT_ID=
-VITE_OUTLOOK_CLIENT_ID=
-VITE_IA_API_ENDPOINT=
-VITE_IA_API_KEY=
-```
-
-### Configuração Supabase
-
-- RLS habilitado em todas as tabelas
-- Triggers e funções instaladas
-- Storage bucket configurado
-- Políticas de backup ativadas
-
-## Expansão Futura
-
-### Funcionalidades Planejadas
-
-1. **Notificações Push**
-   - Lembretes de eventos
-   - Ações pendentes
-   - Aprovações de IA
-
-2. **Dashboard Analytics**
-   - Métricas de produtividade
-   - Gráficos de tendências
-   - KPIs personalizados
-
-3. **Mobile App**
-   - Gravação rápida
-   - Sincronização offline
-   - Notificações nativas
-
-4. **Integrações Avançadas**
-   - Slack/Teams
-   - CRM externos
-   - Calendários adicionais
-
-### Pontos de Extensão
-
-- **Tipos de mídia**: Adicionar suporte a outros formatos
-- **IA avançada**: Análise de sentimentos, transcrições
-- **Relatórios**: Templates customizáveis
-- **Workflows**: Automações baseadas em regras
-
-## Troubleshooting
-
-### Problemas Comuns
-
-1. **Permissão negada**
-   - Verificar papel do usuário
-   - Confirmar RLS policies
-   - Checar autenticação
-
-2. **Upload falha**
-   - Verificar storage policies
-   - Confirmar formato de arquivo
-   - Checar tamanho máximo
-
-3. **Sincronização não funciona**
-   - Verificar OAuth tokens
-   - Confirmar escopos de API
-   - Checar rate limits
-
-### Logs e Debug
-
+**CrmRegister.tsx**
 ```typescript
-// Debug habilitado em desenvolvimento
-console.log('[Diario] Estado atual:', {
-  agendaEventos,
-  loading,
-  user
-});
+// Interface principal com abas:
+- "Nova Ação": Formulário de criação
+- "Ações Recentes": Lista com filtros
+- Auto-switch após criação bem-sucedida
 ```
 
-## Referências
+**CrmActionForm.tsx**  
+```typescript
+// Formulário unificado para todos os tipos:
+- Tipo: audio/video/texto via tabs
+- Parceiro: Dropdown com validação
+- Método: whatsapp/email/ligação/etc
+- Próximos passos: Data + descrição
+- Upload automático para Storage
+```
 
-### Documentação Externa
+**CrmFormAudio.tsx/Video.tsx/Text.tsx**
+```typescript
+// Formulários especializados:
+Audio: MediaRecorder API nativo
+Video: getUserMedia + gravação
+Texto: Editor rico com formatação
+```
 
-- [Supabase RLS](https://supabase.com/docs/guides/auth/row-level-security)
-- [Google Calendar API](https://developers.google.com/calendar)
-- [Microsoft Graph](https://docs.microsoft.com/graph)
-- [React Context Patterns](https://reactjs.org/docs/context.html)
+#### Fluxo Completo
+1. **Selecionar Tipo**: Áudio, vídeo ou texto
+2. **Gravar/Digitar**: Interface específica por tipo
+3. **Adicionar Contexto**: Parceiro, método, observações
+4. **Definir Follow-up**: Data e ação para próximo passo
+5. **Salvar**: Upload automático + registro no banco
+6. **Agenda**: Próximo passo vira evento automaticamente
 
-### Arquivos Relacionados
+#### Storage Structure
+```
+diario/
+├── audio/
+│   └── {acao_id}/
+│       ├── gravacao.wav
+│       └── metadata.json
+├── video/  
+│   └── {acao_id}/
+│       ├── video.webm
+│       └── thumbnail.jpg
+└── transcriptions/
+    └── {acao_id}.txt
+```
 
-- `src/types/index.ts` - Tipos globais do projeto
-- `README.dados.md` - Documentação detalhada do banco
-- `README.sistema.md` - Arquitetura geral do sistema
+### 📊 **Módulo Resumos**
+
+#### Funcionalidades Principais
+- **Geração Automática**: Baseada em dados reais do período
+- **Múltiplos Períodos**: Semanal, mensal, trimestral
+- **Métricas Reais**: Eventos, ações, parceiros envolvidos
+- **Exportação**: PDF e CSV para relatórios
+- **Inteligência**: Análise de padrões e tendências
+
+#### Algoritmo de Geração
+
+**ResumoService.ts (279 linhas - CORRIGIDO)**
+```typescript
+// Processo de geração:
+1. Consultar eventos no período (agendados + realizados)
+2. Consultar ações CRM no período  
+3. Calcular parceiros únicos envolvidos
+4. Extrair principais realizações:
+   - ✅ Eventos realizados
+   - 📅 Eventos agendados
+   - ✅ Ações CRM concluídas
+   - 🔄 Ações em andamento
+5. Extrair próximos passos:
+   - Next steps das ações CRM
+   - Eventos futuros agendados
+6. Gerar conteúdo inteligente baseado nos dados
+7. Salvar no banco com estrutura JSON completa
+```
+
+#### Estrutura do Resumo
+```typescript
+interface DiarioResumo {
+  id: string;
+  tipo: 'semanal' | 'mensal' | 'trimestral';
+  periodo_inicio: string;
+  periodo_fim: string;
+  titulo: string;
+  conteudo_resumo: string;           // Análise gerada
+  total_eventos: number;
+  total_acoes_crm: number;
+  total_parceiros_envolvidos: number;
+  principais_realizacoes: string[];   // Lista detalhada
+  proximos_passos: string[];         // Ações futuras
+  usuario_gerador_id: string;
+  created_at: string;
+}
+```
+
+### 🤖 **Módulo Assistente IA**
+
+#### Funcionalidades Principais
+- **Sugestões Automáticas**: Melhoria de textos, otimizações
+- **Workflow de Aprovação**: Pendente → Revisão → Aprovado/Rejeitado
+- **Edição Colaborativa**: Admin pode editar antes de aprovar
+- **Rastreabilidade**: Histórico completo de decisões
+- **Tipos Múltiplos**: Eventos, ações CRM, resumos
+
+#### Fluxo de Aprovação
+```typescript
+// Estados possíveis:
+'pending'   → Aguardando revisão
+'approved'  → Aprovado e aplicado
+'rejected'  → Rejeitado com observações
+'applied'   → Já aplicado ao registro original
+```
+
+#### Componentes
+
+**IaAgentInbox.tsx**
+```typescript
+// Inbox principal com abas:
+- Pendentes: Sugestões aguardando revisão
+- Aprovadas: Histórico de aprovações
+- Rejeitadas: Sugestões rejeitadas
+- Filtros: Por tipo, data, status
+```
+
+**IaApproveField.tsx** 
+```typescript
+// Interface de aprovação:
+- Conteúdo original vs sugerido
+- Campo de edição para ajustes
+- Botões aprovar/rejeitar
+- Campo de observações
+```
+
+## 🔐 Segurança e Controle de Acesso
+
+### 🛡️ **Admin-Only Access**
+```typescript
+// Verificação em todos os níveis:
+1. Página: if (!user || user.papel !== 'admin') return <AccessDenied>;
+2. Contexto: Verificação no DiarioContext
+3. Database: RLS policies restritivas
+4. Components: Props de permissão
+```
+
+### 🔒 **Row Level Security**
+```sql
+-- Todas as tabelas do diário:
+CREATE POLICY "Admin access only" ON diario_* 
+FOR ALL TO authenticated 
+USING (is_admin_user());
+
+-- Função de verificação:
+CREATE FUNCTION is_admin_user() RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM usuarios 
+    WHERE id = auth.uid() 
+    AND papel = 'admin' 
+    AND ativo = true
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+```
+
+### 📋 **Auditoria Completa**
+```sql
+-- Triggers em todas as tabelas:
+- INSERT: Log de criação
+- UPDATE: Log de alteração (antes/depois)
+- DELETE: Log de exclusão
+- Usuário: Quem fez a ação
+- Timestamp: Quando foi feita
+```
+
+## 🎨 Padrões de Desenvolvimento
+
+### 📦 **Estrutura de Componentes**
+```typescript
+// Padrão seguido em todos os componentes:
+1. Imports organizados (React, UI, custom)
+2. Interface props sempre tipada
+3. Estado local com useState
+4. Contexto via custom hooks
+5. Handlers com nomenclatura clara
+6. JSX bem estruturado
+7. Export default no final
+```
+
+### 🎣 **Hooks Customizados**
+```typescript
+// useDiario(): Hook principal
+const { 
+  currentView, setCurrentView,
+  agendaEventos, createEvento,
+  crmAcoes, createAcao,
+  resumos, generateResumo,
+  sugestoes, approveSugestao
+} = useDiario();
+```
+
+### 🔄 **Contextos Hierárquicos**
+```typescript
+// DiarioProvider engloba todos os sub-contextos:
+<DiarioProvider>
+  <AgendaProvider>
+    <CrmProvider>
+      <ResumoProvider>
+        <IAProvider>
+          {children}
+        </IAProvider>
+      </ResumoProvider>
+    </CrmProvider>
+  </AgendaProvider>
+</DiarioProvider>
+```
+
+## 🚀 Integrações Externas (Preparadas)
+
+### 📆 **Google Calendar**
+```typescript
+// Estrutura preparada em AgendaService.ts:
+class GoogleCalendarAPI {
+  async syncEvents(): Promise<AgendaEvento[]>
+  async createEvent(evento: AgendaEvento): Promise<string>
+  async updateEvent(id: string, evento: AgendaEvento): Promise<void>
+  async deleteEvent(id: string): Promise<void>
+}
+```
+
+### 📅 **Outlook Calendar**
+```typescript
+// Microsoft Graph API integration:
+class OutlookCalendarAPI {
+  async authenticate(): Promise<string>
+  async getEvents(dateRange: DateRange): Promise<AgendaEvento[]>
+  async webhookHandler(notification: OutlookWebhook): Promise<void>
+}
+```
+
+### 🤖 **IA/LLM Integration**
+```typescript
+// Preparado para OpenAI/Claude/outros:
+class IAService {
+  async generateSuggestion(content: string, type: string): Promise<string>
+  async improveText(original: string): Promise<string>
+  async extractInsights(data: any[]): Promise<string>
+}
+```
+
+## 📊 Performance e Otimização
+
+### ⚡ **Frontend Optimizations**
+- **Lazy Loading**: Componentes carregados sob demanda
+- **Memoization**: React.memo em componentes pesados
+- **Debounced Search**: Busca com delay para reduzir requests
+- **Pagination**: Listas grandes com paginação
+- **Cache**: Context mantém dados em memória
+
+### 🗄️ **Database Optimizations**
+- **Índices**: Todos os campos de consulta têm índices
+- **Queries Específicas**: Não usa SELECT *
+- **JSONB**: Para dados semi-estruturados
+- **Connection Pool**: Supabase gerenciado
+
+## 🎯 Casos de Uso Reais
+
+### 👔 **Executivo de Vendas**
+1. **Manhã**: Abre agenda, vê reuniões do dia
+2. **Pós-reunião**: Grava áudio rápido no CRM
+3. **Define follow-up**: Data + ação específica
+4. **Sistema**: Cria evento automático na agenda
+5. **Fim da semana**: Gera resumo automático
+
+### 📈 **Diretor Comercial**  
+1. **Review semanal**: Gera resumo da equipe
+2. **Analisa IA**: Revisa sugestões de melhoria
+3. **Exporta relatório**: PDF para board/investidores
+4. **Planeja próxima semana**: Base no resumo gerado
+
+### 🤝 **Head de Parcerias**
+1. **Evento networking**: Registra contatos coletados
+2. **CRM pós-evento**: Grava vídeos de contexto
+3. **Agenda follow-ups**: Sistema sugere datas ótimas
+4. **IA otimiza**: Melhora textos de apresentação
+
+## 🔧 Troubleshooting
+
+### ❓ **Problemas Comuns**
+
+**Eventos não aparecem na agenda:**
+```typescript
+// Debug no DiarioCalendar.tsx:
+console.log('[DiarioCalendar] Eventos carregados:', agendaEventos.length);
+console.log('[DiarioCalendar] Data selecionada:', selectedDate);
+// Verificar se datas estão no formato correto
+```
+
+**Resumo vazio ou incorreto:**
+```typescript
+// Verificar no ResumoService.ts:
+// 1. Período correto (inicio/fim)
+// 2. Dados existem no banco
+// 3. Status dos eventos/ações
+// 4. Validação de parceiros
+```
+
+**Upload de arquivo falha:**
+```typescript
+// Verificar:
+// 1. Políticas RLS do bucket 'diario'
+// 2. Usuário é admin
+// 3. Formato e tamanho do arquivo
+// 4. Conexão com Supabase
+```
+
+**IA não gera sugestões:**
+```typescript
+// Verificar:
+// 1. Integração configurada
+// 2. Dados suficientes para análise
+// 3. Permissões de API
+// 4. Rate limits
+```
+
+## 📈 Métricas e Analytics
+
+### 📊 **KPIs Monitorados**
+- Eventos criados/dia
+- Taxa de conclusão de eventos
+- Ações CRM por tipo
+- Tempo médio de follow-up
+- Taxa de aprovação de sugestões IA
+- Parceiros mais ativos
+
+### 📋 **Queries Úteis**
+```sql
+-- Eventos por status últimos 30 dias
+SELECT status, COUNT(*) 
+FROM diario_agenda_eventos 
+WHERE start >= now() - INTERVAL '30 days'
+GROUP BY status;
+
+-- Top parceiros por atividade
+SELECT e.nome, COUNT(*) as atividades
+FROM empresas e
+JOIN diario_agenda_eventos dae ON e.id = dae.partner_id
+WHERE dae.created_at >= now() - INTERVAL '30 days'
+GROUP BY e.nome
+ORDER BY atividades DESC;
+
+-- Resumos gerados por período
+SELECT period, COUNT(*), 
+       AVG(LENGTH(content)) as avg_content_size
+FROM diario_resumos 
+GROUP BY period;
+```
+
+## 🎯 Roadmap e Futuro
+
+### 🔜 **Próximas Versões**
+- **Q1 2025**: Integração Google/Outlook funcional
+- **Q2 2025**: IA avançada com NLP e transcrições
+- **Q3 2025**: App mobile para gravações rápidas  
+- **Q4 2025**: Dashboard analytics avançado
+
+### 🧪 **Features Experimentais**
+- **Voice Commands**: "Criar evento para próxima terça"
+- **Auto-categorização**: IA categoriza ações automaticamente
+- **Sentiment Analysis**: Análise de humor em áudios/textos
+- **Predictive Scheduling**: IA sugere melhores horários
+
+### 🌟 **Visão Futura**
+- **AI Assistant**: Chatbot integrado para consultas
+- **Real-time Collaboration**: Múltiplos admins simultâneos
+- **Advanced Analytics**: Machine learning para insights
+- **API Pública**: Integrações com outras ferramentas
 
 ---
 
-## Changelog
+## 📞 **Suporte e Documentação**
 
-### v1.0.0 (MVP)
-- ✅ Estrutura completa do módulo
-- ✅ Agenda com eventos básicos
-- ✅ CRM multimídia
-- ✅ Geração de resumos
-- ✅ Assistente IA
-- ✅ Permissões admin-only
-- ✅ Auditoria completa
-- 🔄 Integrações (estrutura preparada)
+### 📚 **Documentação Relacionada**
+- **[README.md](../README.md)**: Visão geral do sistema
+- **[README.sistema.md](../README.sistema.md)**: Arquitetura completa
+- **[README.dados.md](../README.dados.md)**: Database detalhado
 
-### Próximas Versões
-- 🎯 v1.1.0: Integrações Google/Outlook funcionais
-- 🎯 v1.2.0: IA com processamento real
-- 🎯 v1.3.0: Notificações e alertas
-- 🎯 v2.0.0: Dashboard analytics
+### 🔧 **Para Desenvolvedores**
+- **Setup**: Configurar `.env` com Supabase
+- **Database**: Executar migrations do diário
+- **Storage**: Configurar buckets e políticas
+- **Auth**: Criar usuário admin para testes
+
+### 💬 **Contato**
+Para dúvidas específicas do módulo diário, consulte o código-fonte ou entre em contato com a equipe de desenvolvimento.
 
 ---
 
-> **Nota**: Esta documentação deve ser atualizada sempre que houver alterações significativas no módulo. Mantenha a rastreabilidade entre código, banco de dados e documentação.
+> **Módulo Diário Aeight Partners** - A evolução da gestão executiva através de tecnologia, inteligência artificial e design centrado no usuário.
