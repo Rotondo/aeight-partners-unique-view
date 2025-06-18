@@ -1,293 +1,185 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useAuth } from '@/hooks/useAuth';
-import { toast } from '@/hooks/use-toast';
-import { supabase } from '@/lib/supabase';
-import type { AgendaEvento } from '@/types/diario';
+import { supabase } from '@/integrations/supabase/client';
+import { AgendaEvento } from '@/types/diario';
 
 interface AgendaContextType {
-  // Estados
   agendaEventos: AgendaEvento[];
-  loadingEventos: boolean;
   selectedDate: Date;
-  
-  // Ações
   setSelectedDate: (date: Date) => void;
-  fetchEventos: () => Promise<void>;
+  loadingEventos: boolean;
   createEvento: (evento: Partial<AgendaEvento>) => Promise<void>;
-  updateEvento: (id: string, evento: Partial<AgendaEvento>) => Promise<void>;
+  updateEvento: (id: string, updates: Partial<AgendaEvento>) => Promise<void>;
   deleteEvento: (id: string) => Promise<void>;
-  createEventoFromCrmAction: (crmActionId: string, title: string, date: Date) => Promise<void>;
+  refreshEventos: () => Promise<void>;
 }
 
 const AgendaContext = createContext<AgendaContextType | undefined>(undefined);
+
+export const useAgenda = () => {
+  const context = useContext(AgendaContext);
+  if (!context) {
+    throw new Error('useAgenda must be used within an AgendaProvider');
+  }
+  return context;
+};
 
 interface AgendaProviderProps {
   children: ReactNode;
 }
 
 export const AgendaProvider: React.FC<AgendaProviderProps> = ({ children }) => {
-  const { user } = useAuth();
   const [agendaEventos, setAgendaEventos] = useState<AgendaEvento[]>([]);
-  const [loadingEventos, setLoadingEventos] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [loadingEventos, setLoadingEventos] = useState(true);
 
-  const isAdmin = user?.papel === 'admin';
-
-  useEffect(() => {
-    if (isAdmin) {
-      fetchEventos();
-    }
-  }, [isAdmin]);
-
-  const fetchEventos = async () => {
-    if (!isAdmin) return;
-    
-    setLoadingEventos(true);
+  const loadEventos = async () => {
     try {
-      // Fetch manual events
-      const { data: manualEvents, error: manualError } = await supabase
+      setLoadingEventos(true);
+      
+      // Carregar eventos da agenda
+      const { data: eventosData, error: eventosError } = await supabase
         .from('diario_agenda_eventos')
-        .select('*')
-        .order('start', { ascending: true });
+        .select('*');
 
-      if (manualError) throw manualError;
+      if (eventosError) {
+        console.error('Erro ao carregar eventos:', eventosError);
+        return;
+      }
 
-      // Fetch CRM actions with next step dates to create agenda events
-      const { data: crmActions, error: crmError } = await supabase
+      // Carregar ações do CRM com próximos passos
+      const { data: crmData, error: crmError } = await supabase
         .from('diario_crm_acoes')
         .select('*')
-        .not('next_step_date', 'is', null)
-        .order('next_step_date', { ascending: true });
+        .not('next_step_date', 'is', null);
 
-      if (crmError) throw crmError;
+      if (crmError) {
+        console.error('Erro ao carregar ações CRM:', crmError);
+        return;
+      }
 
-      // Transform manual events
-      const transformedManualEvents: AgendaEvento[] = (manualEvents || []).map(evento => ({
+      // Converter eventos da agenda
+      const eventos: AgendaEvento[] = (eventosData || []).map(evento => ({
         id: evento.id,
-        titulo: evento.title,
-        descricao: evento.description,
-        data_inicio: evento.start,
-        data_fim: evento.end,
-        tipo: 'reuniao', // Default type
-        status: evento.status === 'scheduled' ? 'agendado' : 
-                evento.status === 'completed' ? 'realizado' : 'agendado',
-        usuario_responsavel_id: user?.id || '',
-        fonte_integracao: 'manual',
-        event_type: evento.event_type || 'manual',
-        related_crm_action_id: evento.related_crm_action_id,
+        title: evento.title,
+        description: evento.description,
+        start: evento.start,
+        end: evento.end,
+        status: evento.status,
+        partner_id: evento.partner_id,
+        source: evento.source,
+        external_id: evento.external_id,
+        event_type: 'manual', // Default value since column may not exist yet
+        related_crm_action_id: undefined, // Default value since column may not exist yet  
         created_at: evento.created_at,
         updated_at: evento.updated_at
       }));
 
-      // Transform CRM actions into agenda events
-      const crmAgendaEvents: AgendaEvento[] = (crmActions || []).map(action => ({
-        id: `crm_${action.id}`,
-        titulo: `Próximo passo: ${action.description}`,
-        descricao: action.next_steps,
-        data_inicio: action.next_step_date!,
-        data_fim: new Date(new Date(action.next_step_date!).getTime() + 3600000).toISOString(), // 1 hour later
-        tipo: 'proximo_passo_crm',
+      // Converter próximos passos do CRM em eventos
+      const eventosCrm: AgendaEvento[] = (crmData || []).map(acao => ({
+        id: `crm-${acao.id}`,
+        title: `Próximo Passo: ${acao.content?.substring(0, 50) || 'Ação CRM'}`, // Using content since description may not exist
+        description: acao.content,
+        start: acao.next_step_date!,
+        end: acao.next_step_date!,
         status: 'agendado',
-        parceiro_id: action.partner_id,
-        usuario_responsavel_id: action.user_id,
-        fonte_integracao: 'crm_integration',
-        event_type: 'crm_next_step',
-        related_crm_action_id: action.id,
-        created_at: action.created_at,
-        updated_at: action.created_at
+        partner_id: acao.partner_id,
+        source: 'crm_integration',
+        event_type: 'proximo_passo_crm',
+        related_crm_action_id: acao.id,
+        created_at: acao.created_at,
+        updated_at: acao.created_at
       }));
 
-      // Combine all events
-      const allEvents = [...transformedManualEvents, ...crmAgendaEvents];
-      setAgendaEventos(allEvents);
-      
+      setAgendaEventos([...eventos, ...eventosCrm]);
     } catch (error) {
-      console.error('Erro ao carregar eventos da agenda:', error);
-      toast({
-        title: "Erro",
-        description: "Falha ao carregar eventos da agenda",
-        variant: "destructive"
-      });
+      console.error('Erro ao carregar eventos:', error);
     } finally {
       setLoadingEventos(false);
     }
   };
 
   const createEvento = async (evento: Partial<AgendaEvento>) => {
-    if (!isAdmin) return;
-    
     try {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('diario_agenda_eventos')
-        .insert({
-          title: evento.titulo || '',
-          description: evento.descricao,
-          start: evento.data_inicio || new Date().toISOString(),
-          end: evento.data_fim || new Date(Date.now() + 3600000).toISOString(),
-          source: 'manual',
-          status: 'scheduled',
-          event_type: 'manual',
-          partner_id: evento.parceiro_id
-        })
-        .select()
-        .single();
+        .insert([{
+          title: evento.title,
+          description: evento.description,
+          start: evento.start,
+          end: evento.end,
+          status: evento.status || 'scheduled',
+          partner_id: evento.partner_id,
+          source: evento.source || 'manual'
+        }]);
 
       if (error) throw error;
-
-      await fetchEventos(); // Refresh the list
-      
-      toast({
-        title: "Sucesso",
-        description: "Evento criado com sucesso"
-      });
+      await loadEventos();
     } catch (error) {
       console.error('Erro ao criar evento:', error);
-      toast({
-        title: "Erro",
-        description: "Falha ao criar evento",
-        variant: "destructive"
-      });
+      throw error;
     }
   };
 
-  const updateEvento = async (id: string, evento: Partial<AgendaEvento>) => {
-    if (!isAdmin) return;
-    
+  const updateEvento = async (id: string, updates: Partial<AgendaEvento>) => {
     try {
-      // Only update manual events, not CRM-generated ones
-      if (id.startsWith('crm_')) {
-        toast({
-          title: "Aviso",
-          description: "Eventos de próximos passos do CRM devem ser editados no módulo CRM",
-          variant: "destructive"
-        });
-        return;
-      }
-
       const { error } = await supabase
         .from('diario_agenda_eventos')
         .update({
-          title: evento.titulo,
-          description: evento.descricao,
-          start: evento.data_inicio,
-          end: evento.data_fim,
-          status: evento.status === 'realizado' ? 'completed' : 'scheduled'
+          title: updates.title,
+          description: updates.description,
+          start: updates.start,
+          end: updates.end,
+          status: updates.status,
+          partner_id: updates.partner_id
         })
         .eq('id', id);
 
       if (error) throw error;
-
-      await fetchEventos(); // Refresh the list
-      
-      toast({
-        title: "Sucesso",
-        description: "Evento atualizado com sucesso"
-      });
+      await loadEventos();
     } catch (error) {
       console.error('Erro ao atualizar evento:', error);
-      toast({
-        title: "Erro",
-        description: "Falha ao atualizar evento",
-        variant: "destructive"
-      });
+      throw error;
     }
   };
 
   const deleteEvento = async (id: string) => {
-    if (!isAdmin) return;
-    
     try {
-      // Only delete manual events, not CRM-generated ones
-      if (id.startsWith('crm_')) {
-        toast({
-          title: "Aviso",
-          description: "Eventos de próximos passos do CRM devem ser gerenciados no módulo CRM",
-          variant: "destructive"
-        });
-        return;
-      }
-
       const { error } = await supabase
         .from('diario_agenda_eventos')
         .delete()
         .eq('id', id);
 
       if (error) throw error;
-
-      await fetchEventos(); // Refresh the list
-      
-      toast({
-        title: "Sucesso",
-        description: "Evento excluído com sucesso"
-      });
+      await loadEventos();
     } catch (error) {
-      console.error('Erro ao excluir evento:', error);
-      toast({
-        title: "Erro",
-        description: "Falha ao excluir evento",
-        variant: "destructive"
-      });
+      console.error('Erro ao deletar evento:', error);
+      throw error;
     }
   };
 
-  const createEventoFromCrmAction = async (crmActionId: string, title: string, date: Date) => {
-    if (!isAdmin) return;
-    
-    try {
-      const { error } = await supabase
-        .from('diario_agenda_eventos')
-        .insert({
-          title,
-          start: date.toISOString(),
-          end: new Date(date.getTime() + 3600000).toISOString(), // 1 hour later
-          source: 'crm_integration',
-          status: 'scheduled',
-          event_type: 'crm_related',
-          related_crm_action_id: crmActionId
-        });
-
-      if (error) throw error;
-
-      await fetchEventos();
-      
-      toast({
-        title: "Sucesso",
-        description: "Evento criado a partir da ação do CRM"
-      });
-    } catch (error) {
-      console.error('Erro ao criar evento do CRM:', error);
-      toast({
-        title: "Erro",
-        description: "Falha ao criar evento",
-        variant: "destructive"
-      });
-    }
+  const refreshEventos = async () => {
+    await loadEventos();
   };
 
-  const value: AgendaContextType = {
-    agendaEventos,
-    loadingEventos,
-    selectedDate,
-    setSelectedDate,
-    fetchEventos,
-    createEvento,
-    updateEvento,
-    deleteEvento,
-    createEventoFromCrmAction
-  };
+  useEffect(() => {
+    loadEventos();
+  }, []);
 
   return (
-    <AgendaContext.Provider value={value}>
+    <AgendaContext.Provider
+      value={{
+        agendaEventos,
+        selectedDate,
+        setSelectedDate,
+        loadingEventos,
+        createEvento,
+        updateEvento,
+        deleteEvento,
+        refreshEventos
+      }}
+    >
       {children}
     </AgendaContext.Provider>
   );
-};
-
-export const useAgenda = () => {
-  const context = useContext(AgendaContext);
-  if (context === undefined) {
-    throw new Error('useAgenda deve ser usado dentro de um AgendaProvider');
-  }
-  return context;
 };

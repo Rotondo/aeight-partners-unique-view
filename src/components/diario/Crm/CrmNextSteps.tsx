@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -10,7 +11,7 @@ export const CrmNextSteps: React.FC = () => {
 
   // Filtrar ações com próximos passos pendentes
   const acoesComProximosPassos = crmAcoes.filter(acao => 
-    acao.proximos_passos && 
+    acao.next_steps && 
     acao.status !== 'concluida' && 
     acao.status !== 'cancelada'
   );
@@ -18,8 +19,7 @@ export const CrmNextSteps: React.FC = () => {
   const marcarComoConcluida = async (acaoId: string) => {
     try {
       await updateAcaoCrm(acaoId, {
-        status: 'concluida',
-        data_realizada: new Date().toISOString()
+        status: 'concluida'
       });
     } catch (error) {
       console.error('Erro ao marcar como concluída:', error);
@@ -51,7 +51,7 @@ export const CrmNextSteps: React.FC = () => {
             {acoesComProximosPassos.slice(0, 5).map((acao) => (
               <div key={acao.id} className="border rounded-lg p-3 bg-muted/30">
                 <div className="flex items-start justify-between mb-2">
-                  <h4 className="font-medium text-sm">{acao.titulo}</h4>
+                  <h4 className="font-medium text-sm">{acao.description}</h4>
                   <Badge 
                     variant={acao.status === 'pendente' ? 'destructive' : 'secondary'}
                     className="text-xs"
@@ -61,7 +61,7 @@ export const CrmNextSteps: React.FC = () => {
                 </div>
                 
                 <p className="text-sm text-muted-foreground mb-3">
-                  {acao.proximos_passos}
+                  {acao.next_steps}
                 </p>
                 
                 <div className="flex items-center justify-between">

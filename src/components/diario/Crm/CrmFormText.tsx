@@ -8,19 +8,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Save } from 'lucide-react';
 import { useCrm } from '@/contexts/CrmContext';
 import { usePartners } from '@/hooks/usePartners';
-import { StatusAcaoCrm } from '@/types/diario';
+import { StatusAcaoCrm, MetodoComunicacao } from '@/types/diario';
 
 export const CrmFormText: React.FC = () => {
   const { createAcaoCrm } = useCrm();
   const { partners, loading: loadingPartners } = usePartners();
   
   const [formData, setFormData] = useState({
-    titulo: '',
-    descricao: '',
-    conteudoTexto: '',
-    parceiroId: '',
+    description: '',
+    content: '',
+    communication_method: '' as MetodoComunicacao,
+    partner_id: '',
     status: 'pendente' as StatusAcaoCrm,
-    proximosPassos: ''
+    next_steps: ''
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -28,23 +28,22 @@ export const CrmFormText: React.FC = () => {
     
     try {
       await createAcaoCrm({
-        titulo: formData.titulo,
-        descricao: formData.descricao,
-        tipo: 'texto',
+        description: formData.description,
+        content: formData.content,
+        communication_method: formData.communication_method,
         status: formData.status,
-        parceiro_id: formData.parceiroId || undefined,
-        conteudo_texto: formData.conteudoTexto,
-        proximos_passos: formData.proximosPassos || undefined,
+        partner_id: formData.partner_id || undefined,
+        next_steps: formData.next_steps || undefined,
       });
 
       // Reset form
       setFormData({
-        titulo: '',
-        descricao: '',
-        conteudoTexto: '',
-        parceiroId: '',
+        description: '',
+        content: '',
+        communication_method: '' as MetodoComunicacao,
+        partner_id: '',
         status: 'pendente',
-        proximosPassos: ''
+        next_steps: ''
       });
     } catch (error) {
       console.error('Erro ao salvar ação:', error);
@@ -53,38 +52,42 @@ export const CrmFormText: React.FC = () => {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {/* Título */}
+      {/* Descrição */}
       <div className="space-y-2">
-        <Label htmlFor="titulo">Título</Label>
+        <Label htmlFor="description">Descrição</Label>
         <Input
-          id="titulo"
-          value={formData.titulo}
-          onChange={(e) => setFormData({ ...formData, titulo: e.target.value })}
-          placeholder="Ex: Anotações da reunião"
+          id="description"
+          value={formData.description}
+          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+          placeholder="Ex: Reunião de alinhamento"
           required
         />
       </div>
 
-      {/* Descrição */}
+      {/* Método de Comunicação */}
       <div className="space-y-2">
-        <Label htmlFor="descricao">Descrição</Label>
-        <Textarea
-          id="descricao"
-          value={formData.descricao}
-          onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
-          placeholder="Breve descrição do registro..."
-          rows={2}
-          required
-        />
+        <Label>Método de Comunicação</Label>
+        <Select value={formData.communication_method} onValueChange={(value) => setFormData({ ...formData, communication_method: value as MetodoComunicacao })}>
+          <SelectTrigger>
+            <SelectValue placeholder="Selecione o método" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="whatsapp">WhatsApp</SelectItem>
+            <SelectItem value="ligacao">Ligação</SelectItem>
+            <SelectItem value="email">E-mail</SelectItem>
+            <SelectItem value="encontro">Encontro Presencial</SelectItem>
+            <SelectItem value="reuniao_meet">Reunião Meet</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Conteúdo principal */}
       <div className="space-y-2">
-        <Label htmlFor="conteudo_texto">Conteúdo</Label>
+        <Label htmlFor="content">Conteúdo</Label>
         <Textarea
-          id="conteudo_texto"
-          value={formData.conteudoTexto}
-          onChange={(e) => setFormData({ ...formData, conteudoTexto: e.target.value })}
+          id="content"
+          value={formData.content}
+          onChange={(e) => setFormData({ ...formData, content: e.target.value })}
           placeholder="Digite o conteúdo detalhado aqui..."
           rows={8}
           required
@@ -95,7 +98,7 @@ export const CrmFormText: React.FC = () => {
       {/* Parceiro */}
       <div className="space-y-2">
         <Label>Parceiro (Opcional)</Label>
-        <Select value={formData.parceiroId} onValueChange={(value) => setFormData({ ...formData, parceiroId: value })}>
+        <Select value={formData.partner_id} onValueChange={(value) => setFormData({ ...formData, partner_id: value })}>
           <SelectTrigger>
             <SelectValue placeholder="Selecione um parceiro" />
           </SelectTrigger>
@@ -127,11 +130,11 @@ export const CrmFormText: React.FC = () => {
 
       {/* Próximos passos */}
       <div className="space-y-2">
-        <Label htmlFor="proximos_passos">Próximos Passos</Label>
+        <Label htmlFor="next_steps">Próximos Passos</Label>
         <Textarea
-          id="proximos_passos"
-          value={formData.proximosPassos}
-          onChange={(e) => setFormData({ ...formData, proximosPassos: e.target.value })}
+          id="next_steps"
+          value={formData.next_steps}
+          onChange={(e) => setFormData({ ...formData, next_steps: e.target.value })}
           placeholder="Defina as próximas ações..."
           rows={3}
         />

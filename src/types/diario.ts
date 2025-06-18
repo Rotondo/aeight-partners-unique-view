@@ -1,3 +1,4 @@
+
 // Tipos globais do módulo Diário
 
 // Usando tipos string em vez de enums para maior compatibilidade
@@ -12,18 +13,16 @@ export type StatusSugestaoIA = "pendente" | "em_revisao" | "aprovada" | "rejeita
 // Interfaces principais
 export interface AgendaEvento {
   id: string;
-  titulo: string;
-  descricao?: string;
-  data_inicio: string;
-  data_fim: string;
-  tipo: TipoEventoAgenda;
-  status: StatusEvento;
-  parceiro_id?: string;
-  usuario_responsavel_id: string;
-  fonte_integracao: FonteIntegracao;
-  event_type: string;
+  title: string;
+  description?: string;
+  start: string;
+  end: string;
+  status: string;
+  partner_id?: string;
+  source: string;
+  external_id?: string;
+  event_type?: string;
   related_crm_action_id?: string;
-  observacoes?: string;
   created_at: string;
   updated_at: string;
   // Relações para UI
@@ -31,11 +30,6 @@ export interface AgendaEvento {
     id: string;
     nome: string;
     tipo: string;
-  };
-  usuario_responsavel?: {
-    id: string;
-    nome: string;
-    email: string;
   };
 }
 

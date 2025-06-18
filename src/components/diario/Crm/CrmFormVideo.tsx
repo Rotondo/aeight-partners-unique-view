@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Video, Square, Upload } from 'lucide-react';
 import { useCrm } from '@/contexts/CrmContext';
 import { usePartners } from '@/hooks/usePartners';
-import { StatusAcaoCrm } from '@/types/diario';
+import { StatusAcaoCrm, MetodoComunicacao } from '@/types/diario';
 
 export const CrmFormVideo: React.FC = () => {
   const { createAcaoCrm } = useCrm();
@@ -17,11 +17,12 @@ export const CrmFormVideo: React.FC = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [videoBlob, setVideoBlob] = useState<Blob | null>(null);
   const [formData, setFormData] = useState({
-    titulo: '',
-    descricao: '',
-    parceiroId: '',
+    description: '',
+    content: '',
+    communication_method: 'reuniao_meet' as MetodoComunicacao,
+    partner_id: '',
     status: 'pendente' as StatusAcaoCrm,
-    proximosPassos: ''
+    next_steps: ''
   });
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -78,22 +79,23 @@ export const CrmFormVideo: React.FC = () => {
     try {
       // TODO: Upload do arquivo de vídeo para o Supabase Storage
       await createAcaoCrm({
-        titulo: formData.titulo,
-        descricao: formData.descricao,
-        tipo: 'video',
+        description: formData.description,
+        content: formData.content,
+        communication_method: formData.communication_method,
         status: formData.status,
-        parceiro_id: formData.parceiroId || undefined,
-        proximos_passos: formData.proximosPassos || undefined,
+        partner_id: formData.partner_id || undefined,
+        next_steps: formData.next_steps || undefined,
         // arquivo_video: 'path/to/uploaded/video.webm' // TODO: Implementar upload
       });
 
       // Reset form
       setFormData({
-        titulo: '',
-        descricao: '',
-        parceiroId: '',
+        description: '',
+        content: '',
+        communication_method: 'reuniao_meet',
+        partner_id: '',
         status: 'pendente',
-        proximosPassos: ''
+        next_steps: ''
       });
       setVideoBlob(null);
     } catch (error) {
@@ -162,25 +164,25 @@ export const CrmFormVideo: React.FC = () => {
         )}
       </div>
 
-      {/* Título */}
+      {/* Descrição */}
       <div className="space-y-2">
-        <Label htmlFor="titulo">Título</Label>
+        <Label htmlFor="description">Descrição</Label>
         <Input
-          id="titulo"
-          value={formData.titulo}
-          onChange={(e) => setFormData({ ...formData, titulo: e.target.value })}
+          id="description"
+          value={formData.description}
+          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
           placeholder="Ex: Apresentação de proposta"
           required
         />
       </div>
 
-      {/* Descrição */}
+      {/* Conteúdo adicional */}
       <div className="space-y-2">
-        <Label htmlFor="descricao">Descrição</Label>
+        <Label htmlFor="content">Contexto/Observações</Label>
         <Textarea
-          id="descricao"
-          value={formData.descricao}
-          onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
+          id="content"
+          value={formData.content}
+          onChange={(e) => setFormData({ ...formData, content: e.target.value })}
           placeholder="Descreva o contexto da gravação..."
           rows={3}
           required
@@ -190,7 +192,7 @@ export const CrmFormVideo: React.FC = () => {
       {/* Parceiro */}
       <div className="space-y-2">
         <Label>Parceiro (Opcional)</Label>
-        <Select value={formData.parceiroId} onValueChange={(value) => setFormData({ ...formData, parceiroId: value })}>
+        <Select value={formData.partner_id} onValueChange={(value) => setFormData({ ...formData, partner_id: value })}>
           <SelectTrigger>
             <SelectValue placeholder="Selecione um parceiro" />
           </SelectTrigger>
@@ -222,11 +224,11 @@ export const CrmFormVideo: React.FC = () => {
 
       {/* Próximos passos */}
       <div className="space-y-2">
-        <Label htmlFor="proximos_passos">Próximos Passos</Label>
+        <Label htmlFor="next_steps">Próximos Passos</Label>
         <Textarea
-          id="proximos_passos"
-          value={formData.proximosPassos}
-          onChange={(e) => setFormData({ ...formData, proximosPassos: e.target.value })}
+          id="next_steps"
+          value={formData.next_steps}
+          onChange={(e) => setFormData({ ...formData, next_steps: e.target.value })}
           placeholder="Defina as próximas ações..."
           rows={3}
         />

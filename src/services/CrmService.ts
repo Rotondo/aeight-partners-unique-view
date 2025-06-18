@@ -14,14 +14,12 @@ export class CrmService {
     const mockAcoes: CrmAcao[] = [
       {
         id: '1',
-        titulo: 'Anotações da reunião',
-        descricao: 'Principais pontos discutidos',
-        tipo: 'texto',
+        description: 'Anotações da reunião',
+        communication_method: 'reuniao_meet',
         status: 'concluida',
-        usuario_responsavel_id: 'user-1',
-        conteudo_texto: 'Reunião produtiva com definições importantes.',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        user_id: 'user-1',
+        content: 'Reunião produtiva com definições importantes.',
+        created_at: new Date().toISOString()
       }
     ];
     
@@ -34,21 +32,16 @@ export class CrmService {
   static async createAcao(acao: Partial<CrmAcao>, userId: string): Promise<CrmAcao | null> {
     const novaAcao: CrmAcao = {
       id: Date.now().toString(),
-      titulo: acao.titulo || '',
-      descricao: acao.descricao || '',
-      tipo: acao.tipo || 'texto',
+      description: acao.description || '',
+      communication_method: acao.communication_method || 'email',
       status: acao.status || 'pendente',
-      parceiro_id: acao.parceiro_id,
-      usuario_responsavel_id: userId,
-      arquivo_audio: acao.arquivo_audio,
-      arquivo_video: acao.arquivo_video,
-      conteudo_texto: acao.conteudo_texto,
-      data_prevista: acao.data_prevista,
-      data_realizada: acao.data_realizada,
-      proximos_passos: acao.proximos_passos,
-      observacoes: acao.observacoes,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      partner_id: acao.partner_id,
+      user_id: userId,
+      content: acao.content || '',
+      next_step_date: acao.next_step_date,
+      next_steps: acao.next_steps,
+      metadata: acao.metadata,
+      created_at: new Date().toISOString()
     };
 
     // Mock - em produção faria a chamada real
@@ -76,7 +69,7 @@ export class CrmService {
    */
   static filterAcoesComProximosPassos(acoes: CrmAcao[]): CrmAcao[] {
     return acoes.filter(acao => 
-      acao.proximos_passos && 
+      acao.next_steps && 
       acao.status !== 'concluida' && 
       acao.status !== 'cancelada'
     );
@@ -88,16 +81,16 @@ export class CrmService {
   static validateAcao(acao: Partial<CrmAcao>): { isValid: boolean; errors: string[] } {
     const errors: string[] = [];
 
-    if (!acao.titulo?.trim()) {
-      errors.push('Título é obrigatório');
-    }
-
-    if (!acao.descricao?.trim()) {
+    if (!acao.description?.trim()) {
       errors.push('Descrição é obrigatória');
     }
 
-    if (acao.tipo === 'texto' && !acao.conteudo_texto?.trim()) {
-      errors.push('Conteúdo de texto é obrigatório para este tipo');
+    if (!acao.content?.trim()) {
+      errors.push('Conteúdo é obrigatório');
+    }
+
+    if (!acao.communication_method) {
+      errors.push('Método de comunicação é obrigatório');
     }
 
     return {
