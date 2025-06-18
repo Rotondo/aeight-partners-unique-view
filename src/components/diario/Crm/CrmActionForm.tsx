@@ -21,10 +21,10 @@ export const CrmActionForm: React.FC<CrmActionFormProps> = ({ onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     description: '',
-    communication_method: '' as MetodoComunicacao,
+    communication_method: 'email' as MetodoComunicacao,
     content: '',
     status: 'pendente' as StatusAcaoCrm,
-    partner_id: '',
+    partner_id: 'none',
     next_steps: '',
     next_step_date: ''
   });
@@ -66,10 +66,10 @@ export const CrmActionForm: React.FC<CrmActionFormProps> = ({ onSuccess }) => {
       // Reset form
       setFormData({
         description: '',
-        communication_method: '' as MetodoComunicacao,
+        communication_method: 'email' as MetodoComunicacao,
         content: '',
         status: 'pendente',
-        partner_id: '',
+        partner_id: 'none',
         next_steps: '',
         next_step_date: ''
       });

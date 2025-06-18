@@ -17,8 +17,8 @@ export const CrmFormText: React.FC = () => {
   const [formData, setFormData] = useState({
     description: '',
     content: '',
-    communication_method: '' as MetodoComunicacao,
-    partner_id: '',
+    communication_method: 'email' as MetodoComunicacao,
+    partner_id: 'none',
     status: 'pendente' as StatusAcaoCrm,
     next_steps: ''
   });
@@ -40,8 +40,8 @@ export const CrmFormText: React.FC = () => {
       setFormData({
         description: '',
         content: '',
-        communication_method: '' as MetodoComunicacao,
-        partner_id: '',
+        communication_method: 'email' as MetodoComunicacao,
+        partner_id: 'none',
         status: 'pendente',
         next_steps: ''
       });
