@@ -3,14 +3,19 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ContatoFormRapido } from './ContatoFormRapido';
+import { ContatoFormAvancado } from './ContatoFormAvancado';
 import { ContatosList } from './ContatosList';
+import { EventoAnalytics } from './EventoAnalytics';
+import { ContatosExport } from './ContatosExport';
 import { useEventos } from '@/contexts/EventosContext';
-import { Calendar, MapPin, Users, Plus, Camera } from 'lucide-react';
+import { Calendar, MapPin, Users, Plus, Camera, BarChart3, Settings } from 'lucide-react';
 
 export const EventoAtivo: React.FC = () => {
   const { eventoAtivo } = useEventos();
-  const [showContatoForm, setShowContatoForm] = useState(false);
+  const [showContatoRapido, setShowContatoRapido] = useState(false);
+  const [showContatoAvancado, setShowContatoAvancado] = useState(false);
 
   if (!eventoAtivo) return null;
 
@@ -61,22 +66,32 @@ export const EventoAtivo: React.FC = () => {
       </Card>
 
       {/* Ações Rápidas */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Button
           size="lg"
           className="h-20 text-lg"
-          onClick={() => setShowContatoForm(true)}
+          onClick={() => setShowContatoRapido(true)}
         >
           <Plus className="h-6 w-6 mr-3" />
-          Adicionar Contato
+          Contato Rápido
         </Button>
         
         <Button
           variant="outline"
           size="lg"
           className="h-20 text-lg"
+          onClick={() => setShowContatoAvancado(true)}
+        >
+          <Settings className="h-6 w-6 mr-3" />
+          Contato Completo
+        </Button>
+
+        <Button
+          variant="outline"
+          size="lg"
+          className="h-20 text-lg"
           onClick={() => {
-            // Implementar captura de cartão
+            // TODO: Implementar captura de cartão
             alert('Funcionalidade de captura de cartão será implementada');
           }}
         >
@@ -85,13 +100,44 @@ export const EventoAtivo: React.FC = () => {
         </Button>
       </div>
 
-      {/* Contatos do Evento */}
-      <ContatosList contatos={eventoAtivo.contatos} />
+      {/* Tabs com Conteúdo */}
+      <Tabs defaultValue="contatos" className="space-y-4">
+        <div className="flex justify-between items-center">
+          <TabsList>
+            <TabsTrigger value="contatos" className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Contatos
+            </TabsTrigger>
+            <TabsTrigger value="analytics" className="flex items-center gap-2">
+              <BarChart3 className="h-4 w-4" />
+              Analytics
+            </TabsTrigger>
+          </TabsList>
 
-      {/* Modal de Contato Rápido */}
+          <ContatosExport 
+            contatos={eventoAtivo.contatos} 
+            eventoNome={eventoAtivo.nome}
+          />
+        </div>
+
+        <TabsContent value="contatos">
+          <ContatosList contatos={eventoAtivo.contatos} />
+        </TabsContent>
+
+        <TabsContent value="analytics">
+          <EventoAnalytics evento={eventoAtivo} />
+        </TabsContent>
+      </Tabs>
+
+      {/* Modais */}
       <ContatoFormRapido
-        open={showContatoForm}
-        onClose={() => setShowContatoForm(false)}
+        open={showContatoRapido}
+        onClose={() => setShowContatoRapido(false)}
+      />
+
+      <ContatoFormAvancado
+        open={showContatoAvancado}
+        onClose={() => setShowContatoAvancado(false)}
       />
     </div>
   );

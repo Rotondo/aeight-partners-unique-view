@@ -1,18 +1,18 @@
 
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ContatosList } from './ContatosList';
+import { ContatosFilters } from './ContatosFilters';
+import { ContatosExport } from './ContatosExport';
 import { useEventos } from '@/contexts/EventosContext';
-import { Download, Filter, Users } from 'lucide-react';
+import { Users } from 'lucide-react';
 import type { ContatoEvento } from '@/types/eventos';
 
 export const ContatosColetados: React.FC = () => {
   const { eventos } = useEventos();
-  const [eventoFilter, setEventoFilter] = useState<string>('all');
-  const [interesseFilter, setInteresseFilter] = useState<string>('all');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [interesseFilter, setInteresseFilter] = useState('all');
+  const [empresaFilter, setEmpresaFilter] = useState('all');
 
   // Consolidar todos os contatos de todos os eventos
   const todosContatos: (ContatoEvento & { evento_nome: string })[] = eventos.flatMap(evento =>
@@ -22,38 +22,43 @@ export const ContatosColetados: React.FC = () => {
     }))
   );
 
+  // Obter empresas únicas
+  const empresasDisponiveis = Array.from(
+    new Set(todosContatos.filter(c => c.empresa).map(c => c.empresa!))
+  ).sort();
+
   // Aplicar filtros
   const contatosFiltrados = todosContatos.filter(contato => {
-    if (eventoFilter !== 'all' && contato.evento_id !== eventoFilter) {
-      return false;
+    // Filtro de busca
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      const matchSearch = 
+        (contato.nome?.toLowerCase().includes(term)) ||
+        (contato.email?.toLowerCase().includes(term)) ||
+        (contato.empresa?.toLowerCase().includes(term)) ||
+        (contato.cargo?.toLowerCase().includes(term)) ||
+        (contato.evento_nome.toLowerCase().includes(term));
+      
+      if (!matchSearch) return false;
     }
+
+    // Filtro de interesse
     if (interesseFilter !== 'all' && contato.interesse_nivel !== parseInt(interesseFilter)) {
       return false;
     }
+
+    // Filtro de empresa
+    if (empresaFilter !== 'all' && contato.empresa !== empresaFilter) {
+      return false;
+    }
+
     return true;
   });
 
-  const exportarContatos = () => {
-    const csvContent = [
-      ['Nome', 'Email', 'Telefone', 'Empresa', 'Cargo', 'Evento', 'Interesse', 'Discussão', 'Próximos Passos'].join(','),
-      ...contatosFiltrados.map(contato => [
-        contato.nome || '',
-        contato.email || '',
-        contato.telefone || '',
-        contato.empresa || '',
-        contato.cargo || '',
-        contato.evento_nome,
-        contato.interesse_nivel.toString(),
-        `"${contato.discussao || ''}"`,
-        `"${contato.proximos_passos || ''}"`
-      ].join(','))
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `contatos_eventos_${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
+  const clearFilters = () => {
+    setSearchTerm('');
+    setInteresseFilter('all');
+    setEmpresaFilter('all');
   };
 
   return (
@@ -65,45 +70,26 @@ export const ContatosColetados: React.FC = () => {
               <Users className="h-5 w-5" />
               Todos os Contatos ({contatosFiltrados.length})
             </CardTitle>
-            <Button onClick={exportarContatos} variant="outline">
-              <Download className="h-4 w-4 mr-2" />
-              Exportar CSV
-            </Button>
+            <ContatosExport 
+              contatos={contatosFiltrados} 
+              eventoNome="todos_eventos"
+            />
           </div>
         </CardHeader>
 
         <CardContent>
-          <div className="flex gap-4 items-center">
-            <Filter className="h-4 w-4 text-gray-500" />
-            
-            <Select value={eventoFilter} onValueChange={setEventoFilter}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="Filtrar por evento" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os eventos</SelectItem>
-                {eventos.map(evento => (
-                  <SelectItem key={evento.id} value={evento.id}>
-                    {evento.nome}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={interesseFilter} onValueChange={setInteresseFilter}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="Filtrar por interesse" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os níveis</SelectItem>
-                <SelectItem value="5">Muito Alto</SelectItem>
-                <SelectItem value="4">Alto</SelectItem>
-                <SelectItem value="3">Médio</SelectItem>
-                <SelectItem value="2">Baixo</SelectItem>
-                <SelectItem value="1">Muito Baixo</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <ContatosFilters
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            interesseFilter={interesseFilter}
+            onInteresseChange={setInteresseFilter}
+            empresaFilter={empresaFilter}
+            onEmpresaChange={setEmpresaFilter}
+            empresasDisponiveis={empresasDisponiveis}
+            onClearFilters={clearFilters}
+            totalContatos={todosContatos.length}
+            contatosFiltrados={contatosFiltrados.length}
+          />
         </CardContent>
       </Card>
 

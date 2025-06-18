@@ -3,9 +3,12 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Calendar, MapPin, Users, Play, Edit, Trash2 } from 'lucide-react';
+import { Plus, Calendar, MapPin, Users, Play, Edit } from 'lucide-react';
 import { useEventos } from '@/contexts/EventosContext';
 import { EventoFormModal } from './EventoFormModal';
+import { EventoDeleteConfirm } from './EventoDeleteConfirm';
+import { EventoLoadingSkeleton } from './EventoLoadingSkeleton';
+import { toast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -13,6 +16,7 @@ export const EventosListView: React.FC = () => {
   const { eventos, loading, setEventoAtivo, deleteEvento } = useEventos();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingEvento, setEditingEvento] = useState<any>(null);
+  const [deletingEventoId, setDeletingEventoId] = useState<string | null>(null);
 
   const getStatusBadge = (status: string) => {
     const variants = {
@@ -38,38 +42,33 @@ export const EventosListView: React.FC = () => {
 
   const handleStartEvent = (evento: any) => {
     setEventoAtivo(evento);
+    toast({
+      title: "Evento ativado",
+      description: `"${evento.nome}" está agora ativo para coleta de contatos`
+    });
   };
 
-  const handleDeleteEvent = async (evento: any) => {
-    if (confirm(`Tem certeza que deseja excluir o evento "${evento.nome}"?`)) {
-      try {
-        await deleteEvento(evento.id);
-      } catch (error) {
-        console.error('Erro ao deletar evento:', error);
-        alert('Erro ao deletar evento. Tente novamente.');
-      }
+  const handleDeleteEvent = async (eventoId: string) => {
+    try {
+      setDeletingEventoId(eventoId);
+      await deleteEvento(eventoId);
+      toast({
+        title: "Evento excluído",
+        description: "O evento foi excluído com sucesso"
+      });
+    } catch (error) {
+      toast({
+        title: "Erro ao excluir",
+        description: "Ocorreu um erro ao excluir o evento. Tente novamente.",
+        variant: "destructive"
+      });
+    } finally {
+      setDeletingEventoId(null);
     }
   };
 
   if (loading) {
-    return (
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {[...Array(6)].map((_, i) => (
-          <Card key={i} className="animate-pulse">
-            <CardHeader className="pb-3">
-              <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-              <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <div className="h-3 bg-gray-200 rounded"></div>
-                <div className="h-3 bg-gray-200 rounded w-2/3"></div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    );
+    return <EventoLoadingSkeleton />;
   }
 
   return (
@@ -172,14 +171,11 @@ export const EventosListView: React.FC = () => {
                   >
                     <Edit className="h-4 w-4" />
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDeleteEvent(evento)}
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <EventoDeleteConfirm
+                    evento={evento}
+                    onConfirm={handleDeleteEvent}
+                    loading={deletingEventoId === evento.id}
+                  />
                 </div>
               </CardContent>
             </Card>
