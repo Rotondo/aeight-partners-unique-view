@@ -36,7 +36,7 @@ export const ParceirosSugeridos: React.FC<ParceirosSugeridosProps> = ({
   const fetchParceirosSugeridos = async () => {
     setLoading(true);
     try {
-      // Buscar parceiros com indicadores
+      // CORREÇÃO: Buscar apenas parceiros reais, não clientes
       const { data: parceirosData, error } = await supabase
         .from("empresas")
         .select(`
@@ -47,6 +47,12 @@ export const ParceirosSugeridos: React.FC<ParceirosSugeridosProps> = ({
         .eq("status", true);
 
       if (error) throw error;
+
+      console.log('[ParceirosSugeridos] Parceiros carregados:', {
+        total: parceirosData?.length || 0,
+        categoriaId,
+        valorOportunidade
+      });
 
       // Calcular score de compatibilidade (algoritmo simples por enquanto)
       const parceirosComScore: ParceiroComScore[] = (parceirosData || []).map(parceiro => {
@@ -130,7 +136,7 @@ export const ParceirosSugeridos: React.FC<ParceirosSugeridosProps> = ({
           Parceiros Sugeridos
         </CardTitle>
         <p className="text-sm text-muted-foreground">
-          Baseado na categoria e valor da oportunidade
+          Baseado na categoria e valor da oportunidade (apenas parceiros reais)
         </p>
       </CardHeader>
       <CardContent>

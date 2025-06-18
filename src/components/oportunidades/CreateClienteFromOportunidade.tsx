@@ -51,13 +51,18 @@ export const CreateClienteFromOportunidade: React.FC<CreateClienteFromOportunida
       // Buscar oportunidades selecionadas
       const selectedOps = oportunidades.filter(op => selectedOportunidades.includes(op.id));
       
-      // Criar clientes baseados no nome da oportunidade
+      // CORREÇÃO: Criar clientes com tipo 'cliente' explicitamente
       const clientesToCreate = selectedOps.map(op => ({
         nome: op.nome_lead,
         tipo: 'cliente' as const,
         status: true,
         descricao: `Cliente criado automaticamente a partir da oportunidade: ${op.nome_lead}`
       }));
+
+      console.log('[CreateClienteFromOportunidade] Criando clientes:', {
+        total: clientesToCreate.length,
+        tipo: 'cliente'
+      });
 
       const { data, error } = await supabase
         .from("empresas")

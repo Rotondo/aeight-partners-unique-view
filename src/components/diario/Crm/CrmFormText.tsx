@@ -12,6 +12,7 @@ import { StatusAcaoCrm, MetodoComunicacao } from '@/types/diario';
 
 export const CrmFormText: React.FC = () => {
   const { createAcaoCrm } = useCrm();
+  // CORREÇÃO: Usar apenas parceiros reais, não incluir clientes
   const { partners, loading: loadingPartners } = usePartners();
   
   const [formData, setFormData] = useState({
@@ -96,7 +97,7 @@ export const CrmFormText: React.FC = () => {
         />
       </div>
 
-      {/* Parceiro */}
+      {/* Parceiro - CORRIGIDO: Agora só mostra parceiros reais */}
       <div className="space-y-2">
         <Label>Parceiro (Opcional)</Label>
         <Select value={formData.partner_id} onValueChange={(value) => setFormData({ ...formData, partner_id: value })}>
@@ -107,11 +108,14 @@ export const CrmFormText: React.FC = () => {
             <SelectItem value="none">Nenhum parceiro</SelectItem>
             {partners.map((partner) => (
               <SelectItem key={partner.id} value={partner.id}>
-                {partner.nome}
+                {partner.nome} {partner.tipo === 'intragrupo' ? '(Intragrupo)' : '(Parceiro)'}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
+        {loadingPartners && (
+          <p className="text-sm text-muted-foreground">Carregando parceiros...</p>
+        )}
       </div>
 
       {/* Status */}

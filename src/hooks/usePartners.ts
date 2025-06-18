@@ -11,7 +11,11 @@ interface Partner {
   created_at: string;
 }
 
-export const usePartners = () => {
+interface UsePartnersOptions {
+  includeIntragroup?: boolean;
+}
+
+export const usePartners = (options: UsePartnersOptions = {}) => {
   const [partners, setPartners] = useState<Partner[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -21,9 +25,15 @@ export const usePartners = () => {
       setLoading(true);
       setError(null);
       
+      // Determinar quais tipos incluir
+      const allowedTypes = options.includeIntragroup 
+        ? ['parceiro', 'intragrupo'] 
+        : ['parceiro'];
+      
       const { data, error } = await supabase
         .from('empresas')
         .select('id, nome, tipo, status, descricao, created_at')
+        .in('tipo', allowedTypes)
         .eq('status', true)
         .order('nome', { ascending: true });
 
@@ -32,6 +42,13 @@ export const usePartners = () => {
         setError('Erro ao carregar parceiros');
         return;
       }
+
+      // Log para debug - remover depois da validação
+      console.log('[usePartners] Carregando parceiros:', {
+        allowedTypes,
+        total: data?.length || 0,
+        includeIntragroup: options.includeIntragroup
+      });
 
       setPartners(data || []);
     } catch (err) {
@@ -44,7 +61,7 @@ export const usePartners = () => {
 
   useEffect(() => {
     loadPartners();
-  }, []);
+  }, [options.includeIntragroup]);
 
   return {
     partners,
@@ -52,4 +69,9 @@ export const usePartners = () => {
     error,
     refreshPartners: loadPartners
   };
+};
+
+// Hook específico para casos que precisam de intragrupo + parceiro
+export const usePartnersAndIntragroup = () => {
+  return usePartners({ includeIntragroup: true });
 };
