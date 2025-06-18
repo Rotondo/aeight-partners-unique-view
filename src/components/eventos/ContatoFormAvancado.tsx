@@ -5,13 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { useForm } from 'react-hook-form';
 import { useEventos } from '@/contexts/EventosContext';
 import { toast } from '@/hooks/use-toast';
 import { validateEmail } from '@/utils/inputValidation';
-import { Camera, Upload } from 'lucide-react';
 import type { ContatoEvento } from '@/types/eventos';
 
 interface ContatoFormAvancadoProps {
@@ -37,7 +35,7 @@ export const ContatoFormAvancado: React.FC<ContatoFormAvancadoProps> = ({
   onClose,
   contato
 }) => {
-  const { addContato, updateContato } = useEventos();
+  const { addContato, updateContato, eventoAtivo } = useEventos();
   const isEditing = !!contato?.id;
 
   const {
@@ -81,6 +79,16 @@ export const ContatoFormAvancado: React.FC<ContatoFormAvancadoProps> = ({
 
   const onSubmit = async (data: ContatoFormData) => {
     try {
+      // Verificar se há evento ativo
+      if (!eventoAtivo) {
+        toast({
+          title: "Erro",
+          description: "Nenhum evento está ativo. Ative um evento primeiro.",
+          variant: "destructive"
+        });
+        return;
+      }
+
       // Validação de email
       if (data.email && !validateEmail(data.email)) {
         toast({
@@ -91,8 +99,17 @@ export const ContatoFormAvancado: React.FC<ContatoFormAvancadoProps> = ({
         return;
       }
 
+      // Preparar dados, removendo campos vazios que podem causar erro
       const contatoData = {
-        ...data,
+        nome: data.nome,
+        email: data.email || null,
+        telefone: data.telefone || null,
+        empresa: data.empresa || null,
+        cargo: data.cargo || null,
+        discussao: data.discussao || null,
+        proximos_passos: data.proximos_passos || null,
+        interesse_nivel: data.interesse_nivel,
+        observacoes: data.observacoes || null,
         data_contato: new Date().toISOString()
       };
 
@@ -106,13 +123,14 @@ export const ContatoFormAvancado: React.FC<ContatoFormAvancadoProps> = ({
         await addContato(contatoData);
         toast({
           title: "Contato adicionado",
-          description: "O novo contato foi adicionado ao evento"
+          description: `Contato adicionado ao evento "${eventoAtivo.nome}"`
         });
       }
 
       onClose();
       reset();
     } catch (error) {
+      console.error('Erro ao salvar contato:', error);
       toast({
         title: "Erro",
         description: "Ocorreu um erro ao salvar o contato. Tente novamente.",
@@ -137,12 +155,33 @@ export const ContatoFormAvancado: React.FC<ContatoFormAvancadoProps> = ({
     return labels[nivel as keyof typeof labels] || 'Médio';
   };
 
+  // Se não há evento ativo, mostrar aviso
+  if (!eventoAtivo) {
+    return (
+      <Dialog open={open} onOpenChange={handleClose}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Nenhum evento ativo</DialogTitle>
+          </DialogHeader>
+          <div className="text-center py-8">
+            <p className="text-gray-600 mb-4">
+              Para cadastrar contatos, você precisa ativar um evento primeiro.
+            </p>
+            <Button onClick={handleClose}>
+              Entendi
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {isEditing ? 'Editar Contato' : 'Novo Contato Avançado'}
+            {isEditing ? 'Editar Contato' : `Novo Contato - ${eventoAtivo.nome}`}
           </DialogTitle>
         </DialogHeader>
 
@@ -244,23 +283,6 @@ export const ContatoFormAvancado: React.FC<ContatoFormAvancadoProps> = ({
               placeholder="Informações adicionais, contexto..."
               rows={2}
             />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Foto do Cartão de Visita</Label>
-            <div className="flex gap-2">
-              <Button type="button" variant="outline" className="flex-1">
-                <Camera className="h-4 w-4 mr-2" />
-                Fotografar
-              </Button>
-              <Button type="button" variant="outline" className="flex-1">
-                <Upload className="h-4 w-4 mr-2" />
-                Upload
-              </Button>
-            </div>
-            <p className="text-xs text-gray-500">
-              Funcionalidade de upload será implementada em breve
-            </p>
           </div>
 
           <div className="flex justify-end gap-3 pt-4">

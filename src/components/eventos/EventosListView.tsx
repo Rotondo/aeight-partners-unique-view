@@ -17,6 +17,7 @@ export const EventosListView: React.FC = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingEvento, setEditingEvento] = useState<any>(null);
   const [deletingEventoId, setDeletingEventoId] = useState<string | null>(null);
+  const [activatingEventoId, setActivatingEventoId] = useState<string | null>(null);
 
   const getStatusBadge = (status: string) => {
     const variants = {
@@ -40,12 +41,32 @@ export const EventosListView: React.FC = () => {
     );
   };
 
-  const handleStartEvent = (evento: any) => {
-    setEventoAtivo(evento);
-    toast({
-      title: "Evento ativado",
-      description: `"${evento.nome}" está agora ativo para coleta de contatos`
-    });
+  const handleStartEvent = async (evento: any) => {
+    try {
+      setActivatingEventoId(evento.id);
+      
+      // Definir o evento como ativo
+      setEventoAtivo(evento);
+      
+      // Navegar para a aba de coleta de contatos
+      const tabsTriggers = document.querySelectorAll('[data-value="coleta"]');
+      if (tabsTriggers.length > 0) {
+        (tabsTriggers[0] as HTMLElement).click();
+      }
+      
+      toast({
+        title: "Evento ativado",
+        description: `"${evento.nome}" está agora ativo para coleta de contatos. Você foi redirecionado para a aba de coleta.`
+      });
+    } catch (error) {
+      toast({
+        title: "Erro ao ativar evento",
+        description: "Ocorreu um erro ao ativar o evento. Tente novamente.",
+        variant: "destructive"
+      });
+    } finally {
+      setActivatingEventoId(null);
+    }
   };
 
   const handleDeleteEvent = async (eventoId: string) => {
@@ -160,9 +181,10 @@ export const EventosListView: React.FC = () => {
                     size="sm"
                     onClick={() => handleStartEvent(evento)}
                     className="flex-1"
+                    disabled={activatingEventoId === evento.id}
                   >
                     <Play className="h-4 w-4 mr-2" />
-                    Ativar
+                    {activatingEventoId === evento.id ? 'Ativando...' : 'Ativar'}
                   </Button>
                   <Button
                     variant="outline"

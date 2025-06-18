@@ -4,62 +4,91 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Slider } from '@/components/ui/slider';
 import { useForm } from 'react-hook-form';
 import { useEventos } from '@/contexts/EventosContext';
-import type { ContatoEvento } from '@/types/eventos';
+import { toast } from '@/hooks/use-toast';
+import { validateEmail } from '@/utils/inputValidation';
 
 interface ContatoFormRapidoProps {
   open: boolean;
   onClose: () => void;
-  contato?: Partial<ContatoEvento>;
 }
+
+type ContatoRapidoData = {
+  nome: string;
+  email: string;
+  telefone: string;
+  empresa: string;
+};
 
 export const ContatoFormRapido: React.FC<ContatoFormRapidoProps> = ({
   open,
-  onClose,
-  contato
+  onClose
 }) => {
-  const { addContato, updateContato } = useEventos();
-  const isEditing = !!contato?.id;
+  const { addContato, eventoAtivo } = useEventos();
 
   const {
     register,
     handleSubmit,
     reset,
-    setValue,
-    watch,
-    formState: { isSubmitting }
-  } = useForm<Partial<ContatoEvento>>({
-    defaultValues: contato || {
-      interesse_nivel: 3
+    formState: { errors, isSubmitting }
+  } = useForm<ContatoRapidoData>({
+    defaultValues: {
+      nome: '',
+      email: '',
+      telefone: '',
+      empresa: ''
     }
   });
 
-  const interesseNivel = watch('interesse_nivel') || 3;
-
-  React.useEffect(() => {
-    if (contato) {
-      reset(contato);
-    } else {
-      reset({
-        interesse_nivel: 3
-      });
-    }
-  }, [contato, reset]);
-
-  const onSubmit = async (data: Partial<ContatoEvento>) => {
+  const onSubmit = async (data: ContatoRapidoData) => {
     try {
-      if (isEditing && contato?.id) {
-        await updateContato(contato.id, data);
-      } else {
-        await addContato(data);
+      // Verificar se há evento ativo
+      if (!eventoAtivo) {
+        toast({
+          title: "Erro",
+          description: "Nenhum evento está ativo. Ative um evento primeiro.",
+          variant: "destructive"
+        });
+        return;
       }
+
+      // Validação de email
+      if (data.email && !validateEmail(data.email)) {
+        toast({
+          title: "Email inválido",
+          description: "Por favor, insira um email válido",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Preparar dados
+      const contatoData = {
+        nome: data.nome,
+        email: data.email || null,
+        telefone: data.telefone || null,
+        empresa: data.empresa || null,
+        interesse_nivel: 3, // Valor padrão para contato rápido
+        data_contato: new Date().toISOString()
+      };
+
+      await addContato(contatoData);
+      
+      toast({
+        title: "Contato adicionado",
+        description: `Contato rápido adicionado ao evento "${eventoAtivo.nome}"`
+      });
+
       onClose();
       reset();
     } catch (error) {
-      console.error('Erro ao salvar contato:', error);
+      console.error('Erro ao salvar contato rápido:', error);
+      toast({
+        title: "Erro",
+        description: "Ocorreu um erro ao salvar o contato. Tente novamente.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -68,129 +97,72 @@ export const ContatoFormRapido: React.FC<ContatoFormRapidoProps> = ({
     reset();
   };
 
-  const getInteresseLabel = (nivel: number) => {
-    const labels = {
-      1: 'Muito Baixo',
-      2: 'Baixo', 
-      3: 'Médio',
-      4: 'Alto',
-      5: 'Muito Alto'
-    };
-    return labels[nivel as keyof typeof labels] || 'Médio';
-  };
+  // Se não há evento ativo, mostrar aviso
+  if (!eventoAtivo) {
+    return (
+      <Dialog open={open} onOpenChange={handleClose}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Nenhum evento ativo</DialogTitle>
+          </DialogHeader>
+          <div className="text-center py-8">
+            <p className="text-gray-600 mb-4">
+              Para cadastrar contatos, você precisa ativar um evento primeiro.
+            </p>
+            <Button onClick={handleClose}>
+              Entendi
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>
-            {isEditing ? 'Editar Contato' : 'Novo Contato'}
-          </DialogTitle>
+          <DialogTitle>Contato Rápido - {eventoAtivo.nome}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="nome">Nome</Label>
-              <Input
-                id="nome"
-                {...register('nome')}
-                placeholder="Nome completo"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="empresa">Empresa</Label>
-              <Input
-                id="empresa"
-                {...register('empresa')}
-                placeholder="Nome da empresa"
-              />
-            </div>
-          </div>
-
           <div className="space-y-2">
-            <Label htmlFor="cargo">Cargo</Label>
+            <Label htmlFor="nome">Nome *</Label>
             <Input
-              id="cargo"
-              {...register('cargo')}
-              placeholder="Cargo/Posição"
+              id="nome"
+              {...register('nome', { required: 'Nome é obrigatório' })}
+              placeholder="Nome completo"
             />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                {...register('email')}
-                placeholder="email@exemplo.com"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="telefone">Telefone</Label>
-              <Input
-                id="telefone"
-                {...register('telefone')}
-                placeholder="(11) 99999-9999"
-              />
-            </div>
+            {errors.nome && (
+              <p className="text-sm text-red-600">{errors.nome.message}</p>
+            )}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="discussao">O que discutimos?</Label>
-            <Textarea
-              id="discussao"
-              {...register('discussao')}
-              placeholder="Resumo da conversa, pontos importantes..."
-              rows={3}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="proximos_passos">Próximos passos</Label>
-            <Textarea
-              id="proximos_passos"
-              {...register('proximos_passos')}
-              placeholder="O que deve ser feito no follow-up..."
-              rows={2}
-            />
-          </div>
-
-          <div className="space-y-3">
-            <Label>Nível de Interesse: {getInteresseLabel(interesseNivel)}</Label>
-            <Slider
-              value={[interesseNivel]}
-              onValueChange={(value) => setValue('interesse_nivel', value[0])}
-              min={1}
-              max={5}
-              step={1}
-              className="w-full"
-            />
-            <div className="flex justify-between text-xs text-gray-500">
-              <span>Muito Baixo</span>
-              <span>Muito Alto</span>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="sugestao_followup">Sugestão de Follow-up</Label>
+            <Label htmlFor="email">Email</Label>
             <Input
-              id="sugestao_followup"
-              type="datetime-local"
-              {...register('sugestao_followup')}
+              id="email"
+              type="email"
+              {...register('email')}
+              placeholder="email@exemplo.com"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="observacoes">Observações adicionais</Label>
-            <Textarea
-              id="observacoes"
-              {...register('observacoes')}
-              placeholder="Outras informações relevantes..."
-              rows={2}
+            <Label htmlFor="telefone">Telefone</Label>
+            <Input
+              id="telefone"
+              {...register('telefone')}
+              placeholder="(11) 99999-9999"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="empresa">Empresa</Label>
+            <Input
+              id="empresa"
+              {...register('empresa')}
+              placeholder="Nome da empresa"
             />
           </div>
 
@@ -204,7 +176,7 @@ export const ContatoFormRapido: React.FC<ContatoFormRapidoProps> = ({
               Cancelar
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Salvando...' : (isEditing ? 'Atualizar' : 'Adicionar')}
+              {isSubmitting ? 'Salvando...' : 'Salvar Contato'}
             </Button>
           </div>
         </form>

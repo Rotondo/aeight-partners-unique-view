@@ -10,14 +10,26 @@ import { ContatosList } from './ContatosList';
 import { EventoAnalytics } from './EventoAnalytics';
 import { ContatosExport } from './ContatosExport';
 import { useEventos } from '@/contexts/EventosContext';
-import { Calendar, MapPin, Users, Plus, Camera, BarChart3, Settings } from 'lucide-react';
+import { Calendar, MapPin, Users, Plus, Settings, BarChart3 } from 'lucide-react';
 
 export const EventoAtivo: React.FC = () => {
   const { eventoAtivo } = useEventos();
   const [showContatoRapido, setShowContatoRapido] = useState(false);
   const [showContatoAvancado, setShowContatoAvancado] = useState(false);
 
-  if (!eventoAtivo) return null;
+  if (!eventoAtivo) {
+    return (
+      <div className="text-center py-12">
+        <Calendar className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">
+          Nenhum evento ativo
+        </h3>
+        <p className="text-gray-600">
+          Ative um evento na aba "Eventos" para começar a coletar contatos
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -66,7 +78,7 @@ export const EventoAtivo: React.FC = () => {
       </Card>
 
       {/* Ações Rápidas */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Button
           size="lg"
           className="h-20 text-lg"
@@ -84,19 +96,6 @@ export const EventoAtivo: React.FC = () => {
         >
           <Settings className="h-6 w-6 mr-3" />
           Contato Completo
-        </Button>
-
-        <Button
-          variant="outline"
-          size="lg"
-          className="h-20 text-lg"
-          onClick={() => {
-            // TODO: Implementar captura de cartão
-            alert('Funcionalidade de captura de cartão será implementada');
-          }}
-        >
-          <Camera className="h-6 w-6 mr-3" />
-          Fotografar Cartão
         </Button>
       </div>
 

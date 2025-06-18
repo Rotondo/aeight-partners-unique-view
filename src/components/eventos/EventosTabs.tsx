@@ -6,6 +6,7 @@ import { EventoAtivo } from './EventoAtivo';
 import { ContatosColetados } from './ContatosColetados';
 import { useEventos } from '@/contexts/EventosContext';
 import { Calendar, Users, ContactIcon } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 export const EventosTabs: React.FC = () => {
   const { eventoAtivo } = useEventos();
@@ -20,10 +21,15 @@ export const EventosTabs: React.FC = () => {
         <TabsTrigger 
           value="coleta" 
           className="flex items-center gap-2"
-          disabled={!eventoAtivo}
+          data-value="coleta"
         >
           <ContactIcon className="h-4 w-4" />
           Coleta de Contatos
+          {eventoAtivo && (
+            <Badge variant="default" className="ml-2 bg-green-600">
+              Ativo
+            </Badge>
+          )}
         </TabsTrigger>
         <TabsTrigger value="contatos" className="flex items-center gap-2">
           <Users className="h-4 w-4" />
@@ -36,19 +42,7 @@ export const EventosTabs: React.FC = () => {
       </TabsContent>
 
       <TabsContent value="coleta">
-        {eventoAtivo ? (
-          <EventoAtivo />
-        ) : (
-          <div className="text-center py-12">
-            <ContactIcon className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              Nenhum evento ativo
-            </h3>
-            <p className="text-gray-600">
-              Selecione um evento na aba "Eventos" para iniciar a coleta de contatos
-            </p>
-          </div>
-        )}
+        <EventoAtivo />
       </TabsContent>
 
       <TabsContent value="contatos">
