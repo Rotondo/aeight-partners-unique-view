@@ -52,7 +52,13 @@ export const CrmFormText: React.FC = () => {
   };
 
   // CORREÇÃO: Filtrar parceiros válidos para evitar IDs vazios
-  const validPartners = partners.filter(partner => partner.id && partner.id.trim() !== '');
+  const validPartners = partners.filter(partner => {
+    const isValid = partner.id && partner.id.trim() !== '';
+    console.log('[CrmFormText] Partner validation:', { id: partner.id, nome: partner.nome, isValid });
+    return isValid;
+  });
+
+  console.log('[CrmFormText] Total partners:', partners.length, 'Valid partners:', validPartners.length);
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -109,11 +115,14 @@ export const CrmFormText: React.FC = () => {
           </SelectTrigger>
           <SelectContent className="bg-white border border-gray-300 rounded-md shadow-lg z-50">
             <SelectItem value="none">Nenhum parceiro</SelectItem>
-            {validPartners.map((partner) => (
-              <SelectItem key={partner.id} value={partner.id}>
-                {partner.nome} {partner.tipo === 'intragrupo' ? '(Intragrupo)' : '(Parceiro)'}
-              </SelectItem>
-            ))}
+            {validPartners.map((partner) => {
+              console.log('[CrmFormText] Rendering SelectItem:', { id: partner.id, nome: partner.nome });
+              return (
+                <SelectItem key={partner.id} value={partner.id}>
+                  {partner.nome} {partner.tipo === 'intragrupo' ? '(Intragrupo)' : '(Parceiro)'}
+                </SelectItem>
+              );
+            })}
           </SelectContent>
         </Select>
         {loadingPartners && (
@@ -157,3 +166,4 @@ export const CrmFormText: React.FC = () => {
     </form>
   );
 };
+

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -87,7 +88,13 @@ export const CrmActionForm: React.FC<CrmActionFormProps> = ({ onSuccess }) => {
   };
 
   // CORREÇÃO: Filtrar parceiros válidos para evitar IDs vazios
-  const validPartners = partners.filter(partner => partner.id && partner.id.trim() !== '');
+  const validPartners = partners.filter(partner => {
+    const isValid = partner.id && partner.id.trim() !== '';
+    console.log('[CrmActionForm] Partner validation:', { id: partner.id, nome: partner.nome, isValid });
+    return isValid;
+  });
+
+  console.log('[CrmActionForm] Total partners:', partners.length, 'Valid partners:', validPartners.length);
 
   return (
     <Card className="border border-gray-200">
@@ -187,11 +194,14 @@ export const CrmActionForm: React.FC<CrmActionFormProps> = ({ onSuccess }) => {
                 </SelectTrigger>
                 <SelectContent className="bg-white border border-gray-300 rounded-md shadow-lg z-50">
                   <SelectItem value="none">Nenhum parceiro</SelectItem>
-                  {validPartners.map((partner) => (
-                    <SelectItem key={partner.id} value={partner.id}>
-                      {partner.nome}
-                    </SelectItem>
-                  ))}
+                  {validPartners.map((partner) => {
+                    console.log('[CrmActionForm] Rendering SelectItem:', { id: partner.id, nome: partner.nome });
+                    return (
+                      <SelectItem key={partner.id} value={partner.id}>
+                        {partner.nome}
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             </div>
@@ -235,3 +245,4 @@ export const CrmActionForm: React.FC<CrmActionFormProps> = ({ onSuccess }) => {
     </Card>
   );
 };
+

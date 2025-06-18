@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,7 +29,13 @@ export const CrmFormVideo: React.FC = () => {
   const previewRef = useRef<HTMLVideoElement | null>(null);
 
   // CORREÇÃO: Filtrar parceiros válidos para evitar IDs vazios
-  const validPartners = partners.filter(partner => partner.id && partner.id.trim() !== '');
+  const validPartners = partners.filter(partner => {
+    const isValid = partner.id && partner.id.trim() !== '';
+    console.log('[CrmFormVideo] Partner validation:', { id: partner.id, nome: partner.nome, isValid });
+    return isValid;
+  });
+
+  console.log('[CrmFormVideo] Total partners:', partners.length, 'Valid partners:', validPartners.length);
 
   const startRecording = async () => {
     try {
@@ -201,11 +206,14 @@ export const CrmFormVideo: React.FC = () => {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="none">Nenhum parceiro</SelectItem>
-            {validPartners.map((partner) => (
-              <SelectItem key={partner.id} value={partner.id}>
-                {partner.nome}
-              </SelectItem>
-            ))}
+            {validPartners.map((partner) => {
+              console.log('[CrmFormVideo] Rendering SelectItem:', { id: partner.id, nome: partner.nome });
+              return (
+                <SelectItem key={partner.id} value={partner.id}>
+                  {partner.nome}
+                </SelectItem>
+              );
+            })}
           </SelectContent>
         </Select>
       </div>
