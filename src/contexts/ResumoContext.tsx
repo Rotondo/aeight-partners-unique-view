@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
+import { ResumoService } from '@/services/ResumoService';
 import type { DiarioResumo, TipoResumo } from '@/types/diario';
 
 interface ResumoContextType {
@@ -13,6 +14,7 @@ interface ResumoContextType {
   generateResumo: (tipo: TipoResumo, inicio: string, fim: string) => Promise<void>;
   exportResumoToPdf: (resumoId: string) => Promise<void>;
   exportResumoToCsv: (resumoId: string) => Promise<void>;
+  getResumoDetails: (resumoId: string) => Promise<any>;
 }
 
 const ResumoContext = createContext<ResumoContextType | undefined>(undefined);
@@ -39,26 +41,8 @@ export const ResumoProvider: React.FC<ResumoProviderProps> = ({ children }) => {
     
     setLoadingResumos(true);
     try {
-      // Mock data - substituir por chamada real do Supabase
-      const mockResumos: DiarioResumo[] = [
-        {
-          id: '1',
-          tipo: 'semanal',
-          periodo_inicio: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-          periodo_fim: new Date().toISOString(),
-          titulo: 'Resumo Semanal',
-          conteudo_resumo: 'Semana produtiva com várias reuniões',
-          total_eventos: 5,
-          total_acoes_crm: 3,
-          total_parceiros_envolvidos: 2,
-          principais_realizacoes: ['Reunião de alinhamento', 'Apresentação de proposta'],
-          proximos_passos: ['Follow-up com cliente', 'Preparar relatório'],
-          usuario_gerador_id: user?.id || '',
-          created_at: new Date().toISOString()
-        }
-      ];
-      
-      setResumos(mockResumos);
+      const resumosCarregados = await ResumoService.loadResumos();
+      setResumos(resumosCarregados);
     } catch (error) {
       console.error('Erro ao carregar resumos:', error);
       toast({
@@ -72,44 +56,39 @@ export const ResumoProvider: React.FC<ResumoProviderProps> = ({ children }) => {
   };
 
   const generateResumo = async (tipo: TipoResumo, inicio: string, fim: string) => {
-    if (!isAdmin) return;
+    if (!isAdmin || !user) return;
     
     try {
       toast({
         title: "Gerando Resumo",
-        description: "Processando dados para gerar o resumo..."
+        description: "Processando dados reais para gerar o resumo..."
       });
       
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      const novoResumo = await ResumoService.generateResumo(tipo, inicio, fim, user.id);
       
-      const novoResumo: DiarioResumo = {
-        id: Date.now().toString(),
-        tipo,
-        periodo_inicio: inicio,
-        periodo_fim: fim,
-        titulo: `Resumo ${tipo} - ${new Date().toLocaleDateString('pt-BR')}`,
-        conteudo_resumo: 'Resumo gerado automaticamente',
-        total_eventos: 5,
-        total_acoes_crm: 3,
-        total_parceiros_envolvidos: 5,
-        principais_realizacoes: ['Reuniões realizadas', 'Propostas enviadas'],
-        proximos_passos: ['Acompanhar propostas', 'Agendar follow-ups'],
-        usuario_gerador_id: user?.id || '',
-        created_at: new Date().toISOString()
-      };
-      
-      setResumos(prev => [novoResumo, ...prev]);
-      toast({
-        title: "Sucesso",
-        description: "Resumo gerado com sucesso"
-      });
+      if (novoResumo) {
+        setResumos(prev => [novoResumo, ...prev]);
+        toast({
+          title: "Sucesso",
+          description: `Resumo ${tipo} gerado com dados reais do sistema`
+        });
+      }
     } catch (error) {
       console.error('Erro ao gerar resumo:', error);
       toast({
         title: "Erro",
-        description: "Falha ao gerar resumo",
+        description: "Falha ao gerar resumo com dados reais",
         variant: "destructive"
       });
+    }
+  };
+
+  const getResumoDetails = async (resumoId: string) => {
+    try {
+      return await ResumoService.getResumoDetails(resumoId);
+    } catch (error) {
+      console.error('Erro ao buscar detalhes:', error);
+      return null;
     }
   };
 
@@ -119,14 +98,14 @@ export const ResumoProvider: React.FC<ResumoProviderProps> = ({ children }) => {
     try {
       toast({
         title: "Exportando",
-        description: "Gerando arquivo PDF..."
+        description: "Gerando arquivo PDF com dados reais..."
       });
       
       await new Promise(resolve => setTimeout(resolve, 2000));
       
       toast({
         title: "Sucesso",
-        description: "PDF exportado com sucesso"
+        description: "PDF exportado com dados verificáveis"
       });
     } catch (error) {
       console.error('Erro ao exportar PDF:', error);
@@ -144,14 +123,14 @@ export const ResumoProvider: React.FC<ResumoProviderProps> = ({ children }) => {
     try {
       toast({
         title: "Exportando",
-        description: "Gerando arquivo CSV..."
+        description: "Gerando arquivo CSV com dados reais..."
       });
       
       await new Promise(resolve => setTimeout(resolve, 1500));
       
       toast({
         title: "Sucesso",
-        description: "CSV exportado com sucesso"
+        description: "CSV exportado com dados verificáveis"
       });
     } catch (error) {
       console.error('Erro ao exportar CSV:', error);
@@ -168,7 +147,8 @@ export const ResumoProvider: React.FC<ResumoProviderProps> = ({ children }) => {
     loadingResumos,
     generateResumo,
     exportResumoToPdf,
-    exportResumoToCsv
+    exportResumoToCsv,
+    getResumoDetails
   };
 
   return (

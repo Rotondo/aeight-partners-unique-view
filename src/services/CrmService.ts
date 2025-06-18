@@ -1,9 +1,9 @@
-
 import { supabase } from '@/integrations/supabase/client';
+import { AgendaService } from './AgendaService';
 import type { CrmAcao, MetodoComunicacao, StatusAcaoCrm } from '@/types/diario';
 
 /**
- * Service para operações do CRM
+ * Service para operações do CRM com integração automática à agenda
  */
 export class CrmService {
   /**
@@ -65,10 +65,16 @@ export class CrmService {
   }
 
   /**
-   * Cria uma nova ação do CRM
+   * Cria uma nova ação do CRM com integração automática à agenda
    */
   static async createAcao(acao: Partial<CrmAcao>, userId: string): Promise<CrmAcao | null> {
     try {
+      const validation = CrmService.validateAcao(acao);
+      if (!validation.isValid) {
+        console.error('Ação inválida:', validation.errors);
+        return null;
+      }
+
       const metadata = {
         description: acao.description,
         communication_method: acao.communication_method,
@@ -96,6 +102,17 @@ export class CrmService {
         throw error;
       }
 
+      // INTEGRAÇÃO AUTOMÁTICA: Se há próximo passo com data, criar evento na agenda
+      if (data && acao.next_step_date && acao.next_steps) {
+        console.log('Criando evento na agenda automaticamente...');
+        await AgendaService.createEventFromCrmNextStep(
+          data.id,
+          acao.next_step_date,
+          acao.next_steps,
+          acao.partner_id
+        );
+      }
+
       return data ? {
         id: data.id,
         description: acao.description || '',
@@ -116,7 +133,7 @@ export class CrmService {
   }
 
   /**
-   * Atualiza uma ação do CRM
+   * Atualiza uma ação do CRM com sincronização automática na agenda
    */
   static async updateAcao(id: string, updates: Partial<CrmAcao>): Promise<boolean> {
     try {
@@ -141,6 +158,15 @@ export class CrmService {
         throw error;
       }
 
+      // SINCRONIZAÇÃO AUTOMÁTICA: Atualizar status do evento na agenda
+      if (updates.status) {
+        const agendaStatus = updates.status === 'concluida' ? 'completed' : 
+                           updates.status === 'cancelada' ? 'canceled' : 'scheduled';
+        
+        console.log(`Sincronizando status na agenda: ${agendaStatus}`);
+        await AgendaService.updateEventStatusFromCrm(id, agendaStatus);
+      }
+
       return true;
     } catch (error) {
       console.error('Erro no updateAcao:', error);
@@ -149,10 +175,14 @@ export class CrmService {
   }
 
   /**
-   * Exclui uma ação do CRM
+   * Exclui uma ação do CRM com remoção automática do evento na agenda
    */
   static async deleteAcao(id: string): Promise<boolean> {
     try {
+      // INTEGRAÇÃO AUTOMÁTICA: Remover evento relacionado da agenda
+      console.log('Removendo evento da agenda...');
+      await AgendaService.deleteEventFromCrm(id);
+
       const { error } = await supabase
         .from('diario_crm_acoes')
         .delete()
@@ -171,14 +201,32 @@ export class CrmService {
   }
 
   /**
-   * Filtra ações com próximos passos pendentes
+   * Filtra ações com próximos passos pendentes incluindo status temporal
    */
-  static filterAcoesComProximosPassos(acoes: CrmAcao[]): CrmAcao[] {
-    return acoes.filter(acao => 
+  static filterAcoesComProximosPassos(acoes: CrmAcao[]): CrmAcao[] & { overdue?: CrmAcao[]; upcoming?: CrmAcao[] } {
+    const now = new Date();
+    const proximosPassos = acoes.filter(acao => 
       acao.next_steps && 
       acao.status !== 'concluida' && 
       acao.status !== 'cancelada'
     );
+
+    // Separar por status temporal
+    const overdue = proximosPassos.filter(acao => {
+      if (!acao.next_step_date) return false;
+      return new Date(acao.next_step_date) < now;
+    });
+
+    const upcoming = proximosPassos.filter(acao => {
+      if (!acao.next_step_date) return true; // Sem data = upcoming
+      return new Date(acao.next_step_date) >= now;
+    });
+
+    const result = proximosPassos as CrmAcao[] & { overdue?: CrmAcao[]; upcoming?: CrmAcao[] };
+    result.overdue = overdue;
+    result.upcoming = upcoming;
+
+    return result;
   }
 
   /**
@@ -205,6 +253,9 @@ export class CrmService {
     };
   }
 
+  /**
+   * Mapa o método de comunicação para o formato do CRM
+   */
   private static mapCommunicationMethod(type: string): MetodoComunicacao {
     switch (type) {
       case 'audio': return 'ligacao';
@@ -214,6 +265,9 @@ export class CrmService {
     }
   }
 
+  /**
+   * Mapa o status da ação para o formato do CRM
+   */
   private static mapStatus(metadata: any): StatusAcaoCrm {
     const parsedMetadata = this.safeParseMetadata(metadata);
     if (parsedMetadata?.status) {
@@ -222,11 +276,17 @@ export class CrmService {
     return 'pendente';
   }
 
+  /**
+   * Extrai os próximos passos da ação
+   */
   private static extractNextSteps(metadata: any): string | undefined {
     const parsedMetadata = this.safeParseMetadata(metadata);
     return parsedMetadata?.next_steps;
   }
 
+  /**
+   * Analisa e retorna os dados de metadados de forma segura
+   */
   private static safeParseMetadata(metadata: any): Record<string, any> {
     if (!metadata) return {};
     

@@ -3,10 +3,11 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FileText, Plus, Download, TrendingUp } from 'lucide-react';
+import { FileText, Plus, Download, TrendingUp, Eye, Search } from 'lucide-react';
 import { useResumo } from '@/contexts/ResumoContext';
 import { TipoResumo } from '@/types/diario';
 import { DatePicker } from '@/components/ui/date-picker';
+import { ResumoDetailsModal } from './ResumoDetailsModal';
 
 export const ResumoView: React.FC = () => {
   const { 
@@ -21,6 +22,8 @@ export const ResumoView: React.FC = () => {
   const [dataInicio, setDataInicio] = useState<Date | undefined>(undefined);
   const [dataFim, setDataFim] = useState<Date | undefined>(undefined);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [selectedResumo, setSelectedResumo] = useState<any>(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
 
   const handleGenerateResumo = async () => {
     if (!dataInicio || !dataFim) return;
@@ -37,15 +40,20 @@ export const ResumoView: React.FC = () => {
     }
   };
 
+  const handleShowDetails = (resumo: any) => {
+    setSelectedResumo(resumo);
+    setShowDetailsModal(true);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
         <FileText className="h-6 w-6 text-primary" />
         <div>
-          <h2 className="text-2xl font-bold">Resumos</h2>
+          <h2 className="text-2xl font-bold">Resumos com Dados Reais</h2>
           <p className="text-muted-foreground">
-            Gere resumos executivos e exporte relatórios
+            Todos os números são baseados em dados verificáveis do sistema
           </p>
         </div>
       </div>
@@ -58,7 +66,7 @@ export const ResumoView: React.FC = () => {
             Gerar Novo Resumo
           </CardTitle>
           <CardDescription>
-            Configure o período e tipo de resumo desejado
+            Configure o período e tipo - os dados serão extraídos em tempo real
           </CardDescription>
         </CardHeader>
         
@@ -99,7 +107,7 @@ export const ResumoView: React.FC = () => {
               disabled={!dataInicio || !dataFim || isGenerating}
               className="h-10"
             >
-              {isGenerating ? 'Gerando...' : 'Gerar Resumo'}
+              {isGenerating ? 'Processando...' : 'Gerar com Dados Reais'}
             </Button>
           </div>
         </CardContent>
@@ -108,9 +116,9 @@ export const ResumoView: React.FC = () => {
       {/* Lista de resumos */}
       <Card>
         <CardHeader>
-          <CardTitle>Resumos Gerados</CardTitle>
+          <CardTitle>Resumos Gerados com Dados Verificáveis</CardTitle>
           <CardDescription>
-            Histórico de resumos executivos
+            Clique em "Ver Detalhes" para verificar a origem de cada número
           </CardDescription>
         </CardHeader>
         
@@ -128,13 +136,13 @@ export const ResumoView: React.FC = () => {
               <TrendingUp className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-medium">Nenhum resumo encontrado</h3>
               <p className="text-muted-foreground">
-                Gere seu primeiro resumo para começar
+                Gere seu primeiro resumo para ver dados reais do sistema
               </p>
             </div>
           ) : (
             <div className="space-y-4">
               {resumos.map((resumo) => (
-                <Card key={resumo.id} className="hover:shadow-md transition-shadow">
+                <Card key={resumo.id} className="hover:shadow-md transition-shadow border-l-4 border-l-blue-500">
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
@@ -142,6 +150,9 @@ export const ResumoView: React.FC = () => {
                           <h4 className="font-semibold text-lg">{resumo.titulo}</h4>
                           <span className="text-sm bg-primary/10 text-primary px-2 py-1 rounded">
                             {resumo.tipo}
+                          </span>
+                          <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
+                            Dados Reais
                           </span>
                         </div>
                         
@@ -152,25 +163,40 @@ export const ResumoView: React.FC = () => {
                         </p>
                         
                         <div className="grid grid-cols-3 gap-4 mb-3">
-                          <div className="text-center">
+                          <div className="text-center cursor-pointer hover:bg-blue-50 p-2 rounded transition-colors"
+                               onClick={() => handleShowDetails(resumo)}>
                             <div className="text-2xl font-bold text-blue-600">
                               {resumo.total_eventos}
                             </div>
                             <p className="text-xs text-muted-foreground">Eventos</p>
+                            <p className="text-xs text-blue-600 mt-1">
+                              <Search className="h-3 w-3 inline mr-1" />
+                              Ver detalhes
+                            </p>
                           </div>
                           
-                          <div className="text-center">
+                          <div className="text-center cursor-pointer hover:bg-green-50 p-2 rounded transition-colors"
+                               onClick={() => handleShowDetails(resumo)}>
                             <div className="text-2xl font-bold text-green-600">
                               {resumo.total_acoes_crm}
                             </div>
                             <p className="text-xs text-muted-foreground">Ações CRM</p>
+                            <p className="text-xs text-green-600 mt-1">
+                              <Search className="h-3 w-3 inline mr-1" />
+                              Ver detalhes
+                            </p>
                           </div>
                           
-                          <div className="text-center">
+                          <div className="text-center cursor-pointer hover:bg-purple-50 p-2 rounded transition-colors"
+                               onClick={() => handleShowDetails(resumo)}>
                             <div className="text-2xl font-bold text-purple-600">
                               {resumo.total_parceiros_envolvidos}
                             </div>
                             <p className="text-xs text-muted-foreground">Parceiros</p>
+                            <p className="text-xs text-purple-600 mt-1">
+                              <Search className="h-3 w-3 inline mr-1" />
+                              Ver detalhes
+                            </p>
                           </div>
                         </div>
                         
@@ -185,6 +211,15 @@ export const ResumoView: React.FC = () => {
                       </div>
                       
                       <div className="flex flex-col gap-2 ml-4">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleShowDetails(resumo)}
+                        >
+                          <Eye className="h-4 w-4 mr-2" />
+                          Ver Detalhes
+                        </Button>
+                        
                         <Button
                           variant="outline"
                           size="sm"
@@ -218,6 +253,7 @@ export const ResumoView: React.FC = () => {
           <CardContent className="pt-6">
             <div className="text-2xl font-bold text-center">{resumos.length}</div>
             <p className="text-center text-muted-foreground">Total de Resumos</p>
+            <p className="text-center text-xs text-green-600 mt-1">Com dados verificáveis</p>
           </CardContent>
         </Card>
         
@@ -239,6 +275,19 @@ export const ResumoView: React.FC = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Modal de Detalhes */}
+      {selectedResumo && (
+        <ResumoDetailsModal
+          resumoId={selectedResumo.id}
+          resumo={selectedResumo}
+          isOpen={showDetailsModal}
+          onClose={() => {
+            setShowDetailsModal(false);
+            setSelectedResumo(null);
+          }}
+        />
+      )}
     </div>
   );
 };
