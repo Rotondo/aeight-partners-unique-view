@@ -309,7 +309,7 @@ Development → Testing → Staging → Production
 ## 🎯 Roadmap Técnico
 
 ### 🔜 Próximas Versões
-- **Q1 2025**: Integração completa Google/Outlook
+- **Q2 2025**: Integração completa Google/Outlook
 - **Q2 2025**: IA avançada com NLP
 - **Q3 2025**: App mobile React Native
 - **Q4 2025**: Analytics dashboard avançado
@@ -322,4 +322,4 @@ Development → Testing → Staging → Production
 
 ---
 
-> **Arquitetura Aeight Partners** - Construída para escalar, evoluir e inovar no futuro do relacionamento empresarial.
+> **Arquitetura Rotondo Partners** - Construída para escalar, evoluir e inovar no futuro do relacionamento empresarial.
