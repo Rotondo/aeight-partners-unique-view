@@ -13,14 +13,7 @@ export class CrmService {
     try {
       const { data, error } = await supabase
         .from('diario_crm_acoes')
-        .select(`
-          *,
-          empresas:partner_id (
-            id,
-            nome,
-            tipo
-          )
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -28,25 +21,43 @@ export class CrmService {
         throw error;
       }
 
-      return (data || []).map(acao => ({
-        id: acao.id,
-        description: acao.content,
-        communication_method: this.mapCommunicationMethod(acao.type),
-        status: this.mapStatus(acao.metadata),
-        partner_id: acao.partner_id,
-        user_id: acao.user_id,
-        content: acao.content,
-        next_step_date: acao.next_step_date,
-        next_steps: typeof acao.metadata === 'object' && acao.metadata ? 
-          (acao.metadata as any).next_steps : undefined,
-        metadata: typeof acao.metadata === 'object' ? acao.metadata as Record<string, any> : {},
-        created_at: acao.created_at,
-        parceiro: acao.empresas ? {
-          id: acao.empresas.id,
-          nome: acao.empresas.nome,
-          tipo: acao.empresas.tipo
-        } : undefined
+      // Buscar dados dos parceiros separadamente se necessário
+      const acoesComParceiros = await Promise.all((data || []).map(async (acao) => {
+        let parceiro = undefined;
+        
+        if (acao.partner_id) {
+          const { data: parceiroDados } = await supabase
+            .from('empresas')
+            .select('id, nome, tipo')
+            .eq('id', acao.partner_id)
+            .single();
+          
+          if (parceiroDados) {
+            parceiro = {
+              id: parceiroDados.id,
+              nome: parceiroDados.nome,
+              tipo: parceiroDados.tipo
+            };
+          }
+        }
+
+        return {
+          id: acao.id,
+          description: acao.content || '',
+          communication_method: this.mapCommunicationMethod(acao.type),
+          status: this.mapStatus(acao.metadata),
+          partner_id: acao.partner_id,
+          user_id: acao.user_id,
+          content: acao.content,
+          next_step_date: acao.next_step_date,
+          next_steps: this.extractNextSteps(acao.metadata),
+          metadata: this.safeParseMetadata(acao.metadata),
+          created_at: acao.created_at,
+          parceiro
+        };
       }));
+
+      return acoesComParceiros;
     } catch (error) {
       console.error('Erro no loadAcoes:', error);
       throw error;
@@ -95,7 +106,7 @@ export class CrmService {
         content: data.content,
         next_step_date: data.next_step_date,
         next_steps: acao.next_steps,
-        metadata: typeof data.metadata === 'object' ? data.metadata as Record<string, any> : {},
+        metadata: this.safeParseMetadata(data.metadata),
         created_at: data.created_at
       } : null;
     } catch (error) {
@@ -204,9 +215,33 @@ export class CrmService {
   }
 
   private static mapStatus(metadata: any): StatusAcaoCrm {
-    if (typeof metadata === 'object' && metadata?.status) {
-      return metadata.status;
+    const parsedMetadata = this.safeParseMetadata(metadata);
+    if (parsedMetadata?.status) {
+      return parsedMetadata.status;
     }
     return 'pendente';
+  }
+
+  private static extractNextSteps(metadata: any): string | undefined {
+    const parsedMetadata = this.safeParseMetadata(metadata);
+    return parsedMetadata?.next_steps;
+  }
+
+  private static safeParseMetadata(metadata: any): Record<string, any> {
+    if (!metadata) return {};
+    
+    if (typeof metadata === 'object') {
+      return metadata as Record<string, any>;
+    }
+    
+    if (typeof metadata === 'string') {
+      try {
+        return JSON.parse(metadata);
+      } catch {
+        return {};
+      }
+    }
+    
+    return {};
   }
 }
