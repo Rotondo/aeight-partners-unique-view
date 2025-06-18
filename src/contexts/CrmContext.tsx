@@ -1,22 +1,27 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { toast } from '@/hooks/use-toast';
 import { CrmService } from '@/services/CrmService';
-import type { CrmAcao } from '@/types/diario';
+import { CrmAcao } from '@/types/diario';
 
 interface CrmContextType {
-  // Estados
   crmAcoes: CrmAcao[];
   loadingAcoes: boolean;
-  
-  // Ações
   createAcaoCrm: (acao: Partial<CrmAcao>) => Promise<void>;
-  updateAcaoCrm: (id: string, acao: Partial<CrmAcao>) => Promise<void>;
+  updateAcaoCrm: (id: string, updates: Partial<CrmAcao>) => Promise<void>;
   deleteAcaoCrm: (id: string) => Promise<void>;
+  refreshAcoes: () => Promise<void>;
 }
 
 const CrmContext = createContext<CrmContextType | undefined>(undefined);
+
+export const useCrm = () => {
+  const context = useContext(CrmContext);
+  if (!context) {
+    throw new Error('useCrm must be used within a CrmProvider');
+  }
+  return context;
+};
 
 interface CrmProviderProps {
   children: ReactNode;
@@ -25,134 +30,74 @@ interface CrmProviderProps {
 export const CrmProvider: React.FC<CrmProviderProps> = ({ children }) => {
   const { user } = useAuth();
   const [crmAcoes, setCrmAcoes] = useState<CrmAcao[]>([]);
-  const [loadingAcoes, setLoadingAcoes] = useState(false);
+  const [loadingAcoes, setLoadingAcoes] = useState(true);
 
-  const isAdmin = user?.papel === 'admin';
-
-  useEffect(() => {
-    if (isAdmin) {
-      loadCrmAcoes();
-    }
-  }, [isAdmin]);
-
-  const loadCrmAcoes = async () => {
-    if (!isAdmin) return;
-    
-    setLoadingAcoes(true);
+  const loadAcoes = async () => {
     try {
+      setLoadingAcoes(true);
       const acoes = await CrmService.loadAcoes();
       setCrmAcoes(acoes);
     } catch (error) {
-      console.error('Erro ao carregar ações do CRM:', error);
-      toast({
-        title: "Erro",
-        description: "Falha ao carregar ações do CRM",
-        variant: "destructive"
-      });
+      console.error('Erro ao carregar ações:', error);
     } finally {
       setLoadingAcoes(false);
     }
   };
 
   const createAcaoCrm = async (acao: Partial<CrmAcao>) => {
-    if (!isAdmin || !user) return;
-    
-    const validation = CrmService.validateAcao(acao);
-    if (!validation.isValid) {
-      toast({
-        title: "Erro de Validação",
-        description: validation.errors.join(', '),
-        variant: "destructive"
-      });
-      return;
-    }
+    if (!user) return;
     
     try {
-      const novaAcao = await CrmService.createAcao(acao, user.id);
-      if (novaAcao) {
-        setCrmAcoes(prev => [novaAcao, ...prev]);
-        toast({
-          title: "Sucesso",
-          description: "Ação do CRM criada com sucesso"
-        });
+      const validation = CrmService.validateAcao(acao);
+      if (!validation.isValid) {
+        console.error('Ação inválida:', validation.errors);
+        return;
       }
+
+      await CrmService.createAcao(acao, user.id);
+      await loadAcoes();
     } catch (error) {
-      console.error('Erro ao criar ação do CRM:', error);
-      toast({
-        title: "Erro",
-        description: "Falha ao criar ação do CRM",
-        variant: "destructive"
-      });
+      console.error('Erro ao criar ação:', error);
+      throw error;
     }
   };
 
-  const updateAcaoCrm = async (id: string, acao: Partial<CrmAcao>) => {
-    if (!isAdmin) return;
-    
+  const updateAcaoCrm = async (id: string, updates: Partial<CrmAcao>) => {
     try {
-      const success = await CrmService.updateAcao(id, acao);
-      if (success) {
-        setCrmAcoes(prev => prev.map(a => 
-          a.id === id ? { ...a, ...acao, updated_at: new Date().toISOString() } : a
-        ));
-        
-        toast({
-          title: "Sucesso",
-          description: "Ação do CRM atualizada com sucesso"
-        });
-      }
+      await CrmService.updateAcao(id, updates);
+      await loadAcoes();
     } catch (error) {
-      console.error('Erro ao atualizar ação do CRM:', error);
-      toast({
-        title: "Erro",
-        description: "Falha ao atualizar ação do CRM",
-        variant: "destructive"
-      });
+      console.error('Erro ao atualizar ação:', error);
+      throw error;
     }
   };
 
   const deleteAcaoCrm = async (id: string) => {
-    if (!isAdmin) return;
-    
     try {
-      const success = await CrmService.deleteAcao(id);
-      if (success) {
-        setCrmAcoes(prev => prev.filter(a => a.id !== id));
-        
-        toast({
-          title: "Sucesso",
-          description: "Ação do CRM excluída com sucesso"
-        });
-      }
+      await CrmService.deleteAcao(id);
+      await loadAcoes();
     } catch (error) {
-      console.error('Erro ao excluir ação do CRM:', error);
-      toast({
-        title: "Erro",
-        description: "Falha ao excluir ação do CRM",
-        variant: "destructive"
-      });
+      console.error('Erro ao deletar ação:', error);
+      throw error;
     }
   };
 
-  const value: CrmContextType = {
-    crmAcoes,
-    loadingAcoes,
-    createAcaoCrm,
-    updateAcaoCrm,
-    deleteAcaoCrm
-  };
+  useEffect(() => {
+    loadAcoes();
+  }, []);
 
   return (
-    <CrmContext.Provider value={value}>
+    <CrmContext.Provider
+      value={{
+        crmAcoes,
+        loadingAcoes,
+        createAcaoCrm,
+        updateAcaoCrm,
+        deleteAcaoCrm,
+        refreshAcoes: loadAcoes
+      }}
+    >
       {children}
     </CrmContext.Provider>
   );
-};
-
-export const useCrm = () => {
-  const context = useContext(CrmContext);
-  if (context === undefined) {
-    throw new Error('useCrm deve ser usado dentro de um CrmProvider');
-  }
-  return context;
 };

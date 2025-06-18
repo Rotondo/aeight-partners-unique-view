@@ -61,6 +61,7 @@ export const CrmFormText: React.FC = () => {
           onChange={(e) => setFormData({ ...formData, description: e.target.value })}
           placeholder="Ex: Reunião de alinhamento"
           required
+          className="border border-gray-300 rounded-md px-3 py-2"
         />
       </div>
 
@@ -68,10 +69,10 @@ export const CrmFormText: React.FC = () => {
       <div className="space-y-2">
         <Label>Método de Comunicação</Label>
         <Select value={formData.communication_method} onValueChange={(value) => setFormData({ ...formData, communication_method: value as MetodoComunicacao })}>
-          <SelectTrigger>
+          <SelectTrigger className="border border-gray-300 rounded-md">
             <SelectValue placeholder="Selecione o método" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="bg-white border border-gray-300 rounded-md shadow-lg z-50">
             <SelectItem value="whatsapp">WhatsApp</SelectItem>
             <SelectItem value="ligacao">Ligação</SelectItem>
             <SelectItem value="email">E-mail</SelectItem>
@@ -91,7 +92,7 @@ export const CrmFormText: React.FC = () => {
           placeholder="Digite o conteúdo detalhado aqui..."
           rows={8}
           required
-          className="min-h-[200px]"
+          className="min-h-[200px] border border-gray-300 rounded-md px-3 py-2"
         />
       </div>
 
@@ -99,10 +100,11 @@ export const CrmFormText: React.FC = () => {
       <div className="space-y-2">
         <Label>Parceiro (Opcional)</Label>
         <Select value={formData.partner_id} onValueChange={(value) => setFormData({ ...formData, partner_id: value })}>
-          <SelectTrigger>
+          <SelectTrigger className="border border-gray-300 rounded-md">
             <SelectValue placeholder="Selecione um parceiro" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="bg-white border border-gray-300 rounded-md shadow-lg z-50">
+            <SelectItem value="">Nenhum parceiro</SelectItem>
             {partners.map((partner) => (
               <SelectItem key={partner.id} value={partner.id}>
                 {partner.nome}
@@ -116,10 +118,10 @@ export const CrmFormText: React.FC = () => {
       <div className="space-y-2">
         <Label>Status</Label>
         <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value as StatusAcaoCrm })}>
-          <SelectTrigger>
+          <SelectTrigger className="border border-gray-300 rounded-md">
             <SelectValue />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="bg-white border border-gray-300 rounded-md shadow-lg z-50">
             <SelectItem value="pendente">Pendente</SelectItem>
             <SelectItem value="em_andamento">Em Andamento</SelectItem>
             <SelectItem value="concluida">Concluída</SelectItem>
@@ -137,6 +139,7 @@ export const CrmFormText: React.FC = () => {
           onChange={(e) => setFormData({ ...formData, next_steps: e.target.value })}
           placeholder="Defina as próximas ações..."
           rows={3}
+          className="border border-gray-300 rounded-md px-3 py-2"
         />
       </div>
 

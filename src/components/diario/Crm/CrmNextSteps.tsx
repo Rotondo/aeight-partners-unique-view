@@ -27,8 +27,8 @@ export const CrmNextSteps: React.FC = () => {
   };
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className="border border-gray-200">
+      <CardHeader className="border-b border-gray-200">
         <CardTitle className="flex items-center gap-2">
           <ArrowRight className="h-5 w-5" />
           Próximos Passos
@@ -38,7 +38,7 @@ export const CrmNextSteps: React.FC = () => {
         </CardDescription>
       </CardHeader>
       
-      <CardContent>
+      <CardContent className="p-4">
         {acoesComProximosPassos.length === 0 ? (
           <div className="text-center py-6">
             <CheckCircle className="h-8 w-8 text-green-500 mx-auto mb-3" />
@@ -49,7 +49,7 @@ export const CrmNextSteps: React.FC = () => {
         ) : (
           <div className="space-y-3">
             {acoesComProximosPassos.slice(0, 5).map((acao) => (
-              <div key={acao.id} className="border rounded-lg p-3 bg-muted/30">
+              <div key={acao.id} className="border rounded-lg p-3 bg-muted/30 border-gray-200">
                 <div className="flex items-start justify-between mb-2">
                   <h4 className="font-medium text-sm">{acao.description}</h4>
                   <Badge 
@@ -74,7 +74,7 @@ export const CrmNextSteps: React.FC = () => {
                     size="sm"
                     variant="outline"
                     onClick={() => marcarComoConcluida(acao.id)}
-                    className="text-xs"
+                    className="text-xs border border-gray-300"
                   >
                     Concluir
                   </Button>

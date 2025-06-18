@@ -10,18 +10,18 @@ export type StatusAcaoCrm = "pendente" | "em_andamento" | "concluida" | "cancela
 export type TipoResumo = "semanal" | "mensal" | "trimestral";
 export type StatusSugestaoIA = "pendente" | "em_revisao" | "aprovada" | "rejeitada";
 
-// Interfaces principais
+// Interfaces principais alinhadas com o schema do Supabase
 export interface AgendaEvento {
   id: string;
   title: string;
   description?: string;
   start: string;
   end: string;
-  status: string;
+  status: "scheduled" | "synced" | "completed" | "canceled";
   partner_id?: string;
   source: string;
   external_id?: string;
-  event_type?: string;
+  event_type?: TipoEventoAgenda;
   related_crm_action_id?: string;
   created_at: string;
   updated_at: string;
@@ -110,6 +110,26 @@ export interface IaSugestao {
     nome: string;
     email: string;
   };
+}
+
+// Interfaces para dados transformados (UI)
+export interface AgendaEventoUI {
+  id: string;
+  titulo: string;
+  descricao?: string;
+  data_inicio: string;
+  data_fim: string;
+  tipo: TipoEventoAgenda;
+  status: StatusEvento;
+  parceiro?: {
+    id: string;
+    nome: string;
+    tipo: string;
+  };
+  fonte_integracao: FonteIntegracao;
+  observacoes?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 // Tipos para filtros e queries

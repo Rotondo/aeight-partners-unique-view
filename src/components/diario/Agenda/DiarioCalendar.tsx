@@ -3,17 +3,20 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Calendar, Clock, User, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAgenda } from '@/contexts/AgendaContext';
 import { AgendaEvento } from '@/types/diario';
+import { AgendaEventForm } from './AgendaEventForm';
 import { format, addDays, startOfWeek, isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 export const DiarioCalendar: React.FC = () => {
   const { agendaEventos, selectedDate, setSelectedDate } = useAgenda();
   const [viewMode, setViewMode] = useState<'week' | 'day'>('week');
+  const [showEventForm, setShowEventForm] = useState(false);
 
-  const getEventTypeColor = (tipo: string) => {
+  const getEventTypeColor = (tipo?: string) => {
     switch (tipo) {
       case 'proximo_passo_crm': return 'bg-orange-100 text-orange-800 border-orange-200';
       case 'reuniao': return 'bg-blue-100 text-blue-800 border-blue-200';
@@ -24,9 +27,9 @@ export const DiarioCalendar: React.FC = () => {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'realizado': return '✅';
-      case 'agendado': return '📅';
-      case 'cancelado': return '❌';
+      case 'completed': return '✅';
+      case 'scheduled': return '📅';
+      case 'canceled': return '❌';
       default: return '⏳';
     }
   };
@@ -38,7 +41,7 @@ export const DiarioCalendar: React.FC = () => {
 
   const getEventsForDate = (date: Date) => {
     return agendaEventos.filter(evento => 
-      isSameDay(new Date(evento.data_inicio), date)
+      isSameDay(new Date(evento.start), date)
     );
   };
 
@@ -79,11 +82,11 @@ export const DiarioCalendar: React.FC = () => {
                 {dayEvents.slice(0, 3).map((evento) => (
                   <div 
                     key={evento.id}
-                    className={`text-xs p-1 rounded border ${getEventTypeColor(evento.tipo)}`}
+                    className={`text-xs p-1 rounded border ${getEventTypeColor(evento.event_type)}`}
                   >
                     <div className="flex items-center gap-1">
                       <span>{getStatusIcon(evento.status)}</span>
-                      <span className="truncate">{evento.titulo}</span>
+                      <span className="truncate">{evento.title}</span>
                     </div>
                   </div>
                 ))}
@@ -113,28 +116,28 @@ export const DiarioCalendar: React.FC = () => {
           </div>
         ) : (
           dayEvents.map((evento) => (
-            <Card key={evento.id} className="hover:shadow-md transition-shadow">
+            <Card key={evento.id} className="hover:shadow-md transition-shadow border border-gray-200">
               <CardContent className="p-4">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
                       <span className="text-lg">{getStatusIcon(evento.status)}</span>
-                      <h4 className="font-semibold">{evento.titulo}</h4>
-                      <Badge className={getEventTypeColor(evento.tipo)}>
-                        {evento.tipo.replace('_', ' ')}
+                      <h4 className="font-semibold">{evento.title}</h4>
+                      <Badge className={getEventTypeColor(evento.event_type)}>
+                        {evento.event_type?.replace('_', ' ') || 'evento'}
                       </Badge>
                     </div>
                     
-                    {evento.descricao && (
+                    {evento.description && (
                       <p className="text-muted-foreground text-sm mb-2">
-                        {evento.descricao}
+                        {evento.description}
                       </p>
                     )}
                     
                     <div className="flex items-center gap-4 text-xs text-muted-foreground">
                       <div className="flex items-center gap-1">
                         <Clock className="h-3 w-3" />
-                        {format(new Date(evento.data_inicio), 'HH:mm')} - {format(new Date(evento.data_fim), 'HH:mm')}
+                        {format(new Date(evento.start), 'HH:mm')} - {format(new Date(evento.end), 'HH:mm')}
                       </div>
                       
                       {evento.parceiro && (
@@ -155,64 +158,77 @@ export const DiarioCalendar: React.FC = () => {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
-              Calendário do Diário
-            </CardTitle>
-            <p className="text-sm text-muted-foreground">
-              {format(selectedDate, "MMMM 'de' yyyy", { locale: ptBR })}
-            </p>
-          </div>
-          
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigateWeek('prev')}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            
-            <div className="flex border rounded-lg">
-              <Button
-                variant={viewMode === 'week' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('week')}
-              >
-                Semana
-              </Button>
-              <Button
-                variant={viewMode === 'day' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('day')}
-              >
-                Dia
-              </Button>
+    <>
+      <Card className="border border-gray-200">
+        <CardHeader className="border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="h-5 w-5" />
+                Calendário do Diário
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                {format(selectedDate, "MMMM 'de' yyyy", { locale: ptBR })}
+              </p>
             </div>
             
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigateWeek('next')}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-            
-            <Button size="sm">
-              <Plus className="h-4 w-4 mr-1" />
-              Novo Evento
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigateWeek('prev')}
+                className="border border-gray-300"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              
+              <div className="flex border rounded-lg border-gray-300">
+                <Button
+                  variant={viewMode === 'week' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('week')}
+                >
+                  Semana
+                </Button>
+                <Button
+                  variant={viewMode === 'day' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('day')}
+                >
+                  Dia
+                </Button>
+              </div>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigateWeek('next')}
+                className="border border-gray-300"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              
+              <Button size="sm" onClick={() => setShowEventForm(true)}>
+                <Plus className="h-4 w-4 mr-1" />
+                Novo Evento
+              </Button>
+            </div>
           </div>
-        </div>
-      </CardHeader>
-      
-      <CardContent>
-        {viewMode === 'week' ? renderWeekView() : renderDayView()}
-      </CardContent>
-    </Card>
+        </CardHeader>
+        
+        <CardContent className="p-4">
+          {viewMode === 'week' ? renderWeekView() : renderDayView()}
+        </CardContent>
+      </Card>
+
+      <Dialog open={showEventForm} onOpenChange={setShowEventForm}>
+        <DialogContent className="max-w-2xl p-0 bg-white border border-gray-300">
+          <AgendaEventForm
+            onClose={() => setShowEventForm(false)}
+            onSuccess={() => setShowEventForm(false)}
+          />
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };

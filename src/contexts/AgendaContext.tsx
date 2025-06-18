@@ -69,8 +69,8 @@ export const AgendaProvider: React.FC<AgendaProviderProps> = ({ children }) => {
         partner_id: evento.partner_id,
         source: evento.source,
         external_id: evento.external_id,
-        event_type: 'manual', // Default value since column may not exist yet
-        related_crm_action_id: undefined, // Default value since column may not exist yet  
+        event_type: 'manual',
+        related_crm_action_id: undefined,
         created_at: evento.created_at,
         updated_at: evento.updated_at
       }));
@@ -78,11 +78,11 @@ export const AgendaProvider: React.FC<AgendaProviderProps> = ({ children }) => {
       // Converter próximos passos do CRM em eventos
       const eventosCrm: AgendaEvento[] = (crmData || []).map(acao => ({
         id: `crm-${acao.id}`,
-        title: `Próximo Passo: ${acao.content?.substring(0, 50) || 'Ação CRM'}`, // Using content since description may not exist
+        title: `Próximo Passo: ${acao.content?.substring(0, 50) || 'Ação CRM'}`,
         description: acao.content,
         start: acao.next_step_date!,
         end: acao.next_step_date!,
-        status: 'agendado',
+        status: 'scheduled' as const,
         partner_id: acao.partner_id,
         source: 'crm_integration',
         event_type: 'proximo_passo_crm',
@@ -104,10 +104,10 @@ export const AgendaProvider: React.FC<AgendaProviderProps> = ({ children }) => {
       const { error } = await supabase
         .from('diario_agenda_eventos')
         .insert([{
-          title: evento.title,
+          title: evento.title!,
           description: evento.description,
-          start: evento.start,
-          end: evento.end,
+          start: evento.start!,
+          end: evento.end!,
           status: evento.status || 'scheduled',
           partner_id: evento.partner_id,
           source: evento.source || 'manual'

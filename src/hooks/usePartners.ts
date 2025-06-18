@@ -1,16 +1,20 @@
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
-import type { Empresa } from '@/types';
+import { supabase } from '@/integrations/supabase/client';
+
+interface Partner {
+  id: string;
+  nome: string;
+  tipo: string;
+  status: boolean;
+  descricao?: string;
+  created_at: string;
+}
 
 export const usePartners = () => {
-  const [partners, setPartners] = useState<Empresa[]>([]);
+  const [partners, setPartners] = useState<Partner[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    loadPartners();
-  }, []);
 
   const loadPartners = async () => {
     try {
@@ -19,25 +23,33 @@ export const usePartners = () => {
       
       const { data, error } = await supabase
         .from('empresas')
-        .select('*')
+        .select('id, nome, tipo, status, descricao, created_at')
         .eq('status', true)
         .order('nome', { ascending: true });
 
-      if (error) throw error;
-      
+      if (error) {
+        console.error('Erro ao carregar parceiros:', error);
+        setError('Erro ao carregar parceiros');
+        return;
+      }
+
       setPartners(data || []);
     } catch (err) {
-      console.error('Erro ao carregar parceiros:', err);
-      setError('Erro ao carregar lista de parceiros');
+      console.error('Erro:', err);
+      setError('Erro inesperado ao carregar parceiros');
     } finally {
       setLoading(false);
     }
   };
 
+  useEffect(() => {
+    loadPartners();
+  }, []);
+
   return {
     partners,
     loading,
     error,
-    refetch: loadPartners
+    refreshPartners: loadPartners
   };
 };

@@ -1,5 +1,5 @@
 
-import { ApiService } from './ApiService';
+import { supabase } from '@/integrations/supabase/client';
 import type { CrmAcao } from '@/types/diario';
 
 /**
@@ -10,58 +10,143 @@ export class CrmService {
    * Carrega todas as ações do CRM
    */
   static async loadAcoes(): Promise<CrmAcao[]> {
-    // Mock data por enquanto - será substituído por chamada real do Supabase
-    const mockAcoes: CrmAcao[] = [
-      {
-        id: '1',
-        description: 'Anotações da reunião',
-        communication_method: 'reuniao_meet',
-        status: 'concluida',
-        user_id: 'user-1',
-        content: 'Reunião produtiva com definições importantes.',
-        created_at: new Date().toISOString()
+    try {
+      const { data, error } = await supabase
+        .from('diario_crm_acoes')
+        .select(`
+          *,
+          empresas:partner_id (
+            id,
+            nome,
+            tipo
+          )
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Erro ao carregar ações CRM:', error);
+        throw error;
       }
-    ];
-    
-    return mockAcoes;
+
+      return (data || []).map(acao => ({
+        id: acao.id,
+        description: acao.content,
+        communication_method: this.mapCommunicationMethod(acao.type),
+        status: this.mapStatus(acao.type),
+        partner_id: acao.partner_id,
+        user_id: acao.user_id,
+        content: acao.content,
+        next_step_date: acao.next_step_date,
+        next_steps: acao.metadata?.next_steps,
+        metadata: acao.metadata,
+        created_at: acao.created_at,
+        parceiro: acao.empresas ? {
+          id: acao.empresas.id,
+          nome: acao.empresas.nome,
+          tipo: acao.empresas.tipo
+        } : undefined
+      }));
+    } catch (error) {
+      console.error('Erro no loadAcoes:', error);
+      throw error;
+    }
   }
 
   /**
    * Cria uma nova ação do CRM
    */
   static async createAcao(acao: Partial<CrmAcao>, userId: string): Promise<CrmAcao | null> {
-    const novaAcao: CrmAcao = {
-      id: Date.now().toString(),
-      description: acao.description || '',
-      communication_method: acao.communication_method || 'email',
-      status: acao.status || 'pendente',
-      partner_id: acao.partner_id,
-      user_id: userId,
-      content: acao.content || '',
-      next_step_date: acao.next_step_date,
-      next_steps: acao.next_steps,
-      metadata: acao.metadata,
-      created_at: new Date().toISOString()
-    };
+    try {
+      const { data, error } = await supabase
+        .from('diario_crm_acoes')
+        .insert([{
+          content: acao.content || '',
+          type: acao.communication_method === 'ligacao' ? 'audio' : 
+                acao.communication_method === 'reuniao_meet' ? 'video' : 'text',
+          partner_id: acao.partner_id,
+          user_id: userId,
+          next_step_date: acao.next_step_date,
+          metadata: {
+            description: acao.description,
+            communication_method: acao.communication_method,
+            status: acao.status,
+            next_steps: acao.next_steps,
+            ...acao.metadata
+          }
+        }])
+        .select()
+        .single();
 
-    // Mock - em produção faria a chamada real
-    return novaAcao;
+      if (error) {
+        console.error('Erro ao criar ação CRM:', error);
+        throw error;
+      }
+
+      return data ? {
+        id: data.id,
+        description: acao.description || '',
+        communication_method: acao.communication_method || 'email',
+        status: acao.status || 'pendente',
+        partner_id: data.partner_id,
+        user_id: data.user_id,
+        content: data.content,
+        next_step_date: data.next_step_date,
+        next_steps: acao.next_steps,
+        metadata: data.metadata,
+        created_at: data.created_at
+      } : null;
+    } catch (error) {
+      console.error('Erro no createAcao:', error);
+      throw error;
+    }
   }
 
   /**
    * Atualiza uma ação do CRM
    */
   static async updateAcao(id: string, updates: Partial<CrmAcao>): Promise<boolean> {
-    // Mock - em produção faria a chamada real
-    return true;
+    try {
+      const { error } = await supabase
+        .from('diario_crm_acoes')
+        .update({
+          content: updates.content,
+          next_step_date: updates.next_step_date,
+          metadata: updates.metadata
+        })
+        .eq('id', id);
+
+      if (error) {
+        console.error('Erro ao atualizar ação CRM:', error);
+        throw error;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Erro no updateAcao:', error);
+      return false;
+    }
   }
 
   /**
    * Exclui uma ação do CRM
    */
   static async deleteAcao(id: string): Promise<boolean> {
-    // Mock - em produção faria a chamada real
-    return true;
+    try {
+      const { error } = await supabase
+        .from('diario_crm_acoes')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('Erro ao deletar ação CRM:', error);
+        throw error;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Erro no deleteAcao:', error);
+      return false;
+    }
   }
 
   /**
@@ -97,5 +182,18 @@ export class CrmService {
       isValid: errors.length === 0,
       errors
     };
+  }
+
+  private static mapCommunicationMethod(type: string): any {
+    switch (type) {
+      case 'audio': return 'ligacao';
+      case 'video': return 'reuniao_meet';
+      case 'text': return 'email';
+      default: return 'email';
+    }
+  }
+
+  private static mapStatus(type: string): any {
+    return 'pendente'; // Default status
   }
 }
