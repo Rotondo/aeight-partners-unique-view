@@ -15,7 +15,6 @@ import {
   OportunidadesFilterParams,
   Usuario,
   StatusOportunidade,
-  Empresa,
 } from "@/types";
 import {
   DropdownMenu,
@@ -35,10 +34,11 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { usePartnersAndIntragroup } from "@/hooks/usePartners";
 
 export const OportunidadesFilter: React.FC = () => {
   const { filterParams, setFilterParams } = useOportunidades();
-  const [empresas, setEmpresas] = useState<Empresa[]>([]);
+  const { partners: empresas, loading: empresasLoading } = usePartnersAndIntragroup();
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -67,27 +67,8 @@ export const OportunidadesFilter: React.FC = () => {
   }, [searchTerm]);
 
   useEffect(() => {
-    async function fetchFilterData() {
+    async function fetchUsuarios() {
       try {
-        const { data: empresasData, error: empresasError } = await supabase
-          .from("empresas")
-          .select("id, nome, tipo, status, descricao")
-          .order("nome");
-
-        if (empresasError) throw empresasError;
-
-        if (empresasData) {
-          const typedEmpresas = empresasData.map((empresa) => ({
-            id: empresa.id,
-            nome: empresa.nome,
-            tipo: empresa.tipo as "intragrupo" | "parceiro" | "cliente",
-            status: empresa.status,
-            descricao: empresa.descricao || "",
-          }));
-
-          setEmpresas(typedEmpresas);
-        }
-
         const { data: usuariosData, error: usuariosError } = await supabase
           .from("usuarios")
           .select("id, nome, email, empresa_id, papel, ativo")
@@ -99,18 +80,17 @@ export const OportunidadesFilter: React.FC = () => {
           setUsuarios(usuariosData as Usuario[]);
         }
       } catch (error) {
-        console.error("Erro ao carregar dados para filtros:", error);
+        console.error("Erro ao carregar usuários:", error);
         toast({
           title: "Erro",
-          description: "Não foi possível carregar os dados para filtros.",
+          description: "Não foi possível carregar os usuários para filtros.",
           variant: "destructive",
         });
       }
     }
 
-    fetchFilterData();
-    // eslint-disable-next-line
-  }, []);
+    fetchUsuarios();
+  }, [toast]);
 
   const applyFilters = () => {
     setFilterParams(tempFilters);
@@ -132,6 +112,12 @@ export const OportunidadesFilter: React.FC = () => {
 
   const hasActiveFilters = () => {
     return Object.values(filterParams).some((value) => value !== undefined && value !== "");
+  };
+
+  // Função para obter o label do tipo de empresa
+  const getEmpresaLabel = (empresa: typeof empresas[0]) => {
+    const tipoLabel = empresa.tipo === 'intragrupo' ? '[IG]' : '[P]';
+    return `${tipoLabel} ${empresa.nome}`;
   };
 
   return (
@@ -266,17 +252,26 @@ export const OportunidadesFilter: React.FC = () => {
                       empresaOrigemId: value === "all" ? undefined : value,
                     })
                   }
+                  disabled={empresasLoading}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Todas as empresas" />
+                    <SelectValue placeholder={empresasLoading ? "Carregando..." : "Todas as empresas"} />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todas</SelectItem>
-                    {empresas.map((empresa) => (
-                      <SelectItem key={empresa.id} value={empresa.id}>
-                        {empresa.nome}
-                      </SelectItem>
-                    ))}
+                    {empresas
+                      .sort((a, b) => {
+                        // Ordenar primeiro por tipo (intragrupo antes de parceiro), depois por nome
+                        if (a.tipo !== b.tipo) {
+                          return a.tipo === 'intragrupo' ? -1 : 1;
+                        }
+                        return a.nome.localeCompare(b.nome);
+                      })
+                      .map((empresa) => (
+                        <SelectItem key={empresa.id} value={empresa.id}>
+                          {getEmpresaLabel(empresa)}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -291,17 +286,26 @@ export const OportunidadesFilter: React.FC = () => {
                       empresaDestinoId: value === "all" ? undefined : value,
                     })
                   }
+                  disabled={empresasLoading}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Todas as empresas" />
+                    <SelectValue placeholder={empresasLoading ? "Carregando..." : "Todas as empresas"} />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todas</SelectItem>
-                    {empresas.map((empresa) => (
-                      <SelectItem key={empresa.id} value={empresa.id}>
-                        {empresa.nome}
-                      </SelectItem>
-                    ))}
+                    {empresas
+                      .sort((a, b) => {
+                        // Ordenar primeiro por tipo (intragrupo antes de parceiro), depois por nome
+                        if (a.tipo !== b.tipo) {
+                          return a.tipo === 'intragrupo' ? -1 : 1;
+                        }
+                        return a.nome.localeCompare(b.nome);
+                      })
+                      .map((empresa) => (
+                        <SelectItem key={empresa.id} value={empresa.id}>
+                          {getEmpresaLabel(empresa)}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>
