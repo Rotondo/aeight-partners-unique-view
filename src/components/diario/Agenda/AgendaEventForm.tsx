@@ -31,9 +31,33 @@ export const AgendaEventForm: React.FC<AgendaEventFormProps> = ({
     description: initialData?.description || '',
     start: initialData?.start || '',
     end: initialData?.end || '',
-    partner_id: initialData?.partner_id || '',
+    partner_id: initialData?.partner_id || 'none',
     status: initialData?.status || 'scheduled' as const
   });
+
+  // CORREÇÃO: Filtrar parceiros com validação mais rigorosa
+  const validPartners = partners.filter(partner => {
+    const hasValidId = partner.id && 
+                      typeof partner.id === 'string' && 
+                      partner.id.trim() !== '' && 
+                      partner.id !== 'undefined' && 
+                      partner.id !== 'null';
+    const hasValidName = partner.nome && 
+                        typeof partner.nome === 'string' && 
+                        partner.nome.trim() !== '';
+    
+    console.log('[AgendaEventForm] Partner validation:', { 
+      id: partner.id, 
+      nome: partner.nome, 
+      hasValidId, 
+      hasValidName,
+      isValid: hasValidId && hasValidName 
+    });
+    
+    return hasValidId && hasValidName;
+  });
+
+  console.log('[AgendaEventForm] Total partners:', partners.length, 'Valid partners:', validPartners.length);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,10 +68,15 @@ export const AgendaEventForm: React.FC<AgendaEventFormProps> = ({
 
     setLoading(true);
     try {
+      const eventData = {
+        ...formData,
+        partner_id: formData.partner_id === 'none' ? undefined : formData.partner_id
+      };
+
       if (initialData?.id) {
-        await updateEvento(initialData.id, formData);
+        await updateEvento(initialData.id, eventData);
       } else {
-        await createEvento(formData);
+        await createEvento(eventData);
       }
       
       onSuccess?.();
@@ -136,12 +165,21 @@ export const AgendaEventForm: React.FC<AgendaEventFormProps> = ({
                   <SelectValue placeholder="Selecione um parceiro" />
                 </SelectTrigger>
                 <SelectContent className="bg-white border border-gray-300 rounded-md shadow-lg z-50">
-                  <SelectItem value="">Nenhum parceiro</SelectItem>
-                  {partners.map((partner) => (
-                    <SelectItem key={partner.id} value={partner.id}>
-                      {partner.nome}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="none">Nenhum parceiro</SelectItem>
+                  {validPartners.map((partner) => {
+                    // Verificação adicional antes do render
+                    if (!partner.id || partner.id.trim() === '') {
+                      console.error('[AgendaEventForm] Skipping partner with invalid ID:', partner);
+                      return null;
+                    }
+                    
+                    console.log('[AgendaEventForm] Rendering SelectItem:', { id: partner.id, nome: partner.nome });
+                    return (
+                      <SelectItem key={partner.id} value={partner.id}>
+                        {partner.nome}
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             </div>
