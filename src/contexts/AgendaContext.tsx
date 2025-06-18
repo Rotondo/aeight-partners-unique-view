@@ -1,24 +1,15 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 import type { AgendaEvento } from '@/types/diario';
 
-interface CalendarConnection {
-  id: string;
-  type: 'google' | 'outlook';
-  url: string;
-  name: string;
-  isActive: boolean;
-  lastSync?: Date;
-}
-
 interface AgendaContextType {
   // Estados
   agendaEventos: AgendaEvento[];
   loadingEventos: boolean;
   selectedDate: Date;
-  calendarConnections: CalendarConnection[];
   
   // Ações
   setSelectedDate: (date: Date) => void;
@@ -26,11 +17,7 @@ interface AgendaContextType {
   createEvento: (evento: Partial<AgendaEvento>) => Promise<void>;
   updateEvento: (id: string, evento: Partial<AgendaEvento>) => Promise<void>;
   deleteEvento: (id: string) => Promise<void>;
-  syncGoogleCalendar: () => Promise<void>;
-  syncOutlookCalendar: () => Promise<void>;
-  addCalendarConnection: (type: 'google' | 'outlook', url: string, name: string) => Promise<void>;
-  removeCalendarConnection: (id: string) => Promise<void>;
-  syncCalendarConnection: (id: string) => Promise<void>;
+  createEventoFromCrmAction: (crmActionId: string, title: string, date: Date) => Promise<void>;
 }
 
 const AgendaContext = createContext<AgendaContextType | undefined>(undefined);
@@ -44,68 +31,77 @@ export const AgendaProvider: React.FC<AgendaProviderProps> = ({ children }) => {
   const [agendaEventos, setAgendaEventos] = useState<AgendaEvento[]>([]);
   const [loadingEventos, setLoadingEventos] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [calendarConnections, setCalendarConnections] = useState<CalendarConnection[]>([]);
 
   const isAdmin = user?.papel === 'admin';
 
   useEffect(() => {
     if (isAdmin) {
       fetchEventos();
-      loadCalendarConnections();
     }
-  }, [isAdmin, selectedDate]);
-
-  const loadCalendarConnections = async () => {
-    // In a real implementation, this would load from database
-    const stored = localStorage.getItem('calendar_connections');
-    if (stored) {
-      setCalendarConnections(JSON.parse(stored));
-    }
-  };
-
-  const saveCalendarConnections = (connections: CalendarConnection[]) => {
-    localStorage.setItem('calendar_connections', JSON.stringify(connections));
-    setCalendarConnections(connections);
-  };
+  }, [isAdmin]);
 
   const fetchEventos = async () => {
     if (!isAdmin) return;
     
     setLoadingEventos(true);
     try {
-      const startOfDay = new Date(selectedDate);
-      startOfDay.setHours(0, 0, 0, 0);
-      
-      const endOfDay = new Date(selectedDate);
-      endOfDay.setHours(23, 59, 59, 999);
-
-      const { data, error } = await supabase
+      // Fetch manual events
+      const { data: manualEvents, error: manualError } = await supabase
         .from('diario_agenda_eventos')
         .select('*')
-        .gte('start', startOfDay.toISOString())
-        .lte('start', endOfDay.toISOString())
         .order('start', { ascending: true });
 
-      if (error) throw error;
+      if (manualError) throw manualError;
 
-      // Transform data to match AgendaEvento interface
-      const eventos: AgendaEvento[] = (data || []).map(evento => ({
+      // Fetch CRM actions with next step dates to create agenda events
+      const { data: crmActions, error: crmError } = await supabase
+        .from('diario_crm_acoes')
+        .select('*')
+        .not('next_step_date', 'is', null)
+        .order('next_step_date', { ascending: true });
+
+      if (crmError) throw crmError;
+
+      // Transform manual events
+      const transformedManualEvents: AgendaEvento[] = (manualEvents || []).map(evento => ({
         id: evento.id,
         titulo: evento.title,
         descricao: evento.description,
         data_inicio: evento.start,
         data_fim: evento.end,
-        tipo: 'reuniao', // Default type since we're using simplified schema
+        tipo: 'reuniao', // Default type
         status: evento.status === 'scheduled' ? 'agendado' : 
                 evento.status === 'completed' ? 'realizado' : 'agendado',
         usuario_responsavel_id: user?.id || '',
-        fonte_integracao: evento.source === 'google' ? 'google' : 
-                         evento.source === 'outlook' ? 'outlook' : 'manual',
+        fonte_integracao: 'manual',
+        event_type: evento.event_type || 'manual',
+        related_crm_action_id: evento.related_crm_action_id,
         created_at: evento.created_at,
         updated_at: evento.updated_at
       }));
+
+      // Transform CRM actions into agenda events
+      const crmAgendaEvents: AgendaEvento[] = (crmActions || []).map(action => ({
+        id: `crm_${action.id}`,
+        titulo: `Próximo passo: ${action.description}`,
+        descricao: action.next_steps,
+        data_inicio: action.next_step_date!,
+        data_fim: new Date(new Date(action.next_step_date!).getTime() + 3600000).toISOString(), // 1 hour later
+        tipo: 'proximo_passo_crm',
+        status: 'agendado',
+        parceiro_id: action.partner_id,
+        usuario_responsavel_id: action.user_id,
+        fonte_integracao: 'crm_integration',
+        event_type: 'crm_next_step',
+        related_crm_action_id: action.id,
+        created_at: action.created_at,
+        updated_at: action.created_at
+      }));
+
+      // Combine all events
+      const allEvents = [...transformedManualEvents, ...crmAgendaEvents];
+      setAgendaEventos(allEvents);
       
-      setAgendaEventos(eventos);
     } catch (error) {
       console.error('Erro ao carregar eventos da agenda:', error);
       toast({
@@ -118,83 +114,29 @@ export const AgendaProvider: React.FC<AgendaProviderProps> = ({ children }) => {
     }
   };
 
-  const addCalendarConnection = async (type: 'google' | 'outlook', url: string, name: string) => {
-    const newConnection: CalendarConnection = {
-      id: Date.now().toString(),
-      type,
-      url,
-      name: name || `${type === 'google' ? 'Google' : 'Outlook'} Calendar`,
-      isActive: true,
-      lastSync: new Date()
-    };
-
-    const updatedConnections = [...calendarConnections, newConnection];
-    saveCalendarConnections(updatedConnections);
-
-    toast({
-      title: "Conexão Adicionada",
-      description: `Calendário ${type === 'google' ? 'Google' : 'Outlook'} conectado com sucesso`
-    });
-  };
-
-  const removeCalendarConnection = async (id: string) => {
-    const updatedConnections = calendarConnections.filter(conn => conn.id !== id);
-    saveCalendarConnections(updatedConnections);
-
-    toast({
-      title: "Conexão Removida",
-      description: "Calendário desconectado com sucesso"
-    });
-  };
-
-  const syncCalendarConnection = async (id: string) => {
-    const connection = calendarConnections.find(conn => conn.id === id);
-    if (!connection) return;
-
-    try {
-      // Simulate sync process
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      const updatedConnections = calendarConnections.map(conn => 
-        conn.id === id ? { ...conn, lastSync: new Date() } : conn
-      );
-      saveCalendarConnections(updatedConnections);
-
-      toast({
-        title: "Sincronização Concluída",
-        description: `Eventos do ${connection.type === 'google' ? 'Google' : 'Outlook'} Calendar atualizados`
-      });
-    } catch (error) {
-      console.error('Erro na sincronização:', error);
-      toast({
-        title: "Erro na Sincronização",
-        description: "Falha ao sincronizar eventos",
-        variant: "destructive"
-      });
-    }
-  };
-
   const createEvento = async (evento: Partial<AgendaEvento>) => {
     if (!isAdmin) return;
     
     try {
-      const novoEvento: AgendaEvento = {
-        id: Date.now().toString(),
-        titulo: evento.titulo || '',
-        descricao: evento.descricao,
-        data_inicio: evento.data_inicio || new Date().toISOString(),
-        data_fim: evento.data_fim || new Date(Date.now() + 3600000).toISOString(),
-        tipo: evento.tipo || 'reuniao',
-        status: evento.status || 'agendado',
-        parceiro_id: evento.parceiro_id,
-        usuario_responsavel_id: user?.id || '',
-        fonte_integracao: 'manual',
-        observacoes: evento.observacoes,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
+      const { data, error } = await supabase
+        .from('diario_agenda_eventos')
+        .insert({
+          title: evento.titulo || '',
+          description: evento.descricao,
+          start: evento.data_inicio || new Date().toISOString(),
+          end: evento.data_fim || new Date(Date.now() + 3600000).toISOString(),
+          source: 'manual',
+          status: 'scheduled',
+          event_type: 'manual',
+          partner_id: evento.parceiro_id
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      await fetchEventos(); // Refresh the list
       
-      setAgendaEventos(prev => [...prev, novoEvento]);
       toast({
         title: "Sucesso",
         description: "Evento criado com sucesso"
@@ -213,9 +155,30 @@ export const AgendaProvider: React.FC<AgendaProviderProps> = ({ children }) => {
     if (!isAdmin) return;
     
     try {
-      setAgendaEventos(prev => prev.map(e => 
-        e.id === id ? { ...e, ...evento, updated_at: new Date().toISOString() } : e
-      ));
+      // Only update manual events, not CRM-generated ones
+      if (id.startsWith('crm_')) {
+        toast({
+          title: "Aviso",
+          description: "Eventos de próximos passos do CRM devem ser editados no módulo CRM",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const { error } = await supabase
+        .from('diario_agenda_eventos')
+        .update({
+          title: evento.titulo,
+          description: evento.descricao,
+          start: evento.data_inicio,
+          end: evento.data_fim,
+          status: evento.status === 'realizado' ? 'completed' : 'scheduled'
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      await fetchEventos(); // Refresh the list
       
       toast({
         title: "Sucesso",
@@ -235,7 +198,24 @@ export const AgendaProvider: React.FC<AgendaProviderProps> = ({ children }) => {
     if (!isAdmin) return;
     
     try {
-      setAgendaEventos(prev => prev.filter(e => e.id !== id));
+      // Only delete manual events, not CRM-generated ones
+      if (id.startsWith('crm_')) {
+        toast({
+          title: "Aviso",
+          description: "Eventos de próximos passos do CRM devem ser gerenciados no módulo CRM",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const { error } = await supabase
+        .from('diario_agenda_eventos')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      await fetchEventos(); // Refresh the list
       
       toast({
         title: "Sucesso",
@@ -251,53 +231,35 @@ export const AgendaProvider: React.FC<AgendaProviderProps> = ({ children }) => {
     }
   };
 
-  const syncGoogleCalendar = async () => {
+  const createEventoFromCrmAction = async (crmActionId: string, title: string, date: Date) => {
     if (!isAdmin) return;
     
     try {
-      toast({
-        title: "Sincronização",
-        description: "Sincronizando com Google Calendar..."
-      });
-      
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      await fetchEventos();
-      toast({
-        title: "Sucesso",
-        description: "Sincronização com Google Calendar concluída"
-      });
-    } catch (error) {
-      console.error('Erro na sincronização Google:', error);
-      toast({
-        title: "Erro",
-        description: "Falha na sincronização com Google Calendar",
-        variant: "destructive"
-      });
-    }
-  };
+      const { error } = await supabase
+        .from('diario_agenda_eventos')
+        .insert({
+          title,
+          start: date.toISOString(),
+          end: new Date(date.getTime() + 3600000).toISOString(), // 1 hour later
+          source: 'crm_integration',
+          status: 'scheduled',
+          event_type: 'crm_related',
+          related_crm_action_id: crmActionId
+        });
 
-  const syncOutlookCalendar = async () => {
-    if (!isAdmin) return;
-    
-    try {
-      toast({
-        title: "Sincronização",
-        description: "Sincronizando com Outlook Calendar..."
-      });
-      
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
+      if (error) throw error;
+
       await fetchEventos();
+      
       toast({
         title: "Sucesso",
-        description: "Sincronização com Outlook Calendar concluída"
+        description: "Evento criado a partir da ação do CRM"
       });
     } catch (error) {
-      console.error('Erro na sincronização Outlook:', error);
+      console.error('Erro ao criar evento do CRM:', error);
       toast({
         title: "Erro",
-        description: "Falha na sincronização com Outlook Calendar",
+        description: "Falha ao criar evento",
         variant: "destructive"
       });
     }
@@ -307,17 +269,12 @@ export const AgendaProvider: React.FC<AgendaProviderProps> = ({ children }) => {
     agendaEventos,
     loadingEventos,
     selectedDate,
-    calendarConnections,
     setSelectedDate,
     fetchEventos,
     createEvento,
     updateEvento,
     deleteEvento,
-    syncGoogleCalendar,
-    syncOutlookCalendar,
-    addCalendarConnection,
-    removeCalendarConnection,
-    syncCalendarConnection
+    createEventoFromCrmAction
   };
 
   return (
