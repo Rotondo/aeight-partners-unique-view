@@ -25,8 +25,8 @@ export const usePartners = (options: UsePartnersOptions = {}) => {
       setLoading(true);
       setError(null);
       
-      // Determinar quais tipos incluir
-      const allowedTypes = options.includeIntragroup 
+      // Determinar quais tipos incluir com tipagem explícita
+      const allowedTypes: ('parceiro' | 'intragrupo')[] = options.includeIntragroup 
         ? ['parceiro', 'intragrupo'] 
         : ['parceiro'];
       
