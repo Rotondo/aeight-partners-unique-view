@@ -31,10 +31,17 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
     }
 
     // Garante valor seguro para inputs controlados (não-arquivo)
-    const safeValue =
-      type === "number"
-        ? value === undefined || value === null || value === "" ? "" : value
-        : value === undefined || value === null ? "" : value;
+    const safeValue = React.useMemo(() => {
+      // Se não há value definido, deixar como undefined para componente não controlado
+      if (value === undefined) {
+        return undefined;
+      }
+      // Se value é null ou outro valor, converter para string
+      if (value === null) {
+        return "";
+      }
+      return String(value);
+    }, [value]);
 
     logControlledField("Input", value, props);
 

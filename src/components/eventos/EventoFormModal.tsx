@@ -101,6 +101,16 @@ export const EventoFormModal: React.FC<EventoFormModalProps> = ({
     reset(defaultValues);
   };
 
+  // Valores seguros para os campos controlados
+  const watchedValues = {
+    nome: watch('nome') || '',
+    data_inicio: watch('data_inicio') || '',
+    data_fim: watch('data_fim') || '',
+    local: watch('local') || '',
+    descricao: watch('descricao') || '',
+    status: watch('status') || 'planejado'
+  };
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
@@ -125,6 +135,7 @@ export const EventoFormModal: React.FC<EventoFormModalProps> = ({
             <Input
               id="nome"
               {...register('nome', { required: 'Nome é obrigatório' })}
+              value={watchedValues.nome}
               placeholder="Ex: Feira de Tecnologia 2024"
             />
             {errors.nome && (
@@ -139,6 +150,7 @@ export const EventoFormModal: React.FC<EventoFormModalProps> = ({
                 id="data_inicio"
                 type="datetime-local"
                 {...register('data_inicio', { required: 'Data de início é obrigatória' })}
+                value={watchedValues.data_inicio}
               />
               {errors.data_inicio && (
                 <p className="text-sm text-red-600">{errors.data_inicio.message}</p>
@@ -151,6 +163,7 @@ export const EventoFormModal: React.FC<EventoFormModalProps> = ({
                 id="data_fim"
                 type="datetime-local"
                 {...register('data_fim')}
+                value={watchedValues.data_fim}
               />
             </div>
           </div>
@@ -160,6 +173,7 @@ export const EventoFormModal: React.FC<EventoFormModalProps> = ({
             <Input
               id="local"
               {...register('local')}
+              value={watchedValues.local}
               placeholder="Ex: Centro de Convenções Rebouças"
             />
           </div>
@@ -167,7 +181,7 @@ export const EventoFormModal: React.FC<EventoFormModalProps> = ({
           <div className="space-y-2">
             <Label htmlFor="status">Status</Label>
             <Select
-              value={watch('status')}
+              value={watchedValues.status}
               onValueChange={(value) => setValue('status', value as any)}
             >
               <SelectTrigger>
@@ -187,6 +201,7 @@ export const EventoFormModal: React.FC<EventoFormModalProps> = ({
             <Textarea
               id="descricao"
               {...register('descricao')}
+              value={watchedValues.descricao}
               placeholder="Descreva o evento, objetivos, etc..."
               rows={3}
             />
