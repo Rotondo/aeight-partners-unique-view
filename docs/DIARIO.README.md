@@ -551,4 +551,4 @@ Para dúvidas específicas do módulo diário, consulte o código-fonte ou entre
 
 ---
 
-> **Módulo Diário Aeight Partners** - A evolução da gestão executiva através de tecnologia, inteligência artificial e design centrado no usuário.
+> **Módulo Diário Rotondo Partners** - A evolução da gestão executiva através de tecnologia, inteligência artificial e design centrado no usuário.
