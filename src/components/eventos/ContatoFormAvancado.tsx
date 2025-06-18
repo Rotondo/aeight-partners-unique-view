@@ -30,7 +30,6 @@ type ContatoFormData = {
   proximos_passos: string;
   interesse_nivel: number;
   observacoes: string;
-  foto_cartao?: File;
 };
 
 export const ContatoFormAvancado: React.FC<ContatoFormAvancadoProps> = ({
@@ -259,6 +258,9 @@ export const ContatoFormAvancado: React.FC<ContatoFormAvancadoProps> = ({
                 Upload
               </Button>
             </div>
+            <p className="text-xs text-gray-500">
+              Funcionalidade de upload será implementada em breve
+            </p>
           </div>
 
           <div className="flex justify-end gap-3 pt-4">
