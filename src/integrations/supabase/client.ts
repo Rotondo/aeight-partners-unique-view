@@ -9,5 +9,13 @@ import { SUPABASE_CONFIG } from '@/lib/supabase';
 
 export const supabase = createClient<Database>(
   SUPABASE_CONFIG.URL, 
-  SUPABASE_CONFIG.ANON_KEY
+  SUPABASE_CONFIG.ANON_KEY,
+  {
+    auth: {
+      storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true
+    }
+  }
 );

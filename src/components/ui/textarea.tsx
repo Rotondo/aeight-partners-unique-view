@@ -8,14 +8,12 @@ export interface TextareaProps
 
 /**
  * Textarea base reutilizável com proteção aprimorada contra valores undefined.
- * Exige que o dev forneça pelo menos `id` ou `name` para acessibilidade/autofill.
- * NUNCA repassa children para <textarea>.
+ * Compatível com react-hook-form e outras bibliotecas de formulário.
  */
 const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
-  ({ className, id, name, value, children, ...props }, ref) => {
+  ({ className, id, name, value, defaultValue, onChange, ...props }, ref) => {
     // Em desenvolvimento, avisa se não há id nem name
     if (process.env.NODE_ENV !== "production" && !id && !name) {
-      // eslint-disable-next-line no-console
       console.warn(
         "[Textarea] Recomenda-se fornecer pelo menos um 'id' ou 'name' para campos de formulário."
       );
@@ -23,7 +21,12 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
 
     // Proteção robusta para value controlado - NUNCA permitir undefined/null
     const safeValue = React.useMemo(() => {
-      if (value === undefined || value === null) {
+      // Se não há value definido, deixar como undefined para componente não controlado
+      if (value === undefined) {
+        return undefined;
+      }
+      // Se value é null ou outro valor, converter para string
+      if (value === null) {
         return "";
       }
       return String(value);
@@ -42,6 +45,8 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
         id={id}
         name={name}
         value={safeValue}
+        defaultValue={defaultValue}
+        onChange={onChange}
         {...props}
       />
     );

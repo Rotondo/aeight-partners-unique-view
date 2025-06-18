@@ -6,8 +6,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertTriangle } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { useEventos } from '@/contexts/EventosContext';
+import { logger } from '@/lib/logger';
 import type { Evento } from '@/types/eventos';
 
 interface EventoFormModalProps {
@@ -30,7 +33,7 @@ export const EventoFormModal: React.FC<EventoFormModalProps> = ({
   onClose,
   evento
 }) => {
-  const { createEvento, updateEvento } = useEventos();
+  const { createEvento, updateEvento, error } = useEventos();
   const isEditing = !!evento?.id;
 
   // Valores padrão sempre como strings vazias - NUNCA undefined
@@ -39,7 +42,7 @@ export const EventoFormModal: React.FC<EventoFormModalProps> = ({
     data_inicio: new Date().toISOString().slice(0, 16),
     data_fim: '',
     local: '',
-    descricao: '', // CRÍTICO: sempre string vazia
+    descricao: '',
     status: 'planejado'
   };
 
@@ -56,35 +59,44 @@ export const EventoFormModal: React.FC<EventoFormModalProps> = ({
 
   React.useEffect(() => {
     if (evento && open) {
+      logger.eventLog('Inicializando formulário para edição', evento.id);
       // Garantir que todos os valores sejam strings, nunca undefined
-      reset({
+      const formData: EventoFormData = {
         nome: evento.nome || '',
         data_inicio: evento.data_inicio || new Date().toISOString().slice(0, 16),
         data_fim: evento.data_fim || '',
         local: evento.local || '',
-        descricao: evento.descricao || '', // CRÍTICO: nunca undefined
+        descricao: evento.descricao || '',
         status: evento.status || 'planejado'
-      });
+      };
+      reset(formData);
     } else if (open) {
+      logger.eventLog('Inicializando formulário para criação');
       reset(defaultValues);
     }
   }, [evento, open, reset]);
 
   const onSubmit = async (data: EventoFormData) => {
     try {
+      logger.eventLog('Submetendo formulário', evento?.id, data);
+      
       if (isEditing && evento?.id) {
         await updateEvento(evento.id, data);
+        logger.eventLog('Evento atualizado via formulário', evento.id);
       } else {
         await createEvento(data);
+        logger.eventLog('Evento criado via formulário');
       }
+      
       onClose();
       reset(defaultValues);
     } catch (error) {
-      console.error('Erro ao salvar evento:', error);
+      logger.error('EVENTOS', 'Erro ao salvar evento via formulário', error as Error);
     }
   };
 
   const handleClose = () => {
+    logger.eventLog('Fechando formulário de evento');
     onClose();
     reset(defaultValues);
   };
@@ -97,6 +109,15 @@ export const EventoFormModal: React.FC<EventoFormModalProps> = ({
             {isEditing ? 'Editar Evento' : 'Novo Evento'}
           </DialogTitle>
         </DialogHeader>
+
+        {error && (
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              {error}
+            </AlertDescription>
+          </Alert>
+        )}
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-2">
