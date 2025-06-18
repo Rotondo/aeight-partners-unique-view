@@ -1,6 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import type { AgendaEvento } from '@/types/diario';
+import type { AgendaEvento, TipoEventoAgenda } from '@/types/diario';
 
 /**
  * Service para operações da Agenda com integração ao CRM
@@ -50,7 +50,7 @@ export class AgendaService {
         partner_id: data.partner_id,
         source: data.source,
         external_id: data.external_id,
-        event_type: data.event_type,
+        event_type: (data.event_type as TipoEventoAgenda) || 'proximo_passo_crm',
         related_crm_action_id: data.related_crm_action_id,
         created_at: data.created_at,
         updated_at: data.updated_at
@@ -123,10 +123,107 @@ export class AgendaService {
         throw error;
       }
 
-      return data || [];
+      return (data || []).map(evento => ({
+        id: evento.id,
+        title: evento.title,
+        description: evento.description,
+        start: evento.start,
+        end: evento.end,
+        status: evento.status,
+        partner_id: evento.partner_id,
+        source: evento.source,
+        external_id: evento.external_id,
+        event_type: (evento.event_type as TipoEventoAgenda) || 'outro',
+        related_crm_action_id: evento.related_crm_action_id,
+        created_at: evento.created_at,
+        updated_at: evento.updated_at
+      }));
     } catch (error) {
       console.error('Erro no loadEventos:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Carrega eventos atrasados
+   */
+  static async getOverdueEvents(): Promise<AgendaEvento[]> {
+    try {
+      const now = new Date().toISOString();
+      
+      const { data, error } = await supabase
+        .from('diario_agenda_eventos')
+        .select('*')
+        .lt('start', now)
+        .in('status', ['scheduled', 'synced'])
+        .order('start', { ascending: true });
+
+      if (error) {
+        console.error('Erro ao carregar eventos atrasados:', error);
+        return [];
+      }
+
+      return (data || []).map(evento => ({
+        id: evento.id,
+        title: evento.title,
+        description: evento.description,
+        start: evento.start,
+        end: evento.end,
+        status: evento.status,
+        partner_id: evento.partner_id,
+        source: evento.source,
+        external_id: evento.external_id,
+        event_type: (evento.event_type as TipoEventoAgenda) || 'outro',
+        related_crm_action_id: evento.related_crm_action_id,
+        created_at: evento.created_at,
+        updated_at: evento.updated_at
+      }));
+    } catch (error) {
+      console.error('Erro ao carregar eventos atrasados:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Carrega próximos eventos
+   */
+  static async getUpcomingEvents(): Promise<AgendaEvento[]> {
+    try {
+      const now = new Date().toISOString();
+      const nextWeek = new Date();
+      nextWeek.setDate(nextWeek.getDate() + 7);
+      
+      const { data, error } = await supabase
+        .from('diario_agenda_eventos')
+        .select('*')
+        .gte('start', now)
+        .lte('start', nextWeek.toISOString())
+        .in('status', ['scheduled', 'synced'])
+        .order('start', { ascending: true });
+
+      if (error) {
+        console.error('Erro ao carregar próximos eventos:', error);
+        return [];
+      }
+
+      return (data || []).map(evento => ({
+        id: evento.id,
+        title: evento.title,
+        description: evento.description,
+        start: evento.start,
+        end: evento.end,
+        status: evento.status,
+        partner_id: evento.partner_id,
+        source: evento.source,
+        external_id: evento.external_id,
+        event_type: (evento.event_type as TipoEventoAgenda) || 'outro',
+        related_crm_action_id: evento.related_crm_action_id,
+        created_at: evento.created_at,
+        updated_at: evento.updated_at
+      }));
+    } catch (error) {
+      console.error('Erro ao carregar próximos eventos:', error);
+      return [];
     }
   }
 }
