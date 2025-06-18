@@ -6,7 +6,7 @@ Sistema completo de gestão de relacionamentos, oportunidades e diário executiv
 ## 🎯 Funcionalidades Principais
 
 ### 📋 **Módulo Diário Executivo** (NOVO - Destaque Principal)
-- **Agenda Inteligente**: Calendário semanal/diário com integração Google/Outlook
+- **Agenda Inteligente**: Calendário semanal/diário
 - **CRM Multimídia**: Registro de ações via áudio, vídeo e texto
 - **Resumos Automáticos**: Geração inteligente por período (semanal/mensal/trimestral)
 - **Assistente IA**: Sugestões automáticas para melhorias e otimizações
@@ -32,7 +32,7 @@ Sistema completo de gestão de relacionamentos, oportunidades e diário executiv
 ## 🚀 Status do Projeto
 
 - **Versão Atual**: 2.0.0 (com Módulo Diário)
-- **Última Atualização**: Janeiro 2025
+- **Última Atualização**: Junho 2025
 - **Status**: Produção - Totalmente funcional
 - **Próximas Versões**: Integrações avançadas com IA e calendários
 
@@ -61,7 +61,6 @@ Sistema completo de gestão de relacionamentos, oportunidades e diário executiv
 ### 📅 Agenda
 - Visualização semanal e diária
 - Status: agendado, realizado, cancelado
-- Integração com calendários externos
 - Vinculação com parceiros
 
 ### 📝 CRM
@@ -118,4 +117,4 @@ Para dúvidas técnicas, consulte a documentação específica em cada README ou
 
 ---
 
-> **Sistema Aeight Partners** - Transformando relacionamentos em resultados através de tecnologia e inteligência artificial.
+> **Sistema Rotondo Partners** - Transformando relacionamentos em resultados através de tecnologia e inteligência artificial.
