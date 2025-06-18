@@ -87,11 +87,26 @@ export const CrmActionForm: React.FC<CrmActionFormProps> = ({ onSuccess }) => {
     return option?.icon || MessageSquare;
   };
 
-  // CORREÇÃO: Filtrar parceiros válidos para evitar IDs vazios
+  // CORREÇÃO ROBUSTA: Filtrar parceiros com validação mais rigorosa
   const validPartners = partners.filter(partner => {
-    const isValid = partner.id && partner.id.trim() !== '';
-    console.log('[CrmActionForm] Partner validation:', { id: partner.id, nome: partner.nome, isValid });
-    return isValid;
+    const hasValidId = partner.id && 
+                      typeof partner.id === 'string' && 
+                      partner.id.trim() !== '' && 
+                      partner.id !== 'undefined' && 
+                      partner.id !== 'null';
+    const hasValidName = partner.nome && 
+                        typeof partner.nome === 'string' && 
+                        partner.nome.trim() !== '';
+    
+    console.log('[CrmActionForm] Partner validation:', { 
+      id: partner.id, 
+      nome: partner.nome, 
+      hasValidId, 
+      hasValidName,
+      isValid: hasValidId && hasValidName 
+    });
+    
+    return hasValidId && hasValidName;
   });
 
   console.log('[CrmActionForm] Total partners:', partners.length, 'Valid partners:', validPartners.length);
@@ -195,6 +210,12 @@ export const CrmActionForm: React.FC<CrmActionFormProps> = ({ onSuccess }) => {
                 <SelectContent className="bg-white border border-gray-300 rounded-md shadow-lg z-50">
                   <SelectItem value="none">Nenhum parceiro</SelectItem>
                   {validPartners.map((partner) => {
+                    // Verificação adicional antes do render
+                    if (!partner.id || partner.id.trim() === '') {
+                      console.error('[CrmActionForm] Skipping partner with invalid ID:', partner);
+                      return null;
+                    }
+                    
                     console.log('[CrmActionForm] Rendering SelectItem:', { id: partner.id, nome: partner.nome });
                     return (
                       <SelectItem key={partner.id} value={partner.id}>
@@ -245,4 +266,3 @@ export const CrmActionForm: React.FC<CrmActionFormProps> = ({ onSuccess }) => {
     </Card>
   );
 };
-

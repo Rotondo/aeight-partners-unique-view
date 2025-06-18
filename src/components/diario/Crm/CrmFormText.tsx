@@ -51,11 +51,26 @@ export const CrmFormText: React.FC = () => {
     }
   };
 
-  // CORREÇÃO: Filtrar parceiros válidos para evitar IDs vazios
+  // CORREÇÃO ROBUSTA: Filtrar parceiros com validação mais rigorosa
   const validPartners = partners.filter(partner => {
-    const isValid = partner.id && partner.id.trim() !== '';
-    console.log('[CrmFormText] Partner validation:', { id: partner.id, nome: partner.nome, isValid });
-    return isValid;
+    const hasValidId = partner.id && 
+                      typeof partner.id === 'string' && 
+                      partner.id.trim() !== '' && 
+                      partner.id !== 'undefined' && 
+                      partner.id !== 'null';
+    const hasValidName = partner.nome && 
+                        typeof partner.nome === 'string' && 
+                        partner.nome.trim() !== '';
+    
+    console.log('[CrmFormText] Partner validation:', { 
+      id: partner.id, 
+      nome: partner.nome, 
+      hasValidId, 
+      hasValidName,
+      isValid: hasValidId && hasValidName 
+    });
+    
+    return hasValidId && hasValidName;
   });
 
   console.log('[CrmFormText] Total partners:', partners.length, 'Valid partners:', validPartners.length);
@@ -106,7 +121,7 @@ export const CrmFormText: React.FC = () => {
         />
       </div>
 
-      {/* Parceiro - CORRIGIDO: Agora só mostra parceiros reais com IDs válidos */}
+      {/* Parceiro - CORRIGIDO: Validação mais robusta */}
       <div className="space-y-2">
         <Label>Parceiro (Opcional)</Label>
         <Select value={formData.partner_id} onValueChange={(value) => setFormData({ ...formData, partner_id: value })}>
@@ -116,6 +131,12 @@ export const CrmFormText: React.FC = () => {
           <SelectContent className="bg-white border border-gray-300 rounded-md shadow-lg z-50">
             <SelectItem value="none">Nenhum parceiro</SelectItem>
             {validPartners.map((partner) => {
+              // Verificação adicional antes do render
+              if (!partner.id || partner.id.trim() === '') {
+                console.error('[CrmFormText] Skipping partner with invalid ID:', partner);
+                return null;
+              }
+              
               console.log('[CrmFormText] Rendering SelectItem:', { id: partner.id, nome: partner.nome });
               return (
                 <SelectItem key={partner.id} value={partner.id}>
@@ -166,4 +187,3 @@ export const CrmFormText: React.FC = () => {
     </form>
   );
 };
-
