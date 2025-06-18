@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Categoria, Empresa, RepositorioTag } from '@/types';
 import { supabase } from '@/lib/supabase';
@@ -9,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Upload, Loader2 } from 'lucide-react';
+import { Upload, Loader2, File, Check } from 'lucide-react';
 
 interface MaterialUploadProps {
   categorias: Categoria[];
@@ -93,6 +94,12 @@ const MaterialUpload: React.FC<MaterialUploadProps> = ({
         arquivo: null,
       });
 
+      // Reset file input
+      const fileInput = document.getElementById('arquivo') as HTMLInputElement;
+      if (fileInput) {
+        fileInput.value = '';
+      }
+
       onSuccess();
     } catch (error) {
       console.error('Error uploading material:', error);
@@ -131,6 +138,7 @@ const MaterialUpload: React.FC<MaterialUploadProps> = ({
               id="nome"
               value={formData.nome}
               onChange={(e) => setFormData(prev => ({ ...prev, nome: e.target.value }))}
+              placeholder="Digite o nome do material"
               required
             />
           </div>
@@ -223,15 +231,24 @@ const MaterialUpload: React.FC<MaterialUploadProps> = ({
 
           <div>
             <Label htmlFor="arquivo">Arquivo</Label>
-            <Input
-              id="arquivo"
-              type="file"
-              onChange={(e) => setFormData(prev => ({ 
-                ...prev, 
-                arquivo: e.target.files?.[0] || null 
-              }))}
-              required
-            />
+            <div className="space-y-2">
+              <Input
+                id="arquivo"
+                type="file"
+                onChange={(e) => setFormData(prev => ({ 
+                  ...prev, 
+                  arquivo: e.target.files?.[0] || null 
+                }))}
+                required
+              />
+              {formData.arquivo && (
+                <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 p-2 rounded-md border border-green-200">
+                  <Check className="h-4 w-4" />
+                  <File className="h-4 w-4" />
+                  <span>Arquivo selecionado: {formData.arquivo.name}</span>
+                </div>
+              )}
+            </div>
           </div>
 
           <Button type="submit" disabled={uploading} className="w-full">
