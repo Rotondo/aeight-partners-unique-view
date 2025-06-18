@@ -32,7 +32,7 @@ export const CrmFormText: React.FC = () => {
         content: formData.content,
         communication_method: formData.communication_method,
         status: formData.status,
-        partner_id: formData.partner_id || undefined,
+        partner_id: formData.partner_id === 'none' ? undefined : formData.partner_id,
         next_steps: formData.next_steps || undefined,
       });
 
@@ -104,7 +104,7 @@ export const CrmFormText: React.FC = () => {
             <SelectValue placeholder="Selecione um parceiro" />
           </SelectTrigger>
           <SelectContent className="bg-white border border-gray-300 rounded-md shadow-lg z-50">
-            <SelectItem value="">Nenhum parceiro</SelectItem>
+            <SelectItem value="none">Nenhum parceiro</SelectItem>
             {partners.map((partner) => (
               <SelectItem key={partner.id} value={partner.id}>
                 {partner.nome}

@@ -55,7 +55,7 @@ export const CrmActionForm: React.FC<CrmActionFormProps> = ({ onSuccess }) => {
         communication_method: formData.communication_method,
         content: formData.content,
         status: formData.status,
-        partner_id: formData.partner_id || undefined,
+        partner_id: formData.partner_id === 'none' ? undefined : formData.partner_id,
         next_steps: formData.next_steps || undefined,
         next_step_date: formData.next_step_date || undefined,
         metadata: {
@@ -184,7 +184,7 @@ export const CrmActionForm: React.FC<CrmActionFormProps> = ({ onSuccess }) => {
                   <SelectValue placeholder="Selecione um parceiro" />
                 </SelectTrigger>
                 <SelectContent className="bg-white border border-gray-300 rounded-md shadow-lg z-50">
-                  <SelectItem value="">Nenhum parceiro</SelectItem>
+                  <SelectItem value="none">Nenhum parceiro</SelectItem>
                   {partners.map((partner) => (
                     <SelectItem key={partner.id} value={partner.id}>
                       {partner.nome}
