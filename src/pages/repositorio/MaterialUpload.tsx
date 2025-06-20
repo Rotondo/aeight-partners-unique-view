@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Upload, Loader2, File, Check } from 'lucide-react';
+import { sanitizeFileName, validateFileName } from '@/utils/fileUtils';
 
 interface MaterialUploadProps {
   categorias: Categoria[];
@@ -53,10 +54,26 @@ const MaterialUpload: React.FC<MaterialUploadProps> = ({
     setUploading(true);
 
     try {
-      // Upload do arquivo (ajustado para bucket 'materiais')
-      const fileName = `${Date.now()}_${formData.arquivo.name}`;
+      // Sanitiza o nome do arquivo
+      const originalFileName = formData.arquivo.name;
+      const sanitizedFileName = sanitizeFileName(originalFileName);
+      
+      // Valida o nome do arquivo sanitizado
+      const validation = validateFileName(sanitizedFileName);
+      if (!validation.isValid) {
+        throw new Error(validation.error);
+      }
+
+      // Cria um nome único para o arquivo
+      const timestamp = Date.now();
+      const fileName = `${timestamp}_${sanitizedFileName}`;
+      
+      console.log('Original filename:', originalFileName);
+      console.log('Sanitized filename:', fileName);
+
+      // Upload do arquivo para o bucket 'materiais'
       const { error: uploadError } = await supabase.storage
-        .from('materiais') // <--- nome correto do bucket
+        .from('materiais')
         .upload(fileName, formData.arquivo);
 
       if (uploadError) throw uploadError;
@@ -105,7 +122,7 @@ const MaterialUpload: React.FC<MaterialUploadProps> = ({
       console.error('Error uploading material:', error);
       toast({
         title: 'Erro',
-        description: 'Não foi possível enviar o material.',
+        description: error instanceof Error ? error.message : 'Não foi possível enviar o material.',
         variant: 'destructive',
       });
     } finally {
