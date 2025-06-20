@@ -6,6 +6,8 @@ export type TamanhoEmpresa = "PP" | "P" | "M" | "G" | "GG";
 export type StatusOportunidade = 
   | "em_contato" 
   | "negociando" 
+  | "proposta_enviada"
+  | "aguardando_aprovacao"
   | "ganho" 
   | "perdido" 
   | "Contato" 
