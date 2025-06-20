@@ -6,9 +6,10 @@ import { useStatsCalculation } from "./useStatsCalculation";
 export interface DashboardStatsByStatus {
   em_contato: number;
   negociando: number;
+  proposta_enviada: number;
+  aguardando_aprovacao: number;
   ganho: number;
   perdido: number;
-  outros?: Record<string, number>;
   total: number;
 }
 

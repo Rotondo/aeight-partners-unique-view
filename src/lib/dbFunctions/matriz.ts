@@ -1,7 +1,7 @@
 
 import { supabase } from '../supabase';
 import { StatusOportunidade } from '@/types';
-import { formatDateOrNull, createEmpresaMap, filterByEmpresa } from './helpers';
+import { formatDateOrNull } from './helpers';
 
 // Function to get matriz intragrupo data
 export const getMatrizIntragrupo = async (
@@ -11,15 +11,28 @@ export const getMatrizIntragrupo = async (
   status: StatusOportunidade | null
 ) => {
   try {
-    const { data, error } = await supabase.rpc('get_matriz_intragrupo_data', {
-      data_inicio_param: formatDateOrNull(dataInicio),
-      data_fim_param: formatDateOrNull(dataFim),
-      empresa_id_param: empresaId,
-      status_param: status,
-    });
+    // Implementação local como fallback para evitar erro de RPC
+    const { data: oportunidades, error } = await supabase
+      .from('oportunidades')
+      .select(`
+        *,
+        empresa_origem:empresas!empresa_origem_id(id, nome, tipo),
+        empresa_destino:empresas!empresa_destino_id(id, nome, tipo)
+      `)
+      .gte('data_indicacao', dataInicio ? formatDateOrNull(dataInicio) : '1900-01-01')
+      .lte('data_indicacao', dataFim ? formatDateOrNull(dataFim) : '2100-12-31');
 
     if (error) throw error;
-    return data || [];
+
+    // Filtrar apenas oportunidades intragrupo
+    const intraData = (oportunidades || []).filter(op => 
+      op.empresa_origem?.tipo === 'intragrupo' && 
+      op.empresa_destino?.tipo === 'intragrupo' &&
+      (!status || op.status === status) &&
+      (!empresaId || op.empresa_origem_id === empresaId || op.empresa_destino_id === empresaId)
+    );
+
+    return intraData;
   } catch (error) {
     console.error('Error in getMatrizIntragrupo:', error);
     return [];
@@ -34,15 +47,27 @@ export const getMatrizParcerias = async (
   status: StatusOportunidade | null
 ) => {
   try {
-    const { data, error } = await supabase.rpc('get_matriz_parcerias_data', {
-      data_inicio_param: formatDateOrNull(dataInicio),
-      data_fim_param: formatDateOrNull(dataFim),
-      empresa_id_param: empresaId,
-      status_param: status,
-    });
+    // Implementação local como fallback
+    const { data: oportunidades, error } = await supabase
+      .from('oportunidades')
+      .select(`
+        *,
+        empresa_origem:empresas!empresa_origem_id(id, nome, tipo),
+        empresa_destino:empresas!empresa_destino_id(id, nome, tipo)
+      `)
+      .gte('data_indicacao', dataInicio ? formatDateOrNull(dataInicio) : '1900-01-01')
+      .lte('data_indicacao', dataFim ? formatDateOrNull(dataFim) : '2100-12-31');
 
     if (error) throw error;
-    return data || [];
+
+    // Filtrar parcerias
+    const parceriasData = (oportunidades || []).filter(op => 
+      (op.empresa_origem?.tipo === 'parceiro' || op.empresa_destino?.tipo === 'parceiro') &&
+      (!status || op.status === status) &&
+      (!empresaId || op.empresa_origem_id === empresaId || op.empresa_destino_id === empresaId)
+    );
+
+    return parceriasData;
   } catch (error) {
     console.error('Error in getMatrizParcerias:', error);
     return [];
@@ -56,14 +81,24 @@ export const getQualidadeIndicacoes = async (
   empresaId: string | null
 ) => {
   try {
-    const { data, error } = await supabase.rpc('get_qualidade_indicacoes_data', {
-      data_inicio_param: formatDateOrNull(dataInicio),
-      data_fim_param: formatDateOrNull(dataFim),
-      empresa_id_param: empresaId,
-    });
+    // Implementação local como fallback
+    const { data: oportunidades, error } = await supabase
+      .from('oportunidades')
+      .select(`
+        *,
+        empresa_origem:empresas!empresa_origem_id(id, nome, tipo),
+        empresa_destino:empresas!empresa_destino_id(id, nome, tipo)
+      `)
+      .gte('data_indicacao', dataInicio ? formatDateOrNull(dataInicio) : '1900-01-01')
+      .lte('data_indicacao', dataFim ? formatDateOrNull(dataFim) : '2100-12-31');
 
     if (error) throw error;
-    return data || [];
+
+    const filteredData = (oportunidades || []).filter(op => 
+      !empresaId || op.empresa_origem_id === empresaId || op.empresa_destino_id === empresaId
+    );
+
+    return filteredData;
   } catch (error) {
     console.error('Error in getQualidadeIndicacoes:', error);
     return [];

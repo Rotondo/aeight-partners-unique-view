@@ -1,7 +1,26 @@
 
 import { useState, useEffect } from "react";
-import type { Oportunidade, DashboardStats, DashboardStatsByStatus } from "@/types";
-import { supabase } from "@/lib/supabase"; // Ajuste o caminho conforme necessário
+import type { Oportunidade } from "@/types";
+import { supabase } from "@/lib/supabase";
+
+export interface DashboardStatsByStatus {
+  em_contato: number;
+  negociando: number;
+  proposta_enviada: number;
+  aguardando_aprovacao: number;
+  ganho: number;
+  perdido: number;
+  total: number;
+}
+
+export interface DashboardStats {
+  total: DashboardStatsByStatus;
+  intra: DashboardStatsByStatus;
+  extra: DashboardStatsByStatus;
+  enviadas: number;
+  recebidas: number;
+  saldo: number;
+}
 
 const initialStatsByStatus: DashboardStatsByStatus = {
   em_contato: 0,
@@ -10,7 +29,7 @@ const initialStatsByStatus: DashboardStatsByStatus = {
   aguardando_aprovacao: 0,
   ganho: 0,
   perdido: 0,
-  total: 0, // total aqui se refere ao total por categoria (total_geral, total_intra, total_extra)
+  total: 0,
 };
 
 const initialDashboardStats: DashboardStats = {
@@ -23,85 +42,69 @@ const initialDashboardStats: DashboardStats = {
 };
 
 /**
- * Hook especializado para cálculos de estatísticas usando RPC
+ * Hook para cálculos de estatísticas usando processamento local
  */
 export const useStatsCalculation = (oportunidades: Oportunidade[]): DashboardStats => {
   const [stats, setStats] = useState<DashboardStats>(initialDashboardStats);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<any>(null);
 
   useEffect(() => {
     if (!oportunidades || oportunidades.length === 0) {
       setStats(initialDashboardStats);
-      setLoading(false);
       return;
     }
 
-    const calculateStats = async () => {
-      setLoading(true);
-      setError(null);
+    const calculateStats = () => {
       try {
-        const ids = oportunidades.map(op => op.id);
-        const { data: rpcData, error: rpcError } = await supabase.rpc(
-          'get_dashboard_aggregated_stats',
-          { oportunidade_ids_param: ids }
+        // Separar oportunidades por tipo
+        const intraOportunidades = oportunidades.filter(op => 
+          op.empresa_origem?.tipo === 'intragrupo' && op.empresa_destino?.tipo === 'intragrupo'
+        );
+        
+        const extraOportunidades = oportunidades.filter(op => 
+          !(op.empresa_origem?.tipo === 'intragrupo' && op.empresa_destino?.tipo === 'intragrupo')
         );
 
-        if (rpcError) {
-          throw rpcError;
-        }
-
-        if (rpcData) {
-          // Mapear o resultado da RPC para a estrutura DashboardStats
-          const newStats: DashboardStats = {
-            total: {
-              em_contato: rpcData.total_status_counts.em_contato || 0,
-              negociando: rpcData.total_status_counts.negociando || 0,
-              proposta_enviada: rpcData.total_status_counts.proposta_enviada || 0,
-              aguardando_aprovacao: rpcData.total_status_counts.aguardando_aprovacao || 0,
-              ganho: rpcData.total_status_counts.ganho || 0,
-              perdido: rpcData.total_status_counts.perdido || 0,
-              total: rpcData.total_status_counts.total_geral || 0,
-            },
-            intra: {
-              em_contato: rpcData.intra_status_counts.em_contato || 0,
-              negociando: rpcData.intra_status_counts.negociando || 0,
-              proposta_enviada: rpcData.intra_status_counts.proposta_enviada || 0,
-              aguardando_aprovacao: rpcData.intra_status_counts.aguardando_aprovacao || 0,
-              ganho: rpcData.intra_status_counts.ganho || 0,
-              perdido: rpcData.intra_status_counts.perdido || 0,
-              total: rpcData.intra_status_counts.total_intra || 0,
-            },
-            extra: {
-              em_contato: rpcData.extra_status_counts.em_contato || 0,
-              negociando: rpcData.extra_status_counts.negociando || 0,
-              proposta_enviada: rpcData.extra_status_counts.proposta_enviada || 0,
-              aguardando_aprovacao: rpcData.extra_status_counts.aguardando_aprovacao || 0,
-              ganho: rpcData.extra_status_counts.ganho || 0,
-              perdido: rpcData.extra_status_counts.perdido || 0,
-              total: rpcData.extra_status_counts.total_extra || 0,
-            },
-            enviadas: rpcData.enviadas || 0,
-            recebidas: rpcData.recebidas || 0,
-            saldo: rpcData.saldo || 0,
+        // Função para calcular estatísticas por status
+        const calculateStatusStats = (ops: Oportunidade[]): DashboardStatsByStatus => {
+          const stats = {
+            em_contato: ops.filter(op => op.status === 'em_contato').length,
+            negociando: ops.filter(op => op.status === 'negociando').length,
+            proposta_enviada: ops.filter(op => op.status === 'proposta_enviada').length,
+            aguardando_aprovacao: ops.filter(op => op.status === 'aguardando_aprovacao').length,
+            ganho: ops.filter(op => op.status === 'ganho').length,
+            perdido: ops.filter(op => op.status === 'perdido').length,
+            total: ops.length,
           };
-          setStats(newStats);
-        } else {
-          setStats(initialDashboardStats); // Resetar se não houver dados
-        }
+          return stats;
+        };
+
+        // Calcular enviadas/recebidas
+        const enviadas = oportunidades.filter(op => 
+          op.empresa_origem?.tipo === 'intragrupo' && op.empresa_destino?.tipo === 'parceiro'
+        ).length;
+        
+        const recebidas = oportunidades.filter(op => 
+          op.empresa_origem?.tipo === 'parceiro' && op.empresa_destino?.tipo === 'intragrupo'
+        ).length;
+
+        const newStats: DashboardStats = {
+          total: calculateStatusStats(oportunidades),
+          intra: calculateStatusStats(intraOportunidades),
+          extra: calculateStatusStats(extraOportunidades),
+          enviadas,
+          recebidas,
+          saldo: enviadas - recebidas,
+        };
+
+        setStats(newStats);
       } catch (e) {
-        console.error("Error calculating stats via RPC:", e);
-        setError(e);
-        setStats(initialDashboardStats); // Resetar em caso de erro
-      } finally {
-        setLoading(false);
+        console.error("Error calculating stats:", e);
+        setStats(initialDashboardStats);
       }
     };
 
     calculateStats();
   }, [oportunidades]);
 
-  // O hook pode também retornar loading e error se o consumidor precisar deles.
-  // Por enquanto, apenas retorna as estatísticas conforme o contrato original.
   return stats;
 };

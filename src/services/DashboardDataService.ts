@@ -1,17 +1,17 @@
-import { supabase } from '@/lib/supabase'; // Ajuste o caminho se necessário
-import { StatusOportunidade } from '@/types'; // Ajuste o caminho se necessário
+
+import { supabase } from '@/lib/supabase';
+import { StatusOportunidade } from '@/types';
 import { format } from 'date-fns';
 
-// Tipos de retorno esperados pelas funções, para clareza
-// (Estes podem já existir em @/types, mas são colocados aqui para referência durante a criação do serviço)
+// Tipos de retorno esperados pelas funções
 interface BalancoData {
   tipo: 'Enviadas' | 'Recebidas';
   valor: number;
 }
 
 interface RankingData {
-  parceiro_nome: string; // ou 'parceiro' se for decidido mapear para o formato antigo
-  indicacoes_total: number; // ou 'indicacoes'
+  parceiro_nome: string;
+  indicacoes_total: number;
 }
 
 interface StatusDistributionData {
@@ -31,29 +31,39 @@ export class DashboardDataService {
     status: StatusOportunidade | null
   ): Promise<BalancoData[]> {
     try {
-      const { data, error } = await supabase.rpc('get_balanco_grupo_parcerias_data', {
-        data_inicio_param: this.formatDateOrNull(dataInicio),
-        data_fim_param: this.formatDateOrNull(dataFim),
-        empresa_id_param: empresaId,
-        status_param: status,
-      });
+      // Implementação local como fallback
+      const { data: oportunidades, error } = await supabase
+        .from('oportunidades')
+        .select(`
+          *,
+          empresa_origem:empresas!empresa_origem_id(tipo),
+          empresa_destino:empresas!empresa_destino_id(tipo)
+        `)
+        .gte('data_indicacao', dataInicio ? this.formatDateOrNull(dataInicio) : '1900-01-01')
+        .lte('data_indicacao', dataFim ? this.formatDateOrNull(dataFim) : '2100-12-31');
 
       if (error) throw error;
 
-      const result = data?.[0];
-      if (result) {
-        return [
-          { tipo: 'Enviadas', valor: result.enviadas_count || 0 },
-          { tipo: 'Recebidas', valor: result.recebidas_count || 0 }
-        ];
-      }
+      const filteredOps = (oportunidades || []).filter(op => 
+        (!status || op.status === status) &&
+        (!empresaId || op.empresa_origem_id === empresaId || op.empresa_destino_id === empresaId)
+      );
+
+      const enviadas = filteredOps.filter(op => 
+        op.empresa_origem?.tipo === 'intragrupo' && op.empresa_destino?.tipo === 'parceiro'
+      ).length;
+
+      const recebidas = filteredOps.filter(op => 
+        op.empresa_origem?.tipo === 'parceiro' && op.empresa_destino?.tipo === 'intragrupo'
+      ).length;
+
       return [
-        { tipo: 'Enviadas', valor: 0 },
-        { tipo: 'Recebidas', valor: 0 }
+        { tipo: 'Enviadas', valor: enviadas },
+        { tipo: 'Recebidas', valor: recebidas }
       ];
     } catch (error) {
       console.error('Error in DashboardDataService.getBalancoGrupoParcerias:', error);
-      return [ // Retornar um valor padrão em caso de erro, consistente com a função original
+      return [
         { tipo: 'Enviadas', valor: 0 },
         { tipo: 'Recebidas', valor: 0 }
       ];
@@ -66,14 +76,35 @@ export class DashboardDataService {
     status: StatusOportunidade | null
   ): Promise<RankingData[]> {
     try {
-      const { data, error } = await supabase.rpc('get_ranking_parceiros_enviadas_data', {
-        data_inicio_param: this.formatDateOrNull(dataInicio),
-        data_fim_param: this.formatDateOrNull(dataFim),
-        status_param: status,
-      });
+      // Implementação local como fallback
+      const { data: oportunidades, error } = await supabase
+        .from('oportunidades')
+        .select(`
+          *,
+          empresa_origem:empresas!empresa_origem_id(nome, tipo),
+          empresa_destino:empresas!empresa_destino_id(tipo)
+        `)
+        .gte('data_indicacao', dataInicio ? this.formatDateOrNull(dataInicio) : '1900-01-01')
+        .lte('data_indicacao', dataFim ? this.formatDateOrNull(dataFim) : '2100-12-31');
 
       if (error) throw error;
-      return (data || []) as RankingData[]; // Assumindo que a RPC retorna o formato esperado
+
+      const enviadas = (oportunidades || []).filter(op => 
+        op.empresa_origem?.tipo === 'parceiro' && 
+        op.empresa_destino?.tipo === 'intragrupo' &&
+        (!status || op.status === status)
+      );
+
+      // Agrupar por parceiro
+      const ranking = enviadas.reduce((acc: Record<string, number>, op) => {
+        const parceiro = op.empresa_origem?.nome || 'Desconhecido';
+        acc[parceiro] = (acc[parceiro] || 0) + 1;
+        return acc;
+      }, {});
+
+      return Object.entries(ranking)
+        .map(([parceiro_nome, indicacoes_total]) => ({ parceiro_nome, indicacoes_total }))
+        .sort((a, b) => b.indicacoes_total - a.indicacoes_total);
     } catch (error) {
       console.error('Error in DashboardDataService.getRankingParceirosEnviadas:', error);
       return [];
@@ -86,14 +117,34 @@ export class DashboardDataService {
     status: StatusOportunidade | null
   ): Promise<RankingData[]> {
     try {
-      const { data, error } = await supabase.rpc('get_ranking_parceiros_recebidas_data', {
-        data_inicio_param: this.formatDateOrNull(dataInicio),
-        data_fim_param: this.formatDateOrNull(dataFim),
-        status_param: status,
-      });
+      // Implementação similar ao método anterior, mas invertendo origem/destino
+      const { data: oportunidades, error } = await supabase
+        .from('oportunidades')
+        .select(`
+          *,
+          empresa_origem:empresas!empresa_origem_id(tipo),
+          empresa_destino:empresas!empresa_destino_id(nome, tipo)
+        `)
+        .gte('data_indicacao', dataInicio ? this.formatDateOrNull(dataInicio) : '1900-01-01')
+        .lte('data_indicacao', dataFim ? this.formatDateOrNull(dataFim) : '2100-12-31');
 
       if (error) throw error;
-      return (data || []) as RankingData[];
+
+      const recebidas = (oportunidades || []).filter(op => 
+        op.empresa_origem?.tipo === 'intragrupo' && 
+        op.empresa_destino?.tipo === 'parceiro' &&
+        (!status || op.status === status)
+      );
+
+      const ranking = recebidas.reduce((acc: Record<string, number>, op) => {
+        const parceiro = op.empresa_destino?.nome || 'Desconhecido';
+        acc[parceiro] = (acc[parceiro] || 0) + 1;
+        return acc;
+      }, {});
+
+      return Object.entries(ranking)
+        .map(([parceiro_nome, indicacoes_total]) => ({ parceiro_nome, indicacoes_total }))
+        .sort((a, b) => b.indicacoes_total - a.indicacoes_total);
     } catch (error) {
       console.error('Error in DashboardDataService.getRankingParceirosRecebidas:', error);
       return [];
@@ -106,14 +157,25 @@ export class DashboardDataService {
     empresaId: string | null
   ): Promise<StatusDistributionData[]> {
     try {
-      const { data, error } = await supabase.rpc('get_status_distribution_data', {
-        data_inicio_param: this.formatDateOrNull(dataInicio),
-        data_fim_param: this.formatDateOrNull(dataFim),
-        empresa_id_param: empresaId,
-      });
+      const { data: oportunidades, error } = await supabase
+        .from('oportunidades')
+        .select('status, empresa_origem_id, empresa_destino_id')
+        .gte('data_indicacao', dataInicio ? this.formatDateOrNull(dataInicio) : '1900-01-01')
+        .lte('data_indicacao', dataFim ? this.formatDateOrNull(dataFim) : '2100-12-31');
 
       if (error) throw error;
-      return (data || []) as StatusDistributionData[];
+
+      const filteredOps = (oportunidades || []).filter(op => 
+        !empresaId || op.empresa_origem_id === empresaId || op.empresa_destino_id === empresaId
+      );
+
+      const statusCounts = filteredOps.reduce((acc: Record<string, number>, op) => {
+        const status = op.status || 'indefinido';
+        acc[status] = (acc[status] || 0) + 1;
+        return acc;
+      }, {});
+
+      return Object.entries(statusCounts).map(([status, total]) => ({ status, total }));
     } catch (error) {
       console.error('Error in DashboardDataService.getStatusDistribution:', error);
       return [];
