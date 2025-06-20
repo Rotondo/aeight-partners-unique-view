@@ -320,6 +320,50 @@ Development → Testing → Staging → Production
 - **Voice**: Comandos de voz para CRM
 - **AR/VR**: Visualização imersiva de dados
 
+## Diretrizes de Arquitetura e Otimização
+
+Para manter a performance, manutenibilidade e consistência da aplicação Aeight Partners, as seguintes diretrizes devem ser observadas em novos desenvolvimentos e refatorações:
+
+### 1. Processamento e Agregação de Dados no Backend
+
+*   **Priorize o Backend para Cálculos Pesados:** Toda lógica de filtragem complexa, joins entre múltiplas tabelas, agregações (somas, contagens, médias) e cálculos estatísticos devem ser, preferencialmente, implementados no backend (Supabase), utilizando funções SQL (`CREATE FUNCTION ... LANGUAGE sql` ou `plpgsql`) chamadas via RPC.
+*   **Minimize a Transferência de Dados:** Evite buscar grandes volumes de dados brutos para o frontend. As funções SQL devem retornar apenas os dados necessários e, idealmente, já no formato ou estrutura próxima à de exibição.
+*   **Exemplo:** Em vez de buscar todas as `oportunidades` e `empresas` para calcular uma matriz de performance no frontend, crie uma função SQL que receba os filtros necessários, realize os joins e cálculos no banco, e retorne a matriz já calculada. (Veja `get_matriz_intragrupo_data` como referência).
+
+### 2. Serviços de Frontend para Acesso a Dados
+
+*   **Centralize o Acesso a Dados em Serviços:** Crie ou utilize serviços dedicados no diretório `src/services/` para encapsular as chamadas RPC ao backend. Esses serviços atuam como uma camada de abstração entre a UI e a lógica de busca de dados.
+*   **Exemplos:** `MatrizService.ts`, `DashboardDataService.ts`.
+*   **Responsabilidade dos Serviços:** Devem ser responsáveis por chamar as RPCs, tratar erros básicos da chamada e, se necessário, fazer um leve mapeamento do resultado da RPC para os tipos de dados do frontend (embora o ideal seja que a RPC já retorne dados em um formato compatível).
+
+### 3. Hooks para Lógica de UI e Estado do Componente
+
+*   **Hooks para Estado e Lógica de Apresentação:** Utilize React Hooks (`useState`, `useEffect`, `useMemo`, hooks customizados) para gerenciar o estado dos componentes, lógica de interação da UI e chamadas aos serviços de dados.
+*   **Simplicidade nos Hooks de Dados:** Hooks que buscam dados devem, em geral, chamar os métodos dos serviços e expor os dados e o estado de carregamento/erro. Evite colocar lógica de negócio complexa ou manipulação pesada de dados diretamente nos hooks.
+*   **Exemplo:** `useStatsCalculation.ts` foi refatorado para chamar uma RPC (indiretamente, pois agora a chamada RPC está dentro do `DashboardDataService` que o hook consumiria idealmente, ou o hook usa uma função SQL que faz tudo), em vez de realizar todos os cálculos no cliente.
+
+### 4. Componentes Focados na Apresentação
+
+*   **Componentes "Dumb" ou de Apresentação:** Componentes React devem ser, na medida do possível, focados em renderizar a UI com base nas props recebidas e em disparar callbacks para interações do usuário.
+*   **Delegação da Lógica:** A lógica de busca de dados, manipulação de estado complexo e lógica de negócio deve residir em hooks e serviços, não diretamente nos componentes de renderização.
+
+### 5. Normalização e Tipagem
+
+*   **Tipos Consistentes:** Utilize os tipos definidos em `src/types/` para garantir a consistência dos dados em toda a aplicação.
+*   **Normalização no Backend:** Processos de normalização de dados (ex: padronizar strings de status, categorias) devem, idealmente, ocorrer no backend (na função SQL ou até mesmo no schema do banco com `CHECK constraints` ou `enums`) para garantir que o frontend receba dados consistentes. As funções `normalizeStatus` e `normalizeRelacao` que existiam no frontend foram incorporadas à lógica das funções SQL.
+
+### 6. Migrações SQL para Funções de Backend
+
+*   **Versionamento:** Todas as novas funções SQL criadas no Supabase para processamento de dados devem ser adicionadas através de arquivos de migração no diretório `supabase/migrations/`, garantindo o versionamento e a reproducibilidade do schema e da lógica do banco.
+
+### Benefícios Esperados
+
+*   **Melhor Performance:** Redução da carga no cliente e menor tráfego de dados.
+*   **Maior Manutenibilidade:** Lógica de negócio centralizada e mais fácil de encontrar e modificar.
+*   **Código Frontend Mais Limpo:** Componentes e hooks mais simples e focados.
+*   **Reutilização:** Funções SQL e serviços podem ser reutilizados por diferentes partes da aplicação.
+*   **Robustez:** Cálculos críticos feitos próximos aos dados, no ambiente controlado do banco de dados.
+
 ---
 
 > **Arquitetura Rotondo Partners** - Construída para escalar, evoluir e inovar no futuro do relacionamento empresarial.
