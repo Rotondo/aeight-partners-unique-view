@@ -2,6 +2,7 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Target } from "lucide-react";
 import { DashboardStatsSection } from "./DashboardStats";
 import { OpportunitiesChart } from "./OpportunitiesChart";
 import { ValuesFunnelAnalysis } from "./ValuesFunnelAnalysis";
@@ -13,6 +14,7 @@ import { BalancoGrupoParceriasChart } from "./BalancoGrupoParceriasChart";
 import { RankingParceirosChart } from "./RankingParceirosChart";
 import { StatusDistributionChart } from "./StatusDistributionChart";
 import { PeriodIndicator } from "./PeriodIndicator";
+import { ResultadosControl } from "./ResultadosControl";
 import { OportunidadesFilter } from "@/components/oportunidades/OportunidadesFilter";
 import { useOportunidades } from "@/components/oportunidades/OportunidadesContext";
 import { useDashboardStats } from "@/hooks/useDashboardStats";
@@ -55,10 +57,14 @@ export const OportunidadesDashboards: React.FC = () => {
       </div>
 
       <Tabs defaultValue="quantities" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="quantities">Análise de Quantidades</TabsTrigger>
           <TabsTrigger value="values">Análise de Valores</TabsTrigger>
           <TabsTrigger value="intra-extra">Intra vs Extragrupo</TabsTrigger>
+          <TabsTrigger value="resultados" className="flex items-center gap-2">
+            <Target className="h-4 w-4" />
+            Controle de Resultados
+          </TabsTrigger>
         </TabsList>
         
         <TabsContent value="quantities" className="space-y-6">
@@ -135,6 +141,10 @@ export const OportunidadesDashboards: React.FC = () => {
 
         <TabsContent value="intra-extra" className="space-y-6">
           <IntraExtraAnalysis />
+        </TabsContent>
+
+        <TabsContent value="resultados" className="space-y-6">
+          <ResultadosControl />
         </TabsContent>
       </Tabs>
     </div>

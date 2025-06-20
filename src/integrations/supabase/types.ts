@@ -586,6 +586,75 @@ export type Database = {
           },
         ]
       }
+      metas_oportunidades: {
+        Row: {
+          ano: number
+          ativo: boolean | null
+          created_at: string | null
+          descricao: string | null
+          empresa_id: string | null
+          id: string
+          mes: number | null
+          nome: string
+          periodo: string | null
+          segmento_grupo: string | null
+          tipo_meta: string | null
+          trimestre: number | null
+          updated_at: string | null
+          usuario_criador_id: string | null
+          valor_meta: number
+        }
+        Insert: {
+          ano: number
+          ativo?: boolean | null
+          created_at?: string | null
+          descricao?: string | null
+          empresa_id?: string | null
+          id?: string
+          mes?: number | null
+          nome: string
+          periodo?: string | null
+          segmento_grupo?: string | null
+          tipo_meta?: string | null
+          trimestre?: number | null
+          updated_at?: string | null
+          usuario_criador_id?: string | null
+          valor_meta: number
+        }
+        Update: {
+          ano?: number
+          ativo?: boolean | null
+          created_at?: string | null
+          descricao?: string | null
+          empresa_id?: string | null
+          id?: string
+          mes?: number | null
+          nome?: string
+          periodo?: string | null
+          segmento_grupo?: string | null
+          tipo_meta?: string | null
+          trimestre?: number | null
+          updated_at?: string | null
+          usuario_criador_id?: string | null
+          valor_meta?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "metas_oportunidades_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "metas_oportunidades_usuario_criador_id_fkey"
+            columns: ["usuario_criador_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       onepager: {
         Row: {
           arquivo_upload: string | null

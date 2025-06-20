@@ -10,3 +10,4 @@ export * from './indicadores';
 export * from './onepager';
 export * from './wishlist';
 export * from './dashboard';
+export * from './metas';
