@@ -36,7 +36,8 @@ export const useMetas = () => {
         ...item,
         tipo_meta: item.tipo_meta as 'quantidade' | 'valor',
         periodo: item.periodo as 'mensal' | 'trimestral',
-        segmento_grupo: item.segmento_grupo as 'intragrupo' | 'de_fora_para_dentro' | 'tudo'
+        segmento_grupo: item.segmento_grupo as 'intragrupo' | 'de_fora_para_dentro' | 'tudo',
+        status_oportunidade: (item.status_oportunidade as 'todas' | 'ganhas') || 'todas'
       }));
 
       setMetas(metasTyped);

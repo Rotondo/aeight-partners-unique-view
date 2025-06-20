@@ -1,43 +1,65 @@
 
 import { useMemo } from 'react';
 import type { Oportunidade } from '@/types';
-import type { ResultadosPorGrupo, ResultadosPorEmpresa } from '@/types/metas';
+import type { ResultadosPorGrupo, ResultadosPorEmpresa, ResultadosFilters } from '@/types/metas';
 
-export const useResultadosStats = (oportunidades: Oportunidade[]) => {
+export const useResultadosStats = (oportunidades: Oportunidade[], filters?: ResultadosFilters) => {
   return useMemo(() => {
+    // Aplicar filtros se fornecidos
+    let filteredOportunidades = oportunidades;
+    
+    if (filters?.dataInicio || filters?.dataFim) {
+      filteredOportunidades = oportunidades.filter(op => {
+        const opDate = new Date(op.data_indicacao);
+        
+        if (filters.dataInicio) {
+          const dataInicio = new Date(filters.dataInicio);
+          if (opDate < dataInicio) return false;
+        }
+        
+        if (filters.dataFim) {
+          const dataFim = new Date(filters.dataFim);
+          dataFim.setHours(23, 59, 59, 999); // Incluir o dia inteiro
+          if (opDate > dataFim) return false;
+        }
+        
+        return true;
+      });
+    }
+
     const calculateResultadosPorGrupo = (): ResultadosPorGrupo[] => {
       const grupos = ['intragrupo', 'de_fora_para_dentro', 'tudo'];
       
       return grupos.map(segmento => {
-        let filteredOps = oportunidades;
+        let segmentOps = filteredOportunidades;
         
         if (segmento === 'intragrupo') {
-          filteredOps = oportunidades.filter(op => 
+          segmentOps = filteredOportunidades.filter(op => 
             op.empresa_origem?.tipo === 'intragrupo' && 
             op.empresa_destino?.tipo === 'intragrupo'
           );
         } else if (segmento === 'de_fora_para_dentro') {
-          filteredOps = oportunidades.filter(op => 
+          segmentOps = filteredOportunidades.filter(op => 
             (op.empresa_origem?.tipo === 'parceiro' || op.empresa_origem?.tipo === 'cliente') &&
             op.empresa_destino?.tipo === 'intragrupo'
           );
         }
 
-        const quantidade_total = filteredOps.length;
-        const quantidade_ganho = filteredOps.filter(op => op.status === 'ganho').length;
-        const quantidade_perdido = filteredOps.filter(op => op.status === 'perdido').length;
-        const quantidade_andamento = filteredOps.filter(op => 
+        const quantidade_total = segmentOps.length;
+        const quantidade_ganho = segmentOps.filter(op => op.status === 'ganho').length;
+        const quantidade_perdido = segmentOps.filter(op => op.status === 'perdido').length;
+        const quantidade_andamento = segmentOps.filter(op => 
           op.status === 'em_contato' || op.status === 'negociando'
         ).length;
 
-        const valor_total = filteredOps.reduce((sum, op) => sum + (op.valor || 0), 0);
-        const valor_ganho = filteredOps
+        const valor_total = segmentOps.reduce((sum, op) => sum + (op.valor || 0), 0);
+        const valor_ganho = segmentOps
           .filter(op => op.status === 'ganho')
           .reduce((sum, op) => sum + (op.valor || 0), 0);
-        const valor_perdido = filteredOps
+        const valor_perdido = segmentOps
           .filter(op => op.status === 'perdido')
           .reduce((sum, op) => sum + (op.valor || 0), 0);
-        const valor_andamento = filteredOps
+        const valor_andamento = segmentOps
           .filter(op => op.status === 'em_contato' || op.status === 'negociando')
           .reduce((sum, op) => sum + (op.valor || 0), 0);
 
@@ -63,7 +85,7 @@ export const useResultadosStats = (oportunidades: Oportunidade[]) => {
     const calculateResultadosPorEmpresa = (): ResultadosPorEmpresa[] => {
       const empresaMap = new Map<string, ResultadosPorEmpresa>();
 
-      oportunidades.forEach(op => {
+      filteredOportunidades.forEach(op => {
         [op.empresa_origem, op.empresa_destino].forEach(empresa => {
           if (!empresa) return;
 
@@ -86,7 +108,7 @@ export const useResultadosStats = (oportunidades: Oportunidade[]) => {
       });
 
       return Array.from(empresaMap.values()).map(empresa => {
-        const empresaOps = oportunidades.filter(op => 
+        const empresaOps = filteredOportunidades.filter(op => 
           op.empresa_origem_id === empresa.empresa_id || 
           op.empresa_destino_id === empresa.empresa_id
         );
@@ -103,5 +125,5 @@ export const useResultadosStats = (oportunidades: Oportunidade[]) => {
       resultadosPorGrupo: calculateResultadosPorGrupo(),
       resultadosPorEmpresa: calculateResultadosPorEmpresa()
     };
-  }, [oportunidades]);
+  }, [oportunidades, filters]);
 };

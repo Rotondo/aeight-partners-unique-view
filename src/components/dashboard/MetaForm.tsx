@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { TooltipHelper, tooltipTexts } from './TooltipHelper';
 import type { Meta } from '@/types/metas';
 
 const metaSchema = z.object({
@@ -21,6 +22,7 @@ const metaSchema = z.object({
   mes: z.number().min(1).max(12).optional(),
   trimestre: z.number().min(1).max(4).optional(),
   segmento_grupo: z.enum(['intragrupo', 'de_fora_para_dentro', 'tudo']),
+  status_oportunidade: z.enum(['todas', 'ganhas']),
   empresa_id: z.string().optional()
 });
 
@@ -46,6 +48,7 @@ export const MetaForm: React.FC<MetaFormProps> = ({ open, onClose, onSave, meta 
       mes: meta.mes,
       trimestre: meta.trimestre,
       segmento_grupo: meta.segmento_grupo,
+      status_oportunidade: meta.status_oportunidade,
       empresa_id: meta.empresa_id
     } : {
       nome: '',
@@ -54,7 +57,8 @@ export const MetaForm: React.FC<MetaFormProps> = ({ open, onClose, onSave, meta 
       valor_meta: 0,
       periodo: 'mensal',
       ano: new Date().getFullYear(),
-      segmento_grupo: 'tudo'
+      segmento_grupo: 'tudo',
+      status_oportunidade: 'todas'
     }
   });
 
@@ -158,7 +162,10 @@ export const MetaForm: React.FC<MetaFormProps> = ({ open, onClose, onSave, meta 
                 name="segmento_grupo"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Segmento</FormLabel>
+                    <FormLabel className="flex items-center gap-1">
+                      Segmento
+                      <TooltipHelper content="Define qual segmento de oportunidades será considerado para a meta" />
+                    </FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
@@ -176,6 +183,31 @@ export const MetaForm: React.FC<MetaFormProps> = ({ open, onClose, onSave, meta 
                 )}
               />
             </div>
+
+            <FormField
+              control={form.control}
+              name="status_oportunidade"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center gap-1">
+                    Status da Oportunidade
+                    <TooltipHelper content="Define se considera todas as oportunidades criadas ou apenas as fechadas com sucesso" />
+                  </FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o status" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="todas">Todas as Oportunidades</SelectItem>
+                      <SelectItem value="ganhas">Apenas Oportunidades Ganhas</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <div className="grid grid-cols-3 gap-4">
               <FormField

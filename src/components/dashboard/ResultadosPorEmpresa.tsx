@@ -1,211 +1,145 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Building, TrendingUp, DollarSign } from 'lucide-react';
+import { TooltipHelper, tooltipTexts } from './TooltipHelper';
 import type { ResultadosPorEmpresa } from '@/types/metas';
 
-interface ResultadosPorEmpresaProps {
+interface ResultadosPorEmpresaComponentProps {
   resultados: ResultadosPorEmpresa[];
 }
 
-export const ResultadosPorEmpresaComponent: React.FC<ResultadosPorEmpresaProps> = ({ resultados }) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [tipoFilter, setTipoFilter] = useState('all');
-  const [sortBy, setSortBy] = useState<'nome' | 'quantidade' | 'valor' | 'conversao'>('valor');
-
+export const ResultadosPorEmpresaComponent: React.FC<ResultadosPorEmpresaComponentProps> = ({ resultados }) => {
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
-      currency: 'BRL',
-      minimumFractionDigits: 0,
+      currency: 'BRL'
     }).format(value);
   };
 
-  const formatPercentage = (value: number) => {
-    return `${value.toFixed(1)}%`;
-  };
-
-  const getTipoLabel = (tipo: string) => {
+  const getTipoEmpresaBadge = (tipo: string) => {
     switch (tipo) {
       case 'intragrupo':
-        return 'Intragrupo';
+        return <Badge variant="default">Intragrupo</Badge>;
       case 'parceiro':
-        return 'Parceiro';
+        return <Badge variant="secondary">Parceiro</Badge>;
       case 'cliente':
-        return 'Cliente';
+        return <Badge variant="outline">Cliente</Badge>;
       default:
-        return tipo;
+        return <Badge variant="outline">{tipo}</Badge>;
     }
   };
 
-  const getTipoBadgeVariant = (tipo: string) => {
+  const getTipoEmpresaTooltip = (tipo: string) => {
     switch (tipo) {
       case 'intragrupo':
-        return 'default';
+        return tooltipTexts.empresa.tipoIntragrupo;
       case 'parceiro':
-        return 'secondary';
+        return tooltipTexts.empresa.tipoParceiro;
       case 'cliente':
-        return 'outline';
+        return tooltipTexts.empresa.tipoCliente;
       default:
-        return 'outline';
+        return '';
     }
   };
 
-  const filteredAndSortedResults = resultados
-    .filter(resultado => {
-      const matchesSearch = resultado.empresa_nome.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesType = tipoFilter === 'all' || resultado.empresa_tipo === tipoFilter;
-      return matchesSearch && matchesType;
-    })
-    .sort((a, b) => {
-      switch (sortBy) {
-        case 'nome':
-          return a.empresa_nome.localeCompare(b.empresa_nome);
-        case 'quantidade':
-          return b.quantidade_total - a.quantidade_total;
-        case 'valor':
-          return b.valor_total - a.valor_total;
-        case 'conversao':
-          return b.taxa_conversao - a.taxa_conversao;
-        default:
-          return 0;
-      }
-    });
-
-  const totais = resultados.reduce(
-    (acc, resultado) => ({
-      quantidade: acc.quantidade + resultado.quantidade_total,
-      valor: acc.valor + resultado.valor_total,
-    }),
-    { quantidade: 0, valor: 0 }
-  );
-
-  return (
-    <div className="space-y-6">
-      {/* Resumo Geral */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardContent className="p-6">
-            <div className="text-2xl font-bold">{resultados.length}</div>
-            <p className="text-sm text-gray-600">Empresas Ativas</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="text-2xl font-bold">{totais.quantidade}</div>
-            <p className="text-sm text-gray-600">Total de Oportunidades</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="text-2xl font-bold">{formatCurrency(totais.valor)}</div>
-            <p className="text-sm text-gray-600">Valor Total</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Filtros */}
+  if (resultados.length === 0) {
+    return (
       <Card>
-        <CardHeader>
-          <CardTitle>Filtros</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Buscar empresa..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-            <Select value={tipoFilter} onValueChange={setTipoFilter}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Tipo de Empresa" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os Tipos</SelectItem>
-                <SelectItem value="intragrupo">Intragrupo</SelectItem>
-                <SelectItem value="parceiro">Parceiro</SelectItem>
-                <SelectItem value="cliente">Cliente</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Ordenar por" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="nome">Nome</SelectItem>
-                <SelectItem value="quantidade">Quantidade</SelectItem>
-                <SelectItem value="valor">Valor</SelectItem>
-                <SelectItem value="conversao">Conversão</SelectItem>
-              </SelectContent>
-            </Select>
+        <CardContent className="p-6">
+          <div className="text-center text-gray-500">
+            <Building className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+            <p>Nenhum resultado encontrado</p>
+            <p className="text-sm">Verifique os filtros aplicados</p>
           </div>
         </CardContent>
       </Card>
+    );
+  }
 
-      {/* Tabela de Resultados */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Resultados por Empresa</CardTitle>
-        </CardHeader>
-        <CardContent>
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Building className="h-5 w-5" />
+          Resultados por Empresa ({resultados.length})
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Empresa</TableHead>
                 <TableHead>Tipo</TableHead>
-                <TableHead className="text-right">Quantidade</TableHead>
-                <TableHead className="text-right">Valor Total</TableHead>
-                <TableHead className="text-right">Taxa Conversão</TableHead>
-                <TableHead className="text-right">Ticket Médio</TableHead>
+                <TableHead className="text-right">
+                  <div className="flex items-center justify-end gap-1">
+                    Quantidade
+                    <TooltipHelper content={tooltipTexts.empresa.quantidadeTotal} />
+                  </div>
+                </TableHead>
+                <TableHead className="text-right">
+                  <div className="flex items-center justify-end gap-1">
+                    Valor Total
+                    <TooltipHelper content={tooltipTexts.grupo.valorTotal} />
+                  </div>
+                </TableHead>
+                <TableHead className="text-right">
+                  <div className="flex items-center justify-end gap-1">
+                    Taxa Conversão
+                    <TooltipHelper content={tooltipTexts.empresa.taxaConversao} />
+                  </div>
+                </TableHead>
+                <TableHead className="text-right">
+                  <div className="flex items-center justify-end gap-1">
+                    Ticket Médio
+                    <TooltipHelper content={tooltipTexts.empresa.ticketMedio} />
+                  </div>
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredAndSortedResults.map((resultado) => (
-                <TableRow key={resultado.empresa_id}>
+              {resultados.map((empresa) => (
+                <TableRow key={empresa.empresa_id}>
                   <TableCell className="font-medium">
-                    {resultado.empresa_nome}
+                    {empresa.empresa_nome}
                   </TableCell>
                   <TableCell>
-                    <Badge variant={getTipoBadgeVariant(resultado.empresa_tipo)}>
-                      {getTipoLabel(resultado.empresa_tipo)}
-                    </Badge>
+                    <div className="flex items-center gap-1">
+                      {getTipoEmpresaBadge(empresa.empresa_tipo)}
+                      <TooltipHelper content={getTipoEmpresaTooltip(empresa.empresa_tipo)} />
+                    </div>
                   </TableCell>
                   <TableCell className="text-right">
-                    {resultado.quantidade_total}
+                    {empresa.quantidade_total}
+                  </TableCell>
+                  <TableCell className="text-right font-medium">
+                    {formatCurrency(empresa.valor_total)}
                   </TableCell>
                   <TableCell className="text-right">
-                    {formatCurrency(resultado.valor_total)}
+                    <div className="flex items-center justify-end gap-1">
+                      <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">
+                        {empresa.taxa_conversao.toFixed(1)}%
+                      </span>
+                    </div>
                   </TableCell>
                   <TableCell className="text-right">
-                    <Badge variant="outline">
-                      {formatPercentage(resultado.taxa_conversao)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {formatCurrency(resultado.ticket_medio)}
+                    <div className="flex items-center justify-end gap-1">
+                      <DollarSign className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">
+                        {formatCurrency(empresa.ticket_medio)}
+                      </span>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
-          
-          {filteredAndSortedResults.length === 0 && (
-            <div className="text-center py-8 text-gray-500">
-              Nenhuma empresa encontrada com os filtros aplicados
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 };

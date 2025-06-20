@@ -8,22 +8,24 @@ import { MetaForm } from './MetaForm';
 import { MetasProgress } from './MetasProgress';
 import { ResultadosPorGrupoComponent } from './ResultadosPorGrupo';
 import { ResultadosPorEmpresaComponent } from './ResultadosPorEmpresa';
+import { ResultadosFilters } from './ResultadosFilters';
 import { useMetas } from '@/hooks/useMetas';
 import { useMetasProgress } from '@/hooks/useMetasProgress';
 import { useResultadosStats } from '@/hooks/useResultadosStats';
 import { useOportunidades } from '@/components/oportunidades/OportunidadesContext';
-import type { Meta } from '@/types/metas';
+import type { Meta, ResultadosFilters as ResultadosFiltersType } from '@/types/metas';
 
 export const ResultadosControl: React.FC = () => {
   const [showMetaForm, setShowMetaForm] = useState(false);
   const [editingMeta, setEditingMeta] = useState<Meta | undefined>();
+  const [filters, setFilters] = useState<ResultadosFiltersType>({});
   
   const { metas, isLoading: metasLoading, createMeta, updateMeta, deleteMeta } = useMetas();
   const { filteredOportunidades, isLoading: oportunidadesLoading } = useOportunidades();
   
   const oportunidades = filteredOportunidades || [];
-  const metasProgress = useMetasProgress(metas, oportunidades);
-  const { resultadosPorGrupo, resultadosPorEmpresa } = useResultadosStats(oportunidades);
+  const metasProgress = useMetasProgress(metas, oportunidades, filters);
+  const { resultadosPorGrupo, resultadosPorEmpresa } = useResultadosStats(oportunidades, filters);
 
   const handleCreateMeta = async (data: any) => {
     await createMeta({
@@ -87,6 +89,12 @@ export const ResultadosControl: React.FC = () => {
           </div>
         </CardHeader>
       </Card>
+
+      {/* Filtros de Período */}
+      <ResultadosFilters
+        filters={filters}
+        onFiltersChange={setFilters}
+      />
 
       {/* Tabs principais */}
       <Tabs defaultValue="metas" className="space-y-4">

@@ -12,6 +12,7 @@ export interface Meta {
   trimestre?: number;
   segmento_grupo: 'intragrupo' | 'de_fora_para_dentro' | 'tudo';
   empresa_id?: string;
+  status_oportunidade: 'todas' | 'ganhas';
   ativo: boolean;
   created_at: string;
   updated_at: string;
@@ -23,6 +24,15 @@ export interface MetaProgress {
   realizado: number;
   percentual: number;
   status: 'abaixo' | 'dentro' | 'acima';
+  oportunidades: Array<{
+    id: string;
+    nome_lead: string;
+    empresa_origem?: { nome: string };
+    empresa_destino?: { nome: string };
+    valor?: number;
+    status: string;
+    data_indicacao: string;
+  }>;
 }
 
 export interface ResultadosPorGrupo {
@@ -47,4 +57,9 @@ export interface ResultadosPorEmpresa {
   valor_total: number;
   taxa_conversao: number;
   ticket_medio: number;
+}
+
+export interface ResultadosFilters {
+  dataInicio?: string;
+  dataFim?: string;
 }

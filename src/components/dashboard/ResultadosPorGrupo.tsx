@@ -1,159 +1,168 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { TrendingUp, Users, Target, DollarSign } from 'lucide-react';
+import { TooltipHelper, tooltipTexts } from './TooltipHelper';
 import type { ResultadosPorGrupo } from '@/types/metas';
 
-interface ResultadosPorGrupoProps {
+interface ResultadosPorGrupoComponentProps {
   resultados: ResultadosPorGrupo[];
 }
 
-export const ResultadosPorGrupoComponent: React.FC<ResultadosPorGrupoProps> = ({ resultados }) => {
-  const COLORS = ['#8884d8', '#82ca9d', '#ffc658'];
-
+export const ResultadosPorGrupoComponent: React.FC<ResultadosPorGrupoComponentProps> = ({ resultados }) => {
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
-      currency: 'BRL',
-      minimumFractionDigits: 0,
+      currency: 'BRL'
     }).format(value);
   };
 
-  const formatPercentage = (value: number) => {
-    return `${value.toFixed(1)}%`;
-  };
-
-  const getSegmentoLabel = (segmento: string) => {
+  const getSegmentoName = (segmento: string) => {
     switch (segmento) {
       case 'intragrupo':
         return 'Intragrupo';
       case 'de_fora_para_dentro':
-        return 'De Fora p/ Dentro';
+        return 'De Fora para Dentro';
       case 'tudo':
-        return 'Total Geral';
+        return 'Todos os Segmentos';
       default:
         return segmento;
     }
   };
 
-  const chartData = resultados.map(resultado => ({
-    segmento: getSegmentoLabel(resultado.segmento),
-    'Total': resultado.quantidade_total,
-    'Ganho': resultado.quantidade_ganho,
-    'Perdido': resultado.quantidade_perdido,
-    'Em Andamento': resultado.quantidade_andamento
-  }));
+  const getSegmentoIcon = (segmento: string) => {
+    switch (segmento) {
+      case 'intragrupo':
+        return <Users className="h-5 w-5" />;
+      case 'de_fora_para_dentro':
+        return <TrendingUp className="h-5 w-5" />;
+      case 'tudo':
+        return <Target className="h-5 w-5" />;
+      default:
+        return <Target className="h-5 w-5" />;
+    }
+  };
 
-  const pieData = resultados.map(resultado => ({
-    name: getSegmentoLabel(resultado.segmento),
-    value: resultado.valor_total
-  }));
+  if (resultados.length === 0) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <div className="text-center text-gray-500">
+            <TrendingUp className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+            <p>Nenhum resultado encontrado</p>
+            <p className="text-sm">Verifique os filtros aplicados</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 md:grid-cols-3">
-        {resultados.map((resultado) => (
-          <Card key={resultado.segmento}>
-            <CardHeader>
-              <CardTitle className="text-lg">
-                {getSegmentoLabel(resultado.segmento)}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <p className="text-gray-600">Quantidade</p>
-                  <p className="text-2xl font-bold">{resultado.quantidade_total}</p>
+      {resultados.map((resultado) => (
+        <Card key={resultado.segmento}>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              {getSegmentoIcon(resultado.segmento)}
+              {getSegmentoName(resultado.segmento)}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {/* Quantidade */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-1">
+                  <h4 className="font-medium">Quantidade</h4>
+                  <TooltipHelper content={tooltipTexts.grupo.quantidadeTotal} />
                 </div>
-                <div>
-                  <p className="text-gray-600">Valor Total</p>
-                  <p className="text-2xl font-bold">{formatCurrency(resultado.valor_total)}</p>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Total</span>
+                    <span className="font-medium">{resultado.quantidade_total}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Ganho</span>
+                    <span className="font-medium text-green-600">{resultado.quantidade_ganho}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Perdido</span>
+                    <span className="font-medium text-red-600">{resultado.quantidade_perdido}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Andamento</span>
+                    <span className="font-medium text-blue-600">{resultado.quantidade_andamento}</span>
+                  </div>
                 </div>
               </div>
-              
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-sm">Taxa de Conversão</span>
-                  <Badge variant="outline">
-                    {formatPercentage(resultado.taxa_conversao)}
-                  </Badge>
+
+              {/* Valor */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-1">
+                  <h4 className="font-medium">Valor</h4>
+                  <TooltipHelper content={tooltipTexts.grupo.valorTotal} />
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-sm">Ticket Médio</span>
-                  <Badge variant="outline">
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Total</span>
+                    <span className="font-medium">{formatCurrency(resultado.valor_total)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Ganho</span>
+                    <span className="font-medium text-green-600">{formatCurrency(resultado.valor_ganho)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Perdido</span>
+                    <span className="font-medium text-red-600">{formatCurrency(resultado.valor_perdido)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Andamento</span>
+                    <span className="font-medium text-blue-600">{formatCurrency(resultado.valor_andamento)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Taxa de Conversão */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-1">
+                  <h4 className="font-medium">Taxa de Conversão</h4>
+                  <TooltipHelper content={tooltipTexts.grupo.taxaConversao} />
+                </div>
+                <div className="space-y-2">
+                  <div className="text-2xl font-bold text-primary">
+                    {resultado.taxa_conversao.toFixed(1)}%
+                  </div>
+                  <Progress value={resultado.taxa_conversao} className="h-2" />
+                  <div className="flex justify-between text-sm">
+                    <span>Ganho/Total</span>
+                    <span>{resultado.quantidade_ganho}/{resultado.quantidade_total}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Ticket Médio */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-1">
+                  <h4 className="font-medium">Ticket Médio</h4>
+                  <TooltipHelper content={tooltipTexts.grupo.ticketMedio} />
+                </div>
+                <div className="space-y-2">
+                  <div className="text-2xl font-bold text-primary">
                     {formatCurrency(resultado.ticket_medio)}
-                  </Badge>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <DollarSign className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">
+                      Por oportunidade
+                    </span>
+                  </div>
                 </div>
               </div>
-
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-green-600">Ganhos:</span>
-                  <span className="font-medium">{resultado.quantidade_ganho}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-red-600">Perdas:</span>
-                  <span className="font-medium">{resultado.quantidade_perdido}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-yellow-600">Em Andamento:</span>
-                  <span className="font-medium">{resultado.quantidade_andamento}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Oportunidades por Segmento</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="segmento" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="Ganho" stackId="a" fill="#22c55e" />
-                <Bar dataKey="Em Andamento" stackId="a" fill="#eab308" />
-                <Bar dataKey="Perdido" stackId="a" fill="#ef4444" />
-              </BarChart>
-            </ResponsiveContainer>
+            </div>
           </CardContent>
         </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Distribuição de Valores</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={pieData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {pieData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(value) => formatCurrency(Number(value))} />
-              </PieChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
+      ))}
     </div>
   );
 };

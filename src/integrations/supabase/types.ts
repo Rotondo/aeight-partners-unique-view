@@ -598,6 +598,7 @@ export type Database = {
           nome: string
           periodo: string | null
           segmento_grupo: string | null
+          status_oportunidade: string | null
           tipo_meta: string | null
           trimestre: number | null
           updated_at: string | null
@@ -615,6 +616,7 @@ export type Database = {
           nome: string
           periodo?: string | null
           segmento_grupo?: string | null
+          status_oportunidade?: string | null
           tipo_meta?: string | null
           trimestre?: number | null
           updated_at?: string | null
@@ -632,6 +634,7 @@ export type Database = {
           nome?: string
           periodo?: string | null
           segmento_grupo?: string | null
+          status_oportunidade?: string | null
           tipo_meta?: string | null
           trimestre?: number | null
           updated_at?: string | null
