@@ -31,7 +31,15 @@ export const useMetas = () => {
 
       if (error) throw error;
 
-      setMetas(data || []);
+      // Convert Supabase data to Meta interface with proper type assertions
+      const metasTyped: Meta[] = (data || []).map(item => ({
+        ...item,
+        tipo_meta: item.tipo_meta as 'quantidade' | 'valor',
+        periodo: item.periodo as 'mensal' | 'trimestral',
+        segmento_grupo: item.segmento_grupo as 'intragrupo' | 'de_fora_para_dentro' | 'tudo'
+      }));
+
+      setMetas(metasTyped);
     } catch (error) {
       console.error('Erro ao buscar metas:', error);
       setError('Falha ao carregar metas');
