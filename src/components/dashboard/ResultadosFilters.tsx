@@ -8,12 +8,12 @@ import { Calendar, RotateCcw } from 'lucide-react';
 import { TooltipHelper } from './TooltipHelper';
 import type { ResultadosFilters } from '@/types/metas';
 
-interface ResultadosFiltersProps {
+interface ResultadosFiltersComponentProps {
   filters: ResultadosFilters;
   onFiltersChange: (filters: ResultadosFilters) => void;
 }
 
-export const ResultadosFilters: React.FC<ResultadosFiltersProps> = ({
+export const ResultadosFiltersComponent: React.FC<ResultadosFiltersComponentProps> = ({
   filters,
   onFiltersChange
 }) => {

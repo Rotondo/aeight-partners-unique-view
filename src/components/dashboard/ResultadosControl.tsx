@@ -8,7 +8,7 @@ import { MetaForm } from './MetaForm';
 import { MetasProgress } from './MetasProgress';
 import { ResultadosPorGrupoComponent } from './ResultadosPorGrupo';
 import { ResultadosPorEmpresaComponent } from './ResultadosPorEmpresa';
-import { ResultadosFilters } from './ResultadosFilters';
+import { ResultadosFiltersComponent } from './ResultadosFilters';
 import { useMetas } from '@/hooks/useMetas';
 import { useMetasProgress } from '@/hooks/useMetasProgress';
 import { useResultadosStats } from '@/hooks/useResultadosStats';
@@ -91,7 +91,7 @@ export const ResultadosControl: React.FC = () => {
       </Card>
 
       {/* Filtros de Período */}
-      <ResultadosFilters
+      <ResultadosFiltersComponent
         filters={filters}
         onFiltersChange={setFilters}
       />
