@@ -1,4 +1,3 @@
-
 import { useMemo } from 'react';
 import { Oportunidade } from '@/types';
 
@@ -22,7 +21,7 @@ export const useGrupoPerformance = (oportunidades: Oportunidade[]) => {
   return useMemo(() => {
     // Filtrar apenas oportunidades destinadas ao grupo
     const oportunidadesGrupo = oportunidades.filter(op => 
-      op.empresa_destino?.tipo === 'in tragrupo'
+      op.empresa_destino?.tipo === 'intragrupo'
     );
 
     const empresaMap = new Map<string, {
