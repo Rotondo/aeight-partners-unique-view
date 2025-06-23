@@ -1,249 +1,170 @@
 
-# Sistema de Controle de Resultados - A&eight
-
-Versão: 2.2.1
+# Sistema de Gestão de Oportunidades - A&eight
 
 ## Visão Geral
 
-Sistema abrangente de gestão de oportunidades de negócios com funcionalidades avançadas de controle de resultados, análise de metas e comprobatórios detalhados.
+Sistema completo de gestão de oportunidades de negócio, desenvolvido em React/TypeScript com arquitetura modular para análises avançadas de performance de empresas do grupo e fontes indicadoras.
 
-## Funcionalidades Principais
+## Arquitetura Modular - Dashboard de Oportunidades
 
-### 1. Controle de Metas
-- **Criação de Metas**: Defina metas por quantidade ou valor monetário
-- **Períodos Flexíveis**: Configuração mensal ou trimestral
-- **Segmentação Avançada**: 
-  - Intragrupo: Oportunidades entre empresas do mesmo grupo
-  - De Fora para Dentro: Oportunidades de empresas externas para o grupo
-  - Tudo: Todas as oportunidades independente do segmento
-- **Status de Oportunidade**: Escolha entre considerar todas as oportunidades ou apenas as fechadas com sucesso
-- **Comprobatórios**: Visualização detalhada das oportunidades que compõem cada meta
+O sistema foi refatorado para uma arquitetura modular com micro-serviços independentes, facilitando manutenção, escalabilidade e desenvolvimento colaborativo.
 
-### 2. Filtros de Período Independentes
-- **Filtros Específicos**: Controle de período baseado na data de indicação das oportunidades
-- **Atalhos Rápidos**: Botões para período atual (mês/ano)
-- **Flexibilidade**: Independente dos filtros globais do sistema
+### Estrutura de Módulos
 
-### 3. Análise de Resultados
-- **Por Grupos**: Análise segmentada com métricas de conversão
-- **Por Empresas**: Ranking de performance por empresa
-- **Métricas Avançadas**: Taxa de conversão, ticket médio, valores totais
-
-### 4. Tooltips Explicativos
-- **Cálculos Transparentes**: Explicação detalhada de como cada métrica é calculada
-- **Segmentação Clara**: Definições precisas de cada tipo de segmento
-- **Status de Metas**: Critérios de classificação (acima/dentro/abaixo da meta)
-
-## Métricas e Cálculos
-
-### Metas
-- **Progresso**: (Realizado ÷ Meta) × 100
-- **Status**: 
-  - ≥100% = Acima da meta
-  - ≥80% = Dentro da meta
-  - <80% = Abaixo da meta
-- **Realizado**: Soma das oportunidades que atendem aos critérios da meta no período
-
-### Análise de Grupos
-- **Taxa de Conversão**: Oportunidades ganhas ÷ Total de oportunidades × 100
-- **Ticket Médio**: Valor total ÷ Quantidade total de oportunidades
-- **Valor Total**: Soma de todos os valores das oportunidades no período
-
-### Análise por Empresa
-- **Quantidade Total**: Número de oportunidades onde a empresa aparece como origem ou destino
-- **Taxa de Conversão**: Percentual de oportunidades fechadas com sucesso para cada empresa
-- **Ticket Médio**: Valor médio por oportunidade para cada empresa
-
-## Segmentação de Dados
-
-### Tipos de Segmento
-1. **Intragrupo**: Oportunidades entre empresas pertencentes ao mesmo grupo
-2. **De Fora para Dentro**: Oportunidades originadas de empresas externas (parceiros/clientes) direcionadas para empresas do grupo
-3. **Tudo**: Todas as oportunidades, independente da origem ou destino
-
-### Status de Oportunidade na Meta
-- **Todas**: Considera todas as oportunidades criadas no período (independente do status)
-- **Apenas Ganhas**: Considera apenas oportunidades fechadas com sucesso (status = 'ganho')
-
-## Funcionalidades Técnicas
-
-### Comprobatórios das Metas
-- Lista detalhada das oportunidades que compõem cada meta
-- Filtros aplicados conforme critérios da meta
-- Exportação de dados para análise externa
-- Drill-down completo por oportunidade
-
-### Filtros de Período
-- Baseados na `data_indicacao` (data de criação da oportunidade)
-- Independentes dos filtros globais do contexto
-- Aplicação em tempo real nas análises
-- Persistência durante navegação entre abas
-
-### Interface Responsiva
-- Adaptação automática para diferentes tamanhos de tela
-- Tooltips informativos com explicações detalhadas
-- Navegação intuitiva por abas
-- Cards expansíveis com informações completas
-
-## Estrutura de Dados
-
-### Tabela: metas_oportunidades
-```sql
-- id: UUID (Primary Key)
-- nome: VARCHAR(255) - Nome da meta
-- descricao: TEXT - Descrição opcional
-- tipo_meta: ENUM('quantidade', 'valor') - Tipo de meta
-- valor_meta: NUMERIC - Valor objetivo da meta
-- periodo: ENUM('mensal', 'trimestral') - Período de avaliação
-- ano: INTEGER - Ano da meta
-- mes: INTEGER - Mês (para metas mensais)
-- trimestre: INTEGER - Trimestre (para metas trimestrais)
-- segmento_grupo: ENUM('intragrupo', 'de_fora_para_dentro', 'tudo')
-- status_oportunidade: ENUM('todas', 'ganhas') - Status considerado
-- empresa_id: UUID - Empresa específica (opcional)
-- ativo: BOOLEAN - Status da meta
-- usuario_criador_id: UUID - Usuário que criou a meta
+```
+src/modules/
+├── dashboard-core/          # Componentes base e tipos compartilhados
+├── filters-advanced/        # Sistema de filtros avançados
+├── values-analysis/         # Análise de valores com drill-down
+├── grupo-performance/       # Performance por empresa do grupo
+├── source-indicators/       # Análise de fontes indicadoras
+├── cycle-time/             # Análise temporal de fechamento
+└── efficiency-internal/     # Dashboard de eficiência interna
 ```
 
-## Componentes Principais
+### Funcionalidades Principais
 
-### 1. ResultadosControl
-- Componente principal de controle
-- Gerenciamento de estado dos filtros
-- Coordenação entre diferentes análises
+#### 1. Filtros Avançados
+- **Apenas Empresas do Grupo**: Filtra oportunidades destinadas exclusivamente a empresas intragrupo
+- **Tipo de Relação**: 
+  - Intra: Intragrupo → Intragrupo
+  - Extra: Parceiro → Intragrupo
+- **Filtros Visuais**: Indicadores ativos dos filtros aplicados
 
-### 2. MetasProgress
-- Visualização do progresso das metas
-- Cards expansíveis com métricas detalhadas
-- Botões de ação (editar, excluir, comprobatórios)
+#### 2. Análise de Valores por Status
+- **Distribuição Visual**: Gráficos de barras por status
+- **Drill-down Interativo**: Clique em qualquer status para ver detalhes das oportunidades
+- **Identificação Completa**: Para cada oportunidade:
+  - Nome do lead
+  - Empresa de origem
+  - Valor individual
+  - Datas de criação/fechamento
+  - Tipo de relação (Intra/Extra)
 
-### 3. MetaComprobatorios
-- Modal com lista detalhada das oportunidades
-- Tabela com informações completas
-- Filtros aplicados conforme critérios da meta
+#### 3. Performance por Empresa do Grupo
+- **Ticket Médio Segmentado**: Por tipo de origem (intra vs extra)
+- **Rankings de Performance**:
+  - Por ticket médio geral
+  - Por taxa de conversão
+- **Análise Comparativa**: Volume de oportunidades por empresa
+- **Métricas de Eficiência**: Comparação de performance interna
 
-### 4. ResultadosFilters
-- Componente de filtros independentes
-- Seletores de data com atalhos
-- Aplicação em tempo real
+#### 4. Análise de Fontes Indicadoras
+- **Matriz Origem x Destino**: Valores médios por fonte
+- **Ranking de Indicadores**: Quais empresas geram melhores oportunidades
+- **ROI por Fonte**: Análise de retorno por tipo de indicação
+- **Taxa de Conversão**: Por empresa indicadora
 
-### 5. TooltipHelper
-- Componente reutilizável para tooltips
-- Textos explicativos centralizados
-- Ícones informativos consistentes
+#### 5. Análise Temporal de Fechamento
+- **Tempo de Ciclo**: Médio, mínimo, máximo e mediana
+- **Comparação Segmentada**: Intra vs extragrupo
+- **Gargalos por Empresa**: Identificação de pontos de melhoria
+- **Tendências Temporais**: Evolução dos tempos de fechamento
 
-## Hooks Personalizados
+#### 6. Dashboard de Eficiência Interna
+- **ROI Segmentado**: Por tipo de indicação
+- **Empresas Top Performance**: Melhores receptoras de oportunidades
+- **Recomendações Automáticas**: Onde focar esforços
+- **Qualidade das Indicações**: Tendências e alertas
 
-### useMetas
-- Gerenciamento de metas (CRUD)
-- Integração com Supabase
-- Tratamento de erros e loading
+### Benefícios da Arquitetura Modular
 
-### useMetasProgress
-- Cálculo do progresso das metas
-- Aplicação de filtros específicos
-- Retorno de oportunidades detalhadas
+1. **Modularidade**: Cada análise é independente e reutilizável
+2. **Performance**: Lazy loading de módulos não utilizados
+3. **Manutenibilidade**: Mudanças isoladas por domínio
+4. **Escalabilidade**: Fácil adição de novas análises
+5. **Testabilidade**: Testes unitários por módulo
+6. **Colaboração**: Equipes podem trabalhar em módulos específicos
 
-### useResultadosStats
-- Cálculos estatísticos por grupo e empresa
-- Aplicação de filtros de período
-- Métricas de performance
+### Tecnologias Utilizadas
 
-## Instalação e Configuração
+- **Frontend**: React 18 + TypeScript
+- **UI Components**: Shadcn/UI + Tailwind CSS
+- **Gráficos**: Recharts
+- **Gerenciamento de Estado**: Context API + Hooks customizados
+- **Backend**: Supabase (PostgreSQL + RLS)
+- **Autenticação**: Supabase Auth
 
-### Pré-requisitos
-- Node.js 18+
-- Supabase configurado
-- Banco de dados PostgreSQL
+### Padrões de Desenvolvimento
 
-### Dependências Principais
-- React 18
-- TypeScript
-- Tailwind CSS
-- Radix UI
-- React Hook Form
-- Zod
-
-### Configuração do Banco
-Execute a migração SQL para adicionar o campo `status_oportunidade`:
-
-```sql
-ALTER TABLE metas_oportunidades 
-ADD COLUMN status_oportunidade VARCHAR(20) 
-CHECK (status_oportunidade IN ('todas', 'ganhas')) 
-DEFAULT 'todas';
+#### Estrutura de Módulo
+```
+modules/[module-name]/
+├── components/          # Componentes React específicos
+├── hooks/              # Hooks customizados
+├── services/           # Lógica de negócio e APIs
+├── types/              # Definições TypeScript
+└── index.ts            # Exports públicos
 ```
 
-## Uso e Navegação
+#### Convenções
+- **Componentes**: PascalCase, sufixo com domínio (ex: `GrupoPerformanceAnalysis`)
+- **Hooks**: camelCase, prefixo `use` (ex: `useGrupoPerformance`)
+- **Types**: PascalCase com sufixo descritivo (ex: `EmpresaPerformance`)
+- **Privacidade**: Uso obrigatório do componente `PrivateData` para dados sensíveis
 
-### Acesso ao Módulo
-1. Navegue para "Dashboards de Oportunidades"
-2. Selecione a aba "Controle de Resultados"
-3. Configure filtros de período conforme necessário
+### Métricas de Performance
 
-### Criação de Metas
-1. Clique em "Nova Meta"
-2. Preencha os campos obrigatórios
-3. Defina segmento e status de oportunidade
-4. Salve e acompanhe o progresso
+#### Indicadores Estratégicos
+- **Ticket Médio por Segmento**: Intra vs Extra
+- **Taxa de Conversão por Empresa**: % de fechamento
+- **Tempo de Ciclo**: Dias entre abertura e fechamento
+- **ROI por Fonte**: Retorno por tipo de indicação
+- **Qualidade das Indicações**: Score baseado em conversão e valor
 
-### Análise de Resultados
-1. Use os filtros de período para definir o escopo
-2. Navegue entre as abas para diferentes visões
-3. Utilize tooltips para entender os cálculos
-4. Acesse comprobatórios para detalhamento
+#### Análises Disponíveis
+1. **Quantidades**: Volume de oportunidades por categoria
+2. **Valores**: Distribuição financeira com drill-down
+3. **Performance Grupo**: Análise focada em empresas internas
+4. **Intra vs Extra**: Comparação de eficiência
+5. **Recebimento**: Oportunidades "de fora para dentro"
+6. **Metas**: Probabilidade de atingimento
+7. **Resultados**: Controle de performance geral
 
-## Troubleshooting
+### Instalação e Uso
 
-### Metas não aparecendo
-- Verifique se as metas estão ativas
-- Confirme se o período está correto
-- Verifique permissões de usuário
+```bash
+# Instalar dependências
+npm install
 
-### Cálculos incorretos
-- Confirme filtros de período aplicados
-- Verifique segmentação das oportunidades
-- Confirme status das oportunidades consideradas
+# Configurar variáveis de ambiente
+cp .env.example .env.local
 
-### Performance lenta
-- Otimize filtros de período
-- Considere indexação de dados
-- Verifique conexão com banco de dados
+# Executar em desenvolvimento
+npm run dev
 
-## Changelog
+# Build para produção
+npm run build
+```
 
-### v2.2.1 (Atual)
-- ✅ Adicionado campo `status_oportunidade` nas metas
-- ✅ Implementado sistema de comprobatórios detalhados
-- ✅ Criado filtros de período independentes
-- ✅ Adicionado tooltips explicativos em todas as métricas
-- ✅ Refatorado hooks para melhor performance
-- ✅ Melhorada interface responsiva
-- ✅ Documentação completa atualizada
+### Configuração do Supabase
 
-### v2.1.0
-- Implementação inicial do controle de resultados
-- Criação de metas básicas
-- Análise por grupos e empresas
+O sistema utiliza Row Level Security (RLS) para garantir que usuários só acessem dados de suas respectivas empresas. As políticas são aplicadas automaticamente baseadas no usuário autenticado.
 
-## Contribuição
+### Contribuição
 
 Para contribuir com o projeto:
-1. Faça fork do repositório
-2. Crie uma branch para sua feature
-3. Implemente seguindo os padrões estabelecidos
-4. Adicione testes e documentação
-5. Submeta um pull request
 
-## Suporte
+1. **Clone o repositório**
+2. **Escolha um módulo específico** para trabalhar
+3. **Siga os padrões estabelecidos** de nomenclatura e estrutura
+4. **Teste isoladamente** o módulo modificado
+5. **Documente mudanças** no README específico do módulo
 
-Para suporte técnico ou dúvidas sobre funcionalidades, consulte:
-- Documentação técnica interna
-- Equipe de desenvolvimento
-- Issues no repositório do projeto
+### Próximas Funcionalidades
+
+- [ ] Análise de Fontes Indicadoras (em desenvolvimento)
+- [ ] Análise Temporal de Fechamento (planejado)
+- [ ] Dashboard de Eficiência Interna (planejado)
+- [ ] Alertas automáticos de performance
+- [ ] Export de relatórios por módulo
+- [ ] Integração com APIs externas de CRM
+
+### Licença
+
+Propriedade da A&eight. Todos os direitos reservados.
 
 ---
 
-**Desenvolvido por**: Equipe A&eight  
-**Última atualização**: 2025-01-20  
-**Versão**: 2.2.1
+**Última atualização**: Dezembro 2024  
+**Versão**: 2.0.0 - Arquitetura Modular

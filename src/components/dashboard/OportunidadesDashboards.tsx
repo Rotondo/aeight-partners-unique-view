@@ -2,10 +2,9 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Target, TrendingDown, Calculator, BarChart3 } from "lucide-react";
+import { Target, TrendingDown, Calculator, BarChart3, Users, TrendingUp } from "lucide-react";
 import { DashboardStatsSection } from "./DashboardStats";
 import { OpportunitiesChart } from "./OpportunitiesChart";
-import { ValuesFunnelAnalysis } from "./ValuesFunnelAnalysis";
 import { IntraExtraAnalysis } from "./IntraExtraAnalysis";
 import { MatrizIntragrupoChart } from "./MatrizIntragrupoChart";
 import { MatrizParceriasChart } from "./MatrizParceriasChart";
@@ -24,6 +23,12 @@ import { useMetas } from "@/hooks/useMetas";
 import { useMetasProgress } from "@/hooks/useMetasProgress";
 import { useMetaProbabilidade } from "@/hooks/useMetaProbabilidade";
 
+// Novos módulos
+import { AdvancedFilters } from "@/modules/filters-advanced/components/AdvancedFilters";
+import { useAdvancedFilters } from "@/modules/filters-advanced/hooks/useAdvancedFilters";
+import { ValuesStatusAnalysis } from "@/modules/values-analysis/components/ValuesStatusAnalysis";
+import { GrupoPerformanceAnalysis } from "@/modules/grupo-performance/components/GrupoPerformanceAnalysis";
+
 export const OportunidadesDashboards: React.FC = () => {
   const { filteredOportunidades, isLoading } = useOportunidades();
   const stats = useDashboardStats(filteredOportunidades);
@@ -32,10 +37,19 @@ export const OportunidadesDashboards: React.FC = () => {
   const metasProgress = useMetasProgress(metas, oportunidades);
   const probabilidades = useMetaProbabilidade(metasProgress);
 
+  // Hook para filtros avançados
+  const { 
+    filters: advancedFilters, 
+    setFilters: setAdvancedFilters, 
+    filteredOportunidades: finalFilteredOportunidades 
+  } = useAdvancedFilters(oportunidades);
+
   // Log para diagnóstico
   if (typeof window !== "undefined" && filteredOportunidades) {
     console.log("[OportunidadesDashboards] Dados carregados:", {
       totalOportunidades: filteredOportunidades.length,
+      filtrosAvancados: advancedFilters,
+      oportunidadesFiltradas: finalFilteredOportunidades.length,
       isLoading,
       statsCalculadas: !!stats
     });
@@ -61,14 +75,22 @@ export const OportunidadesDashboards: React.FC = () => {
     <div className="flex flex-col space-y-6">
       <div className="flex flex-col space-y-4">
         <OportunidadesFilter />
+        <AdvancedFilters 
+          filters={advancedFilters}
+          onFiltersChange={setAdvancedFilters}
+        />
         <PeriodIndicator />
         <DashboardStatsSection stats={stats} loading={isLoading} />
       </div>
 
       <Tabs defaultValue="quantities" className="w-full">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="quantities">Análise de Quantidades</TabsTrigger>
           <TabsTrigger value="values">Análise de Valores</TabsTrigger>
+          <TabsTrigger value="grupo-performance" className="flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            Performance Grupo
+          </TabsTrigger>
           <TabsTrigger value="intra-extra">Intra vs Extragrupo</TabsTrigger>
           <TabsTrigger value="recebimento" className="flex items-center gap-2">
             <TrendingDown className="h-4 w-4" />
@@ -153,7 +175,11 @@ export const OportunidadesDashboards: React.FC = () => {
         </TabsContent>
         
         <TabsContent value="values" className="space-y-6">
-          <ValuesFunnelAnalysis />
+          <ValuesStatusAnalysis oportunidades={finalFilteredOportunidades} />
+        </TabsContent>
+
+        <TabsContent value="grupo-performance" className="space-y-6">
+          <GrupoPerformanceAnalysis oportunidades={finalFilteredOportunidades} />
         </TabsContent>
 
         <TabsContent value="intra-extra" className="space-y-6">
