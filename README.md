@@ -1,170 +1,215 @@
 
-# Sistema de Gestão de Oportunidades - A&eight
+# Sistema de Gestão de Oportunidades e Parcerias
 
-## Visão Geral
+Sistema completo para gestão de oportunidades de negócio, análise de performance e controle de parcerias estratégicas.
 
-Sistema completo de gestão de oportunidades de negócio, desenvolvido em React/TypeScript com arquitetura modular para análises avançadas de performance de empresas do grupo e fontes indicadoras.
+## 🏗️ Nova Arquitetura Modular
 
-## Arquitetura Modular - Dashboard de Oportunidades
+O sistema foi refatorado para uma arquitetura baseada em **micro-serviços independentes**, melhorando manutenibilidade, performance e escalabilidade.
 
-O sistema foi refatorado para uma arquitetura modular com micro-serviços independentes, facilitando manutenção, escalabilidade e desenvolvimento colaborativo.
-
-### Estrutura de Módulos
+### 📁 Estrutura de Módulos
 
 ```
 src/modules/
-├── dashboard-core/          # Componentes base e tipos compartilhados
+├── dashboard-core/          # Tipos e componentes base reutilizáveis
 ├── filters-advanced/        # Sistema de filtros avançados
-├── values-analysis/         # Análise de valores com drill-down
-├── grupo-performance/       # Performance por empresa do grupo
-├── source-indicators/       # Análise de fontes indicadoras
-├── cycle-time/             # Análise temporal de fechamento
-└── efficiency-internal/     # Dashboard de eficiência interna
+├── quick-answers/          # Respostas rápidas para perguntas de negócio
+├── values-analysis/        # Análise de valores com drill-down
+├── grupo-performance/      # Performance por empresa do grupo
+├── cycle-time/            # Análise temporal de fechamento
+└── [futuros módulos]/     # Análises específicas modulares
 ```
 
-### Funcionalidades Principais
+### 🎯 Benefícios da Nova Arquitetura
 
-#### 1. Filtros Avançados
-- **Apenas Empresas do Grupo**: Filtra oportunidades destinadas exclusivamente a empresas intragrupo
+- **Modularidade**: Cada análise é independente e reutilizável
+- **Performance**: Lazy loading de módulos não utilizados
+- **Manutenibilidade**: Mudanças isoladas por domínio
+- **Escalabilidade**: Fácil adição de novas análises
+- **Testabilidade**: Testes unitários por módulo
+- **Colaboração**: Equipes podem trabalhar em módulos específicos
+
+## 🚀 Funcionalidades Principais
+
+### 📊 Dashboard de Oportunidades Reformulado
+
+#### 1. **Respostas Rápidas** ⚡
+Seção dedicada que responde automaticamente às perguntas mais frequentes:
+- **Quantas oportunidades vieram no período?**
+- **Quantas foram para cada empresa?**
+- **Qual empresa envia as melhores oportunidades?**
+- **Qual o ticket médio de cada empresa?**
+- **Quantas oportunidades temos em aberto?**
+
+#### 2. **Filtros Avançados** 🔍
+- **Apenas Empresas do Grupo**: Filtra oportunidades destinadas ao grupo
 - **Tipo de Relação**: 
-  - Intra: Intragrupo → Intragrupo
-  - Extra: Parceiro → Intragrupo
-- **Filtros Visuais**: Indicadores ativos dos filtros aplicados
+  - Intra (intragrupo → intragrupo)
+  - Extra (parceiro → intragrupo)
+- **Indicador Visual**: Mostra quando filtros estão ativos
 
-#### 2. Análise de Valores por Status
-- **Distribuição Visual**: Gráficos de barras por status
-- **Drill-down Interativo**: Clique em qualquer status para ver detalhes das oportunidades
-- **Identificação Completa**: Para cada oportunidade:
-  - Nome do lead
-  - Empresa de origem
-  - Valor individual
-  - Datas de criação/fechamento
-  - Tipo de relação (Intra/Extra)
+#### 3. **Análise de Valores com Drill-Down** 💰
+- Cards interativos por status
+- Lista detalhada por oportunidade
+- Informações: Nome do lead, Empresa origem, Valor, Datas
+- **Ticket médio corrigido**: Calculado apenas para oportunidades COM VALOR
 
-#### 3. Performance por Empresa do Grupo
-- **Ticket Médio Segmentado**: Por tipo de origem (intra vs extra)
-- **Rankings de Performance**:
-  - Por ticket médio geral
-  - Por taxa de conversão
-- **Análise Comparativa**: Volume de oportunidades por empresa
-- **Métricas de Eficiência**: Comparação de performance interna
+#### 4. **Performance por Empresa do Grupo** 🏢
+- Ticket médio segmentado (intra vs extragrupo)
+- Rankings de performance
+- Taxa de conversão por tipo de origem
+- Comparação de volumes e eficiência
 
-#### 4. Análise de Fontes Indicadoras
-- **Matriz Origem x Destino**: Valores médios por fonte
-- **Ranking de Indicadores**: Quais empresas geram melhores oportunidades
-- **ROI por Fonte**: Análise de retorno por tipo de indicação
-- **Taxa de Conversão**: Por empresa indicadora
+#### 5. **Análise de Tempo de Ciclo** ⏱️
+- **Métricas completas**: Tempo médio, mínimo, máximo e **mediana**
+- Análise por empresa do grupo
+- Identificação de gargalos
+- Oportunidades em aberto destacadas
+- Comparação intra vs extragrupo
 
-#### 5. Análise Temporal de Fechamento
-- **Tempo de Ciclo**: Médio, mínimo, máximo e mediana
-- **Comparação Segmentada**: Intra vs extragrupo
-- **Gargalos por Empresa**: Identificação de pontos de melhoria
-- **Tendências Temporais**: Evolução dos tempos de fechamento
+#### 6. **Sistema de Tooltips** 💡
+- Explicações claras para todos os gráficos
+- Contextualização dos dados
+- Definições de métricas
+- Sugestões de ação baseadas nos dados
 
-#### 6. Dashboard de Eficiência Interna
-- **ROI Segmentado**: Por tipo de indicação
-- **Empresas Top Performance**: Melhores receptoras de oportunidades
-- **Recomendações Automáticas**: Onde focar esforços
-- **Qualidade das Indicações**: Tendências e alertas
+### 🛠️ Melhorias de UX
 
-### Benefícios da Arquitetura Modular
+#### ✅ Problemas Corrigidos
+- **Filtro "Apenas Empresas do Grupo"**: Agora funciona corretamente
+- **Cálculo de Ticket Médio**: Considera apenas oportunidades com valor > 0
+- **Redundâncias Removidas**: Eliminado gráfico "Distribuição por Status" duplicado
+- **Clareza dos Dados**: Tooltips explicativos em todos os componentes
+- **Foco no Grupo**: Análises centradas nas empresas receptoras do grupo
 
-1. **Modularidade**: Cada análise é independente e reutilizável
-2. **Performance**: Lazy loading de módulos não utilizados
-3. **Manutenibilidade**: Mudanças isoladas por domínio
-4. **Escalabilidade**: Fácil adição de novas análises
-5. **Testabilidade**: Testes unitários por módulo
-6. **Colaboração**: Equipes podem trabalhar em módulos específicos
+#### 🎨 Interface Melhorada
+- Layout responsivo e intuitivo
+- Indicadores visuais de filtros ativos
+- Cards interativos com drill-down
+- Rankings visuais e fáceis de interpretar
+- Dados privados protegidos com componente `PrivateData`
 
-### Tecnologias Utilizadas
+## 📈 Métricas e KPIs
 
-- **Frontend**: React 18 + TypeScript
-- **UI Components**: Shadcn/UI + Tailwind CSS
-- **Gráficos**: Recharts
-- **Gerenciamento de Estado**: Context API + Hooks customizados
-- **Backend**: Supabase (PostgreSQL + RLS)
-- **Autenticação**: Supabase Auth
+### 🎯 Métricas Principais
+- **Total de Oportunidades** (por período/empresa)
+- **Taxa de Conversão** (por fonte/destino)
+- **Ticket Médio** (apenas oportunidades com valor)
+- **Tempo de Ciclo** (média, mediana, min/max)
+- **Oportunidades em Aberto** (contador em tempo real)
+- **Ranking de Fontes** (por qualidade e volume)
 
-### Padrões de Desenvolvimento
+### 📊 Análises Especializadas
+- **Performance Intragrupo**: Foco nas empresas do grupo como receptoras
+- **Qualidade das Fontes**: Ranking de empresas indicadoras
+- **Eficiência Temporal**: Gargalos e oportunidades de melhoria
+- **ROI por Segmento**: Comparação intra vs extragrupo
 
-#### Estrutura de Módulo
-```
-modules/[module-name]/
-├── components/          # Componentes React específicos
-├── hooks/              # Hooks customizados
-├── services/           # Lógica de negócio e APIs
-├── types/              # Definições TypeScript
-└── index.ts            # Exports públicos
-```
+## 🔧 Tecnologias Utilizadas
 
-#### Convenções
-- **Componentes**: PascalCase, sufixo com domínio (ex: `GrupoPerformanceAnalysis`)
-- **Hooks**: camelCase, prefixo `use` (ex: `useGrupoPerformance`)
-- **Types**: PascalCase com sufixo descritivo (ex: `EmpresaPerformance`)
-- **Privacidade**: Uso obrigatório do componente `PrivateData` para dados sensíveis
+- **Frontend**: React 18 + TypeScript + Vite
+- **UI/UX**: Tailwind CSS + Shadcn/UI + Lucide Icons
+- **Backend**: Supabase (Database + Auth + RLS)
+- **Charts**: Recharts
+- **Estado**: Context API + Custom Hooks
+- **Dados**: React Query (@tanstack/react-query)
 
-### Métricas de Performance
+## 🚀 Como Usar
 
-#### Indicadores Estratégicos
-- **Ticket Médio por Segmento**: Intra vs Extra
-- **Taxa de Conversão por Empresa**: % de fechamento
-- **Tempo de Ciclo**: Dias entre abertura e fechamento
-- **ROI por Fonte**: Retorno por tipo de indicação
-- **Qualidade das Indicações**: Score baseado em conversão e valor
+### 1. **Acesso ao Dashboard**
+- Navegue para `/oportunidades-dashboard`
+- Use os filtros básicos (data, empresa, status)
+- Ative filtros avançados conforme necessário
 
-#### Análises Disponíveis
-1. **Quantidades**: Volume de oportunidades por categoria
-2. **Valores**: Distribuição financeira com drill-down
-3. **Performance Grupo**: Análise focada em empresas internas
-4. **Intra vs Extra**: Comparação de eficiência
-5. **Recebimento**: Oportunidades "de fora para dentro"
-6. **Metas**: Probabilidade de atingimento
-7. **Resultados**: Controle de performance geral
+### 2. **Respostas Rápidas**
+- Primeira aba do dashboard
+- Visualize automaticamente as métricas principais
+- Use os rankings para identificar melhores fontes
 
-### Instalação e Uso
+### 3. **Análises Detalhadas**
+- **Valores**: Clique nos cards de status para drill-down
+- **Performance Grupo**: Compare ticket médio e conversão
+- **Tempo de Ciclo**: Identifique gargalos por empresa
+- **Quantidades**: Analise matrizes e distribuições
 
-```bash
-# Instalar dependências
-npm install
+### 4. **Filtros Inteligentes**
+- **"Apenas Empresas do Grupo"**: Foque no que importa
+- **"Tipo de Relação"**: Segmente por origem das oportunidades
+- **Indicador Visual**: Saiba quando filtros estão ativos
 
-# Configurar variáveis de ambiente
-cp .env.example .env.local
+## 🎯 Casos de Uso
 
-# Executar em desenvolvimento
-npm run dev
+### Para Gestores
+- **Identificar** melhores fontes de oportunidades
+- **Monitorar** performance por empresa do grupo
+- **Otimizar** tempos de ciclo de fechamento
+- **Priorizar** oportunidades em aberto
 
-# Build para produção
-npm run build
-```
+### Para Comercial
+- **Foco** em empresas com maior ticket médio
+- **Acompanhamento** de oportunidades por status
+- **Identificação** de gargalos no processo
+- **Relatórios** automáticos de performance
 
-### Configuração do Supabase
+### Para Parcerias
+- **Ranking** de parceiros por qualidade
+- **ROI** por tipo de parceria
+- **Tendências** de indicações recebidas/enviadas
+- **Oportunidades** de melhoria em relacionamentos
 
-O sistema utiliza Row Level Security (RLS) para garantir que usuários só acessem dados de suas respectivas empresas. As políticas são aplicadas automaticamente baseadas no usuário autenticado.
-
-### Contribuição
-
-Para contribuir com o projeto:
-
-1. **Clone o repositório**
-2. **Escolha um módulo específico** para trabalhar
-3. **Siga os padrões estabelecidos** de nomenclatura e estrutura
-4. **Teste isoladamente** o módulo modificado
-5. **Documente mudanças** no README específico do módulo
+## 🔮 Roadmap
 
 ### Próximas Funcionalidades
+- [ ] **Análise de Fontes Indicadoras**: Matriz origem x destino detalhada
+- [ ] **Dashboard de Eficiência Interna**: Métricas estratégicas e recomendações
+- [ ] **Alertas Inteligentes**: Notificações baseadas em performance
+- [ ] **Relatórios Automatizados**: Exports e envios programados
+- [ ] **Integração com CRM**: Sincronização de dados externos
+- [ ] **Machine Learning**: Previsões de conversão e recomendações
 
-- [ ] Análise de Fontes Indicadoras (em desenvolvimento)
-- [ ] Análise Temporal de Fechamento (planejado)
-- [ ] Dashboard de Eficiência Interna (planejado)
-- [ ] Alertas automáticos de performance
-- [ ] Export de relatórios por módulo
-- [ ] Integração com APIs externas de CRM
+### Melhorias Técnicas
+- [ ] **Testes Automatizados**: Cobertura completa dos módulos
+- [ ] **Performance**: Otimizações de queries e rendering
+- [ ] **PWA**: Funcionalidades offline
+- [ ] **API**: Endpoints para integrações externas
 
-### Licença
+## 🤝 Contribuição
 
-Propriedade da A&eight. Todos os direitos reservados.
+### Padrões de Desenvolvimento
+1. **Um módulo = Uma responsabilidade**
+2. **Hooks personalizados** para lógica de negócio
+3. **Componentes pequenos** e focados
+4. **TypeScript strict mode**
+5. **Dados privados** sempre protegidos
+
+### Estrutura de Módulo
+```
+modules/[nome-modulo]/
+├── components/     # Componentes React
+├── hooks/         # Hooks personalizados
+├── types/         # Tipos TypeScript
+├── utils/         # Utilitários específicos
+└── index.ts       # Exports públicos
+```
+
+### Como Adicionar um Novo Módulo
+1. Crie a estrutura de pastas
+2. Implemente hooks de dados
+3. Crie componentes de apresentação
+4. Adicione ao dashboard principal
+5. Documente o caso de uso
 
 ---
 
-**Última atualização**: Dezembro 2024  
-**Versão**: 2.0.0 - Arquitetura Modular
+## 📞 Suporte
+
+Para dúvidas, sugestões ou problemas:
+- 📧 **Email**: [contato@exemplo.com]
+- 💬 **Chat**: Sistema interno de mensagens
+- 📚 **Docs**: Documentação técnica atualizada
+- 🐛 **Issues**: Reporte bugs e solicite features
+
+---
+
+**Sistema em constante evolução** 🚀  
+*Última atualização: Janeiro 2025*

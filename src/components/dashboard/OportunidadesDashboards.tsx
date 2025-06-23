@@ -2,7 +2,7 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Target, TrendingDown, Calculator, BarChart3, Users, TrendingUp } from "lucide-react";
+import { Target, TrendingDown, Calculator, BarChart3, Users, TrendingUp, Clock, Zap } from "lucide-react";
 import { DashboardStatsSection } from "./DashboardStats";
 import { OpportunitiesChart } from "./OpportunitiesChart";
 import { IntraExtraAnalysis } from "./IntraExtraAnalysis";
@@ -11,7 +11,6 @@ import { MatrizParceriasChart } from "./MatrizParceriasChart";
 import { QualidadeIndicacoesChart } from "./QualidadeIndicacoesChart";
 import { BalancoGrupoParceriasChart } from "./BalancoGrupoParceriasChart";
 import { RankingParceirosChart } from "./RankingParceirosChart";
-import { StatusDistributionChart } from "./StatusDistributionChart";
 import { PeriodIndicator } from "./PeriodIndicator";
 import { ResultadosControl } from "./ResultadosControl";
 import { RecebimentoAnalysis } from "./RecebimentoAnalysis";
@@ -23,11 +22,13 @@ import { useMetas } from "@/hooks/useMetas";
 import { useMetasProgress } from "@/hooks/useMetasProgress";
 import { useMetaProbabilidade } from "@/hooks/useMetaProbabilidade";
 
-// Novos módulos
+// Módulos refatorados
 import { AdvancedFilters } from "@/modules/filters-advanced/components/AdvancedFilters";
 import { useAdvancedFilters } from "@/modules/filters-advanced/hooks/useAdvancedFilters";
 import { ValuesStatusAnalysis } from "@/modules/values-analysis/components/ValuesStatusAnalysis";
 import { GrupoPerformanceAnalysis } from "@/modules/grupo-performance/components/GrupoPerformanceAnalysis";
+import { QuickAnswersSection } from "@/modules/quick-answers/components/QuickAnswersSection";
+import { CycleTimeAnalysis } from "@/modules/cycle-time/components/CycleTimeAnalysis";
 
 export const OportunidadesDashboards: React.FC = () => {
   const { filteredOportunidades, isLoading } = useOportunidades();
@@ -44,16 +45,8 @@ export const OportunidadesDashboards: React.FC = () => {
     filteredOportunidades: finalFilteredOportunidades 
   } = useAdvancedFilters(oportunidades);
 
-  // Log para diagnóstico
-  if (typeof window !== "undefined" && filteredOportunidades) {
-    console.log("[OportunidadesDashboards] Dados carregados:", {
-      totalOportunidades: filteredOportunidades.length,
-      filtrosAvancados: advancedFilters,
-      oportunidadesFiltradas: finalFilteredOportunidades.length,
-      isLoading,
-      statsCalculadas: !!stats
-    });
-  }
+  // Indicador visual de filtro ativo
+  const hasAdvancedFilters = advancedFilters.apenasEmpresasGrupo || advancedFilters.tipoRelacao !== 'todos';
 
   if (isLoading || !filteredOportunidades) {
     return (
@@ -75,23 +68,37 @@ export const OportunidadesDashboards: React.FC = () => {
     <div className="flex flex-col space-y-6">
       <div className="flex flex-col space-y-4">
         <OportunidadesFilter />
-        <AdvancedFilters 
-          filters={advancedFilters}
-          onFiltersChange={setAdvancedFilters}
-        />
+        <div className="relative">
+          <AdvancedFilters 
+            filters={advancedFilters}
+            onFiltersChange={setAdvancedFilters}
+          />
+          {hasAdvancedFilters && (
+            <div className="absolute -top-2 -right-2">
+              <div className="h-3 w-3 bg-blue-500 rounded-full animate-pulse"></div>
+            </div>
+          )}
+        </div>
         <PeriodIndicator />
         <DashboardStatsSection stats={stats} loading={isLoading} />
       </div>
 
-      <Tabs defaultValue="quantities" className="w-full">
-        <TabsList className="grid w-full grid-cols-7">
+      <Tabs defaultValue="quick-answers" className="w-full">
+        <TabsList className="grid w-full grid-cols-8">
+          <TabsTrigger value="quick-answers" className="flex items-center gap-2">
+            <Zap className="h-4 w-4" />
+            Respostas Rápidas
+          </TabsTrigger>
           <TabsTrigger value="quantities">Análise de Quantidades</TabsTrigger>
           <TabsTrigger value="values">Análise de Valores</TabsTrigger>
           <TabsTrigger value="grupo-performance" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
             Performance Grupo
           </TabsTrigger>
-          <TabsTrigger value="intra-extra">Intra vs Extragrupo</TabsTrigger>
+          <TabsTrigger value="cycle-time" className="flex items-center gap-2">
+            <Clock className="h-4 w-4" />
+            Tempo Ciclo
+          </TabsTrigger>
           <TabsTrigger value="recebimento" className="flex items-center gap-2">
             <TrendingDown className="h-4 w-4" />
             Recebimento
@@ -106,6 +113,10 @@ export const OportunidadesDashboards: React.FC = () => {
           </TabsTrigger>
         </TabsList>
         
+        <TabsContent value="quick-answers" className="space-y-6">
+          <QuickAnswersSection oportunidades={finalFilteredOportunidades} />
+        </TabsContent>
+        
         <TabsContent value="quantities" className="space-y-6">
           <div className="grid gap-4 md:grid-cols-2">
             <Card>
@@ -114,14 +125,6 @@ export const OportunidadesDashboards: React.FC = () => {
               </CardHeader>
               <CardContent>
                 <OpportunitiesChart stats={stats} loading={isLoading} />
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle>Distribuição por Status</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <StatusDistributionChart />
               </CardContent>
             </Card>
           </div>
@@ -182,8 +185,8 @@ export const OportunidadesDashboards: React.FC = () => {
           <GrupoPerformanceAnalysis oportunidades={finalFilteredOportunidades} />
         </TabsContent>
 
-        <TabsContent value="intra-extra" className="space-y-6">
-          <IntraExtraAnalysis />
+        <TabsContent value="cycle-time" className="space-y-6">
+          <CycleTimeAnalysis oportunidades={finalFilteredOportunidades} />
         </TabsContent>
 
         <TabsContent value="recebimento" className="space-y-6">

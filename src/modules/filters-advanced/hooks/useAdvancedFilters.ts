@@ -12,11 +12,17 @@ export const useAdvancedFilters = (oportunidades: Oportunidade[]) => {
   const filteredOportunidades = useMemo(() => {
     let filtered = [...oportunidades];
 
-    // Filtro: Apenas Empresas do Grupo
+    console.log('Aplicando filtros:', filters);
+    console.log('Total oportunidades inicial:', filtered.length);
+
+    // Filtro: Apenas Empresas do Grupo (CORRIGIDO)
     if (filters.apenasEmpresasGrupo) {
-      filtered = filtered.filter(op => 
-        op.empresa_destino?.tipo === 'intragrupo'
-      );
+      filtered = filtered.filter(op => {
+        const isDestinoIntragrupo = op.empresa_destino?.tipo === 'intragrupo';
+        console.log(`Oportunidade ${op.id}: destino=${op.empresa_destino?.tipo}, mantém=${isDestinoIntragrupo}`);
+        return isDestinoIntragrupo;
+      });
+      console.log('Após filtro empresas do grupo:', filtered.length);
     }
 
     // Filtro: Tipo de Relação
@@ -34,6 +40,7 @@ export const useAdvancedFilters = (oportunidades: Oportunidade[]) => {
           op.empresa_destino?.tipo === 'intragrupo'
         );
       }
+      console.log('Após filtro tipo relação:', filtered.length);
     }
 
     // Filtro: Status
@@ -51,6 +58,7 @@ export const useAdvancedFilters = (oportunidades: Oportunidade[]) => {
       );
     }
 
+    console.log('Total oportunidades filtradas final:', filtered.length);
     return filtered;
   }, [oportunidades, filters]);
 
