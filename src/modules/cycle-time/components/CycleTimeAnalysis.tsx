@@ -1,8 +1,7 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Clock, TrendingUp, AlertCircle } from 'lucide-react';
+import { Clock, TrendingUp, AlertCircle, Info } from 'lucide-react';
 import { Oportunidade } from '@/types';
 import { PrivateData } from '@/components/privacy/PrivateData';
 import { useCycleTimeAnalysis } from '../hooks/useCycleTimeAnalysis';
@@ -53,18 +52,18 @@ export const CycleTimeAnalysis: React.FC<CycleTimeAnalysisProps> = ({
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               Tempo Médio de Ciclo
-              <TooltipHelper content="Tempo médio entre abertura e fechamento de oportunidades (considerando apenas as fechadas)" />
+              <TooltipHelper content="Tempo médio entre abertura e fechamento das oportunidades fechadas, considerando apenas oportunidades direcionadas às empresas do grupo com data inicial dentro do filtro." />
             </CardTitle>
             <Clock className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               <PrivateData type="blur">
-                {analysis.tempoMedioGeral} dias
+                {analysis.tempoMedioCicloFiltrado} dias
               </PrivateData>
             </div>
             <p className="text-xs text-muted-foreground">
-              Ciclo geral do grupo
+              Ciclo de oportunidades fechadas
             </p>
           </CardContent>
         </Card>
@@ -72,17 +71,19 @@ export const CycleTimeAnalysis: React.FC<CycleTimeAnalysisProps> = ({
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
-              Empresas Analisadas
-              <TooltipHelper content="Número de empresas do grupo com oportunidades fechadas ou em andamento" />
+              Tempo Médio de Ciclo Geral
+              <TooltipHelper content="Tempo médio entre abertura e fechamento de todas as oportunidades direcionadas ao grupo, considerando a data atual como fechamento para oportunidades ainda em aberto." />
             </CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-600" />
+            <Clock className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {analysis.totalEmpresasAnalisadas}
+              <PrivateData type="blur">
+                {analysis.tempoMedioCicloGeral} dias
+              </PrivateData>
             </div>
             <p className="text-xs text-muted-foreground">
-              Com dados de ciclo
+              Inclui oportunidades em aberto
             </p>
           </CardContent>
         </Card>
@@ -93,7 +94,7 @@ export const CycleTimeAnalysis: React.FC<CycleTimeAnalysisProps> = ({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             Análise de Ciclo por Empresa
-            <TooltipHelper content="Tempo de fechamento, quantidade de oportunidades e ticket médio por empresa do grupo" />
+            <TooltipHelper content="Tempo de fechamento e resumo das oportunidades direcionadas a cada empresa do grupo. Ticket médio é calculado considerando toda oportunidade com valor (> 0), independente do status. Exibe também empresas com oportunidades sem valor." />
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -105,13 +106,14 @@ export const CycleTimeAnalysis: React.FC<CycleTimeAnalysisProps> = ({
                   <div>
                     <div className="font-medium">{metric.empresa}</div>
                     <div className="text-sm text-muted-foreground">
-                      <PrivateData type="asterisk">{metric.oportunidadesFechadas}</PrivateData> fechadas • {' '}
-                      <PrivateData type="asterisk">{metric.emAndamento}</PrivateData> em aberto
+                      <PrivateData type="asterisk">{metric.totalOportunidades}</PrivateData> oportunidades consideradas{' '}
+                      <span className="mx-1">|</span>
+                      <PrivateData type="asterisk">{metric.oportunidadesSemValor}</PrivateData> sem valor
                     </div>
                   </div>
                 </div>
-                
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-right">
+
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-right">
                   <div>
                     <div className="text-sm text-muted-foreground">Tempo Médio</div>
                     <div className="font-medium">
@@ -129,14 +131,6 @@ export const CycleTimeAnalysis: React.FC<CycleTimeAnalysisProps> = ({
                     </div>
                   </div>
                   <div>
-                    <div className="text-sm text-muted-foreground">Mediana</div>
-                    <div className="font-medium">
-                      <PrivateData type="blur">
-                        {metric.tempoMediana} dias
-                      </PrivateData>
-                    </div>
-                  </div>
-                  <div>
                     <div className="text-sm text-muted-foreground">Ticket Médio</div>
                     <div className="font-medium">
                       <PrivateData type="currency">
@@ -144,14 +138,30 @@ export const CycleTimeAnalysis: React.FC<CycleTimeAnalysisProps> = ({
                       </PrivateData>
                     </div>
                   </div>
+                  <div>
+                    <div className="text-sm text-muted-foreground">Valor Total</div>
+                    <div className="font-medium">
+                      <PrivateData type="currency">
+                        {formatCurrency(metric.totalValor)}
+                      </PrivateData>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-muted-foreground">Fechadas / Em Aberto</div>
+                    <div className="font-medium">
+                      <PrivateData type="asterisk">{metric.oportunidadesFechadas}</PrivateData> /{' '}
+                      <PrivateData type="asterisk">{metric.emAndamento}</PrivateData>
+                    </div>
+                  </div>
                 </div>
               </div>
             ))}
           </div>
-          
+
           {analysis.metrics.length === 0 && (
             <div className="text-center py-8 text-muted-foreground">
-              Nenhuma oportunidade fechada encontrada para análise de ciclo
+              <Info className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+              Nenhuma oportunidade encontrada para análise de ciclo
             </div>
           )}
         </CardContent>
