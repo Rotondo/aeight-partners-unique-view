@@ -26,8 +26,8 @@ export const GrupoPerformanceAnalysis: React.FC<GrupoPerformanceAnalysisProps> =
     }).format(value);
   };
 
-  // Filtrar dados válidos para o gráfico (evitar valores zerados)
-  const dadosValidosGrafico = analysis.empresasPerformance.filter(emp => 
+  // Exibe todas as empresas do grupo que tenham ticket médio > 0 (ao menos uma oportunidade com valor)
+  const dadosValidosGrafico = analysis.empresasPerformance.filter(emp =>
     emp.ticketMedioGeral > 0 || emp.ticketMedioIntra > 0 || emp.ticketMedioExtra > 0
   );
 
@@ -46,13 +46,8 @@ export const GrupoPerformanceAnalysis: React.FC<GrupoPerformanceAnalysisProps> =
           {empresa && (
             <div className="text-xs text-gray-600 mt-2">
               <p>Total oportunidades: <PrivateData type="asterisk">{empresa.totalOportunidades}</PrivateData></p>
-              <p>Com valor: <PrivateData type="asterisk">{empresa.qualidadeDados.totalComValor}</PrivateData></p>
-              {!empresa.qualidadeDados.amostraMinima && (
-                <p className="text-amber-600 flex items-center gap-1">
-                  <AlertCircle className="h-3 w-3" />
-                  Amostra pequena
-                </p>
-              )}
+              <p>Oportunidades com valor: <PrivateData type="asterisk">{empresa.qualidadeDados.totalComValor}</PrivateData></p>
+              <p>Oportunidades ganhas: <PrivateData type="asterisk">{empresa.oportunidadesGanhas}</PrivateData></p>
             </div>
           )}
         </div>
@@ -69,7 +64,7 @@ export const GrupoPerformanceAnalysis: React.FC<GrupoPerformanceAnalysisProps> =
           <AlertCircle className="h-4 w-4" />
           <AlertDescription className="text-amber-800">
             <strong>Atenção:</strong> Dados baseados em apenas {analysis.qualidadeGeral.totalOportunidadesComValor} oportunidades com valor. 
-            Rankings podem não ser representativos. {analysis.qualidadeGeral.empresasComAmostraMinima} de {analysis.qualidadeGeral.totalEmpresas} empresas têm amostra mínima.
+            Rankings podem não ser representativos. {analysis.qualidadeGeral.empresasComAmostraMinima} empresas do grupo com pelo menos uma oportunidade com valor.
           </AlertDescription>
         </Alert>
       )}
@@ -79,7 +74,23 @@ export const GrupoPerformanceAnalysis: React.FC<GrupoPerformanceAnalysisProps> =
           <CardTitle className="flex items-center gap-2">
             Performance por Empresa do Grupo
             <TooltipHelper 
-              content="Ticket médio baseado em TODAS as oportunidades com valor > 0, independente do status. Separação entre indicações internas (intra) e de parceiros (extra)." 
+              content={
+                <>
+                  <div>
+                    <b>Cálculo:</b><br/>
+                    <ul className="list-disc ml-4">
+                      <li>Ticket médio intra: média de valor das oportunidades com valor (&gt; 0), cuja origem é uma empresa do grupo.</li>
+                      <li>Ticket médio extra: média de valor das oportunidades com valor (&gt; 0), cuja origem é um parceiro externo.</li>
+                      <li>Ticket médio geral: média de valor de todas as oportunidades com valor (&gt; 0) para cada empresa do grupo.</li>
+                    </ul>
+                    <b>Regras:</b>
+                    <ul className="list-disc ml-4">
+                      <li>Inclui <b>todas</b> as empresas do grupo que possuem ao menos uma oportunidade com valor (&gt; 0) no período filtrado.</li>
+                      <li>Não há restrição de quantidade mínima de oportunidades.</li>
+                    </ul>
+                  </div>
+                </>
+              }
             />
           </CardTitle>
         </CardHeader>
@@ -89,7 +100,7 @@ export const GrupoPerformanceAnalysis: React.FC<GrupoPerformanceAnalysisProps> =
               <div>
                 <Info className="h-12 w-12 mx-auto text-gray-400 mb-4" />
                 <p className="text-gray-600">Nenhuma empresa do grupo com dados suficientes</p>
-                <p className="text-sm text-gray-500">Mínimo: 2 oportunidades com valor</p>
+                <p className="text-sm text-gray-500">Necessário ao menos uma oportunidade com valor</p>
               </div>
             </div>
           ) : (
@@ -120,7 +131,21 @@ export const GrupoPerformanceAnalysis: React.FC<GrupoPerformanceAnalysisProps> =
             <CardTitle className="flex items-center gap-2">
               <TrendingUp className="h-5 w-5" />
               Ranking por Ticket Médio
-              <TooltipHelper content="Empresas do grupo ordenadas por ticket médio de TODAS as oportunidades com valor > 0. Mínimo 2 oportunidades para aparecer." />
+              <TooltipHelper content={
+                <>
+                  <div>
+                    <b>Cálculo:</b>
+                    <ul className="list-disc ml-4">
+                      <li>Empresas do grupo ordenadas por ticket médio geral (média de valor de todas as oportunidades com valor &gt; 0 para a empresa).</li>
+                    </ul>
+                    <b>Regras:</b>
+                    <ul className="list-disc ml-4">
+                      <li>Inclui <b>todas</b> as empresas do grupo que possuem ao menos uma oportunidade com valor (&gt; 0) no período filtrado.</li>
+                      <li>Não há restrição de quantidade mínima de oportunidades.</li>
+                    </ul>
+                  </div>
+                </>
+              }/>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -129,7 +154,7 @@ export const GrupoPerformanceAnalysis: React.FC<GrupoPerformanceAnalysisProps> =
                 <div className="text-center py-4 text-muted-foreground">
                   <Info className="h-8 w-8 mx-auto mb-2 text-gray-400" />
                   <p className="text-sm">Nenhuma empresa com dados suficientes</p>
-                  <p className="text-xs">Mínimo: 2 oportunidades</p>
+                  <p className="text-xs">Necessário ao menos uma oportunidade com valor</p>
                 </div>
               ) : (
                 analysis.rankingTicketMedio.slice(0, 10).map((empresa, index) => (
@@ -139,12 +164,6 @@ export const GrupoPerformanceAnalysis: React.FC<GrupoPerformanceAnalysisProps> =
                       <div>
                         <div className="font-medium flex items-center gap-2">
                           {empresa.empresa}
-                          {!empresa.qualidadeDados.amostraMinima && (
-                            <Badge variant="secondary" className="text-xs">
-                              <AlertCircle className="h-3 w-3 mr-1" />
-                              Poucos dados
-                            </Badge>
-                          )}
                         </div>
                         <div className="text-sm text-muted-foreground">
                           <PrivateData type="asterisk">{empresa.qualidadeDados.totalComValor}</PrivateData> ops com valor
@@ -173,7 +192,22 @@ export const GrupoPerformanceAnalysis: React.FC<GrupoPerformanceAnalysisProps> =
             <CardTitle className="flex items-center gap-2">
               <Target className="h-5 w-5" />
               Ranking por Conversão
-              <TooltipHelper content="Empresas do grupo ordenadas por taxa de conversão (% ganhas). Mínimo 3 oportunidades para aparecer no ranking." />
+              <TooltipHelper content={
+                <>
+                  <div>
+                    <b>Cálculo:</b>
+                    <ul className="list-disc ml-4">
+                      <li>Taxa de conversão = <b>oportunidades ganhas ÷ oportunidades criadas</b> para cada empresa do grupo.</li>
+                      <li>Exemplo: 10 ganhas de 30 → 33,3%.</li>
+                    </ul>
+                    <b>Regras:</b>
+                    <ul className="list-disc ml-4">
+                      <li>Inclui <b>todas</b> as empresas do grupo com pelo menos uma oportunidade criada no período filtrado.</li>
+                      <li>Não há restrição de quantidade mínima de oportunidades.</li>
+                    </ul>
+                  </div>
+                </>
+              }/>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -182,7 +216,7 @@ export const GrupoPerformanceAnalysis: React.FC<GrupoPerformanceAnalysisProps> =
                 <div className="text-center py-4 text-muted-foreground">
                   <Info className="h-8 w-8 mx-auto mb-2 text-gray-400" />
                   <p className="text-sm">Nenhuma empresa com dados suficientes</p>
-                  <p className="text-xs">Mínimo: 3 oportunidades</p>
+                  <p className="text-xs">Necessário ao menos uma oportunidade criada</p>
                 </div>
               ) : (
                 analysis.rankingConversao.slice(0, 10).map((empresa, index) => (
@@ -228,7 +262,7 @@ export const GrupoPerformanceAnalysis: React.FC<GrupoPerformanceAnalysisProps> =
               <div className="text-2xl font-bold text-green-600">
                 <PrivateData type="asterisk">{analysis.qualidadeGeral.empresasComAmostraMinima}</PrivateData>
               </div>
-              <div className="text-sm text-gray-600">Com amostra mínima</div>
+              <div className="text-sm text-gray-600">Com ao menos 1 op. com valor</div>
             </div>
             <div>
               <div className="text-2xl font-bold text-purple-600">
