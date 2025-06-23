@@ -1187,6 +1187,8 @@ export type Database = {
         | "Contato"
         | "Apresentado"
         | "Sem contato"
+        | "proposta_enviada"
+        | "aguardando_aprovacao"
       status_acao_crm: "pendente" | "em_andamento" | "concluida" | "cancelada"
       status_acao_crm_enum:
         | "pendente"
@@ -1342,6 +1344,8 @@ export const Constants = {
         "Contato",
         "Apresentado",
         "Sem contato",
+        "proposta_enviada",
+        "aguardando_aprovacao",
       ],
       status_acao_crm: ["pendente", "em_andamento", "concluida", "cancelada"],
       status_acao_crm_enum: [

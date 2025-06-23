@@ -2,7 +2,7 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Target } from "lucide-react";
+import { Target, TrendingDown, Calculator, BarChart3 } from "lucide-react";
 import { DashboardStatsSection } from "./DashboardStats";
 import { OpportunitiesChart } from "./OpportunitiesChart";
 import { ValuesFunnelAnalysis } from "./ValuesFunnelAnalysis";
@@ -15,13 +15,22 @@ import { RankingParceirosChart } from "./RankingParceirosChart";
 import { StatusDistributionChart } from "./StatusDistributionChart";
 import { PeriodIndicator } from "./PeriodIndicator";
 import { ResultadosControl } from "./ResultadosControl";
+import { RecebimentoAnalysis } from "./RecebimentoAnalysis";
+import { MetaProbabilidadeCalculos } from "./MetaProbabilidadeCalculos";
 import { OportunidadesFilter } from "@/components/oportunidades/OportunidadesFilter";
 import { useOportunidades } from "@/components/oportunidades/OportunidadesContext";
 import { useDashboardStats } from "@/hooks/useDashboardStats";
+import { useMetas } from "@/hooks/useMetas";
+import { useMetasProgress } from "@/hooks/useMetasProgress";
+import { useMetaProbabilidade } from "@/hooks/useMetaProbabilidade";
 
 export const OportunidadesDashboards: React.FC = () => {
   const { filteredOportunidades, isLoading } = useOportunidades();
   const stats = useDashboardStats(filteredOportunidades);
+  const { metas } = useMetas();
+  const oportunidades = filteredOportunidades || [];
+  const metasProgress = useMetasProgress(metas, oportunidades);
+  const probabilidades = useMetaProbabilidade(metasProgress);
 
   // Log para diagnóstico
   if (typeof window !== "undefined" && filteredOportunidades) {
@@ -57,10 +66,18 @@ export const OportunidadesDashboards: React.FC = () => {
       </div>
 
       <Tabs defaultValue="quantities" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="quantities">Análise de Quantidades</TabsTrigger>
           <TabsTrigger value="values">Análise de Valores</TabsTrigger>
           <TabsTrigger value="intra-extra">Intra vs Extragrupo</TabsTrigger>
+          <TabsTrigger value="recebimento" className="flex items-center gap-2">
+            <TrendingDown className="h-4 w-4" />
+            Recebimento
+          </TabsTrigger>
+          <TabsTrigger value="metas" className="flex items-center gap-2">
+            <Calculator className="h-4 w-4" />
+            Probabilidade Metas
+          </TabsTrigger>
           <TabsTrigger value="resultados" className="flex items-center gap-2">
             <Target className="h-4 w-4" />
             Controle de Resultados
@@ -141,6 +158,14 @@ export const OportunidadesDashboards: React.FC = () => {
 
         <TabsContent value="intra-extra" className="space-y-6">
           <IntraExtraAnalysis />
+        </TabsContent>
+
+        <TabsContent value="recebimento" className="space-y-6">
+          <RecebimentoAnalysis />
+        </TabsContent>
+
+        <TabsContent value="metas" className="space-y-6">
+          <MetaProbabilidadeCalculos probabilidades={probabilidades} />
         </TabsContent>
 
         <TabsContent value="resultados" className="space-y-6">
