@@ -23,21 +23,40 @@ export interface DashboardStats {
 }
 
 export function useDashboardStats(oportunidadesFiltradas?: Oportunidade[] | null): DashboardStats {
-  const oportunidades = useMemo(() => 
-    Array.isArray(oportunidadesFiltradas) ? oportunidadesFiltradas : [], 
-    [oportunidadesFiltradas]
-  );
+  const oportunidades = useMemo(() => {
+    // CORREÇÃO: Garantir array válido e loggar para debug
+    const validArray = Array.isArray(oportunidadesFiltradas) ? oportunidadesFiltradas : [];
+    console.log('[useDashboardStats] Dados recebidos:', {
+      isArray: Array.isArray(oportunidadesFiltradas),
+      isNull: oportunidadesFiltradas === null,
+      isUndefined: oportunidadesFiltradas === undefined,
+      length: validArray.length,
+      sample: validArray.slice(0, 2)
+    });
+    return validArray;
+  }, [oportunidadesFiltradas]);
 
   const stats = useStatsCalculation(oportunidades);
 
-  return useMemo(() => ({
-    total: stats.total,
-    intra: stats.intra,
-    extra: stats.extra,
-    enviadas: stats.enviadas,
-    recebidas: stats.recebidas,
-    saldo: stats.saldo,
-  }), [stats]);
+  return useMemo(() => {
+    console.log('[useDashboardStats] Stats calculadas:', {
+      totalLength: oportunidades.length,
+      totalGanho: stats.total.ganho,
+      totalPerdido: stats.total.perdido,
+      totalEmContato: stats.total.em_contato,
+      totalNegociando: stats.total.negociando,
+      totalAndamento: stats.total.em_contato + stats.total.negociando
+    });
+
+    return {
+      total: stats.total,
+      intra: stats.intra,
+      extra: stats.extra,
+      enviadas: stats.enviadas,
+      recebidas: stats.recebidas,
+      saldo: stats.saldo,
+    };
+  }, [stats, oportunidades.length]);
 }
 
 export default useDashboardStats;

@@ -55,37 +55,39 @@ export const useQuickAnswers = (oportunidades: Oportunidade[]) => {
       `${Object.keys(porEmpresaDestino).length} empresas de destino identificadas`
     );
 
-    // Ranking de empresas que mais enviam (origem)
-    const porEmpresaOrigem = oportunidadesGrupo.reduce((acc, op) => {
-      const empresa = op.empresa_origem?.nome || 'Desconhecida';
-      const tipo = op.empresa_origem?.tipo || 'desconhecido';
-      
-      if (!acc[empresa]) {
-        acc[empresa] = { total: 0, ganhas: 0, valores: [], tipo };
-      }
-      
-      acc[empresa].total += 1;
-      if (op.status === 'ganho') {
-        acc[empresa].ganhas += 1;
-      }
-      if (op.valor && op.valor > 0) {
-        acc[empresa].valores.push(op.valor);
-      }
-      
-      return acc;
-    }, {} as Record<string, { total: number; ganhas: number; valores: number[]; tipo: string }>);
+    // CORREÇÃO CRÍTICA: Ranking de empresas que mais enviam (APENAS PARCEIROS)
+    const porEmpresaOrigem = oportunidadesGrupo
+      .filter(op => op.empresa_origem?.tipo === 'parceiro') // FILTRO CRÍTICO: apenas parceiros
+      .reduce((acc, op) => {
+        const empresa = op.empresa_origem?.nome || 'Desconhecida';
+        const tipo = op.empresa_origem?.tipo || 'desconhecido';
+        
+        if (!acc[empresa]) {
+          acc[empresa] = { total: 0, ganhas: 0, valores: [], tipo };
+        }
+        
+        acc[empresa].total += 1;
+        if (op.status === 'ganho') {
+          acc[empresa].ganhas += 1;
+        }
+        if (op.valor && op.valor > 0) {
+          acc[empresa].valores.push(op.valor);
+        }
+        
+        return acc;
+      }, {} as Record<string, { total: number; ganhas: number; valores: number[]; tipo: string }>);
 
     addStep(
       calculationId,
-      'group-by-origin',
-      'Agrupar por empresa de origem com métricas',
-      oportunidadesGrupo,
+      'group-by-origin-partners-only',
+      'Agrupar por empresa PARCEIRA de origem (correção crítica)',
+      { totalGrupo: oportunidadesGrupo.length, filtradoParceiros: oportunidadesGrupo.filter(op => op.empresa_origem?.tipo === 'parceiro').length },
       Object.keys(porEmpresaOrigem).length,
-      'reduce com contadores de total, ganhas e valores',
-      `${Object.keys(porEmpresaOrigem).length} empresas de origem processadas`
+      'APENAS op.empresa_origem?.tipo === "parceiro"',
+      `${Object.keys(porEmpresaOrigem).length} empresas PARCEIRAS processadas (excluídas empresas do grupo)`
     );
 
-    // Calcular qualidade das empresas origem
+    // CORREÇÃO: Ranking baseado em VALOR TOTAL GERADO (não score híbrido)
     const rankingOrigem = Object.entries(porEmpresaOrigem)
       .map(([empresa, data]) => {
         const taxaConversao = data.total > 0 ? (data.ganhas / data.total) * 100 : 0;
@@ -93,12 +95,6 @@ export const useQuickAnswers = (oportunidades: Oportunidade[]) => {
           data.valores.reduce((sum, v) => sum + v, 0) / data.valores.length : 0;
         const valorTotal = data.valores.reduce((sum, v) => sum + v, 0);
         
-        // Score melhorado: considera volume (30%), conversão (40%), valor médio (30%)
-        const volumeScore = Math.min(data.total / 10, 1) * 30; // Máximo 30 pontos para volume
-        const conversaoScore = taxaConversao * 0.4; // Máximo 40 pontos para conversão
-        const valorScore = Math.min(ticketMedio / 100000, 1) * 30; // Máximo 30 pontos para valor
-        const score = volumeScore + conversaoScore + valorScore;
-
         return {
           empresa,
           tipo: data.tipo,
@@ -107,24 +103,25 @@ export const useQuickAnswers = (oportunidades: Oportunidade[]) => {
           taxaConversao,
           ticketMedio,
           valorTotal,
-          score
+          score: valorTotal // CORREÇÃO: Score = Valor Total Gerado
         };
       })
-      .sort((a, b) => b.score - a.score);
+      .filter(empresa => empresa.totalOportunidades >= 3) // Mínimo 3 oportunidades para ranking
+      .sort((a, b) => b.valorTotal - a.valorTotal); // Ordenar por valor total gerado
 
     addStep(
       calculationId,
-      'calculate-ranking',
-      'Calcular ranking com score ponderado',
+      'calculate-ranking-corrected',
+      'Calcular ranking por VALOR TOTAL GERADO (apenas parceiros)',
       Object.keys(porEmpresaOrigem).length,
-      rankingOrigem.slice(0, 3),
-      'score = volume(30%) + conversão(40%) + valor(30%)',
-      `Top 3: ${rankingOrigem.slice(0, 3).map(r => `${r.empresa}(${r.score.toFixed(1)})`).join(', ')}`
+      rankingOrigem.slice(0, 3).map(r => ({ empresa: r.empresa, valorTotal: r.valorTotal, oportunidades: r.totalOportunidades })),
+      'score = valorTotal (não mais score híbrido), min 3 oportunidades',
+      `Top 3 por valor: ${rankingOrigem.slice(0, 3).map(r => `${r.empresa}(R$ ${r.valorTotal.toLocaleString()})`).join(', ')}`
     );
 
-    // Ticket médio por empresa de destino (apenas com valores > 0)
+    // CORREÇÃO: Ticket médio por empresa de destino (apenas com valores > 0 e ganhas)
     const ticketMedioPorEmpresa = oportunidadesGrupo
-      .filter(op => op.valor && op.valor > 0)
+      .filter(op => op.valor && op.valor > 0 && op.status === 'ganho') // APENAS oportunidades ganhas com valor
       .reduce((acc, op) => {
         const empresa = op.empresa_destino?.nome || 'Desconhecida';
         if (!acc[empresa]) {
@@ -142,31 +139,32 @@ export const useQuickAnswers = (oportunidades: Oportunidade[]) => {
         totalComValor: data.total,
         valorTotal: data.valores.reduce((sum, v) => sum + v, 0)
       }))
+      .filter(emp => emp.totalComValor >= 2) // Mínimo 2 oportunidades ganhas
       .sort((a, b) => b.ticketMedio - a.ticketMedio);
 
     addStep(
       calculationId,
-      'ticket-medio-calculation',
-      'Calcular ticket médio (apenas valores > 0)',
-      { totalComValor: oportunidadesGrupo.filter(op => op.valor && op.valor > 0).length },
+      'ticket-medio-calculation-corrected',
+      'Calcular ticket médio (APENAS oportunidades GANHAS com valor)',
+      { totalGanhasComValor: oportunidadesGrupo.filter(op => op.valor && op.valor > 0 && op.status === 'ganho').length },
       ticketMedioRanking.slice(0, 3),
-      'sum(valores) / count(valores > 0)',
+      'APENAS status === "ganho" AND valor > 0, min 2 oportunidades',
       `Top 3 ticket médio: ${ticketMedioRanking.slice(0, 3).map(r => `${r.empresa}: R$ ${r.ticketMedio.toLocaleString()}`).join(', ')}`
     );
 
-    // Oportunidades em aberto
+    // Oportunidades em aberto (padronizado)
     const emAberto = oportunidadesGrupo.filter(op => 
       op.status === 'em_contato' || op.status === 'negociando'
     ).length;
 
     addStep(
       calculationId,
-      'open-opportunities',
-      'Contar oportunidades em aberto',
+      'open-opportunities-standardized',
+      'Contar oportunidades em aberto (critério padronizado)',
       oportunidadesGrupo,
       emAberto,
       'status === "em_contato" || status === "negociando"',
-      `${emAberto} oportunidades em aberto identificadas`
+      `${emAberto} oportunidades em aberto (critério consistente)`
     );
 
     const result = {
@@ -176,7 +174,14 @@ export const useQuickAnswers = (oportunidades: Oportunidade[]) => {
       ticketMedioRanking,
       emAberto,
       melhorEmpresaOrigem: rankingOrigem[0] || null,
-      empresaComMaiorTicket: ticketMedioRanking[0] || null
+      empresaComMaiorTicket: ticketMedioRanking[0] || null,
+      // Dados de qualidade para validação
+      qualidadeDados: {
+        totalFiltradoParceiros: oportunidadesGrupo.filter(op => op.empresa_origem?.tipo === 'parceiro').length,
+        totalGanhasComValor: oportunidadesGrupo.filter(op => op.valor && op.valor > 0 && op.status === 'ganho').length,
+        empresasComRankingMinimo: rankingOrigem.length,
+        empresasComTicketMinimo: ticketMedioRanking.length
+      }
     };
 
     finishCalculation(calculationId, result);

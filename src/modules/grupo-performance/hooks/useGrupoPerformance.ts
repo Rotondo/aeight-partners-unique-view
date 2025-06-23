@@ -17,6 +17,12 @@ export interface EmpresaPerformance {
   quantidadeExtra: number;
   quantidadeComValorIntra: number;
   quantidadeComValorExtra: number;
+  // Dados de qualidade
+  qualidadeDados: {
+    ganhasComValor: number;
+    totalComValor: number;
+    amostraMinima: boolean;
+  };
 }
 
 export const useGrupoPerformance = (oportunidades: Oportunidade[]) => {
@@ -44,6 +50,7 @@ export const useGrupoPerformance = (oportunidades: Oportunidade[]) => {
     const empresaMap = new Map<string, {
       total: number;
       ganhas: number;
+      ganhasComValor: number;
       valorIntra: number;
       valorExtra: number;
       quantidadeIntra: number;
@@ -62,6 +69,7 @@ export const useGrupoPerformance = (oportunidades: Oportunidade[]) => {
       const existing = empresaMap.get(empresaDestino) || {
         total: 0,
         ganhas: 0,
+        ganhasComValor: 0,
         valorIntra: 0,
         valorExtra: 0,
         quantidadeIntra: 0,
@@ -71,7 +79,10 @@ export const useGrupoPerformance = (oportunidades: Oportunidade[]) => {
       };
 
       existing.total += 1;
-      if (isGanha) existing.ganhas += 1;
+      if (isGanha) {
+        existing.ganhas += 1;
+        if (temValor) existing.ganhasComValor += 1;
+      }
 
       if (isIntra) {
         existing.valorIntra += valor;
@@ -94,12 +105,11 @@ export const useGrupoPerformance = (oportunidades: Oportunidade[]) => {
       Array.from(empresaMap.entries()).map(([empresa, data]) => ({
         empresa,
         total: data.total,
-        intra: data.quantidadeIntra,
-        extra: data.quantidadeExtra,
-        valorIntra: data.valorIntra,
-        valorExtra: data.valorExtra
+        ganhas: data.ganhas,
+        ganhasComValor: data.ganhasComValor,
+        valorTotal: data.valorIntra + data.valorExtra
       })),
-      'Separação entre intra (origem=intragrupo) e extra (origem≠intragrupo)',
+      'Separação entre intra e extra + contagem de ganhas com valor',
       `${empresaMap.size} empresas processadas`
     );
 
@@ -107,11 +117,21 @@ export const useGrupoPerformance = (oportunidades: Oportunidade[]) => {
       .map(([empresa, data]) => {
         const taxaConversao = data.total > 0 ? (data.ganhas / data.total) * 100 : 0;
         
-        // CORREÇÃO: Ticket médio apenas para oportunidades COM VALOR
-        const ticketMedioIntra = data.quantidadeComValorIntra > 0 ? data.valorIntra / data.quantidadeComValorIntra : 0;
-        const ticketMedioExtra = data.quantidadeComValorExtra > 0 ? data.valorExtra / data.quantidadeComValorExtra : 0;
-        const ticketMedioGeral = (data.quantidadeComValorIntra + data.quantidadeComValorExtra) > 0 ? 
-          (data.valorIntra + data.valorExtra) / (data.quantidadeComValorIntra + data.quantidadeComValorExtra) : 0;
+        // CORREÇÃO: Ticket médio APENAS para oportunidades ganhas COM VALOR
+        const ticketMedioIntra = data.ganhasComValor > 0 && data.valorIntra > 0 ? 
+          data.valorIntra / data.quantidadeComValorIntra : 0;
+        const ticketMedioExtra = data.ganhasComValor > 0 && data.valorExtra > 0 ? 
+          data.valorExtra / data.quantidadeComValorExtra : 0;
+        const totalComValor = data.quantidadeComValorIntra + data.quantidadeComValorExtra;
+        const ticketMedioGeral = totalComValor > 0 ? 
+          (data.valorIntra + data.valorExtra) / totalComValor : 0;
+
+        // Dados de qualidade
+        const qualidadeDados = {
+          ganhasComValor: data.ganhasComValor,
+          totalComValor: totalComValor,
+          amostraMinima: data.ganhasComValor >= 2 && totalComValor >= 3
+        };
 
         return {
           empresa,
@@ -126,50 +146,63 @@ export const useGrupoPerformance = (oportunidades: Oportunidade[]) => {
           quantidadeIntra: data.quantidadeIntra,
           quantidadeExtra: data.quantidadeExtra,
           quantidadeComValorIntra: data.quantidadeComValorIntra,
-          quantidadeComValorExtra: data.quantidadeComValorExtra
+          quantidadeComValorExtra: data.quantidadeComValorExtra,
+          qualidadeDados
         };
-      });
+      })
+      .filter(emp => emp.totalOportunidades > 0); // Apenas empresas com dados
 
     addStep(
       calculationId,
       'calculate-performance',
-      'Calcular métricas de performance',
+      'Calcular métricas de performance com validação de qualidade',
       empresaMap.size,
       empresasPerformance.map(emp => ({
         empresa: emp.empresa,
         ticketMedioGeral: emp.ticketMedioGeral,
-        baseCalculo: `${emp.quantidadeComValorIntra + emp.quantidadeComValorExtra} ops com valor`,
-        taxaConversao: emp.taxaConversao
+        baseCalculo: `${emp.qualidadeDados.totalComValor} ops com valor`,
+        ganhasComValor: emp.qualidadeDados.ganhasComValor,
+        amostraMinima: emp.qualidadeDados.amostraMinima
       })),
-      'ticketMedio = valorTotal / quantidadeComValor (apenas ops com valor > 0)',
-      `Ticket médio calculado para ${empresasPerformance.length} empresas`
+      'ticketMedio baseado APENAS em oportunidades com valor, validação de amostra mínima',
+      `${empresasPerformance.length} empresas processadas, ${empresasPerformance.filter(e => e.qualidadeDados.amostraMinima).length} com amostra mínima`
     );
 
+    // Rankings com filtro de qualidade
     const rankingTicketMedio = [...empresasPerformance]
-      .filter(emp => emp.ticketMedioGeral > 0) // Apenas empresas com valores
+      .filter(emp => emp.ticketMedioGeral > 0 && emp.qualidadeDados.amostraMinima) // Apenas com amostra mínima
       .sort((a, b) => b.ticketMedioGeral - a.ticketMedioGeral);
 
     const rankingConversao = [...empresasPerformance]
-      .filter(emp => emp.totalOportunidades > 0)
+      .filter(emp => emp.totalOportunidades >= 5) // Mínimo 5 oportunidades para conversão
       .sort((a, b) => b.taxaConversao - a.taxaConversao);
 
     addStep(
       calculationId,
-      'create-rankings',
-      'Criar rankings por ticket médio e conversão',
+      'create-rankings-with-quality',
+      'Criar rankings com critérios de qualidade',
       empresasPerformance.length,
       {
+        ticketMedioComQualidade: rankingTicketMedio.length,
+        conversaoComQualidade: rankingConversao.length,
         topTicketMedio: rankingTicketMedio.slice(0, 3).map(emp => `${emp.empresa}: R$ ${emp.ticketMedioGeral.toLocaleString()}`),
         topConversao: rankingConversao.slice(0, 3).map(emp => `${emp.empresa}: ${emp.taxaConversao.toFixed(1)}%`)
       },
-      'Ordenação decrescente por valor',
-      `Rankings criados com ${rankingTicketMedio.length} e ${rankingConversao.length} empresas`
+      'Ticket médio: amostra mínima. Conversão: min 5 oportunidades',
+      `Rankings com qualidade: ${rankingTicketMedio.length} para ticket, ${rankingConversao.length} para conversão`
     );
 
     const result = {
       empresasPerformance,
       rankingTicketMedio,
-      rankingConversao
+      rankingConversao,
+      // Indicadores de qualidade geral
+      qualidadeGeral: {
+        totalEmpresas: empresasPerformance.length,
+        empresasComAmostraMinima: empresasPerformance.filter(e => e.qualidadeDados.amostraMinima).length,
+        totalOportunidadesComValor: empresasPerformance.reduce((sum, e) => sum + e.qualidadeDados.totalComValor, 0),
+        totalGanhasComValor: empresasPerformance.reduce((sum, e) => sum + e.qualidadeDados.ganhasComValor, 0)
+      }
     };
 
     finishCalculation(calculationId, result);
