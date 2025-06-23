@@ -119,9 +119,9 @@ export const useQuickAnswers = (oportunidades: Oportunidade[]) => {
       `Top 3 por valor: ${rankingOrigem.slice(0, 3).map(r => `${r.empresa}(R$ ${r.valorTotal.toLocaleString()})`).join(', ')}`
     );
 
-    // CORREÇÃO: Ticket médio por empresa de destino (apenas com valores > 0 e ganhas)
+    // CORREÇÃO: Ticket médio por empresa de destino (TODAS oportunidades com valor > 0)
     const ticketMedioPorEmpresa = oportunidadesGrupo
-      .filter(op => op.valor && op.valor > 0 && op.status === 'ganho') // APENAS oportunidades ganhas com valor
+      .filter(op => op.valor && op.valor > 0) // TODAS oportunidades com valor, independente do status
       .reduce((acc, op) => {
         const empresa = op.empresa_destino?.nome || 'Desconhecida';
         if (!acc[empresa]) {
@@ -139,16 +139,16 @@ export const useQuickAnswers = (oportunidades: Oportunidade[]) => {
         totalComValor: data.total,
         valorTotal: data.valores.reduce((sum, v) => sum + v, 0)
       }))
-      .filter(emp => emp.totalComValor >= 2) // Mínimo 2 oportunidades ganhas
+      .filter(emp => emp.totalComValor >= 2) // Mínimo 2 oportunidades com valor
       .sort((a, b) => b.ticketMedio - a.ticketMedio);
 
     addStep(
       calculationId,
       'ticket-medio-calculation-corrected',
-      'Calcular ticket médio (APENAS oportunidades GANHAS com valor)',
-      { totalGanhasComValor: oportunidadesGrupo.filter(op => op.valor && op.valor > 0 && op.status === 'ganho').length },
+      'Calcular ticket médio (TODAS oportunidades com valor, independente do status)',
+      { totalComValor: oportunidadesGrupo.filter(op => op.valor && op.valor > 0).length },
       ticketMedioRanking.slice(0, 3),
-      'APENAS status === "ganho" AND valor > 0, min 2 oportunidades',
+      'TODAS com valor > 0 (não apenas ganhas), min 2 oportunidades',
       `Top 3 ticket médio: ${ticketMedioRanking.slice(0, 3).map(r => `${r.empresa}: R$ ${r.ticketMedio.toLocaleString()}`).join(', ')}`
     );
 
@@ -178,7 +178,7 @@ export const useQuickAnswers = (oportunidades: Oportunidade[]) => {
       // Dados de qualidade para validação
       qualidadeDados: {
         totalFiltradoParceiros: oportunidadesGrupo.filter(op => op.empresa_origem?.tipo === 'parceiro').length,
-        totalGanhasComValor: oportunidadesGrupo.filter(op => op.valor && op.valor > 0 && op.status === 'ganho').length,
+        totalComValor: oportunidadesGrupo.filter(op => op.valor && op.valor > 0).length,
         empresasComRankingMinimo: rankingOrigem.length,
         empresasComTicketMinimo: ticketMedioRanking.length
       }

@@ -32,3 +32,11 @@ export const TooltipHelper: React.FC<TooltipHelperProps> = ({
     </TooltipProvider>
   );
 };
+
+// Exportar tooltipTexts que outros componentes estão importando
+export const tooltipTexts = {
+  ticketMedio: "Valor médio das oportunidades com valor informado",
+  taxaConversao: "Percentual de oportunidades ganhas sobre o total",
+  valorTotal: "Soma de todos os valores das oportunidades",
+  tempoMedio: "Tempo médio entre indicação e fechamento"
+};
