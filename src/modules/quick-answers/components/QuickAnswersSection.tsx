@@ -1,12 +1,11 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { 
-  TrendingUp, 
-  Target, 
-  DollarSign, 
-  Building, 
+import {
+  TrendingUp,
+  Target,
+  DollarSign,
+  Building,
   Clock,
   Award,
   BarChart3,
@@ -34,6 +33,63 @@ export const QuickAnswersSection: React.FC<QuickAnswersSectionProps> = ({
       minimumFractionDigits: 0
     }).format(value);
   };
+
+  // Helper para tooltip detalhado do card de Melhor Fonte
+  const melhorFonteTooltip = (
+    <div>
+      <b>Cálculo:</b>
+      <ul className="list-disc ml-4">
+        <li>Reflete o 1º lugar do "Ranking de Fontes Indicadoras".</li>
+        <li>Considera <b>parceiros</b> que mais indicaram oportunidades (independente do status das oportunidades).</li>
+        <li>Mostra: nome, tipo, valor total indicado (soma dos valores de todas oportunidades indicadas), quantidade de indicações e taxa de conversão.</li>
+      </ul>
+      <b>Regras:</b>
+      <ul className="list-disc ml-4">
+        <li>Empresas do grupo não aparecem.</li>
+        <li>Valor total = soma do campo "valor" de todas as oportunidades indicadas pelo parceiro.</li>
+      </ul>
+    </div>
+  );
+
+  // Helper para tooltip detalhado do ranking de fontes
+  const rankingFontesTooltip = (
+    <div>
+      <b>Cálculo:</b>
+      <ul className="list-disc ml-4">
+        <li>Mostra parceiros ordenados pela quantidade de oportunidades indicadas (independente do status das oportunidades).</li>
+        <li>Valor total = soma dos valores das oportunidades indicadas (não apenas ganhas).</li>
+        <li>Conversão = oportunidades ganhas ÷ oportunidades indicadas.</li>
+      </ul>
+      <b>Regras:</b>
+      <ul className="list-disc ml-4">
+        <li>Somente parceiros (empresas do tipo "parceiro") aparecem.</li>
+        <li>Mínimo de 3 indicações para aparecer no ranking.</li>
+      </ul>
+      <b>Colunas:</b>
+      <ul className="list-disc ml-4">
+        <li>Posição</li>
+        <li>Nome</li>
+        <li>Tipo</li>
+        <li>Valor total das indicações</li>
+        <li>Quantidade de indicações</li>
+        <li>Conversão</li>
+      </ul>
+    </div>
+  );
+
+  // Helper para tooltip detalhado do ticket médio por empresa
+  const ticketMedioTooltip = (
+    <div>
+      <b>Cálculo:</b>
+      <ul className="list-disc ml-4">
+        <li>Empresas do grupo ordenadas por ticket médio considerando todas oportunidades com valor (&gt; 0), independente do status.</li>
+      </ul>
+      <b>Regras:</b>
+      <ul className="list-disc ml-4">
+        <li>Mínimo de 2 oportunidades com valor para aparecer.</li>
+      </ul>
+    </div>
+  );
 
   return (
     <div className="space-y-6">
@@ -86,21 +142,42 @@ export const QuickAnswersSection: React.FC<QuickAnswersSectionProps> = ({
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-1">
               Melhor Fonte
-              <TooltipHelper content="Parceiro que gerou maior valor total em negócios ganhos. Empresas do grupo não aparecem neste ranking." />
+              <TooltipHelper content={melhorFonteTooltip} trigger="click" />
             </CardTitle>
             <Award className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-lg font-bold truncate">
-              {answers.melhorEmpresaOrigem?.empresa || 'N/A'}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {answers.melhorEmpresaOrigem && (
-                <PrivateData type="currency">
-                  {formatCurrency(answers.melhorEmpresaOrigem.valorTotal)} gerados
-                </PrivateData>
-              )}
-            </p>
+            {answers.rankingOrigem[0] ? (
+              <>
+                <div className="text-lg font-bold truncate">
+                  {answers.rankingOrigem[0].empresa}
+                </div>
+                <div className="flex flex-wrap gap-2 mt-1">
+                  <Badge variant="secondary" className="text-xs">
+                    {answers.rankingOrigem[0].tipo?.toUpperCase()}
+                  </Badge>
+                  <span className="text-xs text-muted-foreground">
+                    <PrivateData type="currency">
+                      {formatCurrency(answers.rankingOrigem[0].valorTotal)}
+                    </PrivateData>{" "}
+                    total indicado
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    <PrivateData type="asterisk">
+                      {answers.rankingOrigem[0].totalOportunidades}
+                    </PrivateData>{" "}
+                    indicações
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    <PrivateData type="blur">
+                      {answers.rankingOrigem[0].taxaConversao.toFixed(1)}% conversão
+                    </PrivateData>
+                  </span>
+                </div>
+              </>
+            ) : (
+              <div className="text-lg font-bold truncate">N/A</div>
+            )}
             {answers.qualidadeDados.empresasComRankingMinimo < 3 && (
               <div className="flex items-center gap-1 mt-1">
                 <Info className="h-3 w-3 text-amber-500" />
@@ -114,7 +191,7 @@ export const QuickAnswersSection: React.FC<QuickAnswersSectionProps> = ({
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-1">
               Maior Ticket Médio
-              <TooltipHelper content="Empresa do grupo com maior valor médio em oportunidades ganhas. Mínimo 2 negócios fechados." />
+              <TooltipHelper content={ticketMedioTooltip} trigger="click" />
             </CardTitle>
             <DollarSign className="h-4 w-4 text-emerald-600" />
           </CardHeader>
@@ -163,7 +240,7 @@ export const QuickAnswersSection: React.FC<QuickAnswersSectionProps> = ({
             <CardTitle className="flex items-center gap-2">
               <Building className="h-5 w-5" />
               Ranking de Fontes Indicadoras
-              <TooltipHelper content="APENAS PARCEIROS ordenados por valor total gerado em negócios ganhos. Mínimo 3 indicações para aparecer no ranking." />
+              <TooltipHelper content={rankingFontesTooltip} trigger="click" />
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -175,36 +252,38 @@ export const QuickAnswersSection: React.FC<QuickAnswersSectionProps> = ({
                   <p className="text-xs">Mínimo: 3 indicações</p>
                 </div>
               ) : (
-                answers.rankingOrigem.slice(0, 8).map((empresa, index) => (
-                  <div key={empresa.empresa} className="flex justify-between items-center p-3 border rounded">
-                    <div className="flex items-center gap-3">
-                      <Badge variant="outline">#{index + 1}</Badge>
-                      <div>
-                        <div className="font-medium flex items-center gap-2">
-                          {empresa.empresa}
-                          <Badge variant="secondary" className="text-xs">
-                            PARCEIRO
-                          </Badge>
+                answers.rankingOrigem
+                  .slice(0, 8)
+                  .map((empresa, index) => (
+                    <div key={empresa.empresa} className="flex justify-between items-center p-3 border rounded">
+                      <div className="flex items-center gap-3">
+                        <Badge variant="outline">#{index + 1}</Badge>
+                        <div>
+                          <div className="font-medium flex items-center gap-2">
+                            {empresa.empresa}
+                            <Badge variant="secondary" className="text-xs">
+                              {empresa.tipo?.toUpperCase()}
+                            </Badge>
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            <PrivateData type="asterisk">{empresa.totalOportunidades}</PrivateData> indicações
+                          </div>
                         </div>
-                        <div className="text-sm text-muted-foreground">
-                          <PrivateData type="asterisk">{empresa.totalOportunidades}</PrivateData> indicações
+                      </div>
+                      <div className="text-right space-y-1">
+                        <div className="font-bold">
+                          <PrivateData type="currency">
+                            {formatCurrency(empresa.valorTotal)}
+                          </PrivateData>
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          <PrivateData type="blur">
+                            {empresa.taxaConversao.toFixed(1)}% conversão
+                          </PrivateData>
                         </div>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="font-bold">
-                        <PrivateData type="currency">
-                          {formatCurrency(empresa.valorTotal)}
-                        </PrivateData>
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        <PrivateData type="blur">
-                          {empresa.taxaConversao.toFixed(1)}% conversão
-                        </PrivateData>
-                      </div>
-                    </div>
-                  </div>
-                ))
+                  ))
               )}
             </div>
           </CardContent>
@@ -215,7 +294,7 @@ export const QuickAnswersSection: React.FC<QuickAnswersSectionProps> = ({
             <CardTitle className="flex items-center gap-2">
               <Target className="h-5 w-5" />
               Ticket Médio por Empresa
-              <TooltipHelper content="Empresas do grupo ordenadas por ticket médio APENAS de oportunidades ganhas com valor. Mínimo 2 negócios fechados." />
+              <TooltipHelper content={ticketMedioTooltip} trigger="click" />
             </CardTitle>
           </CardHeader>
           <CardContent>
