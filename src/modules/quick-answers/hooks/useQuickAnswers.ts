@@ -1,4 +1,3 @@
-
 import { useMemo } from 'react';
 import { Oportunidade } from '@/types';
 import { useCalculationMemory } from '@/modules/calculation-debug/hooks/useCalculationMemory';
@@ -11,10 +10,10 @@ export const useQuickAnswers = (oportunidades: Oportunidade[]) => {
     const memory = startCalculation(calculationId, 'Respostas Rápidas', oportunidades);
 
     // Filtrar apenas empresas do grupo como destino
-    const oportunidadesGrupo = oportunidades.filter(op => 
+    const oportunidadesGrupo = oportunidades.filter(op =>
       op.empresa_destino?.tipo === 'intragrupo'
     );
-    
+
     addStep(
       calculationId,
       'filter-grupo',
@@ -27,7 +26,7 @@ export const useQuickAnswers = (oportunidades: Oportunidade[]) => {
 
     // Total de oportunidades no período
     const totalOportunidades = oportunidadesGrupo.length;
-    
+
     addStep(
       calculationId,
       'total-count',
@@ -55,46 +54,45 @@ export const useQuickAnswers = (oportunidades: Oportunidade[]) => {
       `${Object.keys(porEmpresaDestino).length} empresas de destino identificadas`
     );
 
-    // CORREÇÃO CRÍTICA: Ranking de empresas que mais enviam (APENAS PARCEIROS)
+    // NOVO: Ranking de empresas que mais indicaram (APENAS PARCEIROS, ordenação por quantidade de indicações)
     const porEmpresaOrigem = oportunidadesGrupo
-      .filter(op => op.empresa_origem?.tipo === 'parceiro') // FILTRO CRÍTICO: apenas parceiros
+      .filter(op => op.empresa_origem?.tipo === 'parceiro')
       .reduce((acc, op) => {
         const empresa = op.empresa_origem?.nome || 'Desconhecida';
         const tipo = op.empresa_origem?.tipo || 'desconhecido';
-        
+
         if (!acc[empresa]) {
-          acc[empresa] = { total: 0, ganhas: 0, valores: [], tipo };
+          acc[empresa] = { total: 0, ganhas: 0, valorTotal: 0, valores: [], tipo };
         }
-        
+
         acc[empresa].total += 1;
+        acc[empresa].valorTotal += op.valor && op.valor > 0 ? op.valor : 0;
         if (op.status === 'ganho') {
           acc[empresa].ganhas += 1;
         }
         if (op.valor && op.valor > 0) {
           acc[empresa].valores.push(op.valor);
         }
-        
+
         return acc;
-      }, {} as Record<string, { total: number; ganhas: number; valores: number[]; tipo: string }>);
+      }, {} as Record<string, { total: number; ganhas: number; valorTotal: number; valores: number[]; tipo: string }>);
 
     addStep(
       calculationId,
-      'group-by-origin-partners-only',
-      'Agrupar por empresa PARCEIRA de origem (correção crítica)',
+      'group-by-origin-partners-quantidade',
+      'Agrupar por empresa PARCEIRA de origem (quantidade, valor total, conversão)',
       { totalGrupo: oportunidadesGrupo.length, filtradoParceiros: oportunidadesGrupo.filter(op => op.empresa_origem?.tipo === 'parceiro').length },
       Object.keys(porEmpresaOrigem).length,
       'APENAS op.empresa_origem?.tipo === "parceiro"',
       `${Object.keys(porEmpresaOrigem).length} empresas PARCEIRAS processadas (excluídas empresas do grupo)`
     );
 
-    // CORREÇÃO: Ranking baseado em VALOR TOTAL GERADO (não score híbrido)
+    // Ranking: parceiros ordenados por quantidade de indicações (nova regra)
     const rankingOrigem = Object.entries(porEmpresaOrigem)
       .map(([empresa, data]) => {
         const taxaConversao = data.total > 0 ? (data.ganhas / data.total) * 100 : 0;
-        const ticketMedio = data.valores.length > 0 ? 
+        const ticketMedio = data.valores.length > 0 ?
           data.valores.reduce((sum, v) => sum + v, 0) / data.valores.length : 0;
-        const valorTotal = data.valores.reduce((sum, v) => sum + v, 0);
-        
         return {
           empresa,
           tipo: data.tipo,
@@ -102,26 +100,29 @@ export const useQuickAnswers = (oportunidades: Oportunidade[]) => {
           oportunidadesGanhas: data.ganhas,
           taxaConversao,
           ticketMedio,
-          valorTotal,
-          score: valorTotal // CORREÇÃO: Score = Valor Total Gerado
+          valorTotal: data.valorTotal,
         };
       })
       .filter(empresa => empresa.totalOportunidades >= 3) // Mínimo 3 oportunidades para ranking
-      .sort((a, b) => b.valorTotal - a.valorTotal); // Ordenar por valor total gerado
+      .sort((a, b) => b.totalOportunidades - a.totalOportunidades);
 
     addStep(
       calculationId,
-      'calculate-ranking-corrected',
-      'Calcular ranking por VALOR TOTAL GERADO (apenas parceiros)',
+      'calculate-ranking-by-quantity',
+      'Calcular ranking de parceiros por quantidade de indicações',
       Object.keys(porEmpresaOrigem).length,
-      rankingOrigem.slice(0, 3).map(r => ({ empresa: r.empresa, valorTotal: r.valorTotal, oportunidades: r.totalOportunidades })),
-      'score = valorTotal (não mais score híbrido), min 3 oportunidades',
-      `Top 3 por valor: ${rankingOrigem.slice(0, 3).map(r => `${r.empresa}(R$ ${r.valorTotal.toLocaleString()})`).join(', ')}`
+      rankingOrigem.slice(0, 3).map(r => ({
+        empresa: r.empresa,
+        total: r.totalOportunidades,
+        valorTotal: r.valorTotal
+      })),
+      'Ranking ordenado por quantidade de indicações, min 3 oportunidades',
+      `Top 3 por quantidade: ${rankingOrigem.slice(0, 3).map(r => `${r.empresa}(${r.totalOportunidades} indicações, R$ ${r.valorTotal.toLocaleString()})`).join(', ')}`
     );
 
-    // CORREÇÃO: Ticket médio por empresa de destino (TODAS oportunidades com valor > 0)
+    // Ticket médio por empresa de destino (TODAS oportunidades com valor > 0)
     const ticketMedioPorEmpresa = oportunidadesGrupo
-      .filter(op => op.valor && op.valor > 0) // TODAS oportunidades com valor, independente do status
+      .filter(op => op.valor && op.valor > 0)
       .reduce((acc, op) => {
         const empresa = op.empresa_destino?.nome || 'Desconhecida';
         if (!acc[empresa]) {
@@ -139,21 +140,21 @@ export const useQuickAnswers = (oportunidades: Oportunidade[]) => {
         totalComValor: data.total,
         valorTotal: data.valores.reduce((sum, v) => sum + v, 0)
       }))
-      .filter(emp => emp.totalComValor >= 2) // Mínimo 2 oportunidades com valor
+      .filter(emp => emp.totalComValor >= 2)
       .sort((a, b) => b.ticketMedio - a.ticketMedio);
 
     addStep(
       calculationId,
-      'ticket-medio-calculation-corrected',
-      'Calcular ticket médio (TODAS oportunidades com valor, independente do status)',
+      'ticket-medio-calculation',
+      'Calcular ticket médio (todas oportunidades com valor, independente do status)',
       { totalComValor: oportunidadesGrupo.filter(op => op.valor && op.valor > 0).length },
       ticketMedioRanking.slice(0, 3),
-      'TODAS com valor > 0 (não apenas ganhas), min 2 oportunidades',
+      'Todas com valor > 0, min 2 oportunidades',
       `Top 3 ticket médio: ${ticketMedioRanking.slice(0, 3).map(r => `${r.empresa}: R$ ${r.ticketMedio.toLocaleString()}`).join(', ')}`
     );
 
     // Oportunidades em aberto (padronizado)
-    const emAberto = oportunidadesGrupo.filter(op => 
+    const emAberto = oportunidadesGrupo.filter(op =>
       op.status === 'em_contato' || op.status === 'negociando'
     ).length;
 
