@@ -140,7 +140,7 @@ export const QuickAnswersSection: React.FC<QuickAnswersSectionProps> = ({
       </div>
 
       {/* Alert de Qualidade dos Dados */}
-      {(answers.qualidadeDados.totalGanhasComValor < 5 || answers.qualidadeDados.totalFiltradoParceiros < 10) && (
+      {(answers.qualidadeDados.totalComValor < 5 || answers.qualidadeDados.totalFiltradoParceiros < 10) && (
         <Card className="border-amber-200 bg-amber-50">
           <CardContent className="pt-4">
             <div className="flex items-center gap-2 text-amber-800">
@@ -148,7 +148,7 @@ export const QuickAnswersSection: React.FC<QuickAnswersSectionProps> = ({
               <span className="text-sm font-medium">Atenção: Poucos dados disponíveis</span>
             </div>
             <div className="text-xs text-amber-700 mt-1">
-              • Apenas {answers.qualidadeDados.totalGanhasComValor} oportunidades ganhas com valor
+              • Apenas {answers.qualidadeDados.totalComValor} oportunidades com valor
               • {answers.qualidadeDados.totalFiltradoParceiros} indicações de parceiros
               • Rankings podem não ser representativos
             </div>
