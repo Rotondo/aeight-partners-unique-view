@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Target, TrendingDown, Calculator, BarChart3, Users, TrendingUp, Clock, Zap } from "lucide-react";
@@ -30,6 +30,9 @@ import { GrupoPerformanceAnalysis } from "@/modules/grupo-performance/components
 import { QuickAnswersSection } from "@/modules/quick-answers/components/QuickAnswersSection";
 import { CycleTimeAnalysis } from "@/modules/cycle-time/components/CycleTimeAnalysis";
 
+// Sistema de debug
+import { CalculationDebugPanel } from "@/modules/calculation-debug/components/CalculationDebugPanel";
+
 export const OportunidadesDashboards: React.FC = () => {
   const { filteredOportunidades, isLoading } = useOportunidades();
   const stats = useDashboardStats(filteredOportunidades);
@@ -37,6 +40,9 @@ export const OportunidadesDashboards: React.FC = () => {
   const oportunidades = filteredOportunidades || [];
   const metasProgress = useMetasProgress(metas, oportunidades);
   const probabilidades = useMetaProbabilidade(metasProgress);
+  
+  // Estado para controlar o painel de debug
+  const [showDebugPanel, setShowDebugPanel] = useState(false);
 
   // Hook para filtros avançados
   const { 
@@ -201,6 +207,13 @@ export const OportunidadesDashboards: React.FC = () => {
           <ResultadosControl />
         </TabsContent>
       </Tabs>
+
+      {/* Painel de Debug - sempre presente mas controlado */}
+      <CalculationDebugPanel
+        oportunidades={finalFilteredOportunidades}
+        isVisible={showDebugPanel}
+        onToggle={() => setShowDebugPanel(!showDebugPanel)}
+      />
     </div>
   );
 };
