@@ -1,18 +1,18 @@
 import React, { useRef, useEffect } from "react";
 import * as d3 from "d3";
 import { QuadrantPoint } from "@/types";
-import { useDemoMask } from "@/utils/demoMask";
+import { usePrivacy } from "@/contexts/PrivacyContext";
 
 const Tooltip = ({
   tooltipData,
   position,
+  isDemoMode,
 }: {
   tooltipData: QuadrantPoint | null;
   position: { x: number; y: number };
+  isDemoMode: boolean;
 }) => {
-  const maskedData = useDemoMask(tooltipData);
-  
-  if (!maskedData) return null;
+  if (!tooltipData) return null;
   return (
     <div
       style={{
@@ -30,16 +30,18 @@ const Tooltip = ({
         boxShadow: "0 2px 8px 0 #0005",
       }}
     >
-      <strong>{maskedData.nome}</strong>
+      <strong>
+        {isDemoMode ? "" : tooltipData.nome}
+      </strong>
       <div style={{ marginTop: 4 }}>
         <div>
-          <b>Engajamento:</b> {maskedData.engajamento}
+          <b>Engajamento:</b> {tooltipData.engajamento}
         </div>
         <div>
-          <b>Tamanho:</b> {maskedData.tamanho}
+          <b>Tamanho:</b> {tooltipData.tamanho}
         </div>
         <div>
-          <b>X:</b> {maskedData.x.toFixed(2)} <b>Y:</b> {maskedData.y.toFixed(2)}
+          <b>X:</b> {tooltipData.x.toFixed(2)} <b>Y:</b> {tooltipData.y.toFixed(2)}
         </div>
       </div>
     </div>
@@ -77,11 +79,10 @@ const QuadranteChart: React.FC<QuadranteChartProps> = ({
     pos: { x: number; y: number };
   }>({ point: null, pos: { x: 0, y: 0 } });
 
-  // Aplicar máscara aos dados do gráfico
-  const maskedData = useDemoMask(data);
+  const { isDemoMode } = usePrivacy();
 
   useEffect(() => {
-    if (isLoading || !maskedData.length || !svgRef.current) return;
+    if (isLoading || !data.length || !svgRef.current) return;
 
     d3.select(svgRef.current).selectAll("*").remove();
 
@@ -190,12 +191,13 @@ const QuadranteChart: React.FC<QuadranteChartProps> = ({
       GG: "#f97316",
     };
 
-    // Ajuste labels para ficarem sempre dentro do gráfico - USANDO DADOS MASCARADOS
+    // Ajuste labels para ficarem sempre dentro do gráfico
     const labelPadding = 10;
-    const labelData = maskedData.map((d) => {
+    const labelData = data.map((d) => {
+      const nomeLabel = isDemoMode ? "" : d.nome;
       let x = xScale(d.x) + labelPadding;
       let y = yScale(d.y) - labelPadding;
-      const widthLabel = d.nome.length * 7.2 + 14;
+      const widthLabel = nomeLabel.length * 7.2 + 14;
       const heightLabel = 18;
 
       if (x + widthLabel > width) x = xScale(d.x) - widthLabel - labelPadding;
@@ -205,6 +207,7 @@ const QuadranteChart: React.FC<QuadranteChartProps> = ({
 
       return {
         ...d,
+        nomeLabel,
         labelX: x,
         labelY: y,
         width: widthLabel,
@@ -231,7 +234,6 @@ const QuadranteChart: React.FC<QuadranteChartProps> = ({
 
     const hasSelection = !!selectedId;
 
-    // Labels usando dados mascarados
     chart
       .selectAll(".point-label")
       .data(labelData)
@@ -255,15 +257,14 @@ const QuadranteChart: React.FC<QuadranteChartProps> = ({
       .attr("opacity", (d) =>
         hasSelection && d.id !== selectedId ? 0.6 : 1
       )
-      .text((d, i) => (!overlapping.has(i) ? d.nome : ""))
+      .text((d, i) => (!overlapping.has(i) ? d.nomeLabel : ""))
       .style("user-select", "none");
 
     const pointsGroup = chart.append("g").attr("class", "points-group");
 
-    // Pontos usando dados mascarados
     pointsGroup
       .selectAll("circle")
-      .data(maskedData)
+      .data(data)
       .enter()
       .append("circle")
       .attr("cx", (d) => xScale(d.x))
@@ -291,13 +292,13 @@ const QuadranteChart: React.FC<QuadranteChartProps> = ({
       )
       .attr("cursor", onPointClick ? "pointer" : "default")
       .on("mouseover", function (event, d) {
-        const i = maskedData.findIndex((p) => p.id === d.id);
+        const i = data.findIndex((p) => p.id === d.id);
         setTooltip({
           point: d,
           pos: { x: event.clientX, y: event.clientY },
         });
 
-        if (overlapping.has(i)) {
+        if (overlapping.has(i) && !isDemoMode) {
           d3.select(hoverLayerRef.current).selectAll("*").remove();
           d3.select(hoverLayerRef.current)
             .append("line")
@@ -315,7 +316,7 @@ const QuadranteChart: React.FC<QuadranteChartProps> = ({
             .attr("fontSize", 13)
             .attr("fill", "#0f172a")
             .attr("fontWeight", 600)
-            .text(d.nome)
+            .text(isDemoMode ? "" : d.nome)
             .style("user-select", "none")
             .attr("pointer-events", "none");
         }
@@ -348,7 +349,7 @@ const QuadranteChart: React.FC<QuadranteChartProps> = ({
       hoverLayer = chart.append("g").attr("class", "hover-layer");
     }
     hoverLayerRef.current = hoverLayer.node();
-  }, [maskedData, isLoading, onPointClick, selectedId]);
+  }, [data, isLoading, onPointClick, selectedId, isDemoMode]);
 
   return (
     <div style={{ position: "relative", width: "100%", height: 420 }}>
@@ -362,7 +363,7 @@ const QuadranteChart: React.FC<QuadranteChartProps> = ({
           borderRadius: 8,
         }}
       />
-      <Tooltip tooltipData={tooltip.point} position={tooltip.pos} />
+      <Tooltip tooltipData={tooltip.point} position={tooltip.pos} isDemoMode={isDemoMode} />
     </div>
   );
 };
