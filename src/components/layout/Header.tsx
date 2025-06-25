@@ -4,7 +4,6 @@ import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { DemoModeToggle } from '@/components/privacy/DemoModeToggle';
-import { DemoModeIndicator } from '@/components/privacy/DemoModeIndicator';
 import { LogOut, User } from 'lucide-react';
 
 export const Header: React.FC = () => {
@@ -14,8 +13,6 @@ export const Header: React.FC = () => {
 
   return (
     <header className="bg-white border-b border-gray-200 px-6 py-4">
-      <DemoModeIndicator />
-      
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <h1 className="text-xl font-semibold text-gray-900">

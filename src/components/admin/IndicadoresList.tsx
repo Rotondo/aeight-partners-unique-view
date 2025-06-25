@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
@@ -6,6 +7,8 @@ import { Empresa, IndicadoresParceiro, TamanhoEmpresa, TipoEmpresa } from "@/typ
 import { useToast } from "@/hooks/use-toast";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { PrivateData } from "@/components/privacy/PrivateData";
+import { useDemoMask } from "@/utils/demoMask";
 
 interface IndicadorComEmpresa extends IndicadoresParceiro {
   empresa?: {
@@ -18,6 +21,10 @@ export const IndicadoresList: React.FC = () => {
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+
+  // Aplicar máscara aos dados
+  const maskedIndicadores = useDemoMask(indicadores);
+  const maskedEmpresas = useDemoMask(empresas);
 
   useEffect(() => {
     fetchIndicadores();
@@ -117,17 +124,53 @@ export const IndicadoresList: React.FC = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {indicadores.map((indicador) => (
+            {maskedIndicadores.map((indicador) => (
               <TableRow key={indicador.id}>
-                <TableCell>{indicador.empresa?.nome}</TableCell>
-                <TableCell>{indicador.potencial_leads}</TableCell>
-                <TableCell>{indicador.base_clientes}</TableCell>
-                <TableCell>{indicador.engajamento}</TableCell>
-                <TableCell>{indicador.alinhamento}</TableCell>
-                <TableCell>{indicador.potencial_investimento}</TableCell>
-                <TableCell>{getTamanhoDisplay(indicador.tamanho)}</TableCell>
-                <TableCell>{indicador.score_x}</TableCell>
-                <TableCell>{indicador.score_y}</TableCell>
+                <TableCell>
+                  <PrivateData type="company">
+                    {indicador.empresa?.nome}
+                  </PrivateData>
+                </TableCell>
+                <TableCell>
+                  <PrivateData type="value">
+                    {indicador.potencial_leads}
+                  </PrivateData>
+                </TableCell>
+                <TableCell>
+                  <PrivateData type="value">
+                    {indicador.base_clientes}
+                  </PrivateData>
+                </TableCell>
+                <TableCell>
+                  <PrivateData type="value">
+                    {indicador.engajamento}
+                  </PrivateData>
+                </TableCell>
+                <TableCell>
+                  <PrivateData type="value">
+                    {indicador.alinhamento}
+                  </PrivateData>
+                </TableCell>
+                <TableCell>
+                  <PrivateData type="value">
+                    {indicador.potencial_investimento}
+                  </PrivateData>
+                </TableCell>
+                <TableCell>
+                  <PrivateData type="generic">
+                    {getTamanhoDisplay(indicador.tamanho)}
+                  </PrivateData>
+                </TableCell>
+                <TableCell>
+                  <PrivateData type="value">
+                    {indicador.score_x}
+                  </PrivateData>
+                </TableCell>
+                <TableCell>
+                  <PrivateData type="value">
+                    {indicador.score_y}
+                  </PrivateData>
+                </TableCell>
                 <TableCell>{formatDataAvaliacao(indicador.data_avaliacao)}</TableCell>
               </TableRow>
             ))}

@@ -1,7 +1,7 @@
-// (Mantém igual ao original, sem alteração necessária para o bug reportado)
 import React, { useRef, useEffect } from "react";
 import * as d3 from "d3";
 import { QuadrantPoint } from "@/types";
+import { useDemoMask } from "@/utils/demoMask";
 
 const Tooltip = ({
   tooltipData,
@@ -10,7 +10,9 @@ const Tooltip = ({
   tooltipData: QuadrantPoint | null;
   position: { x: number; y: number };
 }) => {
-  if (!tooltipData) return null;
+  const maskedData = useDemoMask(tooltipData);
+  
+  if (!maskedData) return null;
   return (
     <div
       style={{
@@ -28,16 +30,16 @@ const Tooltip = ({
         boxShadow: "0 2px 8px 0 #0005",
       }}
     >
-      <strong>{tooltipData.nome}</strong>
+      <strong>{maskedData.nome}</strong>
       <div style={{ marginTop: 4 }}>
         <div>
-          <b>Engajamento:</b> {tooltipData.engajamento}
+          <b>Engajamento:</b> {maskedData.engajamento}
         </div>
         <div>
-          <b>Tamanho:</b> {tooltipData.tamanho}
+          <b>Tamanho:</b> {maskedData.tamanho}
         </div>
         <div>
-          <b>X:</b> {tooltipData.x.toFixed(2)} <b>Y:</b> {tooltipData.y.toFixed(2)}
+          <b>X:</b> {maskedData.x.toFixed(2)} <b>Y:</b> {maskedData.y.toFixed(2)}
         </div>
       </div>
     </div>
@@ -75,8 +77,11 @@ const QuadranteChart: React.FC<QuadranteChartProps> = ({
     pos: { x: number; y: number };
   }>({ point: null, pos: { x: 0, y: 0 } });
 
+  // Aplicar máscara aos dados do gráfico
+  const maskedData = useDemoMask(data);
+
   useEffect(() => {
-    if (isLoading || !data.length || !svgRef.current) return;
+    if (isLoading || !maskedData.length || !svgRef.current) return;
 
     d3.select(svgRef.current).selectAll("*").remove();
 
@@ -185,9 +190,9 @@ const QuadranteChart: React.FC<QuadranteChartProps> = ({
       GG: "#f97316",
     };
 
-    // Ajuste labels para ficarem sempre dentro do gráfico
+    // Ajuste labels para ficarem sempre dentro do gráfico - USANDO DADOS MASCARADOS
     const labelPadding = 10;
-    const labelData = data.map((d) => {
+    const labelData = maskedData.map((d) => {
       let x = xScale(d.x) + labelPadding;
       let y = yScale(d.y) - labelPadding;
       const widthLabel = d.nome.length * 7.2 + 14;
@@ -226,6 +231,7 @@ const QuadranteChart: React.FC<QuadranteChartProps> = ({
 
     const hasSelection = !!selectedId;
 
+    // Labels usando dados mascarados
     chart
       .selectAll(".point-label")
       .data(labelData)
@@ -254,9 +260,10 @@ const QuadranteChart: React.FC<QuadranteChartProps> = ({
 
     const pointsGroup = chart.append("g").attr("class", "points-group");
 
+    // Pontos usando dados mascarados
     pointsGroup
       .selectAll("circle")
-      .data(data)
+      .data(maskedData)
       .enter()
       .append("circle")
       .attr("cx", (d) => xScale(d.x))
@@ -284,7 +291,7 @@ const QuadranteChart: React.FC<QuadranteChartProps> = ({
       )
       .attr("cursor", onPointClick ? "pointer" : "default")
       .on("mouseover", function (event, d) {
-        const i = data.findIndex((p) => p.id === d.id);
+        const i = maskedData.findIndex((p) => p.id === d.id);
         setTooltip({
           point: d,
           pos: { x: event.clientX, y: event.clientY },
@@ -341,7 +348,7 @@ const QuadranteChart: React.FC<QuadranteChartProps> = ({
       hoverLayer = chart.append("g").attr("class", "hover-layer");
     }
     hoverLayerRef.current = hoverLayer.node();
-  }, [data, isLoading, onPointClick, selectedId]);
+  }, [maskedData, isLoading, onPointClick, selectedId]);
 
   return (
     <div style={{ position: "relative", width: "100%", height: 420 }}>

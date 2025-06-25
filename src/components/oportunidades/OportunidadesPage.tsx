@@ -1,9 +1,11 @@
+
 import React, { useState } from "react";
 import { OportunidadesProvider } from "@/components/oportunidades/OportunidadesContext";
 import { OportunidadesList } from "@/components/oportunidades/OportunidadesList";
 import { OportunidadesFilter } from "@/components/oportunidades/OportunidadesFilter";
 import { OportunidadesForm } from "@/components/oportunidades/OportunidadesForm";
 import { OportunidadesStats } from "@/components/oportunidades/OportunidadesStats";
+import { DemoModeIndicator } from "@/components/privacy/DemoModeIndicator";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -43,6 +45,8 @@ export const OportunidadesPage: React.FC = () => {
   return (
     <OportunidadesProvider>
       <div className="space-y-4 md:space-y-6">
+        <DemoModeIndicator />
+        
         {/* Header responsivo */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 px-2 md:px-0">
           <h1 className="text-xl md:text-2xl font-bold">Gestão de Oportunidades</h1>
