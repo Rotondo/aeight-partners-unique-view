@@ -1,4 +1,3 @@
-
 import React from "react"
 import {
   Sidebar,
@@ -157,7 +156,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarFooter>
         <div className="p-4">
           <p className="text-xs text-gray-500">
-            &copy; {new Date().getFullYear()} A&eight Partners
+            Desenvolvido por Thiago Rotondo
           </p>
         </div>
       </SidebarFooter>
