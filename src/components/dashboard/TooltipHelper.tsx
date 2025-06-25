@@ -9,15 +9,17 @@ import {
 } from '@/components/ui/tooltip';
 
 interface TooltipHelperProps {
-  content: string;
+  content: React.ReactNode;
   side?: 'top' | 'bottom' | 'left' | 'right';
   className?: string;
+  trigger?: 'hover' | 'click';
 }
 
 export const TooltipHelper: React.FC<TooltipHelperProps> = ({ 
   content, 
   side = 'top',
-  className = "h-3 w-3 text-gray-400 hover:text-gray-600" 
+  className = "h-3 w-3 text-gray-400 hover:text-gray-600",
+  trigger = 'hover'
 }) => {
   return (
     <TooltipProvider>
@@ -26,7 +28,11 @@ export const TooltipHelper: React.FC<TooltipHelperProps> = ({
           <HelpCircle className={className} />
         </TooltipTrigger>
         <TooltipContent side={side} className="max-w-xs">
-          <p className="text-xs">{content}</p>
+          {typeof content === 'string' ? (
+            <p className="text-xs">{content}</p>
+          ) : (
+            <div className="text-xs">{content}</div>
+          )}
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
