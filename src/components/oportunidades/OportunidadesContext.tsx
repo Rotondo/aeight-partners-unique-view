@@ -4,6 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { validateUUID, sanitizeString } from "@/utils/inputValidation";
+import { useDemoMask } from "@/utils/demoMask"; // <-- Importação do hook de máscara
 
 interface OportunidadesContextType {
   oportunidades: Oportunidade[];
@@ -35,6 +36,10 @@ export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ child
   const [filterParams, setFilterParams] = useState<OportunidadesFilterParams>({});
   const { toast } = useToast();
   const { user } = useAuth();
+
+  // NOVO: Aplica a máscara do modo Demo nos dados expostos para os consumidores do contexto
+  const oportunidadesMasked = useDemoMask(oportunidades);
+  const filteredOportunidadesMasked = useDemoMask(filteredOportunidades);
 
   const fetchOportunidades = async () => {
     // Se não há usuário autenticado, apenas limpa os dados
@@ -432,11 +437,12 @@ export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ child
 
   useEffect(() => {
     fetchOportunidades();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   const value = {
-    oportunidades,
-    filteredOportunidades,
+    oportunidades: oportunidadesMasked,
+    filteredOportunidades: filteredOportunidadesMasked,
     isLoading,
     error,
     filterParams,
