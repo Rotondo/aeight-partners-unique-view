@@ -32,7 +32,7 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
+  Tooltip as RechartsTooltip,
   Legend,
   ResponsiveContainer,
   Radar,
@@ -43,6 +43,7 @@ import {
 } from "recharts";
 import { useToast } from "@/hooks/use-toast";
 import { Edit, Check, X as Cancel } from "lucide-react";
+import { usePrivacy } from "@/contexts/PrivacyContext";
 
 interface IndicadoresParceiroWithEmpresa extends IndicadoresParceiro {
   empresa?: {
@@ -71,6 +72,7 @@ const IndicadoresPage: React.FC = () => {
   const [sortColumn, setSortColumn] = useState<string>("empresa");
   const [sortAsc, setSortAsc] = useState<boolean>(true);
   const { toast } = useToast();
+  const { isDemoMode } = usePrivacy();
 
   // Linha em modo edição (id do indicador)
   const [editRowId, setEditRowId] = useState<string | null>(null);
@@ -199,7 +201,7 @@ const IndicadoresPage: React.FC = () => {
       "Data Avaliação",
     ];
     const rows = filteredIndicadores.map((i) => [
-      i.empresa?.nome || "-",
+      isDemoMode ? "" : i.empresa?.nome || "-",
       i.potencial_leads,
       i.base_clientes || "-",
       i.engajamento,
@@ -265,12 +267,18 @@ const IndicadoresPage: React.FC = () => {
     "tamanho",
   ];
 
-  // Gráficos (mantém igual)
+  // Função utilitária para mascarar nomes no modo demo
+  function maskName(nome: string | undefined) {
+    if (!nome) return "-";
+    return isDemoMode ? "" : nome;
+  }
+
+  // Gráficos (com nomes mascarados no modo demo)
   const chartQuali = filteredIndicadores
     .sort((a, b) => b.potencial_leads - a.potencial_leads)
     .slice(0, 10)
     .map((ind) => ({
-      nome: ind.empresa?.nome || "Parceiro",
+      nome: maskName(ind.empresa?.nome),
       Potencial: ind.potencial_leads,
       Engajamento: ind.engajamento,
       Alinhamento: ind.alinhamento,
@@ -278,7 +286,7 @@ const IndicadoresPage: React.FC = () => {
     }));
 
   const chartClientes = filteredIndicadores.map((ind) => ({
-    nome: ind.empresa?.nome || "Parceiro",
+    nome: maskName(ind.empresa?.nome),
     "Base de Clientes": ind.base_clientes || 0,
   }));
 
@@ -296,7 +304,7 @@ const IndicadoresPage: React.FC = () => {
   const maxShare = arredondaParaCima(maxShareValue);
 
   const chartShare = filteredIndicadores.map((ind) => ({
-    nome: ind.empresa?.nome || "Parceiro",
+    nome: maskName(ind.empresa?.nome),
     "Share of Wallet (%)": ind.share_of_wallet ? Number(ind.share_of_wallet.toFixed(2)) : 0,
   }));
 
@@ -358,6 +366,24 @@ const IndicadoresPage: React.FC = () => {
     return String(value);
   }
 
+  // Tooltip customizado para mascarar nomes se necessário
+  const CustomTooltip = (props: any) => {
+    if (!props.active || !props.payload || !props.payload.length) return null;
+    const name = props.payload[0].payload.nome;
+    return (
+      <div className="p-2 bg-white border rounded shadow text-xs">
+        {isDemoMode ? "" : name}
+        {Object.entries(props.payload[0].payload)
+          .filter(([k]) => k !== "nome")
+          .map(([k, v]) => (
+            <div key={k}>
+              <b>{k}:</b> {v}
+            </div>
+          ))}
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
       <DemoModeIndicator />
@@ -384,7 +410,7 @@ const IndicadoresPage: React.FC = () => {
               <SelectItem value="all">Todas as empresas</SelectItem>
               {empresas.map((empresa) => (
                 <SelectItem key={empresa.id} value={empresa.id}>
-                  {empresa.nome}
+                  {maskName(empresa.nome)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -416,7 +442,7 @@ const IndicadoresPage: React.FC = () => {
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="nome" angle={-45} textAnchor="end" height={80} />
                       <YAxis domain={[0, 5]} />
-                      <Tooltip />
+                      <RechartsTooltip content={<CustomTooltip />} />
                       <Legend />
                       <Bar dataKey="Potencial" fill="#8884d8" />
                       <Bar dataKey="Engajamento" fill="#82ca9d" />
@@ -439,7 +465,7 @@ const IndicadoresPage: React.FC = () => {
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="nome" angle={-45} textAnchor="end" height={80} />
                       <YAxis />
-                      <Tooltip />
+                      <RechartsTooltip content={<CustomTooltip />} />
                       <Legend />
                       <Bar dataKey="Base de Clientes" fill="#0088fe" />
                     </BarChart>
@@ -464,13 +490,13 @@ const IndicadoresPage: React.FC = () => {
                         <PolarAngleAxis dataKey="indicador" />
                         <PolarRadiusAxis domain={[0, 5]} />
                         <Radar
-                          name={filteredIndicadores[0].empresa?.nome}
+                          name={isDemoMode ? "" : filteredIndicadores[0].empresa?.nome}
                           dataKey="valor"
                           stroke="#8884d8"
                           fill="#8884d8"
                           fillOpacity={0.5}
                         />
-                        <Tooltip />
+                        <RechartsTooltip />
                       </RadarChart>
                     </ResponsiveContainer>
                   </CardContent>
@@ -493,7 +519,7 @@ const IndicadoresPage: React.FC = () => {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="nome" angle={-45} textAnchor="end" height={80} />
                     <YAxis domain={[0, maxShare]} tickFormatter={(v) => `${v}%`} />
-                    <Tooltip />
+                    <RechartsTooltip content={<CustomTooltip />} />
                     <Legend />
                     <Bar dataKey="Share of Wallet (%)" fill="#a020f0" />
                   </BarChart>
@@ -580,7 +606,7 @@ const IndicadoresPage: React.FC = () => {
                   ) : (
                     filteredIndicadores.map((indicador) => (
                       <TableRow key={indicador.id}>
-                        <TableCell>{indicador.empresa?.nome || "-"}</TableCell>
+                        <TableCell>{maskName(indicador.empresa?.nome)}</TableCell>
                         {/* Campos editáveis */}
                         {editableFields.map((field) => (
                           <TableCell key={field}>
