@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { DemoModeIndicator } from "@/components/privacy/DemoModeIndicator";
 import { supabase } from "@/lib/supabase";
@@ -365,7 +366,9 @@ const IndicadoresPage: React.FC = () => {
         return "[objeto]";
       }
     }
-    return String(value) as React.ReactNode;
+    // Explicitly convert to string and ensure it's a ReactNode
+    const stringValue = String(value);
+    return stringValue;
   }
 
   // Tooltip customizado para mascarar nomes se necessário
@@ -593,7 +596,7 @@ const IndicadoresPage: React.FC = () => {
                         }
                       }}>
                       Share of Wallet (%) {renderSortIcon("share_of_wallet")}
-                    </TableHead>
+                    </TableHead>  
                     <TableHead>Data Avaliação</TableHead>
                     <TableHead>Ações</TableHead>
                   </TableRow>
