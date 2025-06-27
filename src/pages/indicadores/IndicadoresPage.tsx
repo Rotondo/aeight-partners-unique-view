@@ -355,7 +355,7 @@ const IndicadoresPage: React.FC = () => {
       // Se for um objeto simples, exibir JSON formatado
       try {
         const jsonString = JSON.stringify(value, null, 1);
-        if (jsonString === undefined) return "[objeto]";
+        if (jsonString === undefined || jsonString === null) return "[objeto]";
         return (
           <pre style={{ fontSize: 11, margin: 0, background: "rgba(0,0,0,0.03)", padding: 2 }}>
             {jsonString}
