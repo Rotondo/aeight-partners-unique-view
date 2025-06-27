@@ -113,7 +113,7 @@ const QualificacaoPage: React.FC = () => {
     try {
       const oportunidadeData = {
         nome: `Apresentação - ${cliente.nome}`,
-        descricao: cliente.observacoes || 'Oportunidade gerada via WishLift',
+        descricao: cliente.observacoes || 'Oportunidade gerada via Wishlist',
         valor_estimado: 0,
         probabilidade: cliente.scoreQualificacao,
         status: 'prospeccao',

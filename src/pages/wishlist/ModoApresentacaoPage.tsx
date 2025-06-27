@@ -3,10 +3,14 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useWishlist } from "@/contexts/WishlistContext";
-import { Monitor, Download, Share2, Users, Search, Plus, ChevronLeft } from "lucide-react";
+import { Monitor, Download, Share2, Users, Search, Plus, ChevronLeft, ArrowLeftRight, Check, X, Trash2 } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { toast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 
 // Utilizado para seleção individual
@@ -15,6 +19,25 @@ interface ClienteSelecionado {
   nome: string;
   parceiro: string;
   observacoes?: string;
+}
+
+// Interfaces para o sistema de negociação (originais do TrocaMutuaPage)
+interface ClienteInteresse {
+  id: string;
+  nome: string;
+  parceiro: string;
+  interesse: 'alto' | 'medio' | 'baixo' | null;
+  observacoes?: string;
+}
+
+interface NegociacaoAtiva {
+  id: string;
+  parceiro: string;
+  minhosInteresses: ClienteInteresse[];
+  interessesParceiro: ClienteInteresse[];
+  status: 'pendente' | 'aprovado' | 'rejeitado';
+  dataInicio: Date;
+  dataUltimaAtualizacao: Date;
 }
 
 const ModoApresentacaoPage: React.FC = () => {
@@ -35,6 +58,14 @@ const ModoApresentacaoPage: React.FC = () => {
   const [clientesSelecionados, setClientesSelecionados] = useState<ClienteSelecionado[]>([]);
   // Modo visual de apresentação (borda e badge)
   const [modoApresentacao, setModoApresentacao] = useState(false);
+
+  // Estados para o sistema de negociação (originais do TrocaMutuaPage)
+  const [negociacoesAtivas, setNegociacoesAtivas] = useState<NegociacaoAtiva[]>([]);
+  const [showNovoClienteDialog, setShowNovoClienteDialog] = useState(false);
+  const [novoClienteParceiro, setNovoClienteParceiro] = useState("");
+  
+  // Estado para alternar entre os modos
+  const [modoAtivo, setModoAtivo] = useState<'apresentacao' | 'negociacao'>('apresentacao');
 
   // Listas de empresas intragrupo e parceiras externas
   const empresasIntragrupo = Array.from(
@@ -145,12 +176,127 @@ const ModoApresentacaoPage: React.FC = () => {
     setClientesSelecionados([]);
   };
 
+  // Funções do sistema de negociação (originais do TrocaMutuaPage)
+  const empresas = Array.from(
+    new Set(empresasClientes.map(ec => ec.empresa_proprietaria?.nome).filter(Boolean))
+  );
+
+  const iniciarNovaNegociacao = () => {
+    const novaNeg: NegociacaoAtiva = {
+      id: Date.now().toString(),
+      parceiro: "Parceiro Selecionado",
+      minhosInteresses: [],
+      interessesParceiro: [],
+      status: 'pendente',
+      dataInicio: new Date(),
+      dataUltimaAtualizacao: new Date()
+    };
+    setNegociacoesAtivas([...negociacoesAtivas, novaNeg]);
+  };
+
+  const adicionarClienteInteresse = (negociacaoId: string, tipo: 'meus' | 'parceiro') => {
+    if (!novoClienteNome.trim()) return;
+
+    const novoCliente: ClienteInteresse = {
+      id: Date.now().toString(),
+      nome: novoClienteNome,
+      parceiro: novoClienteParceiro,
+      interesse: null
+    };
+
+    setNegociacoesAtivas(prev => prev.map(neg => {
+      if (neg.id === negociacaoId) {
+        return {
+          ...neg,
+          [tipo === 'meus' ? 'minhosInteresses' : 'interessesParceiro']: [
+            ...neg[tipo === 'meus' ? 'minhosInteresses' : 'interessesParceiro'],
+            novoCliente
+          ],
+          dataUltimaAtualizacao: new Date()
+        };
+      }
+      return neg;
+    }));
+
+    setNovoClienteNome("");
+    setNovoClienteParceiro("");
+    setShowNovoClienteDialog(false);
+  };
+
+  const atualizarInteresse = (negociacaoId: string, clienteId: string, tipo: 'meus' | 'parceiro', interesse: 'alto' | 'medio' | 'baixo') => {
+    setNegociacoesAtivas(prev => prev.map(neg => {
+      if (neg.id === negociacaoId) {
+        const campo = tipo === 'meus' ? 'minhosInteresses' : 'interessesParceiro';
+        return {
+          ...neg,
+          [campo]: neg[campo].map(cliente => 
+            cliente.id === clienteId ? { ...cliente, interesse } : cliente
+          ),
+          dataUltimaAtualizacao: new Date()
+        };
+      }
+      return neg;
+    }));
+  };
+
+  const removerCliente = (negociacaoId: string, clienteId: string, tipo: 'meus' | 'parceiro') => {
+    setNegociacoesAtivas(prev => prev.map(neg => {
+      if (neg.id === negociacaoId) {
+        const campo = tipo === 'meus' ? 'minhosInteresses' : 'interessesParceiro';
+        return {
+          ...neg,
+          [campo]: neg[campo].filter(cliente => cliente.id !== clienteId),
+          dataUltimaAtualizacao: new Date()
+        };
+      }
+      return neg;
+    }));
+  };
+
+  const finalizarNegociacao = (negociacaoId: string, status: 'aprovado' | 'rejeitado') => {
+    setNegociacoesAtivas(prev => prev.map(neg => {
+      if (neg.id === negociacaoId) {
+        return {
+          ...neg,
+          status,
+          dataUltimaAtualizacao: new Date()
+        };
+      }
+      return neg;
+    }));
+
+    toast({
+      title: status === 'aprovado' ? "Negociação Aprovada" : "Negociação Rejeitada",
+      description: status === 'aprovado' 
+        ? "Os clientes selecionados seguem para a fase de qualificação" 
+        : "Esta negociação foi encerrada",
+    });
+  };
+
+  const getInteresseColor = (interesse: string | null) => {
+    switch (interesse) {
+      case 'alto': return 'bg-red-100 text-red-800';
+      case 'medio': return 'bg-yellow-100 text-yellow-800';
+      case 'baixo': return 'bg-green-100 text-green-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'pendente': return 'bg-yellow-100 text-yellow-800';
+      case 'aprovado': return 'bg-green-100 text-green-800';
+      case 'rejeitado': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">Carregando modo apresentação...</p>
+          <p className="mt-4 text-muted-foreground">Carregando dados...</p>
         </div>
       </div>
     );
@@ -162,8 +308,11 @@ const ModoApresentacaoPage: React.FC = () => {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight mb-1">
-            Modo Apresentação - Wishlist
+            Troca & Apresentação - Wishlist
           </h1>
+          <p className="text-muted-foreground text-sm">
+            Gerencie apresentações, negociações e trocas de interesses com parceiros
+          </p>
         </div>
         <div className="flex gap-2">
           <Button
@@ -180,165 +329,113 @@ const ModoApresentacaoPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Filtros globais */}
-      <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar cliente ou parceiro em todas as listas..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-8"
-          />
-        </div>
-
-        <Badge variant="secondary" className="px-3 py-1">
-          {clientesSelecionados.length} selecionados
-        </Badge>
-        {clientesSelecionados.length > 0 && (
-          <Button variant="outline" size="sm" onClick={limparSelecoes}>
-            Limpar
+      {/* Seletor de Modo */}
+      <div className="flex justify-center">
+        <div className="inline-flex p-1 bg-muted rounded-lg">
+          <Button
+            variant={modoAtivo === 'apresentacao' ? "default" : "ghost"}
+            onClick={() => setModoAtivo('apresentacao')}
+            size="sm"
+          >
+            <Monitor className="mr-2 h-4 w-4" />
+            Apresentação
           </Button>
-        )}
+          <Button
+            variant={modoAtivo === 'negociacao' ? "default" : "ghost"}
+            onClick={() => setModoAtivo('negociacao')}
+            size="sm"
+          >
+            <ArrowLeftRight className="mr-2 h-4 w-4" />
+            Negociação
+          </Button>
+        </div>
       </div>
 
-      {/* Seletor de parceiros */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Selecione os parceiros para apresentação</CardTitle>
-          <CardDescription>
-            Escolha um ou mais parceiros intragrupo e um parceiro externo para visualizar e comparar as carteiras.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-wrap gap-6">
-          <div>
-            <div className="mb-2 font-medium">Parceiros Intragrupo</div>
-            <div className="flex flex-wrap gap-2">
-              {empresasIntragrupo.map((parc) => (
-                <Button
-                  key={parc.id}
-                  variant={parceirosSelecionados.includes(parc.id) ? "default" : "outline"}
-                  onClick={() => handleToggleParceiroIntragrupo(parc.id)}
-                  size="sm"
-                >
-                  {parc.nome}
-                </Button>
-              ))}
+      {/* Conteúdo baseado no modo selecionado */}
+      {modoAtivo === 'apresentacao' && (
+        <>
+          {/* Filtros globais */}
+          <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar cliente ou parceiro em todas as listas..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-8"
+              />
             </div>
-          </div>
-          <div>
-            <div className="mb-2 font-medium">Parceiro Externo</div>
-            <select
-              value={parceiroExternoSelecionado}
-              onChange={(e) => setParceiroExternoSelecionado(e.target.value)}
-              className="px-3 py-2 border border-input bg-background rounded-md text-sm"
-            >
-              <option value="">Selecione o parceiro</option>
-              {empresasParceiras.map((parc) => (
-                <option key={parc.id} value={parc.id}>
-                  {parc.nome}
-                </option>
-              ))}
-            </select>
-          </div>
-        </CardContent>
-      </Card>
 
-      {/* Tabelas de clientes e painel seleção */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Lista de Clientes Intragrupo */}
-        <div className="lg:col-span-1">
-          <Card className={modoApresentacao ? "border-2 border-primary" : ""}>
+            <Badge variant="secondary" className="px-3 py-1">
+              {clientesSelecionados.length} selecionados
+            </Badge>
+            {clientesSelecionados.length > 0 && (
+              <Button variant="outline" size="sm" onClick={limparSelecoes}>
+                Limpar
+              </Button>
+            )}
+          </div>
+
+          {/* Seletor de parceiros */}
+          <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                Clientes Intragrupo
-                {modoApresentacao && <Badge variant="secondary">Modo Apresentação</Badge>}
-              </CardTitle>
+              <CardTitle>Selecione os parceiros para apresentação</CardTitle>
               <CardDescription>
-                Clientes das empresas intragrupo selecionadas
+                Escolha um ou mais parceiros intragrupo e um parceiro externo para visualizar e comparar as carteiras.
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-2 max-h-96 overflow-y-auto">
-                {clientesIntragrupo.map((cliente) => {
-                  const isSelected = clientesSelecionados.some(c => c.id === cliente.empresa_cliente_id);
-                  return (
-                    <div
-                      key={cliente.id}
-                      className={`flex items-center space-x-3 p-3 rounded-lg border transition-colors cursor-pointer ${
-                        isSelected ? 'bg-primary/10 border-primary' : 'hover:bg-muted/50'
-                      }`}
-                      onClick={() => toggleClienteSelecao(cliente)}
+            <CardContent className="flex flex-wrap gap-6">
+              <div>
+                <div className="mb-2 font-medium">Parceiros Intragrupo</div>
+                <div className="flex flex-wrap gap-2">
+                  {empresasIntragrupo.map((parc) => (
+                    <Button
+                      key={parc.id}
+                      variant={parceirosSelecionados.includes(parc.id) ? "default" : "outline"}
+                      onClick={() => handleToggleParceiroIntragrupo(parc.id)}
+                      size="sm"
                     >
-                      <Checkbox
-                        checked={isSelected}
-                        onChange={() => {}}
-                      />
-                      <div className="flex-1">
-                        <div className="font-medium">{cliente.empresa_cliente?.nome}</div>
-                        <div className="text-sm text-muted-foreground">
-                          Proprietário: {cliente.empresa_proprietaria?.nome}
-                        </div>
-                      </div>
-                      <Badge variant="outline" className="text-xs">
-                        {cliente.empresa_proprietaria?.tipo || 'Indefinido'}
-                      </Badge>
-                    </div>
-                  );
-                })}
-
-                {clientesIntragrupo.length === 0 && (
-                  <div className="text-center py-8">
-                    <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                    <p className="text-muted-foreground">
-                      Nenhum cliente encontrado com os filtros aplicados.
-                    </p>
-                  </div>
-                )}
+                      {parc.nome}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <div className="mb-2 font-medium">Parceiro Externo</div>
+                <select
+                  value={parceiroExternoSelecionado}
+                  onChange={(e) => setParceiroExternoSelecionado(e.target.value)}
+                  className="px-3 py-2 border border-input bg-background rounded-md text-sm"
+                >
+                  <option value="">Selecione o parceiro</option>
+                  {empresasParceiras.map((parc) => (
+                    <option key={parc.id} value={parc.id}>
+                      {parc.nome}
+                    </option>
+                  ))}
+                </select>
               </div>
             </CardContent>
           </Card>
-        </div>
 
-        {/* Lista de clientes do parceiro externo */}
-        <div className="lg:col-span-1">
-          <Card className={modoApresentacao ? "border-2 border-primary" : ""}>
-            <CardHeader>
-              <CardTitle>Clientes do Parceiro Externo</CardTitle>
-              <CardDescription>
-                Adicione novos clientes em tempo real para o parceiro selecionado.
-              </CardDescription>
-              {parceiroExternoSelecionado && (
-                <div className="flex gap-2 mt-2">
-                  <Input
-                    placeholder="Adicionar novo cliente"
-                    value={novoClienteNome}
-                    onChange={(e) => setNovoClienteNome(e.target.value)}
-                    disabled={adicionandoCliente}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        handleAdicionarClienteExterno();
-                      }
-                    }}
-                  />
-                  <Button
-                    size="sm"
-                    onClick={handleAdicionarClienteExterno}
-                    disabled={!novoClienteNome.trim() || adicionandoCliente}
-                  >
-                    <Plus className="h-4 w-4 mr-1" />
-                    {adicionandoCliente ? "Adicionando..." : "Incluir"}
-                  </Button>
-                </div>
-              )}
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2 max-h-96 overflow-y-auto">
-                {parceiroExternoSelecionado ? (
-                  clientesParceiroExterno.length > 0 ? (
-                    clientesParceiroExterno.map((cliente) => {
+          {/* Tabelas de clientes e painel seleção */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Lista de Clientes Intragrupo */}
+            <div className="lg:col-span-1">
+              <Card className={modoApresentacao ? "border-2 border-primary" : ""}>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="h-5 w-5" />
+                    Clientes Intragrupo
+                    {modoApresentacao && <Badge variant="secondary">Modo Apresentação</Badge>}
+                  </CardTitle>
+                  <CardDescription>
+                    Clientes das empresas intragrupo selecionadas
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2 max-h-96 overflow-y-auto">
+                    {clientesIntragrupo.map((cliente) => {
                       const isSelected = clientesSelecionados.some(c => c.id === cliente.empresa_cliente_id);
                       return (
                         <div
@@ -348,78 +445,364 @@ const ModoApresentacaoPage: React.FC = () => {
                           }`}
                           onClick={() => toggleClienteSelecao(cliente)}
                         >
-                          <Checkbox checked={isSelected} onChange={() => {}} />
+                          <Checkbox
+                            checked={isSelected}
+                            onChange={() => {}}
+                          />
                           <div className="flex-1">
                             <div className="font-medium">{cliente.empresa_cliente?.nome}</div>
                             <div className="text-sm text-muted-foreground">
-                              Parceiro: {cliente.empresa_proprietaria?.nome}
+                              Proprietário: {cliente.empresa_proprietaria?.nome}
                             </div>
                           </div>
+                          <Badge variant="outline" className="text-xs">
+                            {cliente.empresa_proprietaria?.tipo || 'Indefinido'}
+                          </Badge>
                         </div>
                       );
-                    })
-                  ) : (
-                    <div className="text-center py-8 text-muted-foreground">
-                      Nenhum cliente registrado para este parceiro externo.
+                    })}
+
+                    {clientesIntragrupo.length === 0 && (
+                      <div className="text-center py-8">
+                        <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                        <p className="text-muted-foreground">
+                          Nenhum cliente encontrado com os filtros aplicados.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Lista de clientes do parceiro externo */}
+            <div className="lg:col-span-1">
+              <Card className={modoApresentacao ? "border-2 border-primary" : ""}>
+                <CardHeader>
+                  <CardTitle>Clientes do Parceiro Externo</CardTitle>
+                  <CardDescription>
+                    Adicione novos clientes em tempo real para o parceiro selecionado.
+                  </CardDescription>
+                  {parceiroExternoSelecionado && (
+                    <div className="flex gap-2 mt-2">
+                      <Input
+                        placeholder="Adicionar novo cliente"
+                        value={novoClienteNome}
+                        onChange={(e) => setNovoClienteNome(e.target.value)}
+                        disabled={adicionandoCliente}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            handleAdicionarClienteExterno();
+                          }
+                        }}
+                      />
+                      <Button
+                        size="sm"
+                        onClick={handleAdicionarClienteExterno}
+                        disabled={!novoClienteNome.trim() || adicionandoCliente}
+                      >
+                        <Plus className="h-4 w-4 mr-1" />
+                        {adicionandoCliente ? "Adicionando..." : "Incluir"}
+                      </Button>
                     </div>
-                  )
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    Selecione um parceiro externo para ver/registrar clientes.
+                  )}
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2 max-h-96 overflow-y-auto">
+                    {parceiroExternoSelecionado ? (
+                      clientesParceiroExterno.length > 0 ? (
+                        clientesParceiroExterno.map((cliente) => {
+                          const isSelected = clientesSelecionados.some(c => c.id === cliente.empresa_cliente_id);
+                          return (
+                            <div
+                              key={cliente.id}
+                              className={`flex items-center space-x-3 p-3 rounded-lg border transition-colors cursor-pointer ${
+                                isSelected ? 'bg-primary/10 border-primary' : 'hover:bg-muted/50'
+                              }`}
+                              onClick={() => toggleClienteSelecao(cliente)}
+                            >
+                              <Checkbox checked={isSelected} onChange={() => {}} />
+                              <div className="flex-1">
+                                <div className="font-medium">{cliente.empresa_cliente?.nome}</div>
+                                <div className="text-sm text-muted-foreground">
+                                  Parceiro: {cliente.empresa_proprietaria?.nome}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <div className="text-center py-8 text-muted-foreground">
+                          Nenhum cliente registrado para este parceiro externo.
+                        </div>
+                      )
+                    ) : (
+                      <div className="text-center py-8 text-muted-foreground">
+                        Selecione um parceiro externo para ver/registrar clientes.
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+                </CardContent>
+              </Card>
+            </div>
 
-        {/* Painel de Seleções (clientes selecionados para exportação) */}
-        <div className="lg:col-span-1">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Share2 className="h-5 w-5" />
-                Clientes Selecionados
-              </CardTitle>
-              <CardDescription>
-                Lista para compartilhar/exportar com o parceiro
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {clientesSelecionados.map((cliente) => (
-                  <div key={cliente.id} className="p-3 bg-muted/50 rounded-lg">
-                    <div className="font-medium text-sm">{cliente.nome}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {cliente.parceiro}
+            {/* Painel de Seleções (clientes selecionados para exportação) */}
+            <div className="lg:col-span-1">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Share2 className="h-5 w-5" />
+                    Clientes Selecionados
+                  </CardTitle>
+                  <CardDescription>
+                    Lista para compartilhar/exportar com o parceiro
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {clientesSelecionados.map((cliente) => (
+                      <div key={cliente.id} className="p-3 bg-muted/50 rounded-lg">
+                        <div className="font-medium text-sm">{cliente.nome}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {cliente.parceiro}
+                        </div>
+                      </div>
+                    ))}
+
+                    {clientesSelecionados.length === 0 && (
+                      <div className="text-center py-8">
+                        <p className="text-sm text-muted-foreground">
+                          Nenhum cliente selecionado ainda
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {clientesSelecionados.length > 0 && (
+                    <div className="mt-4 space-y-2">
+                      <Button onClick={exportarLista} className="w-full" size="sm">
+                        <Download className="mr-2 h-4 w-4" />
+                        Exportar Lista
+                      </Button>
+                      <Button onClick={limparSelecoes} variant="outline" className="w-full" size="sm">
+                        Limpar Seleções
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Modo Negociação */}
+      {modoAtivo === 'negociacao' && (
+        <>
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-xl font-semibold mb-2">Sistema de Negociação</h2>
+              <p className="text-muted-foreground text-sm">
+                Gerencie negociações de clientes e interesses mútuos com parceiros
+              </p>
+            </div>
+            <Button onClick={iniciarNovaNegociacao}>
+              <Plus className="mr-2 h-4 w-4" />
+              Nova Negociação
+            </Button>
+          </div>
+
+          {/* Negociações Ativas */}
+          <div className="space-y-6">
+            {negociacoesAtivas.map((negociacao) => (
+              <Card key={negociacao.id} className="border-2">
+                <CardHeader>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        <ArrowLeftRight className="h-5 w-5" />
+                        Negociação com {negociacao.parceiro}
+                      </CardTitle>
+                      <CardDescription>
+                        Iniciada em {negociacao.dataInicio.toLocaleDateString()}
+                      </CardDescription>
+                    </div>
+                    <Badge className={getStatusColor(negociacao.status)}>
+                      {negociacao.status.toUpperCase()}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Meus Interesses */}
+                    <div>
+                      <div className="flex justify-between items-center mb-4">
+                        <h3 className="font-semibold">Meus Interesses</h3>
+                        <Dialog open={showNovoClienteDialog} onOpenChange={setShowNovoClienteDialog}>
+                          <DialogTrigger asChild>
+                            <Button size="sm" variant="outline">
+                              <Plus className="h-4 w-4 mr-1" />
+                              Adicionar
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Adicionar Cliente de Interesse</DialogTitle>
+                              <DialogDescription>
+                                Adicione um cliente que você tem interesse em conhecer
+                              </DialogDescription>
+                            </DialogHeader>
+                            <div className="space-y-4">
+                              <div>
+                                <Label htmlFor="cliente-nome">Nome do Cliente</Label>
+                                <Input
+                                  id="cliente-nome"
+                                  value={novoClienteNome}
+                                  onChange={(e) => setNovoClienteNome(e.target.value)}
+                                  placeholder="Nome da empresa..."
+                                />
+                              </div>
+                              <div>
+                                <Label htmlFor="cliente-parceiro">Parceiro</Label>
+                                <select 
+                                  id="cliente-parceiro"
+                                  value={novoClienteParceiro}
+                                  onChange={(e) => setNovoClienteParceiro(e.target.value)}
+                                  className="w-full px-3 py-2 border border-input bg-background rounded-md text-sm"
+                                >
+                                  <option value="">Selecione um parceiro</option>
+                                  {empresas.map(empresa => (
+                                    <option key={empresa} value={empresa}>{empresa}</option>
+                                  ))}
+                                </select>
+                              </div>
+                              <div className="flex gap-2">
+                                <Button 
+                                  onClick={() => adicionarClienteInteresse(negociacao.id, 'meus')}
+                                  disabled={!novoClienteNome.trim()}
+                                >
+                                  Adicionar
+                                </Button>
+                                <Button variant="outline" onClick={() => setShowNovoClienteDialog(false)}>
+                                  Cancelar
+                                </Button>
+                              </div>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        {negociacao.minhosInteresses.map((cliente) => (
+                          <div key={cliente.id} className="p-3 border rounded-lg">
+                            <div className="flex justify-between items-start mb-2">
+                              <div>
+                                <div className="font-medium">{cliente.nome}</div>
+                                <div className="text-sm text-muted-foreground">{cliente.parceiro}</div>
+                              </div>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => removerCliente(negociacao.id, cliente.id, 'meus')}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                            
+                            <div className="flex gap-1">
+                              {['alto', 'medio', 'baixo'].map((nivel) => (
+                                <Button
+                                  key={nivel}
+                                  size="sm"
+                                  variant={cliente.interesse === nivel ? "default" : "outline"}
+                                  onClick={() => atualizarInteresse(negociacao.id, cliente.id, 'meus', nivel as any)}
+                                  className="text-xs"
+                                >
+                                  {nivel}
+                                </Button>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                        
+                        {negociacao.minhosInteresses.length === 0 && (
+                          <div className="text-center py-4 text-muted-foreground text-sm">
+                            Nenhum cliente adicionado ainda
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Interesses do Parceiro */}
+                    <div>
+                      <h3 className="font-semibold mb-4">Interesses do Parceiro</h3>
+                      <div className="space-y-2">
+                        {negociacao.interessesParceiro.map((cliente) => (
+                          <div key={cliente.id} className="p-3 border rounded-lg">
+                            <div className="flex justify-between items-start mb-2">
+                              <div>
+                                <div className="font-medium">{cliente.nome}</div>
+                                <div className="text-sm text-muted-foreground">Nosso cliente</div>
+                              </div>
+                              <Badge className={getInteresseColor(cliente.interesse)}>
+                                {cliente.interesse || 'Não avaliado'}
+                              </Badge>
+                            </div>
+                          </div>
+                        ))}
+                        
+                        {negociacao.interessesParceiro.length === 0 && (
+                          <div className="text-center py-4 text-muted-foreground text-sm">
+                            Aguardando interesses do parceiro
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
-                ))}
 
-                {clientesSelecionados.length === 0 && (
-                  <div className="text-center py-8">
-                    <p className="text-sm text-muted-foreground">
-                      Nenhum cliente selecionado ainda
-                    </p>
-                  </div>
-                )}
-              </div>
+                  {/* Ações */}
+                  {negociacao.status === 'pendente' && (
+                    <div className="mt-6 flex gap-2">
+                      <Button 
+                        onClick={() => finalizarNegociacao(negociacao.id, 'aprovado')}
+                        className="flex-1"
+                      >
+                        <Check className="mr-2 h-4 w-4" />
+                        Aprovar Negociação
+                      </Button>
+                      <Button 
+                        onClick={() => finalizarNegociacao(negociacao.id, 'rejeitado')}
+                        variant="outline"
+                        className="flex-1"
+                      >
+                        <X className="mr-2 h-4 w-4" />
+                        Rejeitar
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
 
-              {clientesSelecionados.length > 0 && (
-                <div className="mt-4 space-y-2">
-                  <Button onClick={exportarLista} className="w-full" size="sm">
-                    <Download className="mr-2 h-4 w-4" />
-                    Exportar Lista
+            {negociacoesAtivas.length === 0 && (
+              <Card>
+                <CardContent className="text-center py-12">
+                  <ArrowLeftRight className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                  <h3 className="text-lg font-semibold mb-2">Nenhuma negociação ativa</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Inicie uma nova negociação para trocar interesses com parceiros
+                  </p>
+                  <Button onClick={iniciarNovaNegociacao}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Iniciar Primeira Negociação
                   </Button>
-                  <Button onClick={limparSelecoes} variant="outline" className="w-full" size="sm">
-                    Limpar Seleções
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 };

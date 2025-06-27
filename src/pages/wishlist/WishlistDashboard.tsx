@@ -82,9 +82,9 @@ const WishlistDashboard: React.FC = () => {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">WishLift - Networking Inteligente</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Wishlist - Networking Inteligente</h1>
           <p className="text-muted-foreground">
-            Centralize clientes, identifique sobreposições e facilite networking estratégico
+            Sistema de gestão de networking e parcerias estratégicas
           </p>
         </div>
         <div className="flex gap-2">
@@ -164,7 +164,7 @@ const WishlistDashboard: React.FC = () => {
         </Card>
       </div>
 
-      {/* Workflow WishLift */}
+      {/* Workflow Wishlist */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card className="cursor-pointer hover:shadow-md transition-shadow" 
               onClick={() => navigate("sobrepostos")}>
@@ -205,14 +205,14 @@ const WishlistDashboard: React.FC = () => {
         </Card>
 
         <Card className="cursor-pointer hover:shadow-md transition-shadow" 
-              onClick={() => navigate("troca-mutua")}>
+              onClick={() => navigate("modo-apresentacao")}>
           <CardHeader>
             <CardTitle className="text-lg flex items-center">
               <ArrowLeftRight className="mr-2 h-5 w-5 text-green-500" />
-              3. Troca Mútua
+              3. Troca & Apresentação
             </CardTitle>
             <CardDescription>
-              Gerencie negociações e interesses mútuos
+              Gerencie apresentações, negociações e trocas de interesses
             </CardDescription>
           </CardHeader>
           <CardContent>
