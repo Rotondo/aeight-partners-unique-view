@@ -13,6 +13,10 @@ import ClienteFormModal from "@/components/wishlist/ClienteFormModal";
 import ApresentacaoModal from "@/components/wishlist/ApresentacaoModal";
 import ClientesStats from "@/components/wishlist/ClientesStats";
 import { useNavigate } from "react-router-dom";
+import { DemoModeToggle } from "@/components/privacy/DemoModeToggle";
+import { DemoModeIndicator } from "@/components/privacy/DemoModeIndicator";
+import { usePrivacy } from "@/contexts/PrivacyContext";
+import { PrivateData } from "@/components/privacy/PrivateData";
 
 type EmpresaOption = {
   id: string;
@@ -56,6 +60,9 @@ const EmpresasClientesPage: React.FC = () => {
 
   // Estado para todas as empresas do tipo cliente
   const [empresasClientesAll, setEmpresasClientesAll] = useState<EmpresaOption[]>([]);
+
+  // Demo mode context
+  const { isDemoMode } = usePrivacy();
 
   // Navegação
   const navigate = useNavigate();
@@ -242,6 +249,9 @@ const EmpresasClientesPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Demo Mode Banner */}
+      <DemoModeIndicator />
+
       {/* Botão de retorno para o dashboard da wishlist */}
       <div>
         <Button
@@ -264,15 +274,18 @@ const EmpresasClientesPage: React.FC = () => {
             Gerencie a base de clientes e veja a relevância de cada parceiro
           </p>
         </div>
-        <Button
-          onClick={() => {
-            setModalOpen(true);
-            setModalType("novo");
-          }}
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Adicionar Cliente
-        </Button>
+        <div className="flex gap-2">
+          <DemoModeToggle />
+          <Button
+            onClick={() => {
+              setModalOpen(true);
+              setModalType("novo");
+            }}
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Adicionar Cliente
+          </Button>
+        </div>
       </div>
 
       {/* Tabs Navigation */}
@@ -306,17 +319,26 @@ const EmpresasClientesPage: React.FC = () => {
         </div>
 
         <TabsContent value="clientes" className="space-y-6">
-          <ClientesStats empresasClientes={empresasClientes} />
+          {/* Estatísticas e Tabelas mascarando apenas os campos sensíveis */}
+          <ClientesStats
+            empresasClientes={empresasClientes}
+            PrivateDataComponent={PrivateData}
+            isDemoMode={isDemoMode}
+          />
 
           <ClientesVinculadosTable
             clientesVinculados={filteredClientesVinculados}
             onEditar={handleEditar}
             onSolicitarApresentacao={handleSolicitarApresentacao}
+            PrivateDataComponent={PrivateData}
+            isDemoMode={isDemoMode}
           />
 
           <ClientesNaoVinculadosTable
             clientesNaoVinculados={filteredClientesNaoVinculados}
             onVincular={handleVincularCliente}
+            PrivateDataComponent={PrivateData}
+            isDemoMode={isDemoMode}
           />
         </TabsContent>
 
@@ -334,9 +356,8 @@ const EmpresasClientesPage: React.FC = () => {
                 <ParceiroRelevanceCard
                   key={parceiro.id}
                   parceiro={parceiro}
-                  onClick={() => {
-                    console.log("Ver detalhes do parceiro:", parceiro.nome);
-                  }}
+                  PrivateDataComponent={PrivateData}
+                  isDemoMode={isDemoMode}
                 />
               ))}
 
@@ -379,6 +400,8 @@ const EmpresasClientesPage: React.FC = () => {
         setEmpresasClientesOptions={setEmpresasClientesOptions}
         empresasParceiros={empresasParceiros}
         parceirosJaVinculadosAoCliente={parceirosJaVinculadosAoCliente}
+        PrivateDataComponent={PrivateData}
+        isDemoMode={isDemoMode}
       />
 
       <ApresentacaoModal
@@ -389,6 +412,8 @@ const EmpresasClientesPage: React.FC = () => {
         setApresentacaoObs={setApresentacaoObs}
         onSubmit={handleSubmitApresentacao}
         loading={apresentacaoLoading}
+        PrivateDataComponent={PrivateData}
+        isDemoMode={isDemoMode}
       />
     </div>
   );
