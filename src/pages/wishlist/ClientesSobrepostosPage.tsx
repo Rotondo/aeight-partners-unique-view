@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useWishlist } from "@/contexts/WishlistContext";
 import { supabase } from "@/lib/supabase";
-import { Search, Users, Building2, AlertCircle, Eye } from "lucide-react";
+import { Search, Users, Building2, AlertCircle, Eye, ArrowLeft } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useNavigate } from "react-router-dom";
 import {
   Table,
   TableBody,
@@ -20,7 +21,13 @@ import {
 interface ClienteSobreposto {
   cliente_nome: string;
   cliente_id: string;
-  parceiros: {
+  parceiros_intragrupo: {
+    id: string;
+    nome: string;
+    tipo: string;
+    data_relacionamento: string;
+  }[];
+  parceiros_externos: {
     id: string;
     nome: string;
     tipo: string;
@@ -44,6 +51,7 @@ const ClientesSobrepostosPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filtroTipo, setFiltroTipo] = useState<string>("todos");
   const [loadingAnalise, setLoadingAnalise] = useState(false);
+  const navigate = useNavigate();
 
   const calcularPotencialNetworking = (totalParceiros: number): 'alto' | 'medio' | 'baixo' => {
     if (totalParceiros >= 4) return 'alto';
@@ -69,7 +77,18 @@ const ClientesSobrepostosPage: React.FC = () => {
       // Agrupar clientes por ID e contar quantos parceiros os atendem
       const clientesMap = new Map<string, {
         nome: string;
-        parceiros: any[];
+        parceiros_intragrupo: Array<{
+          id: string;
+          nome: string;
+          tipo: string;
+          data_relacionamento: string;
+        }>;
+        parceiros_externos: Array<{
+          id: string;
+          nome: string;
+          tipo: string;
+          data_relacionamento: string;
+        }>;
       }>();
 
       relacionamentos?.forEach((rel) => {
@@ -79,28 +98,41 @@ const ClientesSobrepostosPage: React.FC = () => {
         if (!clientesMap.has(clienteId)) {
           clientesMap.set(clienteId, {
             nome: clienteNome,
-            parceiros: []
+            parceiros_intragrupo: [],
+            parceiros_externos: []
           });
         }
 
-        clientesMap.get(clienteId)?.parceiros.push({
+        const parceiro = {
           id: rel.empresa_proprietaria_id,
           nome: rel.empresa_proprietaria?.nome || 'Parceiro sem nome',
           tipo: rel.empresa_proprietaria?.tipo || 'indefinido',
           data_relacionamento: rel.data_relacionamento
-        });
+        };
+
+        // Separar parceiros por tipo
+        const cliente = clientesMap.get(clienteId)!;
+        if (parceiro.tipo === 'intragrupo') {
+          cliente.parceiros_intragrupo.push(parceiro);
+        } else {
+          cliente.parceiros_externos.push(parceiro);
+        }
       });
 
       // Filtrar apenas clientes com mais de 1 parceiro (sobrepostos)
       const sobrepostos: ClienteSobreposto[] = Array.from(clientesMap.entries())
-        .filter(([_, cliente]) => cliente.parceiros.length > 1)
-        .map(([clienteId, cliente]) => ({
-          cliente_nome: cliente.nome,
-          cliente_id: clienteId,
-          parceiros: cliente.parceiros,
-          total_parceiros: cliente.parceiros.length,
-          potencial_networking: calcularPotencialNetworking(cliente.parceiros.length)
-        }))
+        .filter(([_, cliente]) => (cliente.parceiros_intragrupo.length + cliente.parceiros_externos.length) > 1)
+        .map(([clienteId, cliente]) => {
+          const totalParceiros = cliente.parceiros_intragrupo.length + cliente.parceiros_externos.length;
+          return {
+            cliente_nome: cliente.nome,
+            cliente_id: clienteId,
+            parceiros_intragrupo: cliente.parceiros_intragrupo,
+            parceiros_externos: cliente.parceiros_externos,
+            total_parceiros: totalParceiros,
+            potencial_networking: calcularPotencialNetworking(totalParceiros)
+          };
+        })
         .sort((a, b) => b.total_parceiros - a.total_parceiros);
 
       setClientesSobrepostos(sobrepostos);
@@ -111,7 +143,7 @@ const ClientesSobrepostosPage: React.FC = () => {
       
       const parceiroContador = new Map<string, number>();
       sobrepostos.forEach(cliente => {
-        cliente.parceiros.forEach(parceiro => {
+        [...cliente.parceiros_intragrupo, ...cliente.parceiros_externos].forEach(parceiro => {
           parceiroContador.set(parceiro.nome, (parceiroContador.get(parceiro.nome) || 0) + 1);
         });
       });
@@ -144,11 +176,12 @@ const ClientesSobrepostosPage: React.FC = () => {
   }, [empresasClientes]);
 
   const clientesFiltrados = clientesSobrepostos.filter(cliente => {
+    const allParceiros = [...cliente.parceiros_intragrupo, ...cliente.parceiros_externos];
     const matchSearch = cliente.cliente_nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                       cliente.parceiros.some(p => p.nome.toLowerCase().includes(searchTerm.toLowerCase()));
+                       allParceiros.some(p => p.nome.toLowerCase().includes(searchTerm.toLowerCase()));
     
     const matchTipo = filtroTipo === "todos" || 
-                     cliente.parceiros.some(p => p.tipo === filtroTipo);
+                     allParceiros.some(p => p.tipo === filtroTipo);
     
     return matchSearch && matchTipo;
   });
@@ -177,13 +210,24 @@ const ClientesSobrepostosPage: React.FC = () => {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight mb-1">
-            Dashboard de Clientes Sobrepostos
-          </h1>
-          <p className="text-muted-foreground text-sm">
-            Identifique oportunidades de networking através de clientes compartilhados
-          </p>
+        <div className="flex items-center gap-4">
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => navigate('/wishlist')}
+            className="flex items-center gap-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Voltar ao Dashboard
+          </Button>
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight mb-1">
+              Clientes Compartilhados
+            </h1>
+            <p className="text-muted-foreground text-sm">
+              Clientes atendidos por múltiplos parceiros - os clientes compartilhados estão listados abaixo
+            </p>
+          </div>
         </div>
         <Button onClick={analisarClientesSobrepostos} disabled={loadingAnalise}>
           <Eye className="mr-2 h-4 w-4" />
@@ -193,7 +237,7 @@ const ClientesSobrepostosPage: React.FC = () => {
 
       {/* Estatísticas */}
       {estatisticas && (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-1 max-w-sm">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Clientes Compartilhados</CardTitle>
@@ -203,51 +247,6 @@ const ClientesSobrepostosPage: React.FC = () => {
               <div className="text-2xl font-bold">{estatisticas.totalClientesCompartilhados}</div>
               <p className="text-xs text-muted-foreground">
                 de {estatisticas.totalClientesUnicos} únicos
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Parceiro Líder</CardTitle>
-              <Building2 className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-lg font-bold truncate">
-                {estatisticas.parceiroComMaisCompartilhamentos}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Mais compartilhamentos
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Média de Parceiros</CardTitle>
-              <AlertCircle className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{estatisticas.mediaCompartilhamentosPorCliente}</div>
-              <p className="text-xs text-muted-foreground">
-                Por cliente compartilhado
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Taxa de Sobreposição</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {estatisticas.totalClientesUnicos > 0 
-                  ? Math.round((estatisticas.totalClientesCompartilhados / estatisticas.totalClientesUnicos) * 100)
-                  : 0}%
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Clientes com múltiplos parceiros
               </p>
             </CardContent>
           </Card>
@@ -283,7 +282,7 @@ const ClientesSobrepostosPage: React.FC = () => {
         <CardHeader>
           <CardTitle>Clientes Compartilhados</CardTitle>
           <CardDescription>
-            Lista de clientes atendidos por múltiplos parceiros - oportunidades de networking
+            Lista dos clientes compartilhados entre parceiros - oportunidades de networking estratégico
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -292,8 +291,9 @@ const ClientesSobrepostosPage: React.FC = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead>Cliente</TableHead>
-                  <TableHead>Parceiros</TableHead>
-                  <TableHead>Total</TableHead>
+                  <TableHead>Parceiros Intragrupo</TableHead>
+                  <TableHead>Parceiros Externos</TableHead>
+                  <TableHead>Total de Parceiros</TableHead>
                   <TableHead>Potencial</TableHead>
                 </TableRow>
               </TableHeader>
@@ -305,11 +305,28 @@ const ClientesSobrepostosPage: React.FC = () => {
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
-                        {cliente.parceiros.map((parceiro, index) => (
-                          <Badge key={index} variant="secondary" className="text-xs">
-                            {parceiro.nome}
-                          </Badge>
-                        ))}
+                        {cliente.parceiros_intragrupo.length > 0 ? (
+                          cliente.parceiros_intragrupo.map((parceiro, index) => (
+                            <Badge key={index} variant="secondary" className="text-xs">
+                              {parceiro.nome}
+                            </Badge>
+                          ))
+                        ) : (
+                          <span className="text-muted-foreground text-xs">Nenhum</span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {cliente.parceiros_externos.length > 0 ? (
+                          cliente.parceiros_externos.map((parceiro, index) => (
+                            <Badge key={index} variant="outline" className="text-xs">
+                              {parceiro.nome}
+                            </Badge>
+                          ))
+                        ) : (
+                          <span className="text-muted-foreground text-xs">Nenhum</span>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell>
