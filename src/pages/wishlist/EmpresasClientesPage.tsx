@@ -15,7 +15,8 @@ import ClientesStats from "@/components/wishlist/ClientesStats";
 import { useNavigate } from "react-router-dom";
 import { DemoModeToggle } from "@/components/privacy/DemoModeToggle";
 import { DemoModeIndicator } from "@/components/privacy/DemoModeIndicator";
-import { useDemoMask } from "@/utils/demoMask";
+import { usePrivacy } from "@/contexts/PrivacyContext";
+import { PrivateData } from "@/components/privacy/PrivateData";
 
 type EmpresaOption = {
   id: string;
@@ -59,6 +60,9 @@ const EmpresasClientesPage: React.FC = () => {
 
   // Estado para todas as empresas do tipo cliente
   const [empresasClientesAll, setEmpresasClientesAll] = useState<EmpresaOption[]>([]);
+
+  // Demo mode context
+  const { isDemoMode } = usePrivacy();
 
   // Navegação
   const navigate = useNavigate();
@@ -232,12 +236,6 @@ const EmpresasClientesPage: React.FC = () => {
     parceiro.nome.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // === DEMO MODE: mascarar dados sensíveis ===
-  const maskedClientesVinculados = useDemoMask(filteredClientesVinculados);
-  const maskedClientesNaoVinculados = useDemoMask(filteredClientesNaoVinculados);
-  const maskedParceiros = useDemoMask(filteredParceiros);
-  const maskedEmpresasClientes = useDemoMask(empresasClientes);
-
   if (loadingEmpresasClientes) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -321,17 +319,26 @@ const EmpresasClientesPage: React.FC = () => {
         </div>
 
         <TabsContent value="clientes" className="space-y-6">
-          <ClientesStats empresasClientes={maskedEmpresasClientes} />
+          {/* Estatísticas e Tabelas mascarando apenas os campos sensíveis */}
+          <ClientesStats
+            empresasClientes={empresasClientes}
+            PrivateDataComponent={PrivateData}
+            isDemoMode={isDemoMode}
+          />
 
           <ClientesVinculadosTable
-            clientesVinculados={maskedClientesVinculados}
+            clientesVinculados={filteredClientesVinculados}
             onEditar={handleEditar}
             onSolicitarApresentacao={handleSolicitarApresentacao}
+            PrivateDataComponent={PrivateData}
+            isDemoMode={isDemoMode}
           />
 
           <ClientesNaoVinculadosTable
-            clientesNaoVinculados={maskedClientesNaoVinculados}
+            clientesNaoVinculados={filteredClientesNaoVinculados}
             onVincular={handleVincularCliente}
+            PrivateDataComponent={PrivateData}
+            isDemoMode={isDemoMode}
           />
         </TabsContent>
 
@@ -345,17 +352,16 @@ const EmpresasClientesPage: React.FC = () => {
             </div>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {maskedParceiros.map((parceiro: any) => (
+              {filteredParceiros.map((parceiro) => (
                 <ParceiroRelevanceCard
                   key={parceiro.id}
                   parceiro={parceiro}
-                  onClick={() => {
-                    console.log("Ver detalhes do parceiro:", parceiro.nome);
-                  }}
+                  PrivateDataComponent={PrivateData}
+                  isDemoMode={isDemoMode}
                 />
               ))}
 
-              {maskedParceiros.length === 0 && (
+              {filteredParceiros.length === 0 && (
                 <div className="col-span-full py-12 text-center text-muted-foreground">
                   <TrendingUp className="h-12 w-12 mx-auto mb-2 text-muted-foreground" />
                   <div className="text-lg font-semibold mb-1">
@@ -394,6 +400,8 @@ const EmpresasClientesPage: React.FC = () => {
         setEmpresasClientesOptions={setEmpresasClientesOptions}
         empresasParceiros={empresasParceiros}
         parceirosJaVinculadosAoCliente={parceirosJaVinculadosAoCliente}
+        PrivateDataComponent={PrivateData}
+        isDemoMode={isDemoMode}
       />
 
       <ApresentacaoModal
@@ -404,6 +412,8 @@ const EmpresasClientesPage: React.FC = () => {
         setApresentacaoObs={setApresentacaoObs}
         onSubmit={handleSubmitApresentacao}
         loading={apresentacaoLoading}
+        PrivateDataComponent={PrivateData}
+        isDemoMode={isDemoMode}
       />
     </div>
   );
