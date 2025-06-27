@@ -1,7 +1,9 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 
+/**
+ * Dados de relevância de um parceiro.
+ */
 interface ParceiroRelevanceData {
   id: string;
   nome: string;
@@ -14,17 +16,27 @@ interface ParceiroRelevanceData {
   taxaAprovacao: number;
   scoreRelevancia: number;
   ultimaAtividade?: string;
+  novosClientesNoPeriodo?: number;
 }
 
+/**
+ * Hook para calcular a relevância dos parceiros, priorizando consistência, volume de negócios e novos clientes.
+ */
 export const useParceiroRelevance = () => {
   const [parceiros, setParceiros] = useState<ParceiroRelevanceData[]>([]);
   const [loading, setLoading] = useState(false);
 
+  /**
+   * Calcula o score de relevância dos parceiros considerando:
+   * - Consistência (atividade recente)
+   * - Volume de negócios (apresentações e solicitações aprovadas)
+   * - Novos clientes trazidos
+   */
   const calculateRelevance = async () => {
     try {
       setLoading(true);
 
-      // Buscar todos os parceiros/intragrupo
+      // Buscar todos os parceiros/intragrupo ativos
       const { data: empresasParceiros, error: empresasError } = await supabase
         .from("empresas")
         .select("id, nome")
@@ -32,8 +44,12 @@ export const useParceiroRelevance = () => {
         .eq("status", true);
 
       if (empresasError) throw empresasError;
-
       const relevanceData: ParceiroRelevanceData[] = [];
+
+      // Definir período para novos clientes (últimos 6 meses)
+      const mesesPeriodoNovosClientes = 6;
+      const dataLimiteNovosClientes = new Date();
+      dataLimiteNovosClientes.setMonth(dataLimiteNovosClientes.getMonth() - mesesPeriodoNovosClientes);
 
       for (const parceiro of empresasParceiros) {
         // Total de clientes do parceiro
@@ -92,6 +108,17 @@ export const useParceiroRelevance = () => {
           ? ((solicitacoesAprovadas || 0) / totalSolicitacoes) * 100
           : 0;
 
+        // Novos clientes trazidos no período (clientes criados pelo parceiro nos últimos X meses)
+        const { data: novosClientes } = await supabase
+          .from("empresa_clientes")
+          .select("id, created_at")
+          .eq("empresa_proprietaria_id", parceiro.id)
+          .eq("status", true)
+          .gte("created_at", dataLimiteNovosClientes.toISOString());
+
+        // Considera clientes únicos por id
+        const novosClientesNoPeriodo = new Set(novosClientes?.map(c => c.id) || []).size;
+
         // Última atividade (última apresentação ou solicitação)
         const { data: ultimaApresentacao } = await supabase
           .from("wishlist_apresentacoes")
@@ -114,16 +141,39 @@ export const useParceiroRelevance = () => {
           ultimaSolicitacao?.created_at
         ].filter(Boolean).sort().reverse()[0];
 
-        // Calcular score de relevância aprimorado
+        // SCORE AJUSTADO
+
+        // Peso base: % de clientes de interesse sobre o total de clientes
         const scoreBase = Math.min((clientesDeInteresse / Math.max(totalClientes || 1, 1)) * 100, 100);
-        const bonusApresentacoes = Math.min((apresentacoesRealizadas || 0) * 3, 15);
+
+        // Bônus para NOVOS CLIENTES (máx. 20 pts)
+        const bonusNovosClientes = Math.min((novosClientesNoPeriodo || 0) * 4, 20);
+
+        // Bônus para volume de negócios (apresentações realizadas, máx. 20 pts)
+        const bonusApresentacoes = Math.min((apresentacoesRealizadas || 0) * 4, 20);
+
+        // Bônus para taxa de aprovação (máx. 20 pts)
+        const bonusAprovacao = Math.min(taxaAprovacao * 0.4, 20);
+
+        // Bônus para taxa de conversão (máx. 25 pts)
         const bonusConversao = Math.min(taxaConversao * 0.5, 25);
-        const bonusAprovacao = Math.min(taxaAprovacao * 0.3, 15);
-        const bonusAtividade = ultimaAtividade ? 
-          Math.max(10 - Math.floor((Date.now() - new Date(ultimaAtividade).getTime()) / (1000 * 60 * 60 * 24 * 30)), 0) : 0;
-        
-        const scoreRelevancia = Math.round(
-          scoreBase + bonusApresentacoes + bonusConversao + bonusAprovacao + bonusAtividade
+
+        // Bônus para consistência/atividade recente (máx. 15 pts, decrescendo 1pt por mês sem atividade)
+        const bonusAtividade = ultimaAtividade
+          ? Math.max(15 - Math.floor((Date.now() - new Date(ultimaAtividade).getTime()) / (1000 * 60 * 60 * 24 * 30)), 0)
+          : 0;
+
+        // Score final limitado a 100
+        const scoreRelevancia = Math.min(
+          Math.round(
+            scoreBase +
+            bonusNovosClientes +
+            bonusApresentacoes +
+            bonusConversao +
+            bonusAprovacao +
+            bonusAtividade
+          ),
+          100
         );
 
         relevanceData.push({
@@ -136,8 +186,9 @@ export const useParceiroRelevance = () => {
           solicitacoesAprovadas: solicitacoesAprovadas || 0,
           taxaConversao,
           taxaAprovacao,
-          scoreRelevancia: Math.min(scoreRelevancia, 100),
+          scoreRelevancia,
           ultimaAtividade,
+          novosClientesNoPeriodo,
         });
       }
 
@@ -154,6 +205,7 @@ export const useParceiroRelevance = () => {
 
   useEffect(() => {
     calculateRelevance();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return {
