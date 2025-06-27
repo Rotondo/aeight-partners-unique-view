@@ -13,6 +13,9 @@ import ClienteFormModal from "@/components/wishlist/ClienteFormModal";
 import ApresentacaoModal from "@/components/wishlist/ApresentacaoModal";
 import ClientesStats from "@/components/wishlist/ClientesStats";
 import { useNavigate } from "react-router-dom";
+import { DemoModeToggle } from "@/components/privacy/DemoModeToggle";
+import { DemoModeIndicator } from "@/components/privacy/DemoModeIndicator";
+import { useDemoMask } from "@/utils/demoMask";
 
 type EmpresaOption = {
   id: string;
@@ -229,6 +232,12 @@ const EmpresasClientesPage: React.FC = () => {
     parceiro.nome.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // === DEMO MODE: mascarar dados sensíveis ===
+  const maskedClientesVinculados = useDemoMask(filteredClientesVinculados);
+  const maskedClientesNaoVinculados = useDemoMask(filteredClientesNaoVinculados);
+  const maskedParceiros = useDemoMask(filteredParceiros);
+  const maskedEmpresasClientes = useDemoMask(empresasClientes);
+
   if (loadingEmpresasClientes) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -242,6 +251,9 @@ const EmpresasClientesPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Demo Mode Banner */}
+      <DemoModeIndicator />
+
       {/* Botão de retorno para o dashboard da wishlist */}
       <div>
         <Button
@@ -264,15 +276,18 @@ const EmpresasClientesPage: React.FC = () => {
             Gerencie a base de clientes e veja a relevância de cada parceiro
           </p>
         </div>
-        <Button
-          onClick={() => {
-            setModalOpen(true);
-            setModalType("novo");
-          }}
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Adicionar Cliente
-        </Button>
+        <div className="flex gap-2">
+          <DemoModeToggle />
+          <Button
+            onClick={() => {
+              setModalOpen(true);
+              setModalType("novo");
+            }}
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Adicionar Cliente
+          </Button>
+        </div>
       </div>
 
       {/* Tabs Navigation */}
@@ -306,16 +321,16 @@ const EmpresasClientesPage: React.FC = () => {
         </div>
 
         <TabsContent value="clientes" className="space-y-6">
-          <ClientesStats empresasClientes={empresasClientes} />
+          <ClientesStats empresasClientes={maskedEmpresasClientes} />
 
           <ClientesVinculadosTable
-            clientesVinculados={filteredClientesVinculados}
+            clientesVinculados={maskedClientesVinculados}
             onEditar={handleEditar}
             onSolicitarApresentacao={handleSolicitarApresentacao}
           />
 
           <ClientesNaoVinculadosTable
-            clientesNaoVinculados={filteredClientesNaoVinculados}
+            clientesNaoVinculados={maskedClientesNaoVinculados}
             onVincular={handleVincularCliente}
           />
         </TabsContent>
@@ -330,7 +345,7 @@ const EmpresasClientesPage: React.FC = () => {
             </div>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {filteredParceiros.map((parceiro) => (
+              {maskedParceiros.map((parceiro: any) => (
                 <ParceiroRelevanceCard
                   key={parceiro.id}
                   parceiro={parceiro}
@@ -340,7 +355,7 @@ const EmpresasClientesPage: React.FC = () => {
                 />
               ))}
 
-              {filteredParceiros.length === 0 && (
+              {maskedParceiros.length === 0 && (
                 <div className="col-span-full py-12 text-center text-muted-foreground">
                   <TrendingUp className="h-12 w-12 mx-auto mb-2 text-muted-foreground" />
                   <div className="text-lg font-semibold mb-1">
