@@ -4,10 +4,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useWishlist } from "@/contexts/WishlistContext";
-import { Heart, Users, Presentation, TrendingUp, Plus, Eye, Monitor, ArrowLeftRight, Star } from "lucide-react";
+import { Heart, Users, Presentation, TrendingUp, Plus, Eye, Monitor, Star } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useClientesSobrepostos } from "@/hooks/useClientesSobrepostos";
-import ClientesSobrepostosAlert from "@/components/wishlist/ClientesSobrepostosAlert";
 
 const WishlistDashboard: React.FC = () => {
   const { stats, loading, apresentacoes, wishlistItems } = useWishlist();
@@ -82,10 +81,7 @@ const WishlistDashboard: React.FC = () => {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">WishLift - Networking Inteligente</h1>
-          <p className="text-muted-foreground">
-            Centralize clientes, identifique sobreposições e facilite networking estratégico
-          </p>
+          <h1 className="text-3xl font-bold tracking-tight">Wishlist</h1>
         </div>
         <div className="flex gap-2">
           <Button onClick={() => navigate("modo-apresentacao")} variant="outline">
@@ -102,12 +98,6 @@ const WishlistDashboard: React.FC = () => {
           </Button>
         </div>
       </div>
-
-      {/* Alert de Clientes Sobrepostos */}
-      <ClientesSobrepostosAlert
-        totalSobrepostos={totalSobrepostos}
-        novosSobrepostos={clientesMaisCompartilhados.map(c => c.nome)}
-      />
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -165,7 +155,7 @@ const WishlistDashboard: React.FC = () => {
       </div>
 
       {/* Workflow WishLift */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <Card className="cursor-pointer hover:shadow-md transition-shadow" 
               onClick={() => navigate("sobrepostos")}>
           <CardHeader>
@@ -205,30 +195,11 @@ const WishlistDashboard: React.FC = () => {
         </Card>
 
         <Card className="cursor-pointer hover:shadow-md transition-shadow" 
-              onClick={() => navigate("troca-mutua")}>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center">
-              <ArrowLeftRight className="mr-2 h-5 w-5 text-green-500" />
-              3. Troca Mútua
-            </CardTitle>
-            <CardDescription>
-              Gerencie negociações e interesses mútuos
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button variant="outline" className="w-full">
-              <ArrowLeftRight className="mr-2 h-4 w-4" />
-              Negociar
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card className="cursor-pointer hover:shadow-md transition-shadow" 
               onClick={() => navigate("qualificacao")}>
           <CardHeader>
             <CardTitle className="text-lg flex items-center">
               <Star className="mr-2 h-5 w-5 text-purple-500" />
-              4. Qualificação
+              3. Qualificação
             </CardTitle>
             <CardDescription>
               Avalie e converta clientes em oportunidades
