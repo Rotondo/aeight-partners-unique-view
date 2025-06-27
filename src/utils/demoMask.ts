@@ -6,7 +6,10 @@ import { usePrivacy } from '@/contexts/PrivacyContext';
  * - Números viram 0
  * - Objetos e arrays são processados recursivamente
  * - Campos com nome sugestivo (ex: name, email, valor) são mascarados
+ * - Nunca mascara o campo "id" ou campos-chave críticos
  */
+const FIELDS_TO_NEVER_MASK = ['id', 'key', 'uuid', 'codigo', 'slug'];
+
 export function maskSensitiveData(data: any): any {
   if (Array.isArray(data)) {
     return data.map(maskSensitiveData);
@@ -14,7 +17,10 @@ export function maskSensitiveData(data: any): any {
   if (data && typeof data === 'object') {
     const masked: any = {};
     for (const key in data) {
-      if (
+      // Nunca mascarar IDs e campos críticos
+      if (FIELDS_TO_NEVER_MASK.includes(key.toLowerCase())) {
+        masked[key] = data[key];
+      } else if (
         typeof data[key] === 'string' &&
         ['name', 'nome', 'email', 'telefone', 'document', 'cpf', 'cnpj', 'address', 'endereco', 'company', 'empresa'].some(s =>
           key.toLowerCase().includes(s)
