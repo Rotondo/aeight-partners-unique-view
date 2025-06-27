@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Target, TrendingDown, Calculator, BarChart3, Users, TrendingUp, Clock, Zap } from "lucide-react";
+import { Target, TrendingDown, Calculator, Users, Clock, Zap } from "lucide-react";
 import { DashboardStatsSection } from "./DashboardStats";
 import { OpportunitiesChart } from "./OpportunitiesChart";
 import { IntraExtraAnalysis } from "./IntraExtraAnalysis";
@@ -32,6 +32,50 @@ import { CycleTimeAnalysis } from "@/modules/cycle-time/components/CycleTimeAnal
 // Sistema de debug
 import { CalculationDebugPanel } from "@/modules/calculation-debug/components/CalculationDebugPanel";
 
+// UI base (dropdown)
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+
+const TAB_OPTIONS = [
+  {
+    value: "quick-answers",
+    label: "Respostas Rápidas",
+    icon: <Zap className="h-4 w-4" />,
+  },
+  {
+    value: "quantities",
+    label: "Análise de Quantidades",
+  },
+  {
+    value: "values",
+    label: "Análise de Valores",
+  },
+  {
+    value: "grupo-performance",
+    label: "Performance Grupo",
+    icon: <Users className="h-4 w-4" />,
+  },
+  {
+    value: "cycle-time",
+    label: "Tempo Ciclo",
+    icon: <Clock className="h-4 w-4" />,
+  },
+  {
+    value: "recebimento",
+    label: "Recebimento",
+    icon: <TrendingDown className="h-4 w-4" />,
+  },
+  {
+    value: "metas",
+    label: "Probabilidade Metas",
+    icon: <Calculator className="h-4 w-4" />,
+  },
+  {
+    value: "resultados",
+    label: "Controle de Resultados",
+    icon: <Target className="h-4 w-4" />,
+  },
+];
+
 export const OportunidadesDashboards: React.FC = () => {
   const { filteredOportunidades, isLoading } = useOportunidades();
   const stats = useDashboardStats(filteredOportunidades);
@@ -42,6 +86,9 @@ export const OportunidadesDashboards: React.FC = () => {
 
   // Estado para controlar o painel de debug
   const [showDebugPanel, setShowDebugPanel] = useState(false);
+
+  // Tab state
+  const [tab, setTab] = useState<string>(TAB_OPTIONS[0].value);
 
   // Hook para filtros avançados
   const {
@@ -85,125 +132,117 @@ export const OportunidadesDashboards: React.FC = () => {
         <DashboardStatsSection stats={stats} loading={isLoading} />
       </div>
 
-      <Tabs defaultValue="quick-answers" className="w-full">
-        <TabsList className="flex flex-nowrap overflow-x-auto w-full gap-x-2 scrollbar-thin scrollbar-thumb-muted-foreground/40 scrollbar-track-transparent">
-          <TabsTrigger value="quick-answers" className="flex items-center gap-2 min-w-max">
-            <Zap className="h-4 w-4" />
-            Respostas Rápidas
-          </TabsTrigger>
-          <TabsTrigger value="quantities" className="min-w-max">Análise de Quantidades</TabsTrigger>
-          <TabsTrigger value="values" className="min-w-max">Análise de Valores</TabsTrigger>
-          <TabsTrigger value="grupo-performance" className="flex items-center gap-2 min-w-max">
-            <Users className="h-4 w-4" />
-            Performance Grupo
-          </TabsTrigger>
-          <TabsTrigger value="cycle-time" className="flex items-center gap-2 min-w-max">
-            <Clock className="h-4 w-4" />
-            Tempo Ciclo
-          </TabsTrigger>
-          <TabsTrigger value="recebimento" className="flex items-center gap-2 min-w-max">
-            <TrendingDown className="h-4 w-4" />
-            Recebimento
-          </TabsTrigger>
-          <TabsTrigger value="metas" className="flex items-center gap-2 min-w-max">
-            <Calculator className="h-4 w-4" />
-            Probabilidade Metas
-          </TabsTrigger>
-          <TabsTrigger value="resultados" className="flex items-center gap-2 min-w-max">
-            <Target className="h-4 w-4" />
-            Controle de Resultados
-          </TabsTrigger>
-        </TabsList>
+      {/* Tabs em desktop/tablet, Dropdown em mobile */}
+      <div>
+        {/* Dropdown para mobile (até md) */}
+        <div className="block md:hidden mb-2">
+          <label htmlFor="dashboard-tab-select" className="sr-only">Selecionar seção</label>
+          <Select value={tab} onValueChange={setTab}>
+            <SelectTrigger id="dashboard-tab-select" className="w-full">
+              <SelectValue placeholder="Selecionar seção" />
+            </SelectTrigger>
+            <SelectContent>
+              {TAB_OPTIONS.map(option => (
+                <SelectItem key={option.value} value={option.value}>
+                  <span className="flex items-center gap-2">
+                    {option.icon}
+                    {option.label}
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        {/* Tabs horizontais para md+ */}
+        <Tabs value={tab} onValueChange={setTab} className="w-full">
+          <TabsList className="hidden md:flex flex-nowrap w-full gap-x-2">
+            {TAB_OPTIONS.map(option => (
+              <TabsTrigger key={option.value} value={option.value} className="flex items-center gap-2 min-w-max">
+                {option.icon}
+                {option.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
 
-        <TabsContent value="quick-answers" className="space-y-6">
-          <QuickAnswersSection oportunidades={finalFilteredOportunidades} />
-        </TabsContent>
-
-        <TabsContent value="quantities" className="space-y-6">
-          <div className="grid gap-4 md:grid-cols-2">
+          <TabsContent value="quick-answers" className={tab === "quick-answers" ? "space-y-6 block" : "hidden"}>
+            <QuickAnswersSection oportunidades={finalFilteredOportunidades} />
+          </TabsContent>
+          <TabsContent value="quantities" className={tab === "quantities" ? "space-y-6 block" : "hidden"}>
+            <div className="grid gap-4 md:grid-cols-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Oportunidades por Status</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <OpportunitiesChart stats={stats} loading={isLoading} />
+                </CardContent>
+              </Card>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Matriz Intragrupo</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <MatrizIntragrupoChart />
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Matriz Parcerias</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <MatrizParceriasChart />
+                </CardContent>
+              </Card>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Qualidade das Indicações</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <QualidadeIndicacoesChart />
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Balanço Grupo x Parcerias</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <BalancoGrupoParceriasChart />
+                </CardContent>
+              </Card>
+            </div>
             <Card>
               <CardHeader>
-                <CardTitle>Oportunidades por Status</CardTitle>
+                <CardTitle>Ranking de Parceiros</CardTitle>
               </CardHeader>
               <CardContent>
-                <OpportunitiesChart stats={stats} loading={isLoading} />
+                <RankingParceirosChart />
               </CardContent>
             </Card>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Matriz Intragrupo</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <MatrizIntragrupoChart />
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle>Matriz Parcerias</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <MatrizParceriasChart />
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Qualidade das Indicações</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <QualidadeIndicacoesChart />
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle>Balanço Grupo x Parcerias</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <BalancoGrupoParceriasChart />
-              </CardContent>
-            </Card>
-          </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Ranking de Parceiros</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <RankingParceirosChart />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="values" className="space-y-6">
-          <ValuesStatusAnalysis oportunidades={finalFilteredOportunidades} />
-        </TabsContent>
-
-        <TabsContent value="grupo-performance" className="space-y-6">
-          <GrupoPerformanceAnalysis oportunidades={finalFilteredOportunidades} />
-        </TabsContent>
-
-        <TabsContent value="cycle-time" className="space-y-6">
-          <CycleTimeAnalysis oportunidades={finalFilteredOportunidades} />
-        </TabsContent>
-
-        <TabsContent value="recebimento" className="space-y-6">
-          <RecebimentoAnalysis />
-        </TabsContent>
-
-        <TabsContent value="metas" className="space-y-6">
-          <MetaProbabilidadeCalculos probabilidades={probabilidades} />
-        </TabsContent>
-
-        <TabsContent value="resultados" className="space-y-6">
-          <ResultadosControl />
-        </TabsContent>
-      </Tabs>
-
+          </TabsContent>
+          <TabsContent value="values" className={tab === "values" ? "space-y-6 block" : "hidden"}>
+            <ValuesStatusAnalysis oportunidades={finalFilteredOportunidades} />
+          </TabsContent>
+          <TabsContent value="grupo-performance" className={tab === "grupo-performance" ? "space-y-6 block" : "hidden"}>
+            <GrupoPerformanceAnalysis oportunidades={finalFilteredOportunidades} />
+          </TabsContent>
+          <TabsContent value="cycle-time" className={tab === "cycle-time" ? "space-y-6 block" : "hidden"}>
+            <CycleTimeAnalysis oportunidades={finalFilteredOportunidades} />
+          </TabsContent>
+          <TabsContent value="recebimento" className={tab === "recebimento" ? "space-y-6 block" : "hidden"}>
+            <RecebimentoAnalysis />
+          </TabsContent>
+          <TabsContent value="metas" className={tab === "metas" ? "space-y-6 block" : "hidden"}>
+            <MetaProbabilidadeCalculos probabilidades={probabilidades} />
+          </TabsContent>
+          <TabsContent value="resultados" className={tab === "resultados" ? "space-y-6 block" : "hidden"}>
+            <ResultadosControl />
+          </TabsContent>
+        </Tabs>
+      </div>
       {/* Painel de Debug - sempre presente mas controlado */}
       <CalculationDebugPanel
         oportunidades={finalFilteredOportunidades}
