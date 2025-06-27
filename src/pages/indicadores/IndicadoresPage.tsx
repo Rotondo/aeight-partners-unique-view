@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { DemoModeIndicator } from "@/components/privacy/DemoModeIndicator";
 import { supabase } from "@/lib/supabase";
@@ -366,9 +365,8 @@ const IndicadoresPage: React.FC = () => {
         return "[objeto]";
       }
     }
-    // Explicitly convert to string and ensure it's a ReactNode
-    const stringValue = String(value);
-    return stringValue;
+    // Explicitly convert to string and return it as a ReactNode
+    return String(value || "");
   }
 
   // Tooltip customizado para mascarar nomes se necessário
