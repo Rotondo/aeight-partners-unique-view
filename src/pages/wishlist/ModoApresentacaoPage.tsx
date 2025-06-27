@@ -8,6 +8,9 @@ import { useWishlist } from "@/contexts/WishlistContext";
 import { Monitor, Download, Share2, Users, Search, Plus, ChevronLeft } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useNavigate } from "react-router-dom";
+import { DemoModeToggle } from "@/components/privacy/DemoModeToggle";
+import { DemoModeIndicator } from "@/components/privacy/DemoModeIndicator";
+import { PrivateData } from "@/components/privacy/PrivateData";
 
 // Utilizado para seleção individual
 interface ClienteSelecionado {
@@ -18,7 +21,7 @@ interface ClienteSelecionado {
 }
 
 const ModoApresentacaoPage: React.FC = () => {
-  const { empresasClientes, loading } = useWishlist();
+  const { empresasClientes, loading, addEmpresaCliente } = useWishlist();
   const navigate = useNavigate();
 
   // Estado para seleção dos parceiros intragrupo
@@ -78,28 +81,26 @@ const ModoApresentacaoPage: React.FC = () => {
         ec.empresa_proprietaria?.nome?.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  // Adicionar novo cliente ao parceiro externo (simulação local)
-  const handleAdicionarClienteExterno = () => {
+  // Adicionar novo cliente ao parceiro externo usando o contexto
+  const handleAdicionarClienteExterno = async () => {
     if (!novoClienteNome.trim() || !parceiroExternoSelecionado) return;
     setAdicionandoCliente(true);
-    // No backend real, aqui faria um insert e um fetch atualizado.
-    // Simulação: apenas atualiza a lista localmente
-    setTimeout(() => {
-      empresasClientes.push({
-        id: `novo-${Date.now()}`,
+    
+    try {
+      await addEmpresaCliente({
         empresa_proprietaria_id: parceiroExternoSelecionado,
-        empresa_cliente_id: `novo-cliente-${Date.now()}`,
+        empresa_cliente_id: `novo-cliente-${Date.now()}`, // Temporary ID - should be created properly in backend
         data_relacionamento: new Date().toISOString(),
         status: true,
-        observacoes: "",
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        empresa_proprietaria: empresasClientes.find(ec => ec.empresa_proprietaria_id === parceiroExternoSelecionado)?.empresa_proprietaria,
-        empresa_cliente: { id: `novo-cliente-${Date.now()}`, nome: novoClienteNome }
+        observacoes: `Cliente adicionado via Modo Apresentação: ${novoClienteNome}`,
+        // Note: empresa_proprietaria and empresa_cliente will be populated by the context
       });
       setNovoClienteNome("");
+    } catch (error) {
+      console.error("Erro ao adicionar cliente:", error);
+    } finally {
       setAdicionandoCliente(false);
-    }, 600);
+    }
   };
 
   // Seleção múltipla de parceiros intragrupo
@@ -158,24 +159,29 @@ const ModoApresentacaoPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      <DemoModeIndicator />
+      
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight mb-1">
-            Modo Apresentação - Wishlist
-          </h1>
+      <div className="flex justify-between items-center flex-wrap gap-4">
+        <div className="flex items-center gap-4">
+          <Button variant="outline" onClick={() => navigate("/wishlist")} className="flex-shrink-0">
+            <ChevronLeft className="h-4 w-4 mr-1" />
+            Voltar ao Dashboard
+          </Button>
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight mb-1">
+              Modo Apresentação - Wishlist
+            </h1>
+          </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <DemoModeToggle />
           <Button
             variant={modoApresentacao ? "default" : "outline"}
             onClick={() => setModoApresentacao(!modoApresentacao)}
           >
             <Monitor className="mr-2 h-4 w-4" />
             {modoApresentacao ? "Sair do Modo" : "Modo Apresentação"}
-          </Button>
-          <Button variant="outline" onClick={() => navigate(-1)}>
-            <ChevronLeft className="h-4 w-4 mr-1" />
-            Voltar
           </Button>
         </div>
       </div>
@@ -276,9 +282,15 @@ const ModoApresentacaoPage: React.FC = () => {
                         onChange={() => {}}
                       />
                       <div className="flex-1">
-                        <div className="font-medium">{cliente.empresa_cliente?.nome}</div>
+                        <div className="font-medium">
+                          <PrivateData type="company">
+                            {cliente.empresa_cliente?.nome}
+                          </PrivateData>
+                        </div>
                         <div className="text-sm text-muted-foreground">
-                          Proprietário: {cliente.empresa_proprietaria?.nome}
+                          Proprietário: <PrivateData type="company">
+                            {cliente.empresa_proprietaria?.nome}
+                          </PrivateData>
                         </div>
                       </div>
                       <Badge variant="outline" className="text-xs">
@@ -350,9 +362,15 @@ const ModoApresentacaoPage: React.FC = () => {
                         >
                           <Checkbox checked={isSelected} onChange={() => {}} />
                           <div className="flex-1">
-                            <div className="font-medium">{cliente.empresa_cliente?.nome}</div>
+                            <div className="font-medium">
+                              <PrivateData type="company">
+                                {cliente.empresa_cliente?.nome}
+                              </PrivateData>
+                            </div>
                             <div className="text-sm text-muted-foreground">
-                              Parceiro: {cliente.empresa_proprietaria?.nome}
+                              Parceiro: <PrivateData type="company">
+                                {cliente.empresa_proprietaria?.nome}
+                              </PrivateData>
                             </div>
                           </div>
                         </div>

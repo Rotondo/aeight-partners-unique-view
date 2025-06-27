@@ -8,6 +8,9 @@ import { supabase } from "@/lib/supabase";
 import { Search, Users, Eye, ChevronLeft } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useNavigate } from "react-router-dom";
+import { DemoModeToggle } from "@/components/privacy/DemoModeToggle";
+import { DemoModeIndicator } from "@/components/privacy/DemoModeIndicator";
+import { PrivateData } from "@/components/privacy/PrivateData";
 
 interface ClienteSobreposto {
   cliente_nome: string;
@@ -172,22 +175,27 @@ const ClientesSobrepostosPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      <DemoModeIndicator />
+      
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight mb-1">
-            Dashboard de Clientes Compartilhados
-          </h1>
-          <p className="text-muted-foreground text-sm">
-            Abaixo estão listados todos os clientes que são atendidos por mais de um parceiro (compartilhados). 
-            Use os filtros para refinar a análise.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => navigate("/wishlist")}>
+      <div className="flex justify-between items-center flex-wrap gap-4">
+        <div className="flex items-center gap-4">
+          <Button variant="outline" onClick={() => navigate("/wishlist")} className="flex-shrink-0">
             <ChevronLeft className="h-4 w-4 mr-1" />
-            Voltar para Wishlist
+            Voltar ao Dashboard
           </Button>
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight mb-1">
+              Dashboard de Clientes Compartilhados
+            </h1>
+            <p className="text-muted-foreground text-sm">
+              Abaixo estão listados todos os clientes que são atendidos por mais de um parceiro (compartilhados). 
+              Use os filtros para refinar a análise.
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <DemoModeToggle />
           <Button onClick={analisarClientesSobrepostos} disabled={loadingAnalise}>
             <Eye className="mr-2 h-4 w-4" />
             Reanalisar
@@ -258,14 +266,20 @@ const ClientesSobrepostosPage: React.FC = () => {
               <TableBody>
                 {clientesFiltrados.map((cliente) => (
                   <TableRow key={cliente.cliente_id}>
-                    <TableCell className="font-medium">{cliente.cliente_nome}</TableCell>
+                    <TableCell className="font-medium">
+                      <PrivateData type="company">
+                        {cliente.cliente_nome}
+                      </PrivateData>
+                    </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
                         {cliente.parceirosIntragrupo.length === 0
                           ? <span className="text-xs text-muted-foreground">—</span>
                           : cliente.parceirosIntragrupo.map((parceiro, idx) => (
                               <Badge key={parceiro.id + idx} variant="secondary" className="text-xs">
-                                {parceiro.nome}
+                                <PrivateData type="company">
+                                  {parceiro.nome}
+                                </PrivateData>
                               </Badge>
                             ))}
                       </div>
@@ -276,7 +290,9 @@ const ClientesSobrepostosPage: React.FC = () => {
                           ? <span className="text-xs text-muted-foreground">—</span>
                           : cliente.parceirosExternos.map((parceiro, idx) => (
                               <Badge key={parceiro.id + idx} variant="outline" className="text-xs">
-                                {parceiro.nome}
+                                <PrivateData type="company">
+                                  {parceiro.nome}
+                                </PrivateData>
                               </Badge>
                             ))}
                       </div>
