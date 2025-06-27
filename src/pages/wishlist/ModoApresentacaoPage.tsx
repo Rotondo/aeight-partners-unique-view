@@ -5,12 +5,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useWishlist } from "@/contexts/WishlistContext";
+import { useAllActivePartners } from "@/hooks/usePartners";
 import { Monitor, Download, Share2, Users, Search, Plus, ChevronLeft } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useNavigate } from "react-router-dom";
 import { DemoModeToggle } from "@/components/privacy/DemoModeToggle";
 import { DemoModeIndicator } from "@/components/privacy/DemoModeIndicator";
 import { PrivateData } from "@/components/privacy/PrivateData";
+import { supabase } from "@/lib/supabase";
+import { toast } from "@/hooks/use-toast";
 
 // Utilizado para seleção individual
 interface ClienteSelecionado {
@@ -22,6 +25,7 @@ interface ClienteSelecionado {
 
 const ModoApresentacaoPage: React.FC = () => {
   const { empresasClientes, loading, addEmpresaCliente } = useWishlist();
+  const { partners: allPartners, loading: loadingPartners } = useAllActivePartners();
   const navigate = useNavigate();
 
   // Estado para seleção dos parceiros intragrupo
@@ -39,27 +43,21 @@ const ModoApresentacaoPage: React.FC = () => {
   // Modo visual de apresentação (borda e badge)
   const [modoApresentacao, setModoApresentacao] = useState(false);
 
-  // Listas de empresas intragrupo e parceiras externas
-  const empresasIntragrupo = Array.from(
-    new Map(
-      empresasClientes
-        .filter(ec => ec.empresa_proprietaria?.tipo === "intragrupo")
-        .map(ec => [ec.empresa_proprietaria_id, {
-          id: ec.empresa_proprietaria_id,
-          nome: ec.empresa_proprietaria?.nome || "",
-        }])
-    ).values()
-  );
-  const empresasParceiras = Array.from(
-    new Map(
-      empresasClientes
-        .filter(ec => ec.empresa_proprietaria?.tipo === "parceiro")
-        .map(ec => [ec.empresa_proprietaria_id, {
-          id: ec.empresa_proprietaria_id,
-          nome: ec.empresa_proprietaria?.nome || "",
-        }])
-    ).values()
-  );
+  // Listas de empresas intragrupo e parceiras externas baseadas em TODOS os parceiros ativos
+  // Não apenas aqueles que já têm clientes vinculados
+  const empresasIntragrupo = allPartners
+    .filter(partner => partner.tipo === "intragrupo")
+    .map(partner => ({
+      id: partner.id,
+      nome: partner.nome,
+    }));
+    
+  const empresasParceiras = allPartners
+    .filter(partner => partner.tipo === "parceiro")
+    .map(partner => ({
+      id: partner.id,
+      nome: partner.nome,
+    }));
 
   // Clientes das empresas intragrupo selecionadas
   const clientesIntragrupo = empresasClientes.filter(
@@ -81,23 +79,46 @@ const ModoApresentacaoPage: React.FC = () => {
         ec.empresa_proprietaria?.nome?.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  // Adicionar novo cliente ao parceiro externo usando o contexto
+  // Adicionar novo cliente ao parceiro externo
   const handleAdicionarClienteExterno = async () => {
     if (!novoClienteNome.trim() || !parceiroExternoSelecionado) return;
     setAdicionandoCliente(true);
     
     try {
+      // Primeiro, criar o cliente na tabela empresas
+      const { data: clienteData, error: clienteError } = await supabase
+        .from('empresas')
+        .insert({
+          nome: novoClienteNome,
+          tipo: 'cliente',
+          status: true,
+        })
+        .select('id')
+        .single();
+
+      if (clienteError) throw clienteError;
+
+      // Depois, criar o relacionamento empresa_clientes
       await addEmpresaCliente({
         empresa_proprietaria_id: parceiroExternoSelecionado,
-        empresa_cliente_id: `novo-cliente-${Date.now()}`, // Temporary ID - should be created properly in backend
+        empresa_cliente_id: clienteData.id,
         data_relacionamento: new Date().toISOString(),
         status: true,
         observacoes: `Cliente adicionado via Modo Apresentação: ${novoClienteNome}`,
-        // Note: empresa_proprietaria and empresa_cliente will be populated by the context
       });
+
       setNovoClienteNome("");
+      toast({
+        title: "Sucesso",
+        description: "Cliente adicionado com sucesso!",
+      });
     } catch (error) {
       console.error("Erro ao adicionar cliente:", error);
+      toast({
+        title: "Erro",
+        description: "Erro ao adicionar cliente. Tente novamente.",
+        variant: "destructive",
+      });
     } finally {
       setAdicionandoCliente(false);
     }
@@ -146,7 +167,7 @@ const ModoApresentacaoPage: React.FC = () => {
     setClientesSelecionados([]);
   };
 
-  if (loading) {
+  if (loading || loadingPartners) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
@@ -213,7 +234,8 @@ const ModoApresentacaoPage: React.FC = () => {
         <CardHeader>
           <CardTitle>Selecione os parceiros para apresentação</CardTitle>
           <CardDescription>
-            Escolha um ou mais parceiros intragrupo e um parceiro externo para visualizar e comparar as carteiras.
+            Escolha um ou mais parceiros intragrupo e um parceiro externo para visualizar e comparar as carteiras. 
+            Todos os parceiros ativos são exibidos, mesmo aqueles sem clientes cadastrados ainda.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-6">
@@ -304,7 +326,9 @@ const ModoApresentacaoPage: React.FC = () => {
                   <div className="text-center py-8">
                     <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
                     <p className="text-muted-foreground">
-                      Nenhum cliente encontrado com os filtros aplicados.
+                      {parceirosSelecionados.length === 0 
+                        ? "Selecione parceiros intragrupo para visualizar clientes"
+                        : "Nenhum cliente encontrado para os parceiros selecionados"}
                     </p>
                   </div>
                 )}
@@ -378,7 +402,9 @@ const ModoApresentacaoPage: React.FC = () => {
                     })
                   ) : (
                     <div className="text-center py-8 text-muted-foreground">
-                      Nenhum cliente registrado para este parceiro externo.
+                      <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                      <p>Este parceiro ainda não possui clientes cadastrados.</p>
+                      <p className="text-sm mt-2">Use o campo acima para adicionar o primeiro cliente.</p>
                     </div>
                   )
                 ) : (

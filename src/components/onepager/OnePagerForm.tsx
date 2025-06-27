@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { supabase } from '@/lib/supabase';
 import { Categoria, Empresa, OnePager } from '@/types';
 import { useToast } from '@/hooks/use-toast';
+import { shouldCreateAutomaticClientRelationship } from '@/utils/companyClassification';
 import {
   Card,
   CardContent,
@@ -128,6 +129,7 @@ const OnePagerForm: React.FC<OnePagerFormProps> = ({
       // Carregar clientes associados
       fetchClientesAssociados(editingOnePager.id);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editingOnePager, form]);
 
   // Carrega todos os clientes
@@ -182,7 +184,7 @@ const OnePagerForm: React.FC<OnePagerFormProps> = ({
       if (error) throw error;
 
       if (data && data.length > 0) {
-        const empresaIds = data.map((item: any) => item.empresa_id);
+        const empresaIds = data.map((item: { empresa_id: string }) => item.empresa_id);
         const { data: empresas, error: empresasError } = await supabase
           .from('empresas')
           .select('*')
@@ -337,6 +339,8 @@ const OnePagerForm: React.FC<OnePagerFormProps> = ({
       }
 
       // Gerencia criação de novos clientes (em empresas) e correlaciona com parceiro (empresa_clientes)
+      // Using let because we need to modify the array by pushing new client IDs
+      // eslint-disable-next-line prefer-const
       let finalClienteIds: string[] = values.clienteIds ? [...values.clienteIds] : [];
 
       if (novosClientes.length > 0) {
@@ -365,7 +369,54 @@ const OnePagerForm: React.FC<OnePagerFormProps> = ({
           finalClienteIds.push(clienteId);
 
           // Cria relação empresa_clientes (parceiro-cliente), se não existir
+          // Only create automatic relationships for valid partner companies
           if (values.empresaId && clienteId) {
+            // Get company type to validate relationship creation
+            const { data: empresaData, error: empresaError } = await supabase
+              .from('empresas')
+              .select('tipo')
+              .eq('id', values.empresaId)
+              .single();
+            
+            if (empresaError) throw empresaError;
+            
+            // Only create relationship if it's a valid partner company
+            if (empresaData && shouldCreateAutomaticClientRelationship(empresaData.tipo, values.empresaId)) {
+              const { data: relExists, error } = await supabase
+                .from('empresa_clientes')
+                .select('id')
+                .eq('empresa_proprietaria_id', values.empresaId)
+                .eq('empresa_cliente_id', clienteId)
+                .maybeSingle();
+              if (!relExists) {
+                await supabase.from('empresa_clientes').insert({
+                  empresa_proprietaria_id: values.empresaId,
+                  empresa_cliente_id: clienteId,
+                  status: true,
+                  data_relacionamento: new Date().toISOString(),
+                  observacoes: 'Vínculo criado via OnePager',
+                });
+              }
+            }
+          }
+        }
+      }
+
+      // Para cada cliente selecionado, também garantir vínculo empresa_clientes
+      // Only create relationships for valid partner companies
+      if (values.empresaId && finalClienteIds.length > 0) {
+        // Get company type to validate relationship creation
+        const { data: empresaData, error: empresaError } = await supabase
+          .from('empresas')
+          .select('tipo')
+          .eq('id', values.empresaId)
+          .single();
+        
+        if (empresaError) throw empresaError;
+        
+        // Only create relationships if it's a valid partner company
+        if (empresaData && shouldCreateAutomaticClientRelationship(empresaData.tipo, values.empresaId)) {
+          for (const clienteId of finalClienteIds) {
             const { data: relExists, error } = await supabase
               .from('empresa_clientes')
               .select('id')
@@ -381,27 +432,6 @@ const OnePagerForm: React.FC<OnePagerFormProps> = ({
                 observacoes: 'Vínculo criado via OnePager',
               });
             }
-          }
-        }
-      }
-
-      // Para cada cliente selecionado, também garantir vínculo empresa_clientes
-      if (values.empresaId && finalClienteIds.length > 0) {
-        for (const clienteId of finalClienteIds) {
-          const { data: relExists, error } = await supabase
-            .from('empresa_clientes')
-            .select('id')
-            .eq('empresa_proprietaria_id', values.empresaId)
-            .eq('empresa_cliente_id', clienteId)
-            .maybeSingle();
-          if (!relExists) {
-            await supabase.from('empresa_clientes').insert({
-              empresa_proprietaria_id: values.empresaId,
-              empresa_cliente_id: clienteId,
-              status: true,
-              data_relacionamento: new Date().toISOString(),
-              observacoes: 'Vínculo criado via OnePager',
-            });
           }
         }
       }
