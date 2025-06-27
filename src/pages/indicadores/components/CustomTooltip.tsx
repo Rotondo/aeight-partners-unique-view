@@ -20,7 +20,7 @@ export const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload })
         .filter(([k]) => k !== "nome")
         .map(([k, v]) => (
           <div key={k}>
-            <b>{k}:</b> {v}
+            <b>{k}:</b> {String(v || "")}
           </div>
         ))}
     </div>
