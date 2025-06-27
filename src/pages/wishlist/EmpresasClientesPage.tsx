@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useWishlist } from "@/contexts/WishlistContext";
-import { Plus, Search, Building2, TrendingUp } from "lucide-react";
+import { Plus, Search, Building2, TrendingUp, ArrowLeft } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ParceiroRelevanceCard from "@/components/wishlist/ParceiroRelevanceCard";
@@ -13,6 +12,7 @@ import ClientesNaoVinculadosTable from "@/components/wishlist/ClientesNaoVincula
 import ClienteFormModal from "@/components/wishlist/ClienteFormModal";
 import ApresentacaoModal from "@/components/wishlist/ApresentacaoModal";
 import ClientesStats from "@/components/wishlist/ClientesStats";
+import { useNavigate } from "react-router-dom";
 
 type EmpresaOption = {
   id: string;
@@ -29,9 +29,9 @@ const EmpresasClientesPage: React.FC = () => {
     updateEmpresaCliente,
     solicitarApresentacao,
   } = useWishlist();
-  
+
   const { parceiros, loading: loadingRelevance, refresh: refreshRelevance } = useParceiroRelevance();
-  
+
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("clientes");
 
@@ -56,6 +56,9 @@ const EmpresasClientesPage: React.FC = () => {
 
   // Estado para todas as empresas do tipo cliente
   const [empresasClientesAll, setEmpresasClientesAll] = useState<EmpresaOption[]>([]);
+
+  // Navegação
+  const navigate = useNavigate();
 
   // Buscar empresas para o formulário
   useEffect(() => {
@@ -133,7 +136,7 @@ const EmpresasClientesPage: React.FC = () => {
   const handleEditar = (relacionamento: any) => {
     const clienteId = relacionamento.empresa_cliente_id;
     const nome = relacionamento.empresa_cliente?.nome;
-    
+
     if (
       clienteId &&
       nome &&
@@ -144,7 +147,7 @@ const EmpresasClientesPage: React.FC = () => {
         { id: clienteId, nome, tipo: "cliente" },
       ]);
     }
-    
+
     setModalType("editar");
     setEditRelacionamentoId(relacionamento.id);
     setParceirosSelecionados([relacionamento.empresa_proprietaria_id]);
@@ -215,7 +218,7 @@ const EmpresasClientesPage: React.FC = () => {
   const clientesVinculadosIds = new Set(
     empresasClientes.map((c) => c.empresa_cliente_id)
   );
-  
+
   const filteredClientesNaoVinculados = empresasClientesAll.filter(
     (cliente) =>
       !clientesVinculadosIds.has(cliente.id) &&
@@ -239,6 +242,18 @@ const EmpresasClientesPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Botão de retorno para o dashboard da wishlist */}
+      <div>
+        <Button
+          variant="outline"
+          onClick={() => navigate("/wishlist")}
+          className="flex items-center gap-2 mb-4"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Voltar ao Dashboard
+        </Button>
+      </div>
+
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
@@ -279,8 +294,8 @@ const EmpresasClientesPage: React.FC = () => {
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder={
-                activeTab === "clientes" 
-                  ? "Buscar por empresa ou proprietário..." 
+                activeTab === "clientes"
+                  ? "Buscar por empresa ou proprietário..."
                   : "Buscar parceiros..."
               }
               value={searchTerm}
@@ -292,13 +307,13 @@ const EmpresasClientesPage: React.FC = () => {
 
         <TabsContent value="clientes" className="space-y-6">
           <ClientesStats empresasClientes={empresasClientes} />
-          
+
           <ClientesVinculadosTable
             clientesVinculados={filteredClientesVinculados}
             onEditar={handleEditar}
             onSolicitarApresentacao={handleSolicitarApresentacao}
           />
-          
+
           <ClientesNaoVinculadosTable
             clientesNaoVinculados={filteredClientesNaoVinculados}
             onVincular={handleVincularCliente}
@@ -324,7 +339,7 @@ const EmpresasClientesPage: React.FC = () => {
                   }}
                 />
               ))}
-              
+
               {filteredParceiros.length === 0 && (
                 <div className="col-span-full py-12 text-center text-muted-foreground">
                   <TrendingUp className="h-12 w-12 mx-auto mb-2 text-muted-foreground" />
