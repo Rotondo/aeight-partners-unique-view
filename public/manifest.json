@@ -1,0 +1,17 @@
+{
+  "name": "A&eight Partnership Hub",
+  "short_name": "A&eightHub",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#4a90e2",
+  "description": "Plataforma Unificada de Parcerias A&eight",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
