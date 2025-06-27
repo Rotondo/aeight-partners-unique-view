@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { DemoModeIndicator } from "@/components/privacy/DemoModeIndicator";
 import { supabase } from "@/lib/supabase";
@@ -355,9 +354,11 @@ const IndicadoresPage: React.FC = () => {
     if (typeof value === "object") {
       // Se for um objeto simples, exibir JSON formatado
       try {
+        const jsonString = JSON.stringify(value, null, 1);
+        if (jsonString === undefined) return "[objeto]";
         return (
           <pre style={{ fontSize: 11, margin: 0, background: "rgba(0,0,0,0.03)", padding: 2 }}>
-            {JSON.stringify(value, null, 1)}
+            {jsonString}
           </pre>
         );
       } catch {
