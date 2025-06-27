@@ -1,14 +1,16 @@
-
 import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useWishlist } from "@/contexts/WishlistContext";
-import { Heart, Users, Presentation, TrendingUp, Plus } from "lucide-react";
+import { Heart, Users, Presentation, TrendingUp, Plus, Eye } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useClientesSobrepostos } from "@/hooks/useClientesSobrepostos";
+import ClientesSobrepostosAlert from "@/components/wishlist/ClientesSobrepostosAlert";
 
 const WishlistDashboard: React.FC = () => {
   const { stats, loading, apresentacoes, wishlistItems } = useWishlist();
+  const { totalSobrepostos, getClientesMaisCompartilhados } = useClientesSobrepostos();
   const navigate = useNavigate();
 
   // Buscar atividades recentes reais
@@ -72,18 +74,23 @@ const WishlistDashboard: React.FC = () => {
   }
 
   const recentActivities = getRecentActivities();
+  const clientesMaisCompartilhados = getClientesMaisCompartilhados(3);
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Wishlist & Networking</h1>
+          <h1 className="text-3xl font-bold tracking-tight">WishLift - Networking Inteligente</h1>
           <p className="text-muted-foreground">
-            Gerencie relacionamentos estratégicos e facilite networking entre parceiros
+            Centralize clientes, identifique sobreposições e facilite networking estratégico
           </p>
         </div>
         <div className="flex gap-2">
+          <Button onClick={() => navigate("sobrepostos")} variant="outline">
+            <Eye className="mr-2 h-4 w-4" />
+            Clientes Sobrepostos
+          </Button>
           <Button onClick={() => navigate("clientes")} variant="outline">
             <Users className="mr-2 h-4 w-4" />
             Gerenciar Clientes
@@ -94,6 +101,12 @@ const WishlistDashboard: React.FC = () => {
           </Button>
         </div>
       </div>
+
+      {/* Alert de Clientes Sobrepostos */}
+      <ClientesSobrepostosAlert
+        totalSobrepostos={totalSobrepostos}
+        novosSobrepostos={clientesMaisCompartilhados.map(c => c.nome)}
+      />
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -112,15 +125,13 @@ const WishlistDashboard: React.FC = () => {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pendentes</CardTitle>
-            <Badge variant="outline" className="px-2 py-1">
-              {stats?.solicitacoesPendentes || 0}
-            </Badge>
+            <CardTitle className="text-sm font-medium">Clientes Compartilhados</CardTitle>
+            <Users className="h-4 w-4 text-orange-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.solicitacoesPendentes || 0}</div>
+            <div className="text-2xl font-bold text-orange-600">{totalSobrepostos}</div>
             <p className="text-xs text-muted-foreground">
-              Aguardando aprovação
+              Oportunidades de networking
             </p>
           </CardContent>
         </Card>
@@ -153,7 +164,26 @@ const WishlistDashboard: React.FC = () => {
       </div>
 
       {/* Quick Actions */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card className="cursor-pointer hover:shadow-md transition-shadow" 
+              onClick={() => navigate("sobrepostos")}>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center">
+              <Eye className="mr-2 h-5 w-5 text-orange-500" />
+              Clientes Compartilhados
+            </CardTitle>
+            <CardDescription>
+              Veja intersecções e oportunidades de networking
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <span className="text-2xl font-bold text-orange-600">{totalSobrepostos}</span>
+              <Badge variant="secondary">Novo!</Badge>
+            </div>
+          </CardContent>
+        </Card>
+
         <Card className="cursor-pointer hover:shadow-md transition-shadow" 
               onClick={() => navigate("clientes")}>
           <CardHeader>

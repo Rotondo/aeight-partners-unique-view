@@ -6,6 +6,7 @@ import WishlistDashboard from "./WishlistDashboard";
 import EmpresasClientesPage from "./EmpresasClientesPage";
 import WishlistItemsPage from "./WishlistItemsPage";
 import ApresentacoesPage from "./ApresentacoesPage";
+import ClientesSobrepostosPage from "./ClientesSobrepostosPage";
 
 const WishlistPage: React.FC = () => {
   return (
@@ -16,6 +17,7 @@ const WishlistPage: React.FC = () => {
           <Route path="clientes" element={<EmpresasClientesPage />} />
           <Route path="itens" element={<WishlistItemsPage />} />
           <Route path="apresentacoes" element={<ApresentacoesPage />} />
+          <Route path="sobrepostos" element={<ClientesSobrepostosPage />} />
         </Routes>
       </div>
     </WishlistProvider>
