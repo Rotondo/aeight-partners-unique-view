@@ -17,11 +17,13 @@ import { DemoModeToggle } from "@/components/privacy/DemoModeToggle";
 import { DemoModeIndicator } from "@/components/privacy/DemoModeIndicator";
 import { usePrivacy } from "@/contexts/PrivacyContext";
 import { PrivateData } from "@/components/privacy/PrivateData";
+import { shouldCreateAutomaticClientRelationship } from "@/utils/companyClassification";
+import { EmpresaTipoString } from "@/types/common";
 
 type EmpresaOption = {
   id: string;
   nome: string;
-  tipo: string;
+  tipo: EmpresaTipoString;
 };
 
 const EmpresasClientesPage: React.FC = () => {
@@ -121,17 +123,36 @@ const EmpresasClientesPage: React.FC = () => {
       const novosParceiros = parceirosSelecionados.filter(
         (id) => !jaVinculados.includes(id)
       );
-      await Promise.all(
-        novosParceiros.map((parceiroId) =>
-          addEmpresaCliente({
-            empresa_proprietaria_id: parceiroId,
-            empresa_cliente_id: empresaCliente,
-            status: true,
-            data_relacionamento: new Date().toISOString(),
-            observacoes,
-          })
-        )
-      );
+      
+      // Filter out partners that shouldn't have automatic relationships created
+      const validPartners = [];
+      for (const parceiroId of novosParceiros) {
+        const partner = empresasParceiros.find(p => p.id === parceiroId);
+        if (partner && shouldCreateAutomaticClientRelationship(partner.tipo, parceiroId)) {
+          validPartners.push(parceiroId);
+        } else if (partner) {
+          console.warn(`Skipping automatic relationship creation with ${partner.tipo} company: ${partner.nome}`);
+        }
+      }
+      
+      if (validPartners.length > 0) {
+        await Promise.all(
+          validPartners.map((parceiroId) =>
+            addEmpresaCliente({
+              empresa_proprietaria_id: parceiroId,
+              empresa_cliente_id: empresaCliente,
+              status: true,
+              data_relacionamento: new Date().toISOString(),
+              observacoes,
+            })
+          )
+        );
+      }
+      
+      // Show warning if some relationships were skipped
+      if (validPartners.length < novosParceiros.length) {
+        console.warn("Some relationships were not created due to business rules (preventing automatic Aeight linking)");
+      }
     }
     setModalLoading(false);
     setModalOpen(false);
