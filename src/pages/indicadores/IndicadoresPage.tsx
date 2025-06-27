@@ -365,7 +365,7 @@ const IndicadoresPage: React.FC = () => {
         return "[objeto]";
       }
     }
-    return String(value);
+    return String(value) as React.ReactNode;
   }
 
   // Tooltip customizado para mascarar nomes se necessário
