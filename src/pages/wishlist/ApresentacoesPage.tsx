@@ -6,11 +6,15 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useWishlist } from "@/contexts/WishlistContext";
-import { Plus, Search, Presentation, Calendar, CheckCircle, XCircle, Loader2 } from "lucide-react";
+import { Plus, Search, Presentation, Calendar, CheckCircle, XCircle, Loader2, ChevronLeft } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { StatusApresentacao, TipoApresentacao, WishlistItem } from "@/types";
 import { supabase } from "@/lib/supabase";
+import { useNavigate } from "react-router-dom";
+import { DemoModeToggle } from "@/components/privacy/DemoModeToggle";
+import { DemoModeIndicator } from "@/components/privacy/DemoModeIndicator";
+import { PrivateData } from "@/components/privacy/PrivateData";
 
 type EmpresaOption = {
   id: string;
@@ -27,6 +31,8 @@ const ApresentacoesPage: React.FC = () => {
     fetchWishlistItems,
     wishlistItems,
   } = useWishlist();
+  
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusApresentacao | "all">("all");
 
@@ -166,19 +172,29 @@ const ApresentacoesPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      <DemoModeIndicator />
+      
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Apresentações</h1>
-          <p className="text-muted-foreground">
-            Acompanhe apresentações e facilitações realizadas
-          </p>
-        </div>
-        <Dialog open={modalOpen} onOpenChange={(o) => { setModalOpen(o); if (!o) resetModal(); }}>
-          <Button onClick={() => setModalOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Registrar Apresentação
+      <div className="flex justify-between items-center flex-wrap gap-4">
+        <div className="flex items-center gap-4">
+          <Button variant="outline" onClick={() => navigate("/wishlist")} className="flex-shrink-0">
+            <ChevronLeft className="h-4 w-4 mr-1" />
+            Voltar ao Dashboard
           </Button>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Apresentações</h1>
+            <p className="text-muted-foreground">
+              Acompanhe apresentações e facilitações realizadas
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <DemoModeToggle />
+          <Dialog open={modalOpen} onOpenChange={(o) => { setModalOpen(o); if (!o) resetModal(); }}>
+            <Button onClick={() => setModalOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Registrar Apresentação
+            </Button>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Registrar Nova Apresentação</DialogTitle>
@@ -291,6 +307,7 @@ const ApresentacoesPage: React.FC = () => {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {/* Filters */}
@@ -374,10 +391,17 @@ const ApresentacoesPage: React.FC = () => {
               <div className="flex justify-between items-start">
                 <div>
                   <CardTitle className="text-lg">
-                    {apresentacao.wishlist_item?.empresa_interessada?.nome} → {apresentacao.wishlist_item?.empresa_desejada?.nome}
+                    <PrivateData type="company">
+                      {apresentacao.wishlist_item?.empresa_interessada?.nome}
+                    </PrivateData>{" "} → {" "}
+                    <PrivateData type="company">
+                      {apresentacao.wishlist_item?.empresa_desejada?.nome}
+                    </PrivateData>
                   </CardTitle>
                   <CardDescription>
-                    Facilitado por: {apresentacao.empresa_facilitadora?.nome}
+                    Facilitado por: <PrivateData type="company">
+                      {apresentacao.empresa_facilitadora?.nome}
+                    </PrivateData>
                   </CardDescription>
                 </div>
                 <div className="flex items-center gap-2">
@@ -406,7 +430,11 @@ const ApresentacoesPage: React.FC = () => {
                 {apresentacao.feedback && (
                   <div>
                     <p className="text-sm font-medium">Feedback:</p>
-                    <p className="text-sm text-muted-foreground">{apresentacao.feedback}</p>
+                    <p className="text-sm text-muted-foreground">
+                      <PrivateData type="generic">
+                        {apresentacao.feedback}
+                      </PrivateData>
+                    </p>
                   </div>
                 )}
 

@@ -6,6 +6,9 @@ import { useWishlist } from "@/contexts/WishlistContext";
 import { Heart, Users, Presentation, TrendingUp, Plus, Eye, Monitor, Star } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useClientesSobrepostos } from "@/hooks/useClientesSobrepostos";
+import { DemoModeToggle } from "@/components/privacy/DemoModeToggle";
+import { DemoModeIndicator } from "@/components/privacy/DemoModeIndicator";
+import { PrivateData } from "@/components/privacy/PrivateData";
 
 const WishlistDashboard: React.FC = () => {
   const { stats, loading, apresentacoes, wishlistItems } = useWishlist();
@@ -76,12 +79,15 @@ const WishlistDashboard: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      <DemoModeIndicator />
+      
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center flex-wrap gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Wishlist - Networking Inteligente</h1>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <DemoModeToggle />
           <Button onClick={() => navigate("modo-apresentacao")} variant="outline">
             <Monitor className="mr-2 h-4 w-4" />
             Troca & Apresentação
@@ -269,7 +275,9 @@ const WishlistDashboard: React.FC = () => {
                       {activity.message}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      {activity.detail}
+                      <PrivateData type="generic">
+                        {activity.detail}
+                      </PrivateData>
                     </p>
                   </div>
                   <div className="ml-auto text-sm text-muted-foreground">

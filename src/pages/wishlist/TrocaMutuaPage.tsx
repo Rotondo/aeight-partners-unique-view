@@ -7,10 +7,14 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useWishlist } from "@/contexts/WishlistContext";
-import { ArrowLeftRight, Check, X, Plus, Trash2 } from "lucide-react";
+import { ArrowLeftRight, Check, X, Plus, Trash2, ChevronLeft } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
+import { DemoModeToggle } from "@/components/privacy/DemoModeToggle";
+import { DemoModeIndicator } from "@/components/privacy/DemoModeIndicator";
+import { PrivateData } from "@/components/privacy/PrivateData";
 
 interface ClienteInteresse {
   id: string;
@@ -32,6 +36,7 @@ interface NegociacaoAtiva {
 
 const TrocaMutuaPage: React.FC = () => {
   const { empresasClientes, loading } = useWishlist();
+  const navigate = useNavigate();
   const [negociacoesAtivas, setNegociacoesAtivas] = useState<NegociacaoAtiva[]>([]);
   const [novaNegociacao, setNovaNegociacao] = useState<Partial<NegociacaoAtiva> | null>(null);
   const [showNovoClienteDialog, setShowNovoClienteDialog] = useState(false);
@@ -43,9 +48,12 @@ const TrocaMutuaPage: React.FC = () => {
   );
 
   const iniciarNovaNegociacao = () => {
+    // Use the first available partner company or a placeholder
+    const parceiroSelecionado = empresas.length > 0 ? empresas[0] : "Selecionar Parceiro";
+    
     const novaNeg: NegociacaoAtiva = {
       id: Date.now().toString(),
-      parceiro: "Parceiro Selecionado",
+      parceiro: parceiroSelecionado,
       minhosInteresses: [],
       interessesParceiro: [],
       status: 'pendente',
@@ -165,20 +173,31 @@ const TrocaMutuaPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      <DemoModeIndicator />
+      
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight mb-1">
-            Sistema de Troca Mútua
-          </h1>
-          <p className="text-muted-foreground text-sm">
-            Gerencie negociações de clientes e interesses mútuos com parceiros
-          </p>
+      <div className="flex justify-between items-center flex-wrap gap-4">
+        <div className="flex items-center gap-4">
+          <Button variant="outline" onClick={() => navigate("/wishlist")} className="flex-shrink-0">
+            <ChevronLeft className="h-4 w-4 mr-1" />
+            Voltar ao Dashboard
+          </Button>
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight mb-1">
+              Sistema de Troca Mútua
+            </h1>
+            <p className="text-muted-foreground text-sm">
+              Gerencie negociações de clientes e interesses mútuos com parceiros
+            </p>
+          </div>
         </div>
-        <Button onClick={iniciarNovaNegociacao}>
-          <Plus className="mr-2 h-4 w-4" />
-          Nova Negociação
-        </Button>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <DemoModeToggle />
+          <Button onClick={iniciarNovaNegociacao}>
+            <Plus className="mr-2 h-4 w-4" />
+            Nova Negociação
+          </Button>
+        </div>
       </div>
 
       {/* Negociações Ativas */}
@@ -190,7 +209,9 @@ const TrocaMutuaPage: React.FC = () => {
                 <div>
                   <CardTitle className="flex items-center gap-2">
                     <ArrowLeftRight className="h-5 w-5" />
-                    Negociação com {negociacao.parceiro}
+                    Negociação com <PrivateData type="company">
+                      {negociacao.parceiro}
+                    </PrivateData>
                   </CardTitle>
                   <CardDescription>
                     Iniciada em {negociacao.dataInicio.toLocaleDateString()}
@@ -266,8 +287,16 @@ const TrocaMutuaPage: React.FC = () => {
                       <div key={cliente.id} className="p-3 border rounded-lg">
                         <div className="flex justify-between items-start mb-2">
                           <div>
-                            <div className="font-medium">{cliente.nome}</div>
-                            <div className="text-sm text-muted-foreground">{cliente.parceiro}</div>
+                            <div className="font-medium">
+                              <PrivateData type="company">
+                                {cliente.nome}
+                              </PrivateData>
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              <PrivateData type="company">
+                                {cliente.parceiro}
+                              </PrivateData>
+                            </div>
                           </div>
                           <Button
                             size="sm"
@@ -310,7 +339,11 @@ const TrocaMutuaPage: React.FC = () => {
                       <div key={cliente.id} className="p-3 border rounded-lg">
                         <div className="flex justify-between items-start mb-2">
                           <div>
-                            <div className="font-medium">{cliente.nome}</div>
+                            <div className="font-medium">
+                              <PrivateData type="company">
+                                {cliente.nome}
+                              </PrivateData>
+                            </div>
                             <div className="text-sm text-muted-foreground">Nosso cliente</div>
                           </div>
                           <Badge className={getInteresseColor(cliente.interesse)}>

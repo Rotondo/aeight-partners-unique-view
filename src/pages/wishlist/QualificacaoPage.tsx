@@ -6,12 +6,16 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 import { useWishlist } from "@/contexts/WishlistContext";
-import { Star, CheckCircle, Clock, ArrowRight, Users, Calendar } from "lucide-react";
+import { Star, CheckCircle, Clock, ArrowRight, Users, Calendar, ChevronLeft } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
+import { DemoModeToggle } from "@/components/privacy/DemoModeToggle";
+import { DemoModeIndicator } from "@/components/privacy/DemoModeIndicator";
+import { PrivateData } from "@/components/privacy/PrivateData";
 
 interface ClienteQualificacao {
   id: string;
@@ -31,38 +35,65 @@ interface ClienteQualificacao {
 }
 
 const QualificacaoPage: React.FC = () => {
-  const { loading, convertToOportunidade } = useWishlist();
-  const [clientesQualificacao, setClientesQualificacao] = useState<ClienteQualificacao[]>([
-    {
-      id: '1',
-      nome: 'Nike Brasil',
-      parceiro: 'Agência XYZ',
-      scoreQualificacao: 0,
-      statusQualificacao: 'pendente',
-      criterios: {
-        potencialReceita: 5,
-        facilidadeAcesso: 3,
-        alinhamentoEstrategico: 4,
-        urgencia: 2
-      }
-    },
-    {
-      id: '2',
-      nome: 'Adidas',
-      parceiro: 'Marketing Plus',
-      scoreQualificacao: 85,
-      statusQualificacao: 'qualificado',
-      criterios: {
-        potencialReceita: 9,
-        facilidadeAcesso: 8,
-        alinhamentoEstrategico: 9,
-        urgencia: 7
-      },
-      observacoes: 'Cliente com grande potencial, já demonstrou interesse em nossas soluções.',
-      dataQualificacao: new Date('2024-01-15'),
-      proximosPassos: 'Agendar reunião de apresentação com o CMO'
-    }
-  ]);
+  const { 
+    loading, 
+    convertToOportunidade,
+    apresentacoes,
+    wishlistItems,
+    empresasClientes 
+  } = useWishlist();
+  
+  const navigate = useNavigate();
+  
+  // Criar dados de qualificação baseados em dados reais das apresentações e wishlist items
+  const [clientesQualificacao, setClientesQualificacao] = useState<ClienteQualificacao[]>(() => {
+    // Combinar dados de apresentações realizadas e wishlist items aprovados
+    const clientes: ClienteQualificacao[] = [];
+    
+    // Adicionar clientes de apresentações realizadas que ainda não foram convertidas
+    apresentacoes
+      .filter(ap => ap.status_apresentacao === 'realizada' && !ap.converteu_oportunidade)
+      .forEach(ap => {
+        if (ap.wishlist_item?.empresa_desejada) {
+          clientes.push({
+            id: `apresentacao-${ap.id}`,
+            nome: ap.wishlist_item.empresa_desejada.nome || 'Nome não disponível',
+            parceiro: ap.empresa_facilitadora?.nome || 'Parceiro não disponível',
+            scoreQualificacao: 0, // Será calculado dinamicamente
+            statusQualificacao: 'pendente',
+            criterios: {
+              potencialReceita: 5,
+              facilidadeAcesso: 6,
+              alinhamentoEstrategico: 5,
+              urgencia: 4
+            }
+          });
+        }
+      });
+    
+    // Adicionar clientes de wishlist items aprovados
+    wishlistItems
+      .filter(item => item.status === 'aprovado')
+      .forEach(item => {
+        if (item.empresa_desejada && !clientes.some(c => c.nome === item.empresa_desejada?.nome)) {
+          clientes.push({
+            id: `wishlist-${item.id}`,
+            nome: item.empresa_desejada.nome || 'Nome não disponível',
+            parceiro: item.empresa_proprietaria?.nome || 'Proprietário não disponível',
+            scoreQualificacao: 0, // Será calculado dinamicamente
+            statusQualificacao: 'pendente',
+            criterios: {
+              potencialReceita: item.prioridade || 5,
+              facilidadeAcesso: 5,
+              alinhamentoEstrategico: 6,
+              urgencia: item.prioridade || 5
+            }
+          });
+        }
+      });
+    
+    return clientes;
+  });
 
   const [clienteSelecionado, setClienteSelecionado] = useState<ClienteQualificacao | null>(null);
   const [showConversaoDialog, setShowConversaoDialog] = useState(false);
@@ -169,15 +200,26 @@ const QualificacaoPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      <DemoModeIndicator />
+      
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight mb-1">
-            Qualificação Colaborativa
-          </h1>
-          <p className="text-muted-foreground text-sm">
-            Avalie o potencial de cada cliente e converta os melhores em oportunidades
-          </p>
+      <div className="flex justify-between items-center flex-wrap gap-4">
+        <div className="flex items-center gap-4">
+          <Button variant="outline" onClick={() => navigate("/wishlist")} className="flex-shrink-0">
+            <ChevronLeft className="h-4 w-4 mr-1" />
+            Voltar ao Dashboard
+          </Button>
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight mb-1">
+              Qualificação Colaborativa
+            </h1>
+            <p className="text-muted-foreground text-sm">
+              Avalie o potencial de cada cliente e converta os melhores em oportunidades
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <DemoModeToggle />
         </div>
       </div>
 
@@ -240,8 +282,16 @@ const QualificacaoPage: React.FC = () => {
               <CardHeader>
                 <div className="flex justify-between items-start">
                   <div>
-                    <CardTitle className="text-lg">{cliente.nome}</CardTitle>
-                    <CardDescription>Parceiro: {cliente.parceiro}</CardDescription>
+                    <CardTitle className="text-lg">
+                      <PrivateData type="company">
+                        {cliente.nome}
+                      </PrivateData>
+                    </CardTitle>
+                    <CardDescription>
+                      Parceiro: <PrivateData type="company">
+                        {cliente.parceiro}
+                      </PrivateData>
+                    </CardDescription>
                   </div>
                   <div className="text-right">
                     <div className={`text-2xl font-bold ${getScoreColor(cliente.scoreQualificacao)}`}>
@@ -364,8 +414,16 @@ const QualificacaoPage: React.FC = () => {
               <CardHeader>
                 <div className="flex justify-between items-start">
                   <div>
-                    <CardTitle className="text-lg">{cliente.nome}</CardTitle>
-                    <CardDescription>Parceiro: {cliente.parceiro}</CardDescription>
+                    <CardTitle className="text-lg">
+                      <PrivateData type="company">
+                        {cliente.nome}
+                      </PrivateData>
+                    </CardTitle>
+                    <CardDescription>
+                      Parceiro: <PrivateData type="company">
+                        {cliente.parceiro}
+                      </PrivateData>
+                    </CardDescription>
                   </div>
                   <div className="text-right">
                     <Badge className={getStatusColor(cliente.statusQualificacao)}>
@@ -381,14 +439,22 @@ const QualificacaoPage: React.FC = () => {
                 {cliente.observacoes && (
                   <div className="mb-4">
                     <Label className="text-sm font-medium">Observações</Label>
-                    <p className="text-sm text-muted-foreground mt-1">{cliente.observacoes}</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      <PrivateData type="generic">
+                        {cliente.observacoes}
+                      </PrivateData>
+                    </p>
                   </div>
                 )}
                 
                 {cliente.proximosPassos && (
                   <div className="mb-4">
                     <Label className="text-sm font-medium">Próximos Passos</Label>
-                    <p className="text-sm text-muted-foreground mt-1">{cliente.proximosPassos}</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      <PrivateData type="generic">
+                        {cliente.proximosPassos}
+                      </PrivateData>
+                    </p>
                   </div>
                 )}
 
@@ -413,8 +479,16 @@ const QualificacaoPage: React.FC = () => {
               <CardHeader>
                 <div className="flex justify-between items-start">
                   <div>
-                    <CardTitle className="text-lg">{cliente.nome}</CardTitle>
-                    <CardDescription>Parceiro: {cliente.parceiro}</CardDescription>
+                    <CardTitle className="text-lg">
+                      <PrivateData type="company">
+                        {cliente.nome}
+                      </PrivateData>
+                    </CardTitle>
+                    <CardDescription>
+                      Parceiro: <PrivateData type="company">
+                        {cliente.parceiro}
+                      </PrivateData>
+                    </CardDescription>
                   </div>
                   <Badge className={getStatusColor(cliente.statusQualificacao)}>
                     CONVERTIDO
