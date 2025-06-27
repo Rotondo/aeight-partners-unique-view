@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { DemoModeIndicator } from "@/components/privacy/DemoModeIndicator";
 import { supabase } from "@/lib/supabase";
@@ -349,7 +350,7 @@ const IndicadoresPage: React.FC = () => {
   ];
 
   // Função para garantir que nenhum objeto seja renderizado como React child
-  function safeRenderCell(value: any) {
+  function safeRenderCell(value: any): React.ReactNode {
     if (value === null || value === undefined) return "-";
     if (typeof value === "object") {
       // Se for um objeto simples, exibir JSON formatado
