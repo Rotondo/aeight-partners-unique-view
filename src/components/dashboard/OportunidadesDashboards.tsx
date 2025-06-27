@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -40,19 +39,19 @@ export const OportunidadesDashboards: React.FC = () => {
   const oportunidades = filteredOportunidades || [];
   const metasProgress = useMetasProgress(metas, oportunidades);
   const probabilidades = useMetaProbabilidade(metasProgress);
-  
+
   // Estado para controlar o painel de debug
   const [showDebugPanel, setShowDebugPanel] = useState(false);
 
   // Hook para filtros avançados
-  const { 
-    filters: advancedFilters, 
-    setFilters: setAdvancedFilters, 
-    filteredOportunidades: finalFilteredOportunidades 
+  const {
+    filters: advancedFilters,
+    setFilters: setAdvancedFilters,
+    filteredOportunidades: finalFilteredOportunidades,
   } = useAdvancedFilters(oportunidades);
 
   // Indicador visual de filtro ativo
-  const hasAdvancedFilters = advancedFilters.apenasEmpresasGrupo || advancedFilters.tipoRelacao !== 'todos';
+  const hasAdvancedFilters = advancedFilters.apenasEmpresasGrupo || advancedFilters.tipoRelacao !== "todos";
 
   if (isLoading || !filteredOportunidades) {
     return (
@@ -75,10 +74,7 @@ export const OportunidadesDashboards: React.FC = () => {
       <div className="flex flex-col space-y-4">
         <OportunidadesFilter />
         <div className="relative">
-          <AdvancedFilters 
-            filters={advancedFilters}
-            onFiltersChange={setAdvancedFilters}
-          />
+          <AdvancedFilters filters={advancedFilters} onFiltersChange={setAdvancedFilters} />
           {hasAdvancedFilters && (
             <div className="absolute -top-2 -right-2">
               <div className="h-3 w-3 bg-blue-500 rounded-full animate-pulse"></div>
@@ -90,39 +86,39 @@ export const OportunidadesDashboards: React.FC = () => {
       </div>
 
       <Tabs defaultValue="quick-answers" className="w-full">
-        <TabsList className="grid w-full grid-cols-8">
-          <TabsTrigger value="quick-answers" className="flex items-center gap-2">
+        <TabsList className="flex flex-nowrap overflow-x-auto w-full gap-x-2 scrollbar-thin scrollbar-thumb-muted-foreground/40 scrollbar-track-transparent">
+          <TabsTrigger value="quick-answers" className="flex items-center gap-2 min-w-max">
             <Zap className="h-4 w-4" />
             Respostas Rápidas
           </TabsTrigger>
-          <TabsTrigger value="quantities">Análise de Quantidades</TabsTrigger>
-          <TabsTrigger value="values">Análise de Valores</TabsTrigger>
-          <TabsTrigger value="grupo-performance" className="flex items-center gap-2">
+          <TabsTrigger value="quantities" className="min-w-max">Análise de Quantidades</TabsTrigger>
+          <TabsTrigger value="values" className="min-w-max">Análise de Valores</TabsTrigger>
+          <TabsTrigger value="grupo-performance" className="flex items-center gap-2 min-w-max">
             <Users className="h-4 w-4" />
             Performance Grupo
           </TabsTrigger>
-          <TabsTrigger value="cycle-time" className="flex items-center gap-2">
+          <TabsTrigger value="cycle-time" className="flex items-center gap-2 min-w-max">
             <Clock className="h-4 w-4" />
             Tempo Ciclo
           </TabsTrigger>
-          <TabsTrigger value="recebimento" className="flex items-center gap-2">
+          <TabsTrigger value="recebimento" className="flex items-center gap-2 min-w-max">
             <TrendingDown className="h-4 w-4" />
             Recebimento
           </TabsTrigger>
-          <TabsTrigger value="metas" className="flex items-center gap-2">
+          <TabsTrigger value="metas" className="flex items-center gap-2 min-w-max">
             <Calculator className="h-4 w-4" />
             Probabilidade Metas
           </TabsTrigger>
-          <TabsTrigger value="resultados" className="flex items-center gap-2">
+          <TabsTrigger value="resultados" className="flex items-center gap-2 min-w-max">
             <Target className="h-4 w-4" />
             Controle de Resultados
           </TabsTrigger>
         </TabsList>
-        
+
         <TabsContent value="quick-answers" className="space-y-6">
           <QuickAnswersSection oportunidades={finalFilteredOportunidades} />
         </TabsContent>
-        
+
         <TabsContent value="quantities" className="space-y-6">
           <div className="grid gap-4 md:grid-cols-2">
             <Card>
@@ -182,7 +178,7 @@ export const OportunidadesDashboards: React.FC = () => {
             </CardContent>
           </Card>
         </TabsContent>
-        
+
         <TabsContent value="values" className="space-y-6">
           <ValuesStatusAnalysis oportunidades={finalFilteredOportunidades} />
         </TabsContent>
