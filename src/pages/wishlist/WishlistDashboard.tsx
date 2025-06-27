@@ -1,13 +1,11 @@
-
 import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useWishlist } from "@/contexts/WishlistContext";
-import { Heart, Users, Presentation, TrendingUp, Plus, Eye, Monitor, ArrowLeftRight, Star } from "lucide-react";
+import { Heart, Users, Presentation, TrendingUp, Plus, Eye, Monitor, Star } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useClientesSobrepostos } from "@/hooks/useClientesSobrepostos";
-import ClientesSobrepostosAlert from "@/components/wishlist/ClientesSobrepostosAlert";
 
 const WishlistDashboard: React.FC = () => {
   const { stats, loading, apresentacoes, wishlistItems } = useWishlist();
@@ -17,12 +15,12 @@ const WishlistDashboard: React.FC = () => {
   // Buscar atividades recentes reais
   const getRecentActivities = () => {
     const activities = [];
-    
+
     // Adicionar wishlist items recentes
     const recentWishlistItems = wishlistItems
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
       .slice(0, 3);
-    
+
     recentWishlistItems.forEach(item => {
       activities.push({
         type: 'wishlist',
@@ -57,7 +55,7 @@ const WishlistDashboard: React.FC = () => {
     const diffMs = now.getTime() - date.getTime();
     const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
     const diffDays = Math.floor(diffHours / 24);
-    
+
     if (diffDays > 0) return `${diffDays}d atrás`;
     if (diffHours > 0) return `${diffHours}h atrás`;
     return 'Agora mesmo';
@@ -75,22 +73,18 @@ const WishlistDashboard: React.FC = () => {
   }
 
   const recentActivities = getRecentActivities();
-  const clientesMaisCompartilhados = getClientesMaisCompartilhados(3);
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">WishLift - Networking Inteligente</h1>
-          <p className="text-muted-foreground">
-            Centralize clientes, identifique sobreposições e facilite networking estratégico
-          </p>
+          <h1 className="text-3xl font-bold tracking-tight">Wishlist - Networking Inteligente</h1>
         </div>
         <div className="flex gap-2">
           <Button onClick={() => navigate("modo-apresentacao")} variant="outline">
             <Monitor className="mr-2 h-4 w-4" />
-            Modo Apresentação
+            Troca & Apresentação
           </Button>
           <Button onClick={() => navigate("sobrepostos")} variant="outline">
             <Eye className="mr-2 h-4 w-4" />
@@ -103,12 +97,6 @@ const WishlistDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Alert de Clientes Sobrepostos */}
-      <ClientesSobrepostosAlert
-        totalSobrepostos={totalSobrepostos}
-        novosSobrepostos={clientesMaisCompartilhados.map(c => c.nome)}
-      />
-
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
@@ -120,19 +108,6 @@ const WishlistDashboard: React.FC = () => {
             <div className="text-2xl font-bold">{stats?.totalSolicitacoes || 0}</div>
             <p className="text-xs text-muted-foreground">
               Total de itens na wishlist
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Clientes Compartilhados</CardTitle>
-            <Users className="h-4 w-4 text-orange-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{totalSobrepostos}</div>
-            <p className="text-xs text-muted-foreground">
-              Oportunidades de networking
             </p>
           </CardContent>
         </Card>
@@ -162,11 +137,23 @@ const WishlistDashboard: React.FC = () => {
             </p>
           </CardContent>
         </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Base de Clientes</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats?.empresasMaisDesejadas?.length || 0}</div>
+            <p className="text-xs text-muted-foreground">
+              Empresas cadastradas
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Workflow WishLift */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="cursor-pointer hover:shadow-md transition-shadow" 
+      {/* Workflow - atualizado */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <Card className="cursor-pointer hover:shadow-md transition-shadow"
               onClick={() => navigate("sobrepostos")}>
           <CardHeader>
             <CardTitle className="text-lg flex items-center">
@@ -178,57 +165,35 @@ const WishlistDashboard: React.FC = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center justify-between">
-              <span className="text-2xl font-bold text-orange-600">{totalSobrepostos}</span>
-              <Badge variant="secondary">Fase 1</Badge>
-            </div>
+            <Badge variant="secondary">Fase 1</Badge>
           </CardContent>
         </Card>
 
-        <Card className="cursor-pointer hover:shadow-md transition-shadow" 
+        <Card className="cursor-pointer hover:shadow-md transition-shadow"
               onClick={() => navigate("modo-apresentacao")}>
           <CardHeader>
             <CardTitle className="text-lg flex items-center">
               <Monitor className="mr-2 h-5 w-5 text-blue-500" />
-              2. Modo Reunião
+              2. Troca & Apresentação
             </CardTitle>
             <CardDescription>
-              Interface otimizada para seleção durante reuniões
+              Interface unificada para reuniões e negociação
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Button variant="outline" className="w-full">
               <Monitor className="mr-2 h-4 w-4" />
-              Iniciar Modo
+              Iniciar
             </Button>
           </CardContent>
         </Card>
 
-        <Card className="cursor-pointer hover:shadow-md transition-shadow" 
-              onClick={() => navigate("troca-mutua")}>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center">
-              <ArrowLeftRight className="mr-2 h-5 w-5 text-green-500" />
-              3. Troca Mútua
-            </CardTitle>
-            <CardDescription>
-              Gerencie negociações e interesses mútuos
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button variant="outline" className="w-full">
-              <ArrowLeftRight className="mr-2 h-4 w-4" />
-              Negociar
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card className="cursor-pointer hover:shadow-md transition-shadow" 
+        <Card className="cursor-pointer hover:shadow-md transition-shadow"
               onClick={() => navigate("qualificacao")}>
           <CardHeader>
             <CardTitle className="text-lg flex items-center">
               <Star className="mr-2 h-5 w-5 text-purple-500" />
-              4. Qualificação
+              3. Qualificação
             </CardTitle>
             <CardDescription>
               Avalie e converta clientes em oportunidades
@@ -286,7 +251,7 @@ const WishlistDashboard: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Recent Activity - Agora com dados reais */}
+      {/* Recent Activity */}
       <Card>
         <CardHeader>
           <CardTitle>Atividade Recente</CardTitle>
@@ -322,6 +287,9 @@ const WishlistDashboard: React.FC = () => {
           </div>
         </CardContent>
       </Card>
+      <div className="text-xs text-muted-foreground text-right pt-2">
+        Desenvolvido por Thiago Rotondo
+      </div>
     </div>
   );
 };
