@@ -1,9 +1,10 @@
+
 import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useWishlist } from "@/contexts/WishlistContext";
-import { Heart, Users, Presentation, TrendingUp, Plus, Eye } from "lucide-react";
+import { Heart, Users, Presentation, TrendingUp, Plus, Eye, Monitor, ArrowLeftRight, Star } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useClientesSobrepostos } from "@/hooks/useClientesSobrepostos";
 import ClientesSobrepostosAlert from "@/components/wishlist/ClientesSobrepostosAlert";
@@ -87,13 +88,13 @@ const WishlistDashboard: React.FC = () => {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button onClick={() => navigate("modo-apresentacao")} variant="outline">
+            <Monitor className="mr-2 h-4 w-4" />
+            Modo Apresentação
+          </Button>
           <Button onClick={() => navigate("sobrepostos")} variant="outline">
             <Eye className="mr-2 h-4 w-4" />
             Clientes Sobrepostos
-          </Button>
-          <Button onClick={() => navigate("clientes")} variant="outline">
-            <Users className="mr-2 h-4 w-4" />
-            Gerenciar Clientes
           </Button>
           <Button onClick={() => navigate("itens")}>
             <Plus className="mr-2 h-4 w-4" />
@@ -163,75 +164,127 @@ const WishlistDashboard: React.FC = () => {
         </Card>
       </div>
 
-      {/* Quick Actions */}
+      {/* Workflow WishLift */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card className="cursor-pointer hover:shadow-md transition-shadow" 
               onClick={() => navigate("sobrepostos")}>
           <CardHeader>
             <CardTitle className="text-lg flex items-center">
               <Eye className="mr-2 h-5 w-5 text-orange-500" />
-              Clientes Compartilhados
+              1. Identificar Sobreposições
             </CardTitle>
             <CardDescription>
-              Veja intersecções e oportunidades de networking
+              Detecte clientes compartilhados automaticamente
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
               <span className="text-2xl font-bold text-orange-600">{totalSobrepostos}</span>
-              <Badge variant="secondary">Novo!</Badge>
+              <Badge variant="secondary">Fase 1</Badge>
             </div>
           </CardContent>
         </Card>
 
         <Card className="cursor-pointer hover:shadow-md transition-shadow" 
-              onClick={() => navigate("clientes")}>
+              onClick={() => navigate("modo-apresentacao")}>
           <CardHeader>
-            <CardTitle className="text-lg">Base de Clientes</CardTitle>
+            <CardTitle className="text-lg flex items-center">
+              <Monitor className="mr-2 h-5 w-5 text-blue-500" />
+              2. Modo Reunião
+            </CardTitle>
             <CardDescription>
-              Gerencie a base de clientes de cada parceiro
+              Interface otimizada para seleção durante reuniões
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Button variant="outline" className="w-full">
-              <Users className="mr-2 h-4 w-4" />
-              Acessar
+              <Monitor className="mr-2 h-4 w-4" />
+              Iniciar Modo
             </Button>
           </CardContent>
         </Card>
 
         <Card className="cursor-pointer hover:shadow-md transition-shadow" 
-              onClick={() => navigate("itens")}>
+              onClick={() => navigate("troca-mutua")}>
           <CardHeader>
-            <CardTitle className="text-lg">Wishlist Itens</CardTitle>
+            <CardTitle className="text-lg flex items-center">
+              <ArrowLeftRight className="mr-2 h-5 w-5 text-green-500" />
+              3. Troca Mútua
+            </CardTitle>
             <CardDescription>
-              Visualize e gerencie todas as solicitações de interesse
+              Gerencie negociações e interesses mútuos
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Button variant="outline" className="w-full">
-              <Heart className="mr-2 h-4 w-4" />
-              Acessar
+              <ArrowLeftRight className="mr-2 h-4 w-4" />
+              Negociar
             </Button>
           </CardContent>
         </Card>
 
         <Card className="cursor-pointer hover:shadow-md transition-shadow" 
-              onClick={() => navigate("apresentacoes")}>
+              onClick={() => navigate("qualificacao")}>
           <CardHeader>
-            <CardTitle className="text-lg">Apresentações</CardTitle>
+            <CardTitle className="text-lg flex items-center">
+              <Star className="mr-2 h-5 w-5 text-purple-500" />
+              4. Qualificação
+            </CardTitle>
             <CardDescription>
-              Acompanhe apresentações e facilitações realizadas
+              Avalie e converta clientes em oportunidades
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Button variant="outline" className="w-full">
-              <Presentation className="mr-2 h-4 w-4" />
-              Acessar
+              <Star className="mr-2 h-4 w-4" />
+              Qualificar
             </Button>
           </CardContent>
         </Card>
       </div>
+
+      {/* Acesso Rápido - Funcionalidades Originais */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Funcionalidades Adicionais</CardTitle>
+          <CardDescription>
+            Acesso rápido às funcionalidades complementares
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-3">
+            <Button variant="outline" onClick={() => navigate("clientes")} className="h-auto p-4">
+              <div className="flex flex-col items-center gap-2">
+                <Users className="h-6 w-6" />
+                <div className="text-center">
+                  <div className="font-medium">Base de Clientes</div>
+                  <div className="text-sm text-muted-foreground">Gerencie carteiras</div>
+                </div>
+              </div>
+            </Button>
+
+            <Button variant="outline" onClick={() => navigate("itens")} className="h-auto p-4">
+              <div className="flex flex-col items-center gap-2">
+                <Heart className="h-6 w-6" />
+                <div className="text-center">
+                  <div className="font-medium">Wishlist Itens</div>
+                  <div className="text-sm text-muted-foreground">Solicitações de interesse</div>
+                </div>
+              </div>
+            </Button>
+
+            <Button variant="outline" onClick={() => navigate("apresentacoes")} className="h-auto p-4">
+              <div className="flex flex-col items-center gap-2">
+                <Presentation className="h-6 w-6" />
+                <div className="text-center">
+                  <div className="font-medium">Apresentações</div>
+                  <div className="text-sm text-muted-foreground">Facilitações realizadas</div>
+                </div>
+              </div>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Recent Activity - Agora com dados reais */}
       <Card>

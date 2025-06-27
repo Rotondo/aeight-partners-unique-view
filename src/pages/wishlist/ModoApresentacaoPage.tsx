@@ -1,0 +1,263 @@
+
+import React, { useState } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useWishlist } from "@/contexts/WishlistContext";
+import { Monitor, Download, Share2, Users, Search, Filter } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+
+interface ClienteSelecionado {
+  id: string;
+  nome: string;
+  parceiro: string;
+  observacoes?: string;
+}
+
+const ModoApresentacaoPage: React.FC = () => {
+  const { empresasClientes, loading } = useWishlist();
+  const [clientesSelecionados, setClientesSelecionados] = useState<ClienteSelecionado[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [empresaSelecionada, setEmpresaSelecionada] = useState<string>("todas");
+  const [modoApresentacao, setModoApresentacao] = useState(false);
+
+  const empresas = Array.from(
+    new Set(empresasClientes.map(ec => ec.empresa_proprietaria?.nome).filter(Boolean))
+  );
+
+  const clientesFiltrados = empresasClientes.filter(ec => {
+    const matchSearch = ec.empresa_cliente?.nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                       ec.empresa_proprietaria?.nome?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchEmpresa = empresaSelecionada === "todas" || 
+                        ec.empresa_proprietaria?.nome === empresaSelecionada;
+    
+    return matchSearch && matchEmpresa;
+  });
+
+  const toggleClienteSelecao = (cliente: any) => {
+    const clienteId = cliente.empresa_cliente_id;
+    const isSelected = clientesSelecionados.some(c => c.id === clienteId);
+    
+    if (isSelected) {
+      setClientesSelecionados(prev => prev.filter(c => c.id !== clienteId));
+    } else {
+      setClientesSelecionados(prev => [...prev, {
+        id: clienteId,
+        nome: cliente.empresa_cliente?.nome || 'Cliente sem nome',
+        parceiro: cliente.empresa_proprietaria?.nome || 'Parceiro sem nome'
+      }]);
+    }
+  };
+
+  const exportarLista = () => {
+    const csv = [
+      ['Cliente', 'Parceiro', 'Observações'],
+      ...clientesSelecionados.map(c => [c.nome, c.parceiro, c.observacoes || ''])
+    ].map(row => row.join(',')).join('\n');
+    
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `clientes-selecionados-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+  };
+
+  const limparSelecoes = () => {
+    setClientesSelecionados([]);
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Carregando modo apresentação...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight mb-1">
+            Modo Apresentação - WishLift
+          </h1>
+          <p className="text-muted-foreground text-sm">
+            Interface otimizada para reuniões e seleção de clientes em tempo real
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button 
+            variant={modoApresentacao ? "default" : "outline"}
+            onClick={() => setModoApresentacao(!modoApresentacao)}
+          >
+            <Monitor className="mr-2 h-4 w-4" />
+            {modoApresentacao ? "Sair do Modo" : "Modo Apresentação"}
+          </Button>
+          {clientesSelecionados.length > 0 && (
+            <Button onClick={exportarLista} variant="outline">
+              <Download className="mr-2 h-4 w-4" />
+              Exportar Lista
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Controles */}
+      <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar cliente ou parceiro..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-8"
+          />
+        </div>
+        
+        <select 
+          value={empresaSelecionada} 
+          onChange={(e) => setEmpresaSelecionada(e.target.value)}
+          className="px-3 py-2 border border-input bg-background rounded-md text-sm"
+        >
+          <option value="todas">Todas as empresas</option>
+          {empresas.map(empresa => (
+            <option key={empresa} value={empresa}>{empresa}</option>
+          ))}
+        </select>
+
+        <Badge variant="secondary" className="px-3 py-1">
+          {clientesSelecionados.length} selecionados
+        </Badge>
+
+        {clientesSelecionados.length > 0 && (
+          <Button variant="outline" size="sm" onClick={limparSelecoes}>
+            Limpar
+          </Button>
+        )}
+      </div>
+
+      {/* Conteúdo Principal */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Lista de Clientes */}
+        <div className="lg:col-span-2">
+          <Card className={modoApresentacao ? "border-2 border-primary" : ""}>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Base de Clientes
+                {modoApresentacao && <Badge variant="secondary">Modo Apresentação</Badge>}
+              </CardTitle>
+              <CardDescription>
+                Selecione os clientes de interesse durante a reunião
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2 max-h-96 overflow-y-auto">
+                {clientesFiltrados.map((cliente) => {
+                  const isSelected = clientesSelecionados.some(c => c.id === cliente.empresa_cliente_id);
+                  return (
+                    <div 
+                      key={cliente.id}
+                      className={`flex items-center space-x-3 p-3 rounded-lg border transition-colors cursor-pointer ${
+                        isSelected ? 'bg-primary/10 border-primary' : 'hover:bg-muted/50'
+                      }`}
+                      onClick={() => toggleClienteSelecao(cliente)}
+                    >
+                      <Checkbox 
+                        checked={isSelected}
+                        onChange={() => {}}
+                      />
+                      <div className="flex-1">
+                        <div className="font-medium">{cliente.empresa_cliente?.nome}</div>
+                        <div className="text-sm text-muted-foreground">
+                          Parceiro: {cliente.empresa_proprietaria?.nome}
+                        </div>
+                      </div>
+                      <Badge variant="outline" className="text-xs">
+                        {cliente.empresa_proprietaria?.tipo || 'Indefinido'}
+                      </Badge>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {clientesFiltrados.length === 0 && (
+                <div className="text-center py-8">
+                  <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                  <p className="text-muted-foreground">
+                    Nenhum cliente encontrado com os filtros aplicados
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Painel de Seleções */}
+        <div className="lg:col-span-1">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Share2 className="h-5 w-5" />
+                Clientes Selecionados
+              </CardTitle>
+              <CardDescription>
+                Lista para compartilhar com o parceiro
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {clientesSelecionados.map((cliente) => (
+                  <div key={cliente.id} className="p-3 bg-muted/50 rounded-lg">
+                    <div className="font-medium text-sm">{cliente.nome}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {cliente.parceiro}
+                    </div>
+                  </div>
+                ))}
+
+                {clientesSelecionados.length === 0 && (
+                  <div className="text-center py-8">
+                    <p className="text-sm text-muted-foreground">
+                      Nenhum cliente selecionado ainda
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {clientesSelecionados.length > 0 && (
+                <div className="mt-4 space-y-2">
+                  <Button onClick={exportarLista} className="w-full" size="sm">
+                    <Download className="mr-2 h-4 w-4" />
+                    Exportar Lista
+                  </Button>
+                  <Button onClick={limparSelecoes} variant="outline" className="w-full" size="sm">
+                    Limpar Seleções
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ModoApresentacaoPage;

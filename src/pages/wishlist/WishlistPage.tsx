@@ -7,6 +7,9 @@ import EmpresasClientesPage from "./EmpresasClientesPage";
 import WishlistItemsPage from "./WishlistItemsPage";
 import ApresentacoesPage from "./ApresentacoesPage";
 import ClientesSobrepostosPage from "./ClientesSobrepostosPage";
+import ModoApresentacaoPage from "./ModoApresentacaoPage";
+import TrocaMutuaPage from "./TrocaMutuaPage";
+import QualificacaoPage from "./QualificacaoPage";
 
 const WishlistPage: React.FC = () => {
   return (
@@ -18,6 +21,9 @@ const WishlistPage: React.FC = () => {
           <Route path="itens" element={<WishlistItemsPage />} />
           <Route path="apresentacoes" element={<ApresentacoesPage />} />
           <Route path="sobrepostos" element={<ClientesSobrepostosPage />} />
+          <Route path="modo-apresentacao" element={<ModoApresentacaoPage />} />
+          <Route path="troca-mutua" element={<TrocaMutuaPage />} />
+          <Route path="qualificacao" element={<QualificacaoPage />} />
         </Routes>
       </div>
     </WishlistProvider>

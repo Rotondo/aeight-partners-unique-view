@@ -202,7 +202,7 @@ const ClientesSobrepostosPage: React.FC = () => {
             <CardContent>
               <div className="text-2xl font-bold">{estatisticas.totalClientesCompartilhados}</div>
               <p className="text-xs text-muted-foreground">
-                de {estadisticas?.totalClientesUnicos} únicos
+                de {estatisticas.totalClientesUnicos} únicos
               </p>
             </CardContent>
           </Card>
