@@ -18,12 +18,16 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { useWishlist } from "@/contexts/WishlistContext";
-import { Plus, Search, Heart, Calendar, Star, Loader2 } from "lucide-react";
+import { Plus, Search, Heart, Calendar, Star, Loader2, ChevronLeft } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { WishlistStatus, WishlistItem } from "@/types";
 import { supabase } from "@/lib/supabase";
 import { toast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
+import { DemoModeToggle } from "@/components/privacy/DemoModeToggle";
+import { DemoModeIndicator } from "@/components/privacy/DemoModeIndicator";
+import { PrivateData } from "@/components/privacy/PrivateData";
 
 // Tipo auxiliar para empresas
 type EmpresaOption = {
@@ -52,6 +56,8 @@ const WishlistItemsPage: React.FC = () => {
     addWishlistItem,
     updateWishlistItem,
   } = useWishlist();
+
+  const navigate = useNavigate();
 
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<WishlistStatus | "all">("all");
@@ -312,26 +318,36 @@ const WishlistItemsPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      <DemoModeIndicator />
+      
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Wishlist Items</h1>
-          <p className="text-muted-foreground">
-            Gerencie solicitações de interesse e apresentações
-          </p>
+      <div className="flex justify-between items-center flex-wrap gap-4">
+        <div className="flex items-center gap-4">
+          <Button variant="outline" onClick={() => navigate("/wishlist")} className="flex-shrink-0">
+            <ChevronLeft className="h-4 w-4 mr-1" />
+            Voltar ao Dashboard
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Wishlist Items</h1>
+            <p className="text-muted-foreground">
+              Gerencie solicitações de interesse e apresentações
+            </p>
+          </div>
         </div>
-        <Dialog
-          open={modalOpen}
-          onOpenChange={(o) => {
-            setModalOpen(o);
-            if (!o) resetModal();
-          }}
-        >
-          <Button
-            onClick={() => {
-              setEditingItem(null);
-              setModalOpen(true);
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <DemoModeToggle />
+          <Dialog
+            open={modalOpen}
+            onOpenChange={(o) => {
+              setModalOpen(o);
+              if (!o) resetModal();
             }}
+          >
+            <Button
+              onClick={() => {
+                setEditingItem(null);
+                setModalOpen(true);
+              }}
             data-testid="button-nova-solicitacao"
           >
             <Plus className="mr-2 h-4 w-4" />
@@ -509,6 +525,7 @@ const WishlistItemsPage: React.FC = () => {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {/* Filters */}
@@ -603,11 +620,17 @@ const WishlistItemsPage: React.FC = () => {
               <div className="flex justify-between items-start">
                 <div>
                   <CardTitle className="text-lg">
-                    {(item.empresa_interessada?.nome || "—")} →{" "}
-                    {(item.empresa_desejada?.nome || "—")}
+                    <PrivateData type="company">
+                      {(item.empresa_interessada?.nome || "—")}
+                    </PrivateData>{" "} →{" "}
+                    <PrivateData type="company">
+                      {(item.empresa_desejada?.nome || "—")}
+                    </PrivateData>
                   </CardTitle>
                   <CardDescription>
-                    Proprietário: {(item.empresa_proprietaria?.nome || "—")}
+                    Proprietário: <PrivateData type="company">
+                      {(item.empresa_proprietaria?.nome || "—")}
+                    </PrivateData>
                   </CardDescription>
                 </div>
                 <div className="flex items-center gap-2">
@@ -637,7 +660,9 @@ const WishlistItemsPage: React.FC = () => {
                   <div>
                     <p className="text-sm font-medium">Motivo:</p>
                     <p className="text-sm text-muted-foreground">
-                      {item.motivo}
+                      <PrivateData type="generic">
+                        {item.motivo}
+                      </PrivateData>
                     </p>
                   </div>
                 )}
@@ -645,7 +670,9 @@ const WishlistItemsPage: React.FC = () => {
                   <div>
                     <p className="text-sm font-medium">Observações:</p>
                     <p className="text-sm text-muted-foreground">
-                      {item.observacoes}
+                      <PrivateData type="generic">
+                        {item.observacoes}
+                      </PrivateData>
                     </p>
                   </div>
                 )}
