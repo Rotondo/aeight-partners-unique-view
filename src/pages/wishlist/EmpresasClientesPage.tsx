@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -79,16 +80,25 @@ const EmpresasClientesPage: React.FC = () => {
 
       if (!error && data) {
         setEmpresasClientesOptions(
-          data.filter((e: EmpresaOption) => e.tipo === "cliente")
+          data.filter((e: any) => e.tipo === "cliente").map((e: any) => ({
+            id: e.id,
+            nome: e.nome,
+            tipo: e.tipo as EmpresaTipoString
+          }))
         );
         setEmpresasParceiros(
-          data.filter(
-            (e: EmpresaOption) =>
-              e.tipo === "parceiro" || e.tipo === "intragrupo"
-          )
+          data.filter((e: any) => e.tipo === "parceiro" || e.tipo === "intragrupo").map((e: any) => ({
+            id: e.id,
+            nome: e.nome,
+            tipo: e.tipo as EmpresaTipoString
+          }))
         );
         setEmpresasClientesAll(
-          data.filter((e: EmpresaOption) => e.tipo === "cliente")
+          data.filter((e: any) => e.tipo === "cliente").map((e: any) => ({
+            id: e.id,
+            nome: e.nome,
+            tipo: e.tipo as EmpresaTipoString
+          }))
         );
       }
     };
@@ -172,7 +182,7 @@ const EmpresasClientesPage: React.FC = () => {
     ) {
       setEmpresasClientesOptions((prev) => [
         ...prev,
-        { id: clienteId, nome, tipo: "cliente" },
+        { id: clienteId, nome, tipo: "cliente" as EmpresaTipoString },
       ]);
     }
 
@@ -223,7 +233,7 @@ const EmpresasClientesPage: React.FC = () => {
         {
           id: cliente.id,
           nome: cliente.nome,
-          tipo: "cliente",
+          tipo: "cliente" as EmpresaTipoString,
         },
       ]);
     }
@@ -340,26 +350,20 @@ const EmpresasClientesPage: React.FC = () => {
         </div>
 
         <TabsContent value="clientes" className="space-y-6">
-          {/* Estatísticas e Tabelas mascarando apenas os campos sensíveis */}
+          {/* Estatísticas */}
           <ClientesStats
             empresasClientes={empresasClientes}
-            PrivateDataComponent={PrivateData}
-            isDemoMode={isDemoMode}
           />
 
           <ClientesVinculadosTable
             clientesVinculados={filteredClientesVinculados}
             onEditar={handleEditar}
             onSolicitarApresentacao={handleSolicitarApresentacao}
-            PrivateDataComponent={PrivateData}
-            isDemoMode={isDemoMode}
           />
 
           <ClientesNaoVinculadosTable
             clientesNaoVinculados={filteredClientesNaoVinculados}
             onVincular={handleVincularCliente}
-            PrivateDataComponent={PrivateData}
-            isDemoMode={isDemoMode}
           />
         </TabsContent>
 
@@ -377,8 +381,6 @@ const EmpresasClientesPage: React.FC = () => {
                 <ParceiroRelevanceCard
                   key={parceiro.id}
                   parceiro={parceiro}
-                  PrivateDataComponent={PrivateData}
-                  isDemoMode={isDemoMode}
                 />
               ))}
 
@@ -418,11 +420,9 @@ const EmpresasClientesPage: React.FC = () => {
         onSubmit={handleSubmit}
         modalLoading={modalLoading}
         empresasClientesOptions={empresasClientesOptions}
-        setEmpresasClientesOptions={setEmpresasClientesOptions}
+        setEmpresasClientesOptions={(empresas: EmpresaOption[]) => setEmpresasClientesOptions(empresas)}
         empresasParceiros={empresasParceiros}
         parceirosJaVinculadosAoCliente={parceirosJaVinculadosAoCliente}
-        PrivateDataComponent={PrivateData}
-        isDemoMode={isDemoMode}
       />
 
       <ApresentacaoModal
@@ -433,8 +433,6 @@ const EmpresasClientesPage: React.FC = () => {
         setApresentacaoObs={setApresentacaoObs}
         onSubmit={handleSubmitApresentacao}
         loading={apresentacaoLoading}
-        PrivateDataComponent={PrivateData}
-        isDemoMode={isDemoMode}
       />
     </div>
   );

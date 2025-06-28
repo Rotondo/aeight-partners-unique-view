@@ -132,7 +132,11 @@ const ModoApresentacaoPage: React.FC = () => {
   };
 
   // Seleção individual (painel lateral, exportação)
-  const toggleClienteSelecao = (cliente: { empresa_cliente_id: string, empresa_cliente: { nome: string }, empresa_proprietaria: { nome: string } }) => {
+  const toggleClienteSelecao = (cliente: { 
+    empresa_cliente_id: string, 
+    empresa_cliente?: { nome: string }, 
+    empresa_proprietaria?: { nome: string } 
+  }) => {
     const clienteId = cliente.empresa_cliente_id;
     const isSelected = clientesSelecionados.some(c => c.id === clienteId);
     if (isSelected) {
@@ -297,7 +301,11 @@ const ModoApresentacaoPage: React.FC = () => {
                       className={`flex items-center space-x-3 p-3 rounded-lg border transition-colors cursor-pointer ${
                         isSelected ? 'bg-primary/10 border-primary' : 'hover:bg-muted/50'
                       }`}
-                      onClick={() => toggleClienteSelecao(cliente)}
+                      onClick={() => toggleClienteSelecao({
+                        empresa_cliente_id: cliente.empresa_cliente_id,
+                        empresa_cliente: cliente.empresa_cliente,
+                        empresa_proprietaria: cliente.empresa_proprietaria
+                      })}
                     >
                       <Checkbox
                         checked={isSelected}
@@ -382,7 +390,11 @@ const ModoApresentacaoPage: React.FC = () => {
                           className={`flex items-center space-x-3 p-3 rounded-lg border transition-colors cursor-pointer ${
                             isSelected ? 'bg-primary/10 border-primary' : 'hover:bg-muted/50'
                           }`}
-                          onClick={() => toggleClienteSelecao(cliente)}
+                          onClick={() => toggleClienteSelecao({
+                            empresa_cliente_id: cliente.empresa_cliente_id,
+                            empresa_cliente: cliente.empresa_cliente,
+                            empresa_proprietaria: cliente.empresa_proprietaria
+                          })}
                         >
                           <Checkbox checked={isSelected} onChange={() => {}} />
                           <div className="flex-1">

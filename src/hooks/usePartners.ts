@@ -62,7 +62,14 @@ export const usePartners = (options: UsePartnersOptions = {}) => {
         showAllPartners: options.showAllPartners
       });
 
-      setPartners(filteredData);
+      // Ensure all fields are present
+      const partnersWithDefaults = filteredData.map(partner => ({
+        ...partner,
+        descricao: partner.descricao || '',
+        created_at: partner.created_at || new Date().toISOString()
+      }));
+
+      setPartners(partnersWithDefaults);
     } catch (err) {
       console.error('Erro:', err);
       setError('Erro inesperado ao carregar parceiros');
