@@ -46,11 +46,18 @@ export const usePartners = (options: UsePartnersOptions = {}) => {
         return;
       }
 
+      // Ensure all fields are present first
+      const partnersWithDefaults = (data || []).map(partner => ({
+        ...partner,
+        descricao: partner.descricao || '',
+        created_at: partner.created_at || new Date().toISOString()
+      }));
+
       // Apply company classification filtering if needed
-      let filteredData = data || [];
+      let filteredData = partnersWithDefaults;
       if (options.showAllPartners) {
         // Show all active external partners regardless of client relationships
-        filteredData = getActiveExternalPartners(data || []);
+        filteredData = getActiveExternalPartners(partnersWithDefaults);
       }
 
       // Log para debug - remover depois da validação
@@ -62,14 +69,7 @@ export const usePartners = (options: UsePartnersOptions = {}) => {
         showAllPartners: options.showAllPartners
       });
 
-      // Ensure all fields are present
-      const partnersWithDefaults = filteredData.map(partner => ({
-        ...partner,
-        descricao: partner.descricao || '',
-        created_at: partner.created_at || new Date().toISOString()
-      }));
-
-      setPartners(partnersWithDefaults);
+      setPartners(filteredData);
     } catch (err) {
       console.error('Erro:', err);
       setError('Erro inesperado ao carregar parceiros');
