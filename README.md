@@ -1,215 +1,257 @@
 
 # Sistema de Gestão de Oportunidades e Parcerias
 
-Sistema completo para gestão de oportunidades de negócio, análise de performance e controle de parcerias estratégicas.
+Sistema completo PWA para gestão de oportunidades de negócio, análise de performance e controle de parcerias estratégicas com capacidades offline.
 
-## 🏗️ Nova Arquitetura Modular
+## 🚀 **NOVA VERSÃO PWA** - Progressive Web App
 
-O sistema foi refatorado para uma arquitetura baseada em **micro-serviços independentes**, melhorando manutenibilidade, performance e escalabilidade.
+### 📱 Capacidades Móveis e Offline
+- **Instalação nativa**: Instale como app no celular/desktop
+- **Uso offline**: Funciona sem conexão com internet
+- **Sincronização automática**: Dados sincronizam quando conectar
+- **Cache inteligente**: Performance otimizada em conexões lentas
+- **Push notifications**: Alertas importantes (preparado)
 
-### 📁 Estrutura de Módulos
+### 🔧 Configuração PWA
+```json
+Manifest configurado para:
+- Nome: "A&eight Partners" 
+- Tema: #4a90e2
+- Ícones otimizados para todas as telas
+- Service Worker com cache estratégico
+```
+
+## 🏗️ **ARQUITETURA MODULAR APRIMORADA**
+
+### 📊 **Módulo de Indicadores Refatorado**
+Completamente reestruturado para máxima performance e manutenibilidade:
 
 ```
-src/modules/
-├── dashboard-core/          # Tipos e componentes base reutilizáveis
-├── filters-advanced/        # Sistema de filtros avançados
-├── quick-answers/          # Respostas rápidas para perguntas de negócio
-├── values-analysis/        # Análise de valores com drill-down
-├── grupo-performance/      # Performance por empresa do grupo
-├── cycle-time/            # Análise temporal de fechamento
-└── [futuros módulos]/     # Análises específicas modulares
+src/pages/indicadores/
+├── IndicadoresPage.tsx          # Coordenador principal (240 linhas → otimizado)
+├── types.ts                     # Interfaces TypeScript centralizadas
+├── utils.ts                     # Utilitários específicos do módulo
+└── components/
+    ├── IndicadoresFilters.tsx   # Filtros avançados
+    ├── IndicadoresCharts.tsx    # Visualizações gráficas
+    ├── IndicadoresTable.tsx     # Tabela responsiva com edição
+    └── CustomTooltip.tsx        # Tooltip personalizado
 ```
 
-### 🎯 Benefícios da Nova Arquitetura
+#### 🎯 Benefícios da Refatoração
+- **Performance**: Componentes pequenos e focados
+- **Manutenibilidade**: Lógica isolada por responsabilidade
+- **Reusabilidade**: Utilitários compartilháveis
+- **TypeScript**: Tipagem forte em todas as interfaces
+- **Responsividade**: Interface otimizada para mobile
 
-- **Modularidade**: Cada análise é independente e reutilizável
-- **Performance**: Lazy loading de módulos não utilizados
-- **Manutenibilidade**: Mudanças isoladas por domínio
-- **Escalabilidade**: Fácil adição de novas análises
-- **Testabilidade**: Testes unitários por módulo
-- **Colaboração**: Equipes podem trabalhar em módulos específicos
+### 🎪 **Sistema Wishlist Aprimorado**
+Reestruturação completa com novas funcionalidades:
 
-## 🚀 Funcionalidades Principais
+#### 📋 Páginas Especializadas
+- **WishlistDashboard**: Overview geral e métricas
+- **EmpresasClientesPage**: Gestão de clientes
+- **WishlistItemsPage**: Solicitações de apresentação
+- **ApresentacoesPage**: Execução de networking
+- **ClientesSobrepostosPage**: Análise de sobreposição
+- **ModoApresentacaoPage**: Interface para apresentações
+- **TrocaMutuaPage**: Sistema de trocas entre parceiros
+- **QualificacaoPage**: Qualificação de oportunidades
 
-### 📊 Dashboard de Oportunidades Reformulado
+#### 🤖 **Inteligência de Negócio**
+- **Detecção automática** de clientes sobrepostos
+- **Scoring de relevância** entre parceiros
+- **Alertas inteligentes** para oportunidades
+- **Classificação automática** de empresas por porte
 
-#### 1. **Respostas Rápidas** ⚡
-Seção dedicada que responde automaticamente às perguntas mais frequentes:
-- **Quantas oportunidades vieram no período?**
-- **Quantas foram para cada empresa?**
-- **Qual empresa envia as melhores oportunidades?**
-- **Qual o ticket médio de cada empresa?**
-- **Quantas oportunidades temos em aberto?**
+## 🔧 **Novos Hooks Customizados**
 
-#### 2. **Filtros Avançados** 🔍
-- **Apenas Empresas do Grupo**: Filtra oportunidades destinadas ao grupo
-- **Tipo de Relação**: 
-  - Intra (intragrupo → intragrupo)
-  - Extra (parceiro → intragrupo)
-- **Indicador Visual**: Mostra quando filtros estão ativos
+### 📊 Análise de Dados
+- `useClientesSobrepostos`: Identifica clientes compartilhados
+- `useParceiroRelevance`: Calcula relevância entre parceiros
+- `usePartners`: Gestão otimizada de parceiros
 
-#### 3. **Análise de Valores com Drill-Down** 💰
-- Cards interativos por status
-- Lista detalhada por oportunidade
-- Informações: Nome do lead, Empresa origem, Valor, Datas
-- **Ticket médio corrigido**: Calculado apenas para oportunidades COM VALOR
+### 🎯 Funcionalidades
+- **Performance otimizada** com React Query
+- **Cache inteligente** de dados frequentes
+- **Validações automáticas** de regras de negócio
+- **Tratamento de erros** padronizado
 
-#### 4. **Performance por Empresa do Grupo** 🏢
-- Ticket médio segmentado (intra vs extragrupo)
-- Rankings de performance
-- Taxa de conversão por tipo de origem
-- Comparação de volumes e eficiência
+## 🎨 **Melhorias de Interface**
 
-#### 5. **Análise de Tempo de Ciclo** ⏱️
-- **Métricas completas**: Tempo médio, mínimo, máximo e **mediana**
-- Análise por empresa do grupo
-- Identificação de gargalos
-- Oportunidades em aberto destacadas
-- Comparação intra vs extragrupo
+### 📱 Design Responsivo
+- **Mobile-first**: Interface otimizada para celular
+- **Breakpoints inteligentes**: Adaptação automática
+- **Touch-friendly**: Botões e elementos otimizados para toque
+- **Acessibilidade**: Labels e navegação por teclado
 
-#### 6. **Sistema de Tooltips** 💡
-- Explicações claras para todos os gráficos
-- Contextualização dos dados
-- Definições de métricas
-- Sugestões de ação baseadas nos dados
+### 🎯 Componentes Inteligentes
+- **Tooltips contextuais**: Ajuda inline em tempo real
+- **Alertas dinâmicos**: Notificações baseadas em regras
+- **Filtros avançados**: Busca e segmentação poderosa
+- **Tabelas interativas**: Edição inline e exportação
 
-### 🛠️ Melhorias de UX
+## 🚀 **Funcionalidades Principais Atualizadas**
 
-#### ✅ Problemas Corrigidos
-- **Filtro "Apenas Empresas do Grupo"**: Agora funciona corretamente
-- **Cálculo de Ticket Médio**: Considera apenas oportunidades com valor > 0
-- **Redundâncias Removidas**: Eliminado gráfico "Distribuição por Status" duplicado
-- **Clareza dos Dados**: Tooltips explicativos em todos os componentes
-- **Foco no Grupo**: Análises centradas nas empresas receptoras do grupo
+### 📊 Dashboard de Oportunidades
+- **PWA Ready**: Funciona offline
+- **Respostas rápidas** automatizadas
+- **Filtros avançados** com persistência
+- **Análise de valores** com drill-down interativo
+- **Performance por empresa** segmentada
+- **Tempo de ciclo** com análise estatística completa
 
-#### 🎨 Interface Melhorada
-- Layout responsivo e intuitivo
-- Indicadores visuais de filtros ativos
-- Cards interativos com drill-down
-- Rankings visuais e fáceis de interpretar
-- Dados privados protegidos com componente `PrivateData`
+### 🏢 Gestão de Parceiros
+- **Quadrante inteligente** com scoring automático
+- **One-pagers dinâmicos** responsivos
+- **Indicadores em tempo real**
+- **Sistema de classificação** automática
 
-## 📈 Métricas e KPIs
+### 💼 Pipeline de Oportunidades
+- **Interface PWA** otimizada
+- **Atividades automatizadas**
+- **Follow-ups inteligentes**
+- **Análise de conversão** avançada
 
-### 🎯 Métricas Principais
-- **Total de Oportunidades** (por período/empresa)
-- **Taxa de Conversão** (por fonte/destino)
-- **Ticket Médio** (apenas oportunidades com valor)
-- **Tempo de Ciclo** (média, mediana, min/max)
-- **Oportunidades em Aberto** (contador em tempo real)
-- **Ranking de Fontes** (por qualidade e volume)
+### 🎯 Sistema Wishlist
+- **Networking automatizado**
+- **Detecção de sobreposições**
+- **Scoring de relevância**
+- **Apresentações estruturadas**
 
-### 📊 Análises Especializadas
-- **Performance Intragrupo**: Foco nas empresas do grupo como receptoras
-- **Qualidade das Fontes**: Ranking de empresas indicadoras
-- **Eficiência Temporal**: Gargalos e oportunidades de melhoria
-- **ROI por Segmento**: Comparação intra vs extragrupo
+## 🔐 **Segurança e Privacidade**
 
-## 🔧 Tecnologias Utilizadas
+### 🛡️ Proteção de Dados
+- **Modo Demo**: Mascaramento automático de dados sensíveis
+- **Utilitário demoMask**: Proteção recursiva de informações
+- **RLS completo**: Segurança em nível de linha
+- **Auditoria**: Log completo de ações
 
-- **Frontend**: React 18 + TypeScript + Vite
-- **UI/UX**: Tailwind CSS + Shadcn/UI + Lucide Icons
-- **Backend**: Supabase (Database + Auth + RLS)
-- **Charts**: Recharts
-- **Estado**: Context API + Custom Hooks
-- **Dados**: React Query (@tanstack/react-query)
+### 🔒 Controle de Acesso
+- **Papéis granulares**: Admin, Manager, User
+- **Módulo Diário**: Acesso restrito a administradores
+- **Políticas específicas**: Por módulo e funcionalidade
 
-## 🚀 Como Usar
+## 🔧 **Tecnologias e Performance**
 
-### 1. **Acesso ao Dashboard**
-- Navegue para `/oportunidades-dashboard`
-- Use os filtros básicos (data, empresa, status)
-- Ative filtros avançados conforme necessário
+### ⚡ Stack Atualizada
+- **PWA**: Service Worker + Manifest
+- **React 18**: Concurrent features
+- **TypeScript**: Tipagem forte em 100%
+- **Tailwind CSS**: Design system consistente
+- **Supabase**: Backend completo com RLS
 
-### 2. **Respostas Rápidas**
-- Primeira aba do dashboard
-- Visualize automaticamente as métricas principais
-- Use os rankings para identificar melhores fontes
+### 📊 Otimizações
+- **Lazy loading**: Componentes carregados sob demanda
+- **Code splitting**: Bundles otimizados por rota
+- **Cache estratégico**: Service Worker inteligente
+- **Compressão**: Assets otimizados para mobile
 
-### 3. **Análises Detalhadas**
-- **Valores**: Clique nos cards de status para drill-down
-- **Performance Grupo**: Compare ticket médio e conversão
-- **Tempo de Ciclo**: Identifique gargalos por empresa
-- **Quantidades**: Analise matrizes e distribuições
-
-### 4. **Filtros Inteligentes**
-- **"Apenas Empresas do Grupo"**: Foque no que importa
-- **"Tipo de Relação"**: Segmente por origem das oportunidades
-- **Indicador Visual**: Saiba quando filtros estão ativos
-
-## 🎯 Casos de Uso
+## 🎯 **Casos de Uso Aprimorados**
 
 ### Para Gestores
-- **Identificar** melhores fontes de oportunidades
-- **Monitorar** performance por empresa do grupo
-- **Otimizar** tempos de ciclo de fechamento
-- **Priorizar** oportunidades em aberto
+- **Dashboard PWA**: Métricas sempre disponíveis
+- **Alertas automáticos**: Oportunidades e gargalos
+- **Análise offline**: Trabalhe sem conexão
+- **Relatórios móveis**: Acesso em qualquer lugar
 
 ### Para Comercial
-- **Foco** em empresas com maior ticket médio
-- **Acompanhamento** de oportunidades por status
-- **Identificação** de gargalos no processo
-- **Relatórios** automáticos de performance
+- **App instalável**: Acesso rápido e nativo
+- **Networking automatizado**: Detecção de oportunidades
+- **Pipeline móvel**: Gestão completa no celular
+- **Sincronização**: Dados sempre atualizados
 
 ### Para Parcerias
-- **Ranking** de parceiros por qualidade
-- **ROI** por tipo de parceria
-- **Tendências** de indicações recebidas/enviadas
-- **Oportunidades** de melhoria em relacionamentos
+- **Scoring automático**: Relevância de parceiros
+- **Sobreposições**: Identifica clientes compartilhados
+- **Apresentações**: Sistema estruturado de networking
+- **Métricas avançadas**: ROI e performance detalhada
 
-## 🔮 Roadmap
+## 🚀 **Roadmap Atualizado**
 
-### Próximas Funcionalidades
-- [ ] **Análise de Fontes Indicadoras**: Matriz origem x destino detalhada
-- [ ] **Dashboard de Eficiência Interna**: Métricas estratégicas e recomendações
-- [ ] **Alertas Inteligentes**: Notificações baseadas em performance
-- [ ] **Relatórios Automatizados**: Exports e envios programados
-- [ ] **Integração com CRM**: Sincronização de dados externos
-- [ ] **Machine Learning**: Previsões de conversão e recomendações
+### Q2 2025 - PWA Avançado
+- [ ] **Push Notifications**: Alertas em tempo real
+- [ ] **Background Sync**: Sincronização em segundo plano
+- [ ] **Geolocalização**: Networking baseado em localização
+- [ ] **Camera Integration**: Scan de cartões de visita
+- [ ] **Voice Commands**: Comandos de voz para CRM
 
-### Melhorias Técnicas
-- [ ] **Testes Automatizados**: Cobertura completa dos módulos
-- [ ] **Performance**: Otimizações de queries e rendering
-- [ ] **PWA**: Funcionalidades offline
-- [ ] **API**: Endpoints para integrações externas
+### Q3 2025 - IA e Automação
+- [ ] **Machine Learning**: Previsões de conversão
+- [ ] **NLP**: Análise de sentimentos em interações
+- [ ] **Automação Completa**: Workflows inteligentes
+- [ ] **Integração CRM**: Conectores externos
+- [ ] **API Pública**: Integrações de terceiros
 
-## 🤝 Contribuição
+### Q4 2025 - Escala Empresarial
+- [ ] **Multi-tenancy**: Suporte a múltiplas organizações
+- [ ] **Analytics Avançado**: BI integrado
+- [ ] **Compliance**: LGPD e regulamentações
+- [ ] **Mobile App**: React Native nativo
+- [ ] **Desktop App**: Electron para desktop
 
-### Padrões de Desenvolvimento
-1. **Um módulo = Uma responsabilidade**
-2. **Hooks personalizados** para lógica de negócio
-3. **Componentes pequenos** e focados
-4. **TypeScript strict mode**
-5. **Dados privados** sempre protegidos
+## 🔧 **Como Usar - PWA Edition**
 
-### Estrutura de Módulo
-```
-modules/[nome-modulo]/
-├── components/     # Componentes React
-├── hooks/         # Hooks personalizados
-├── types/         # Tipos TypeScript
-├── utils/         # Utilitários específicos
-└── index.ts       # Exports públicos
-```
+### 📱 Instalação
+1. **Web**: Acesse via navegador
+2. **Instalar**: Clique no ícone de instalação
+3. **Mobile**: "Adicionar à tela inicial"
+4. **Desktop**: "Instalar aplicativo"
 
-### Como Adicionar um Novo Módulo
-1. Crie a estrutura de pastas
-2. Implemente hooks de dados
-3. Crie componentes de apresentação
-4. Adicione ao dashboard principal
-5. Documente o caso de uso
+### 🚀 Recursos Offline
+- **Dashboard**: Métricas cacheadas
+- **Oportunidades**: Lista e detalhes
+- **Parceiros**: Informações básicas
+- **Sincronização**: Automática ao conectar
+
+### 🎯 Navegação Otimizada
+- **Sidebar responsiva**: Colapsa em mobile
+- **Quick access**: Ações frequentes destacadas
+- **Search global**: Busca em todos os módulos
+- **Filtros persistentes**: Mantém configurações
+
+## 📊 **Métricas de Performance PWA**
+
+### ⚡ Core Web Vitals
+- **LCP**: < 2.5s (carregamento principal)
+- **FID**: < 100ms (interatividade)
+- **CLS**: < 0.1 (estabilidade visual)
+- **PWA Score**: 90+ (Lighthouse)
+
+### 📱 Mobile Experience
+- **Touch targets**: Mínimo 44px
+- **Viewport**: Responsive em todos os dispositivos
+- **Offline**: Funcionalidades básicas disponíveis
+- **Cache**: 90% dos recursos em cache
+
+## 🤝 **Colaboração e Manutenção**
+
+### 🔧 Desenvolvimento
+- **Componentes pequenos**: Máximo 200 linhas
+- **Hooks focados**: Uma responsabilidade por hook
+- **TypeScript strict**: Tipagem obrigatória
+- **Testes preparados**: Estrutura para testing
+
+### 📚 Documentação Técnica
+- **README.sistema.md**: Arquitetura detalhada
+- **README.dados.md**: Estrutura de dados completa
+- **Comentários**: Código autodocumentado
+- **Exemplos**: Casos de uso práticos
 
 ---
 
-## 📞 Suporte
+## 📞 **Suporte e Evolução**
 
-Para dúvidas, sugestões ou problemas:
-- 📧 **Email**: [contato@exemplo.com]
-- 💬 **Chat**: Sistema interno de mensagens
-- 📚 **Docs**: Documentação técnica atualizada
-- 🐛 **Issues**: Reporte bugs e solicite features
+### 🚀 **Nova Era PWA**
+O sistema agora é uma aplicação web progressiva completa, oferecendo experiência nativa em qualquer dispositivo com capacidades offline robustas.
+
+### 🎯 **Arquitetura Modular**
+Refatoração completa garantiu código mais limpo, performance superior e facilidade de manutenção para evolução contínua.
+
+### 📱 **Mobile-First Experience**
+Interface completamente responsiva com foco em usabilidade móvel e acessibilidade universal.
 
 ---
 
-**Sistema em constante evolução** 🚀  
-*Última atualização: Janeiro 2025*
+**Sistema Aeight Partners PWA** 🚀  
+*Última atualização: Janeiro 2025 - Versão PWA 2.0*

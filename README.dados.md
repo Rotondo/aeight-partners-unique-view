@@ -1,1005 +1,859 @@
 
-# Aeight Partners - Banco de Dados, Storage e Auditoria Completa
+# Aeight Partners - Banco de Dados PWA, Storage e Auditoria Completa
 
-Documentação exaustiva do banco de dados PostgreSQL/Supabase, incluindo o **Módulo Diário Executivo** e todas as estruturas de dados do sistema.
+Documentação exaustiva do banco de dados PostgreSQL/Supabase com suporte PWA, incluindo cache offline, sincronização automática e todas as estruturas de dados do sistema modular refatorado.
 
 ## 📑 Sumário
 
-1. [Schema Completo do Banco](#schema-completo-do-banco)
-2. [Módulo Diário Executivo - Database](#módulo-diário-executivo---database)
-3. [Módulos Core - Database](#módulos-core---database)
-4. [Módulo de Eventos - Database](#módulo-de-eventos---database)
-5. [ENUMs e Validações](#enums-e-validações)
-6. [Políticas RLS e Segurança](#políticas-rls-e-segurança)
-7. [Triggers e Auditoria](#triggers-e-auditoria)
-8. [Supabase Storage](#supabase-storage)
-9. [Funções e Procedures](#funções-e-procedures)
-10. [FAQ e Troubleshooting](#faq-e-troubleshooting)
+1. [Schema PWA e Cache Offline](#schema-pwa-e-cache-offline)
+2. [Módulo Indicadores Refatorado - Database](#módulo-indicadores-refatorado---database)
+3. [Módulo Wishlist Aprimorado - Database](#módulo-wishlist-aprimorado---database)
+4. [Sistema de Classificação e Scoring](#sistema-de-classificação-e-scoring)
+5. [Cache e Sincronização PWA](#cache-e-sincronização-pwa)
+6. [Módulo Diário Executivo - Database](#módulo-diário-executivo---database)
+7. [Módulos Core - Database](#módulos-core---database)
+8. [ENUMs e Validações Aprimoradas](#enums-e-validações-aprimoradas)
+9. [Políticas RLS e Segurança PWA](#políticas-rls-e-segurança-pwa)
+10. [Triggers e Auditoria Avançada](#triggers-e-auditoria-avançada)
+11. [Supabase Storage PWA](#supabase-storage-pwa)
+12. [Funções e Procedures Otimizadas](#funções-e-procedures-otimizadas)
 
 ---
 
-## 1. Schema Completo do Banco
+## 1. Schema PWA e Cache Offline
 
-### 📊 Visão Geral
-- **27 tabelas principais** (4 do Diário + 23 core)
-- **15 ENUMs** para validação rigorosa
-- **50+ políticas RLS** para segurança
-- **15+ triggers** para auditoria
-- **8+ funções customizadas**
+### 📊 **Visão Geral PWA**
+- **27 tabelas principais** com cache inteligente
+- **15+ ENUMs** com validação client-side
+- **60+ políticas RLS** otimizadas para PWA
+- **20+ triggers** com sincronização automática
+- **12+ funções customizadas** com cache
+- **Cache Strategy**: Network-first com fallback offline
 
----
-
-## 2. Módulo Diário Executivo - Database
-
-### 📅 **diario_agenda_eventos**
-Eventos da agenda com integração Google/Outlook
-
+### 🔄 **Estratégia de Sincronização**
 ```sql
-CREATE TABLE diario_agenda_eventos (
-  id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
-  title TEXT NOT NULL,                    -- Título do evento
-  description TEXT,                       -- Descrição detalhada
-  start TIMESTAMP NOT NULL,               -- Data/hora início
-  end TIMESTAMP NOT NULL,                 -- Data/hora fim
-  status diario_event_status NOT NULL DEFAULT 'scheduled',
-  partner_id UUID REFERENCES empresas(id), -- Parceiro vinculado
-  source TEXT NOT NULL DEFAULT 'manual',  -- Fonte: manual/google/outlook
-  external_id TEXT,                       -- ID externo (Google/Outlook)
-  event_type TEXT,                        -- Tipo: reuniao/call/apresentacao
-  related_crm_action_id UUID,             -- Vinculação com CRM
-  created_at TIMESTAMP NOT NULL DEFAULT now(),
-  updated_at TIMESTAMP NOT NULL DEFAULT now()
+-- Tabela de controle de sincronização PWA
+CREATE TABLE public.sync_control (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  table_name TEXT NOT NULL,
+  last_sync TIMESTAMP WITH TIME ZONE DEFAULT now(),
+  sync_status TEXT DEFAULT 'pending', -- pending | syncing | completed | error
+  device_id TEXT,
+  user_id UUID REFERENCES auth.users,
+  changes_count INTEGER DEFAULT 0,
+  error_message TEXT
 );
 
--- Índices para performance
-CREATE INDEX idx_agenda_eventos_start ON diario_agenda_eventos(start);
-CREATE INDEX idx_agenda_eventos_partner ON diario_agenda_eventos(partner_id);
-CREATE INDEX idx_agenda_eventos_status ON diario_agenda_eventos(status);
-```
-
-**Campos Críticos:**
-- `start/end`: Período do evento (validação: end > start)
-- `status`: scheduled | completed | canceled | synced
-- `source`: Origem do evento (manual | google | outlook)
-- `external_id`: Para sincronização com calendários externos
-
-### 📝 **diario_crm_acoes**
-Ações de CRM com suporte multimídia
-
-```sql
-CREATE TABLE diario_crm_acoes (
-  id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
-  description TEXT,                       -- Descrição da ação
-  content TEXT NOT NULL,                  -- Conteúdo principal
-  type crm_action_type NOT NULL,          -- audio | video | text
-  status status_acao_crm_enum NOT NULL DEFAULT 'pendente',
-  communication_method metodo_comunicacao, -- whatsapp | email | call
-  partner_id UUID REFERENCES empresas(id), -- Parceiro envolvido
-  user_id UUID NOT NULL,                  -- Usuário responsável
-  next_step_date TIMESTAMP,               -- Próximo passo agendado
-  next_steps TEXT,                        -- Descrição próximos passos
-  metadata JSONB,                         -- Dados adicionais (arquivos, etc)
-  created_at TIMESTAMP NOT NULL DEFAULT now()
-);
-
--- Índices específicos
-CREATE INDEX idx_crm_acoes_user ON diario_crm_acoes(user_id);
-CREATE INDEX idx_crm_acoes_partner ON diario_crm_acoes(partner_id);
-CREATE INDEX idx_crm_acoes_type ON diario_crm_acoes(type);
-CREATE INDEX idx_crm_acoes_status ON diario_crm_acoes(status);
-CREATE INDEX idx_crm_acoes_next_step ON diario_crm_acoes(next_step_date);
-```
-
-**Campos Específicos:**
-- `type`: Tipo de conteúdo (audio/video/text)
-- `metadata`: JSON com URLs de arquivos, durações, etc
-- `next_steps`: Automáticamente vira evento na agenda
-- `communication_method`: Canal de comunicação usado
-
-### 📊 **diario_resumos**
-Resumos executivos gerados automaticamente
-
-```sql
-CREATE TABLE diario_resumos (
-  id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
-  period diario_period NOT NULL,          -- week | month | quarter
-  content TEXT,                           -- Conteúdo JSON estruturado
-  export_url TEXT,                        -- URL do PDF/CSV gerado
-  generated_at TIMESTAMP NOT NULL DEFAULT now()
-);
-
--- Estrutura do content (JSON):
-{
-  "resumo_completo": { /* Objeto DiarioResumo */ },
-  "detalhes_eventos": [ /* Array de eventos */ ],
-  "detalhes_acoes": [ /* Array de ações CRM */ ],
-  "criterios_busca": { /* Período e filtros */ },
-  "metricas": {
-    "total_eventos": 15,
-    "total_acoes_crm": 23,
-    "parceiros_envolvidos": 8,
-    "eventos_realizados": 12,
-    "acoes_concluidas": 18
-  }
-}
-```
-
-### 🤖 **diario_ia_sugestoes**
-Sugestões da IA para aprovação
-
-```sql
-CREATE TABLE diario_ia_sugestoes (
-  id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
-  target_type TEXT NOT NULL,              -- evento | acao_crm | resumo
-  target_id UUID,                         -- ID do registro relacionado
-  field TEXT NOT NULL,                    -- Campo a ser melhorado
-  suggestion TEXT NOT NULL,               -- Sugestão da IA
-  status ia_suggestion_status NOT NULL DEFAULT 'pending',
-  approved_by UUID,                       -- Quem aprovou/rejeitou
-  approved_at TIMESTAMP,                  -- Quando foi decidido
-  created_at TIMESTAMP NOT NULL DEFAULT now()
-);
-
--- Índices
-CREATE INDEX idx_ia_sugestoes_status ON diario_ia_sugestoes(status);
-CREATE INDEX idx_ia_sugestoes_target ON diario_ia_sugestoes(target_type, target_id);
+-- Índices para performance PWA
+CREATE INDEX idx_sync_control_table ON sync_control(table_name);
+CREATE INDEX idx_sync_control_user ON sync_control(user_id);
+CREATE INDEX idx_sync_control_status ON sync_control(sync_status);
 ```
 
 ---
 
-## 3. Módulos Core - Database
+## 2. Módulo Indicadores Refatorado - Database
 
-### 🏢 **empresas**
-Parceiros, clientes e empresas do grupo
+### 📊 **Estruturas de Dados Aprimoradas**
 
+#### **indicadores_parceiro** (Otimizada)
 ```sql
-CREATE TABLE empresas (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  nome TEXT NOT NULL,                     -- Nome da empresa
-  tipo company_type NOT NULL,             -- intragrupo | parceiro | cliente
-  descricao TEXT,                         -- Descrição da empresa
-  status BOOLEAN NOT NULL DEFAULT true,   -- Ativa/inativa
-  created_at TIMESTAMP DEFAULT now()
-);
-
--- Relacionamentos importantes
--- Uma empresa pode ter: contatos, oportunidades, indicadores, onepager, materiais
-```
-
-### 👥 **usuarios**
-Usuários do sistema com controle de acesso
-
-```sql
-CREATE TABLE usuarios (
-  id UUID PRIMARY KEY,                    -- ID do Supabase Auth
-  nome TEXT NOT NULL,
-  email TEXT,
-  papel user_role NOT NULL DEFAULT 'user', -- admin | manager | user
-  empresa_id UUID REFERENCES empresas(id),
-  ativo BOOLEAN NOT NULL DEFAULT true,
-  created_at TIMESTAMP DEFAULT now()
-);
-
--- Papel 'admin' = acesso total + módulo diário
--- Papel 'manager' = gestão de equipe + relatórios
--- Papel 'user' = operação básica
-```
-
-### 💼 **oportunidades**
-Pipeline de vendas e indicações
-
-```sql
-CREATE TABLE oportunidades (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  nome_lead TEXT NOT NULL,                -- Nome do lead/oportunidade
-  empresa_origem_id UUID NOT NULL REFERENCES empresas(id),
-  empresa_destino_id UUID NOT NULL REFERENCES empresas(id),
-  contato_id UUID REFERENCES contatos(id),
-  usuario_envio_id UUID REFERENCES usuarios(id),
-  usuario_recebe_id UUID REFERENCES usuarios(id),
-  valor NUMERIC,                          -- Valor estimado
-  status opportunity_status DEFAULT 'em_contato',
-  data_indicacao TIMESTAMP DEFAULT now(),
-  data_fechamento TIMESTAMP,
-  motivo_perda TEXT,                      -- Se perdeu, por que?
-  observacoes TEXT,
-  created_at TIMESTAMP DEFAULT now()
-);
-
--- Campos calculados via triggers:
--- - idade_oportunidade (dias desde criação)
--- - taxa_conversao (por usuário/empresa)
-```
-
-### 📞 **contatos**
-Contatos das empresas parceiras
-
-```sql
-CREATE TABLE contatos (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  empresa_id UUID NOT NULL REFERENCES empresas(id),
-  nome TEXT NOT NULL,
-  email TEXT,
-  telefone TEXT,
-  created_at TIMESTAMP DEFAULT now(),
-  
-  -- Constraints
-  CONSTRAINT contato_info_check CHECK (
-    email IS NOT NULL OR telefone IS NOT NULL
-  )
-);
-```
-
-### 📋 **atividades_oportunidade**
-Follow-ups e ações nas oportunidades
-
-```sql
-CREATE TABLE atividades_oportunidade (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  oportunidade_id UUID NOT NULL REFERENCES oportunidades(id),
-  titulo TEXT NOT NULL,
-  descricao TEXT,
-  data_prevista DATE NOT NULL,
-  data_realizada DATE,
-  concluida BOOLEAN NOT NULL DEFAULT false,
-  usuario_responsavel_id UUID REFERENCES usuarios(id),
-  created_at TIMESTAMP DEFAULT now(),
-  updated_at TIMESTAMP DEFAULT now()
-);
-
--- Trigger para atualizar status da oportunidade automaticamente
-```
-
-### 📊 **indicadores_parceiro**
-Métricas e quadrante de parceiros
-
-```sql
+-- Tabela principal com novos campos calculados
 CREATE TABLE indicadores_parceiro (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   empresa_id UUID NOT NULL REFERENCES empresas(id),
-  potencial_leads INTEGER NOT NULL,       -- Eixo X
+  
+  -- Métricas core (mantidas)
+  potencial_leads INTEGER NOT NULL,
   base_clientes INTEGER,
-  engajamento INTEGER NOT NULL,           -- Eixo Y  
+  engajamento INTEGER NOT NULL,
   alinhamento INTEGER NOT NULL,
   potencial_investimento INTEGER NOT NULL,
-  tamanho company_size NOT NULL,          -- PP | P | M | G | GG
-  score_x NUMERIC,                        -- Calculado automaticamente
-  score_y NUMERIC,                        -- Calculado automaticamente
-  data_avaliacao TIMESTAMP DEFAULT now()
-);
-
--- Fórmulas de cálculo:
--- score_x = (potencial_leads * 0.6) + (base_clientes * 0.4)
--- score_y = (engajamento * 0.5) + (alinhamento * 0.3) + (potencial_investimento * 0.2)
-```
-
-### 📄 **onepager**
-One-pagers das empresas
-
-```sql
-CREATE TABLE onepager (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  empresa_id UUID NOT NULL REFERENCES empresas(id),
-  categoria_id UUID NOT NULL REFERENCES categorias(id),
-  nome TEXT,
-  url TEXT,                               -- Site da empresa
-  icp TEXT,                               -- Ideal Customer Profile
-  oferta TEXT,                            -- Principais ofertas
-  diferenciais TEXT,                      -- Diferenciais competitivos
-  cases_sucesso TEXT,                     -- Cases de sucesso
-  big_numbers TEXT,                       -- Números importantes
-  ponto_forte TEXT,                       -- Principal força
-  ponto_fraco TEXT,                       -- Principal fraqueza
-  contato_nome TEXT,
-  contato_email TEXT,
-  contato_telefone TEXT,
-  nota_quadrante NUMERIC,                 -- Posição no quadrante
-  url_imagem TEXT,                        -- Logo da empresa
-  arquivo_upload TEXT,                    -- Arquivo adicional
-  data_upload TIMESTAMP DEFAULT now()
+  tamanho company_size NOT NULL,
+  
+  -- Novos campos calculados automaticamente
+  oportunidades_indicadas INTEGER DEFAULT 0,
+  share_of_wallet NUMERIC(5,2),
+  score_relevancia NUMERIC(5,2),
+  classificacao_automatica TEXT,
+  
+  -- Campos de controle aprimorados
+  score_x NUMERIC GENERATED ALWAYS AS (
+    (potencial_leads * 0.6) + (COALESCE(base_clientes, 0) * 0.4)
+  ) STORED,
+  score_y NUMERIC GENERATED ALWAYS AS (
+    (engajamento * 0.5) + (alinhamento * 0.3) + (potencial_investimento * 0.2)
+  ) STORED,
+  
+  data_avaliacao TIMESTAMP DEFAULT now(),
+  updated_at TIMESTAMP DEFAULT now(),
+  
+  -- Cache PWA
+  cached_data JSONB,
+  cache_expires_at TIMESTAMP
 );
 ```
 
-### 📚 **repositorio_materiais**
-Repositório de documentos e materiais
-
+#### **Novos Índices para Performance**
 ```sql
-CREATE TABLE repositorio_materiais (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  empresa_id UUID NOT NULL REFERENCES empresas(id),
-  categoria_id UUID NOT NULL REFERENCES categorias(id),
-  nome VARCHAR NOT NULL,
-  tipo_arquivo VARCHAR NOT NULL,          -- pdf | docx | pptx | xlsx
-  tag_categoria TEXT[],                   -- Array de tags
-  url_arquivo TEXT,                       -- URL no Supabase Storage
-  arquivo_upload BYTEA,                   -- Dados binários (deprecated)
-  validade_contrato DATE,                 -- Para contratos
-  usuario_upload UUID NOT NULL REFERENCES usuarios(id),
-  data_upload TIMESTAMP DEFAULT now()
-);
+-- Índices otimizados para consultas frequentes PWA
+CREATE INDEX idx_indicadores_empresa_ativo ON indicadores_parceiro(empresa_id) 
+  WHERE cached_data IS NOT NULL;
+CREATE INDEX idx_indicadores_score_x ON indicadores_parceiro(score_x DESC);
+CREATE INDEX idx_indicadores_score_y ON indicadores_parceiro(score_y DESC);
+CREATE INDEX idx_indicadores_relevancia ON indicadores_parceiro(score_relevancia DESC);
+CREATE INDEX idx_indicadores_share_wallet ON indicadores_parceiro(share_of_wallet DESC);
 
--- Estrutura no Storage: /empresa_id/categoria_id/arquivo
+-- Índice composto para dashboard PWA
+CREATE INDEX idx_indicadores_dashboard ON indicadores_parceiro(
+  empresa_id, score_x, score_y, oportunidades_indicadas
+) WHERE cached_data IS NOT NULL;
 ```
 
----
+### 🎯 **Interfaces TypeScript Refatoradas**
 
-## 4. Módulo de Eventos - Database
-
-### 🎪 **eventos**
-Eventos de networking e apresentações
-
+#### **types.ts - Estruturas Centralizadas**
 ```sql
-CREATE TABLE eventos (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  nome VARCHAR NOT NULL,
-  descricao TEXT,
-  data_inicio TIMESTAMP NOT NULL,
-  data_fim TIMESTAMP,
-  local VARCHAR,
-  status VARCHAR DEFAULT 'planejado',      -- planejado | andamento | finalizado
-  usuario_responsavel_id UUID NOT NULL REFERENCES usuarios(id),
-  created_at TIMESTAMP DEFAULT now(),
-  updated_at TIMESTAMP DEFAULT now()
-);
-```
-
-### 👤 **contatos_evento**
-Contatos coletados em eventos
-
-```sql
-CREATE TABLE contatos_evento (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  evento_id UUID NOT NULL REFERENCES eventos(id),
-  nome VARCHAR,
-  cargo VARCHAR,
-  empresa VARCHAR,
-  email VARCHAR,
-  telefone VARCHAR,
-  foto_cartao VARCHAR,                    -- URL da foto do cartão
-  interesse_nivel INTEGER DEFAULT 3,      -- 1-5 (1=baixo, 5=alto)
-  discussao TEXT,                         -- O que foi discutido
-  proximos_passos TEXT,                   -- Ações definidas
-  data_contato TIMESTAMP DEFAULT now(),
-  sugestao_followup TIMESTAMP,            -- Quando fazer follow-up
-  observacoes TEXT,
-  created_at TIMESTAMP DEFAULT now(),
-  updated_at TIMESTAMP DEFAULT now()
-);
-
--- Integração com Diário:
--- Próximos passos viram eventos na agenda automaticamente
-```
-
-### 🎯 **Wishlist - Sistema de Apresentações**
-
-#### **wishlist_items**
-Solicitações de apresentação entre parceiros
-
-```sql
-CREATE TABLE wishlist_items (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  empresa_interessada_id UUID NOT NULL REFERENCES empresas(id),
-  empresa_desejada_id UUID NOT NULL REFERENCES empresas(id),
-  empresa_proprietaria_id UUID NOT NULL REFERENCES empresas(id), -- Quem tem o relacionamento
-  motivo TEXT,                            -- Por que quer conhecer
-  prioridade INTEGER DEFAULT 3,           -- 1-5
-  status VARCHAR DEFAULT 'pendente',       -- pendente | aprovado | rejeitado | convertido
-  data_solicitacao TIMESTAMP DEFAULT now(),
-  data_resposta TIMESTAMP,
-  observacoes TEXT,
-  created_at TIMESTAMP DEFAULT now(),
-  updated_at TIMESTAMP DEFAULT now()
-);
-```
-
-#### **wishlist_apresentacoes**
-Execução das apresentações
-
-```sql
-CREATE TABLE wishlist_apresentacoes (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  wishlist_item_id UUID NOT NULL REFERENCES wishlist_items(id),
-  empresa_facilitadora_id UUID NOT NULL REFERENCES empresas(id),
-  data_apresentacao TIMESTAMP DEFAULT now(),
-  tipo_apresentacao VARCHAR DEFAULT 'email', -- email | reuniao | evento | digital
-  status_apresentacao VARCHAR DEFAULT 'pendente', -- pendente | agendada | realizada | cancelada
-  tipo_solicitacao VARCHAR DEFAULT 'solicitacao', -- solicitacao | registro
-  feedback TEXT,
-  converteu_oportunidade BOOLEAN DEFAULT false,
-  oportunidade_id UUID REFERENCES oportunidades(id),
-  created_at TIMESTAMP DEFAULT now(),
-  updated_at TIMESTAMP DEFAULT now()
-);
+-- Estrutura JSON para interface IndicadoresParceiroWithEmpresa
+/*
+{
+  "id": "uuid",
+  "empresa_id": "uuid", 
+  "empresa": {
+    "id": "uuid",
+    "nome": "string"
+  },
+  "potencial_leads": "number",
+  "engajamento": "number",
+  "alinhamento": "number", 
+  "potencial_investimento": "number",
+  "tamanho": "company_size_enum",
+  "oportunidades_indicadas": "number",
+  "share_of_wallet": "number",
+  "score_relevancia": "number",
+  "classificacao_automatica": "string"
+}
+*/
 ```
 
 ---
 
-## 5. ENUMs e Validações
+## 3. Módulo Wishlist Aprimorado - Database
 
-### 📋 **ENUMs do Sistema**
+### 🎪 **Novas Estruturas de Dados**
 
+#### **clientes_sobrepostos** (Nova Tabela)
 ```sql
--- Tipos de empresa
-CREATE TYPE company_type AS ENUM ('intragrupo', 'parceiro', 'cliente');
-
--- Status de oportunidade  
-CREATE TYPE opportunity_status AS ENUM (
-  'em_contato', 'negociando', 'ganho', 'perdido', 
-  'Contato', 'Apresentado', 'Sem contato'
+-- Detecção automática de clientes compartilhados
+CREATE TABLE public.clientes_sobrepostos (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  parceiro_a_id UUID NOT NULL REFERENCES empresas(id),
+  parceiro_b_id UUID NOT NULL REFERENCES empresas(id),
+  cliente_sobreposto_id UUID NOT NULL REFERENCES empresas(id),
+  score_sobreposicao NUMERIC(5,2) NOT NULL,
+  relevancia_a NUMERIC(5,2),
+  relevancia_b NUMERIC(5,2),
+  oportunidade_mutua BOOLEAN DEFAULT false,
+  data_deteccao TIMESTAMP DEFAULT now(),
+  status TEXT DEFAULT 'detectado', -- detectado | analisado | oportunidade | descartado
+  
+  -- Cache para PWA
+  cached_analysis JSONB,
+  
+  CONSTRAINT unique_sobreposicao UNIQUE(parceiro_a_id, parceiro_b_id, cliente_sobreposto_id)
 );
 
--- Papéis de usuário
-CREATE TYPE user_role AS ENUM ('admin', 'user', 'manager');
-
--- Tamanhos de empresa
-CREATE TYPE company_size AS ENUM ('PP', 'P', 'M', 'G', 'GG');
+-- Índices otimizados
+CREATE INDEX idx_sobrepostos_parceiro_a ON clientes_sobrepostos(parceiro_a_id);
+CREATE INDEX idx_sobrepostos_parceiro_b ON clientes_sobrepostos(parceiro_b_id);
+CREATE INDEX idx_sobrepostos_score ON clientes_sobrepostos(score_sobreposicao DESC);
+CREATE INDEX idx_sobrepostos_oportunidade ON clientes_sobrepostos(oportunidade_mutua) 
+  WHERE oportunidade_mutua = true;
 ```
 
-### 🔄 **ENUMs do Módulo Diário**
-
+#### **parceiro_relevancia** (Nova Tabela)
 ```sql
--- Status de eventos da agenda
-CREATE TYPE diario_event_status AS ENUM (
-  'scheduled', 'synced', 'completed', 'canceled'
+-- Scoring automático de relevância entre parceiros
+CREATE TABLE public.parceiro_relevancia (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  parceiro_origem_id UUID NOT NULL REFERENCES empresas(id),
+  parceiro_destino_id UUID NOT NULL REFERENCES empresas(id),
+  score_relevancia NUMERIC(5,2) NOT NULL,
+  fatores_calculo JSONB NOT NULL, -- Detalhamento do cálculo
+  
+  -- Métricas específicas
+  clientes_compartilhados INTEGER DEFAULT 0,
+  oportunidades_historicas INTEGER DEFAULT 0,
+  compatibilidade_segmento NUMERIC(3,2),
+  potencial_negocio NUMERIC(5,2),
+  
+  -- Controle temporal
+  calculado_em TIMESTAMP DEFAULT now(),
+  valido_ate TIMESTAMP DEFAULT (now() + INTERVAL '30 days'),
+  
+  -- Cache PWA
+  cached_details JSONB,
+  
+  CONSTRAINT unique_relevancia UNIQUE(parceiro_origem_id, parceiro_destino_id)
 );
 
--- Períodos de resumo
-CREATE TYPE diario_period AS ENUM ('week', 'month', 'quarter');
-
--- Status de sugestões da IA
-CREATE TYPE ia_suggestion_status AS ENUM (
-  'pending', 'approved', 'rejected', 'applied'
-);
-
--- Tipos de ação CRM
-CREATE TYPE crm_action_type AS ENUM ('audio', 'video', 'text');
-
--- Status das ações CRM
-CREATE TYPE status_acao_crm_enum AS ENUM (
-  'pendente', 'em_andamento', 'concluida', 'cancelada'
-);
-
--- Métodos de comunicação
-CREATE TYPE metodo_comunicacao AS ENUM (
-  'whatsapp', 'ligacao', 'email', 'encontro', 'reuniao_meet'
-);
+-- Índices para performance
+CREATE INDEX idx_relevancia_origem ON parceiro_relevancia(parceiro_origem_id);
+CREATE INDEX idx_relevancia_score ON parceiro_relevancia(score_relevancia DESC);
+CREATE INDEX idx_relevancia_valido ON parceiro_relevancia(valido_ate) 
+  WHERE valido_ate > now();
 ```
 
-### ✅ **Validações e Constraints**
-
+### 🔄 **Wishlist Items Aprimorado**
 ```sql
--- Validação de datas
-ALTER TABLE diario_agenda_eventos 
-ADD CONSTRAINT valid_event_dates CHECK (end > start);
+-- Extensão da tabela existente com novos campos
+ALTER TABLE wishlist_items ADD COLUMN IF NOT EXISTS score_prioridade NUMERIC(3,2);
+ALTER TABLE wishlist_items ADD COLUMN IF NOT EXISTS relevancia_automatica NUMERIC(5,2);
+ALTER TABLE wishlist_items ADD COLUMN IF NOT EXISTS clientes_comuns INTEGER DEFAULT 0;
+ALTER TABLE wishlist_items ADD COLUMN IF NOT EXISTS cached_analysis JSONB;
 
--- Validação de prioridade
-ALTER TABLE wishlist_items 
-ADD CONSTRAINT valid_priority CHECK (prioridade BETWEEN 1 AND 5);
-
--- Validação de interesse
-ALTER TABLE contatos_evento 
-ADD CONSTRAINT valid_interest CHECK (interesse_nivel BETWEEN 1 AND 5);
-
--- Validação de scores
-ALTER TABLE indicadores_parceiro 
-ADD CONSTRAINT valid_scores CHECK (
-  score_x >= 0 AND score_x <= 10 AND
-  score_y >= 0 AND score_y <= 10
-);
+-- Novos índices
+CREATE INDEX idx_wishlist_score_prioridade ON wishlist_items(score_prioridade DESC) 
+  WHERE status = 'pendente';
+CREATE INDEX idx_wishlist_relevancia ON wishlist_items(relevancia_automatica DESC);
 ```
 
 ---
 
-## 6. Políticas RLS e Segurança
+## 4. Sistema de Classificação e Scoring
 
-### 🛡️ **Módulo Diário (Admin-only)**
-
+### 🏢 **Empresa Classification Enhanced**
 ```sql
--- Função para verificar admin
-CREATE OR REPLACE FUNCTION is_admin_user()
-RETURNS BOOLEAN AS $$
+-- Função para classificação automática
+CREATE OR REPLACE FUNCTION classify_empresa_automatica(empresa_id UUID)
+RETURNS JSONB AS $$
+DECLARE
+  classificacao RECORD;
+  resultado JSONB;
 BEGIN
-  RETURN EXISTS (
-    SELECT 1 FROM usuarios 
-    WHERE id = auth.uid() 
-    AND papel = 'admin'
-    AND ativo = true
+  -- Buscar dados da empresa
+  SELECT 
+    e.nome,
+    e.tipo,
+    COALESCE(i.base_clientes, 0) as base_clientes,
+    COALESCE(i.potencial_leads, 0) as potencial_leads,
+    COALESCE(i.tamanho, 'P'::company_size) as tamanho,
+    COUNT(o.id) as total_oportunidades
+  INTO classificacao
+  FROM empresas e
+  LEFT JOIN indicadores_parceiro i ON e.id = i.empresa_id
+  LEFT JOIN oportunidades o ON e.id = o.empresa_origem_id
+  WHERE e.id = classify_empresa_automatica.empresa_id
+  GROUP BY e.id, e.nome, e.tipo, i.base_clientes, i.potencial_leads, i.tamanho;
+  
+  -- Calcular classificação
+  resultado := jsonb_build_object(
+    'porte', classificacao.tamanho,
+    'categoria', CASE 
+      WHEN classificacao.total_oportunidades > 10 THEN 'Parceiro Ativo'
+      WHEN classificacao.potencial_leads > 50 THEN 'Alto Potencial'
+      WHEN classificacao.base_clientes > 100 THEN 'Base Sólida'
+      ELSE 'Em Desenvolvimento'
+    END,
+    'score_atividade', LEAST(classificacao.total_oportunidades * 0.1, 10),
+    'score_potencial', LEAST(classificacao.potencial_leads * 0.02, 10),
+    'score_base', LEAST(classificacao.base_clientes * 0.01, 10)
   );
+  
+  RETURN resultado;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- Policies do diário (todas as tabelas)
-CREATE POLICY "Admin access diario_agenda_eventos"
-ON diario_agenda_eventos FOR ALL
-TO authenticated
-USING (is_admin_user());
-
-CREATE POLICY "Admin access diario_crm_acoes"
-ON diario_crm_acoes FOR ALL
-TO authenticated
-USING (is_admin_user());
-
--- Repetir para: diario_resumos, diario_ia_sugestoes
 ```
 
-### 🔐 **Políticas Core**
-
+### 📊 **Algoritmo de Relevância**
 ```sql
--- Oportunidades: apenas envolvidos
-CREATE POLICY "View own opportunities"
-ON oportunidades FOR SELECT
-USING (
-  usuario_envio_id = auth.uid() OR 
-  usuario_recebe_id = auth.uid() OR
-  is_admin_user()
-);
-
--- Materiais: empresa própria + admins
-CREATE POLICY "View company materials"
-ON repositorio_materiais FOR SELECT
-USING (
-  empresa_id IN (
-    SELECT empresa_id FROM usuarios WHERE id = auth.uid()
-  ) OR is_admin_user()
-);
-
--- Contatos: empresa própria
-CREATE POLICY "View company contacts"
-ON contatos FOR SELECT
-USING (
-  empresa_id IN (
-    SELECT empresa_id FROM usuarios WHERE id = auth.uid()
-  )
-);
-```
-
-### 🎯 **Políticas Wishlist**
-
-```sql
--- Visualizar wishlist própria
-CREATE POLICY "View relevant wishlist"
-ON wishlist_items FOR SELECT
-USING (
-  empresa_interessada_id IN (SELECT empresa_id FROM usuarios WHERE id = auth.uid()) OR
-  empresa_proprietaria_id IN (SELECT empresa_id FROM usuarios WHERE id = auth.uid()) OR
-  is_admin_user()
-);
-
--- Aprovar apenas se proprietário do relacionamento
-CREATE POLICY "Approve wishlist items"
-ON wishlist_items FOR UPDATE
-USING (
-  empresa_proprietaria_id IN (SELECT empresa_id FROM usuarios WHERE id = auth.uid()) OR
-  is_admin_user()
-);
+-- Função para calcular relevância entre parceiros
+CREATE OR REPLACE FUNCTION calculate_parceiro_relevancia(
+  origem_id UUID,
+  destino_id UUID
+) RETURNS NUMERIC AS $$
+DECLARE
+  score_final NUMERIC := 0;
+  clientes_comuns INTEGER;
+  oportunidades_historicas INTEGER;
+  compatibilidade NUMERIC;
+BEGIN
+  -- Contar clientes compartilhados
+  SELECT COUNT(DISTINCT cs.cliente_sobreposto_id)
+  INTO clientes_comuns
+  FROM clientes_sobrepostos cs
+  WHERE (cs.parceiro_a_id = origem_id AND cs.parceiro_b_id = destino_id)
+     OR (cs.parceiro_a_id = destino_id AND cs.parceiro_b_id = origem_id);
+  
+  -- Contar oportunidades históricas
+  SELECT COUNT(*)
+  INTO oportunidades_historicas
+  FROM oportunidades o
+  WHERE (o.empresa_origem_id = origem_id AND o.empresa_destino_id = destino_id)
+     OR (o.empresa_origem_id = destino_id AND o.empresa_destino_id = origem_id);
+  
+  -- Calcular compatibilidade de segmento (simplificado)
+  SELECT 
+    CASE 
+      WHEN i1.tamanho = i2.tamanho THEN 1.0
+      WHEN abs(
+        CASE i1.tamanho 
+          WHEN 'PP' THEN 1 WHEN 'P' THEN 2 WHEN 'M' THEN 3 
+          WHEN 'G' THEN 4 WHEN 'GG' THEN 5 ELSE 3 END -
+        CASE i2.tamanho 
+          WHEN 'PP' THEN 1 WHEN 'P' THEN 2 WHEN 'M' THEN 3 
+          WHEN 'G' THEN 4 WHEN 'GG' THEN 5 ELSE 3 END
+      ) = 1 THEN 0.8
+      ELSE 0.5
+    END
+  INTO compatibilidade
+  FROM indicadores_parceiro i1, indicadores_parceiro i2
+  WHERE i1.empresa_id = origem_id AND i2.empresa_id = destino_id;
+  
+  -- Calcular score final
+  score_final := 
+    (clientes_comuns * 2.0) + 
+    (oportunidades_historicas * 1.5) + 
+    (COALESCE(compatibilidade, 0.5) * 3.0);
+  
+  RETURN LEAST(score_final, 10.0);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 ```
 
 ---
 
-## 7. Triggers e Auditoria
+## 5. Cache e Sincronização PWA
 
-### 📝 **Trigger de Updated_at**
-
+### 🔄 **Sistema de Cache Inteligente**
 ```sql
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = NOW();
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
--- Aplicar em tabelas relevantes
-CREATE TRIGGER update_diario_agenda_eventos_updated_at
-  BEFORE UPDATE ON diario_agenda_eventos
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- Repetir para: atividades_oportunidade, contatos_evento, wishlist_*
-```
-
-### 🔍 **Auditoria Completa**
-
-```sql
--- Tabela de auditoria universal
-CREATE TABLE audit_log (
+-- Tabela para controle de cache PWA
+CREATE TABLE public.pwa_cache_control (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  table_name TEXT NOT NULL,
-  record_id UUID NOT NULL,
-  operation TEXT NOT NULL,               -- INSERT | UPDATE | DELETE
-  old_values JSONB,
-  new_values JSONB,
-  user_id UUID,
-  timestamp TIMESTAMP DEFAULT now()
+  cache_key TEXT NOT NULL UNIQUE,
+  data JSONB NOT NULL,
+  expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+  user_id UUID REFERENCES auth.users,
+  device_id TEXT,
+  created_at TIMESTAMP DEFAULT now(),
+  accessed_at TIMESTAMP DEFAULT now(),
+  access_count INTEGER DEFAULT 1
 );
 
--- Função de auditoria
-CREATE OR REPLACE FUNCTION audit_trigger_function()
-RETURNS TRIGGER AS $$
+-- Índices para performance
+CREATE INDEX idx_pwa_cache_key ON pwa_cache_control(cache_key);
+CREATE INDEX idx_pwa_cache_expires ON pwa_cache_control(expires_at);
+CREATE INDEX idx_pwa_cache_user ON pwa_cache_control(user_id);
+
+-- Função para limpeza automática de cache
+CREATE OR REPLACE FUNCTION cleanup_expired_cache()
+RETURNS INTEGER AS $$
+DECLARE
+  deleted_count INTEGER;
 BEGIN
-  INSERT INTO audit_log (
-    table_name, record_id, operation, 
-    old_values, new_values, user_id
-  ) VALUES (
-    TG_TABLE_NAME,
-    COALESCE(NEW.id, OLD.id),
-    TG_OP,
-    CASE WHEN TG_OP != 'INSERT' THEN row_to_json(OLD) END,
-    CASE WHEN TG_OP != 'DELETE' THEN row_to_json(NEW) END,
-    auth.uid()
-  );
-  RETURN COALESCE(NEW, OLD);
+  DELETE FROM pwa_cache_control 
+  WHERE expires_at < now();
+  
+  GET DIAGNOSTICS deleted_count = ROW_COUNT;
+  RETURN deleted_count;
 END;
 $$ LANGUAGE plpgsql;
-
--- Aplicar em tabelas críticas
-CREATE TRIGGER audit_diario_agenda_eventos
-  AFTER INSERT OR UPDATE OR DELETE ON diario_agenda_eventos
-  FOR EACH ROW EXECUTE FUNCTION audit_trigger_function();
-
--- Repetir para: oportunidades, repositorio_materiais, etc.
 ```
 
-### 🤖 **Triggers Específicos do Diário**
-
+### 📱 **Triggers de Sincronização**
 ```sql
--- Criar evento na agenda automaticamente quando ação CRM tem próximo passo
-CREATE OR REPLACE FUNCTION create_agenda_from_crm()
+-- Trigger para marcar dados para sync quando alterados
+CREATE OR REPLACE FUNCTION mark_for_sync()
 RETURNS TRIGGER AS $$
 BEGIN
-  IF NEW.next_step_date IS NOT NULL AND NEW.next_steps IS NOT NULL THEN
-    INSERT INTO diario_agenda_eventos (
-      title, description, start, end, 
-      partner_id, source, related_crm_action_id
-    ) VALUES (
-      'Follow-up: ' || LEFT(NEW.next_steps, 50),
-      NEW.next_steps,
-      NEW.next_step_date,
-      NEW.next_step_date + INTERVAL '1 hour',
-      NEW.partner_id,
-      'crm_generated',
-      NEW.id
-    );
-  END IF;
+  INSERT INTO sync_control (table_name, user_id, changes_count)
+  VALUES (TG_TABLE_NAME, auth.uid(), 1)
+  ON CONFLICT (table_name, user_id) 
+  DO UPDATE SET 
+    changes_count = sync_control.changes_count + 1,
+    last_sync = now(),
+    sync_status = 'pending';
+  
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER create_agenda_from_crm_trigger
-  AFTER INSERT OR UPDATE ON diario_crm_acoes
-  FOR EACH ROW EXECUTE FUNCTION create_agenda_from_crm();
+-- Aplicar em tabelas críticas
+CREATE TRIGGER sync_indicadores_parceiro
+  AFTER INSERT OR UPDATE OR DELETE ON indicadores_parceiro
+  FOR EACH ROW EXECUTE FUNCTION mark_for_sync();
+
+CREATE TRIGGER sync_oportunidades
+  AFTER INSERT OR UPDATE OR DELETE ON oportunidades
+  FOR EACH ROW EXECUTE FUNCTION mark_for_sync();
 ```
 
 ---
 
-## 8. Supabase Storage
+## 6. Módulo Diário Executivo - Database
 
-### 📁 **Estrutura de Buckets**
+### 📅 **Estruturas Mantidas com Melhorias PWA**
 
-```
-Storage Buckets:
-├── materiais/                   # Repositório de materiais
-│   ├── {empresa_id}/
-│   │   ├── {categoria_id}/
-│   │   │   ├── documento1.pdf
-│   │   │   └── apresentacao1.pptx
-│   │   └── onepagers/
-│   │       └── onepager.pdf
-│   └── publicos/               # Materiais públicos
-├── diario/                     # Módulo diário
-│   ├── audio/
-│   │   └── {acao_id}/
-│   │       └── gravacao.wav
-│   ├── video/
-│   │   └── {acao_id}/
-│   │       └── video.webm
-│   └── reports/
-│       ├── resumos/
-│       │   ├── {resumo_id}.pdf
-│       │   └── {resumo_id}.csv
-│       └── exports/
-└── eventos/                    # Materiais de eventos
-    ├── fotos_cartao/
-    │   └── {contato_id}.jpg
-    └── materiais_evento/
-        └── {evento_id}/
-```
-
-### 🔐 **Políticas de Storage**
-
+#### **diario_agenda_eventos** (Cache Otimizado)
 ```sql
--- Leitura pública para materiais específicos
-CREATE POLICY "Public read materials"
-ON storage.objects FOR SELECT
-TO anon, authenticated
-USING (bucket_id = 'materiais' AND (storage.foldername(name))[1] = 'publicos');
+-- Adição de campos para PWA
+ALTER TABLE diario_agenda_eventos ADD COLUMN IF NOT EXISTS sync_status TEXT DEFAULT 'synced';
+ALTER TABLE diario_agenda_eventos ADD COLUMN IF NOT EXISTS offline_changes JSONB;
+ALTER TABLE diario_agenda_eventos ADD COLUMN IF NOT EXISTS device_id TEXT;
 
--- Upload apenas autenticado
-CREATE POLICY "Authenticated upload"
-ON storage.objects FOR INSERT
-TO authenticated
-WITH CHECK (bucket_id IN ('materiais', 'diario', 'eventos'));
-
--- Exclusão apenas pelo dono ou admin
-CREATE POLICY "Owner or admin delete"
-ON storage.objects FOR DELETE
-TO authenticated
-USING (
-  bucket_id IN ('materiais', 'diario', 'eventos') AND
-  (auth.uid()::text = owner OR is_admin_user())
-);
-
--- Política específica do diário (admin-only)
-CREATE POLICY "Admin only diario storage"
-ON storage.objects FOR ALL
-TO authenticated
-USING (bucket_id = 'diario' AND is_admin_user())
-WITH CHECK (bucket_id = 'diario' AND is_admin_user());
+-- Índice para sincronização
+CREATE INDEX idx_agenda_sync_status ON diario_agenda_eventos(sync_status)
+  WHERE sync_status != 'synced';
 ```
 
-### 📊 **Metadados de Arquivos**
-
+#### **diario_crm_acoes** (Upload Otimizado)
 ```sql
--- Função para extrair metadados
-CREATE OR REPLACE FUNCTION extract_file_metadata(
-  file_path TEXT,
-  file_size BIGINT,
-  mime_type TEXT
-) RETURNS JSONB AS $$
+-- Melhorias para arquivos PWA
+ALTER TABLE diario_crm_acoes ADD COLUMN IF NOT EXISTS upload_progress INTEGER DEFAULT 100;
+ALTER TABLE diario_crm_acoes ADD COLUMN IF NOT EXISTS offline_file_data BYTEA;
+ALTER TABLE diario_crm_acoes ADD COLUMN IF NOT EXISTS sync_priority INTEGER DEFAULT 1;
+
+-- Índice para uploads pendentes
+CREATE INDEX idx_crm_upload_pending ON diario_crm_acoes(upload_progress)
+  WHERE upload_progress < 100;
+```
+
+---
+
+## 7. Módulos Core - Database
+
+### 🏢 **Empresas (Classificação Automática)**
+```sql
+-- Extensão da tabela empresas
+ALTER TABLE empresas ADD COLUMN IF NOT EXISTS classificacao_automatica JSONB;
+ALTER TABLE empresas ADD COLUMN IF NOT EXISTS score_relevancia_media NUMERIC(5,2);
+ALTER TABLE empresas ADD COLUMN IF NOT EXISTS ultima_analise TIMESTAMP;
+
+-- Trigger para atualização automática
+CREATE OR REPLACE FUNCTION update_empresa_classificacao()
+RETURNS TRIGGER AS $$
 BEGIN
-  RETURN jsonb_build_object(
-    'path', file_path,
-    'size', file_size,
-    'mime_type', mime_type,
-    'uploaded_at', now(),
-    'uploaded_by', auth.uid(),
-    'bucket', split_part(file_path, '/', 1)
-  );
+  NEW.classificacao_automatica := classify_empresa_automatica(NEW.id);
+  NEW.ultima_analise := now();
+  RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
+
+CREATE TRIGGER auto_classify_empresa
+  BEFORE INSERT OR UPDATE ON empresas
+  FOR EACH ROW EXECUTE FUNCTION update_empresa_classificacao();
+```
+
+### 💼 **Oportunidades (Análise Aprimorada)**
+```sql
+-- Campos adicionais para análise
+ALTER TABLE oportunidades ADD COLUMN IF NOT EXISTS score_qualificacao NUMERIC(5,2);
+ALTER TABLE oportunidades ADD COLUMN IF NOT EXISTS origem_deteccao TEXT DEFAULT 'manual';
+ALTER TABLE oportunidades ADD COLUMN IF NOT EXISTS potencial_sobreposicao BOOLEAN DEFAULT false;
+
+-- Índices para relatórios PWA
+CREATE INDEX idx_oportunidades_score ON oportunidades(score_qualificacao DESC);
+CREATE INDEX idx_oportunidades_origem ON oportunidades(origem_deteccao);
 ```
 
 ---
 
-## 9. Funções e Procedures
+## 8. ENUMs e Validações Aprimoradas
 
-### 📊 **Estatísticas do Diário**
-
+### 📋 **Novos ENUMs para PWA**
 ```sql
-CREATE OR REPLACE FUNCTION get_diario_stats(
-  user_id UUID,
-  start_date TIMESTAMP DEFAULT now() - INTERVAL '30 days',
-  end_date TIMESTAMP DEFAULT now()
-)
-RETURNS JSONB AS $$
-DECLARE
-  stats JSONB;
-BEGIN
-  SELECT jsonb_build_object(
-    'total_eventos', (
-      SELECT COUNT(*) FROM diario_agenda_eventos 
-      WHERE start >= start_date AND start <= end_date
-    ),
-    'eventos_realizados', (
-      SELECT COUNT(*) FROM diario_agenda_eventos 
-      WHERE start >= start_date AND start <= end_date AND status = 'completed'
-    ),
-    'total_acoes_crm', (
-      SELECT COUNT(*) FROM diario_crm_acoes 
-      WHERE created_at >= start_date AND created_at <= end_date
-    ),
-    'acoes_concluidas', (
-      SELECT COUNT(*) FROM diario_crm_acoes 
-      WHERE created_at >= start_date AND created_at <= end_date AND status = 'concluida'
-    ),
-    'parceiros_envolvidos', (
-      SELECT COUNT(DISTINCT partner_id) FROM (
-        SELECT partner_id FROM diario_agenda_eventos 
-        WHERE start >= start_date AND start <= end_date AND partner_id IS NOT NULL
-        UNION
-        SELECT partner_id FROM diario_crm_acoes 
-        WHERE created_at >= start_date AND created_at <= end_date AND partner_id IS NOT NULL
-      ) t
-    ),
-    'sugestoes_pendentes', (
-      SELECT COUNT(*) FROM diario_ia_sugestoes WHERE status = 'pending'
-    )
-  ) INTO stats;
-  
-  RETURN stats;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+-- Status de sincronização PWA
+CREATE TYPE sync_status_enum AS ENUM (
+  'pending', 'syncing', 'synced', 'error', 'conflict'
+);
+
+-- Prioridade de sincronização
+CREATE TYPE sync_priority_enum AS ENUM (
+  'low', 'normal', 'high', 'critical'
+);
+
+-- Status de cache
+CREATE TYPE cache_status_enum AS ENUM (
+  'fresh', 'stale', 'expired', 'invalid'
+);
+
+-- Origem de detecção
+CREATE TYPE detection_origin_enum AS ENUM (
+  'manual', 'automatic', 'ai_suggested', 'bulk_import', 'api_integration'
+);
 ```
 
-### 🔄 **Sincronização de Calendários**
+---
 
+## 9. Políticas RLS e Segurança PWA
+
+### 🛡️ **Políticas Otimizadas para PWA**
 ```sql
-CREATE OR REPLACE FUNCTION sync_external_calendar_event(
-  external_id TEXT,
-  source TEXT,
-  title TEXT,
-  description TEXT,
-  start_time TIMESTAMP,
-  end_time TIMESTAMP,
-  partner_email TEXT DEFAULT NULL
-)
-RETURNS UUID AS $$
-DECLARE
-  event_id UUID;
-  partner_id UUID;
-BEGIN
-  -- Buscar parceiro pelo email
-  IF partner_email IS NOT NULL THEN
-    SELECT e.id INTO partner_id
-    FROM empresas e
-    JOIN contatos c ON e.id = c.empresa_id
-    WHERE c.email = partner_email
-    LIMIT 1;
-  END IF;
-  
-  -- Inserir ou atualizar evento
-  INSERT INTO diario_agenda_eventos (
-    external_id, source, title, description, 
-    start, end, partner_id, status
-  ) VALUES (
-    external_id, source, title, description,
-    start_time, end_time, partner_id, 'synced'
+-- Cache: usuário pode ver apenas seu próprio cache
+CREATE POLICY "User can access own cache"
+ON pwa_cache_control FOR ALL
+TO authenticated
+USING (user_id = auth.uid())
+WITH CHECK (user_id = auth.uid());
+
+-- Indicadores: acesso otimizado com cache
+CREATE POLICY "Indicadores with cache optimization"
+ON indicadores_parceiro FOR SELECT
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM usuarios u 
+    WHERE u.id = auth.uid() 
+    AND u.ativo = true
+    AND (u.papel = 'admin' OR u.empresa_id IS NOT NULL)
   )
-  ON CONFLICT (external_id, source) 
-  DO UPDATE SET
-    title = EXCLUDED.title,
-    description = EXCLUDED.description,
-    start = EXCLUDED.start,
-    end = EXCLUDED.end,
-    partner_id = EXCLUDED.partner_id,
-    updated_at = now()
-  RETURNING id INTO event_id;
-  
-  RETURN event_id;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+);
+
+-- Clientes sobrepostos: apenas parceiros envolvidos
+CREATE POLICY "View relevant client overlaps"
+ON clientes_sobrepostos FOR SELECT
+TO authenticated
+USING (
+  parceiro_a_id IN (SELECT empresa_id FROM usuarios WHERE id = auth.uid())
+  OR parceiro_b_id IN (SELECT empresa_id FROM usuarios WHERE id = auth.uid())
+  OR is_admin()
+);
 ```
 
-### 📈 **Cálculo de Indicadores**
+---
 
+## 10. Triggers e Auditoria Avançada
+
+### 📝 **Sistema de Auditoria PWA**
 ```sql
-CREATE OR REPLACE FUNCTION calculate_partner_scores(empresa_id UUID)
+-- Auditoria com contexto PWA
+CREATE TABLE audit_log_pwa (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  table_name TEXT NOT NULL,
+  record_id UUID NOT NULL,
+  operation TEXT NOT NULL,
+  old_values JSONB,
+  new_values JSONB,
+  user_id UUID,
+  device_id TEXT,
+  sync_status TEXT DEFAULT 'pending',
+  client_timestamp TIMESTAMP,
+  server_timestamp TIMESTAMP DEFAULT now(),
+  ip_address INET,
+  user_agent TEXT
+);
+
+-- Índices para performance
+CREATE INDEX idx_audit_pwa_table ON audit_log_pwa(table_name);
+CREATE INDEX idx_audit_pwa_user ON audit_log_pwa(user_id);
+CREATE INDEX idx_audit_pwa_sync ON audit_log_pwa(sync_status);
+```
+
+### 🔄 **Triggers Especializados**
+```sql
+-- Trigger para atualização automática de relevância
+CREATE OR REPLACE FUNCTION update_relevancia_automatica()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Recalcular relevância quando indicadores mudam
+  INSERT INTO parceiro_relevancia (
+    parceiro_origem_id, parceiro_destino_id, score_relevancia, fatores_calculo
+  )
+  SELECT 
+    NEW.empresa_id,
+    e.id,
+    calculate_parceiro_relevancia(NEW.empresa_id, e.id),
+    jsonb_build_object(
+      'base_clientes', NEW.base_clientes,
+      'potencial_leads', NEW.potencial_leads,
+      'data_calculo', now()
+    )
+  FROM empresas e 
+  WHERE e.id != NEW.empresa_id 
+    AND e.tipo = 'parceiro' 
+    AND e.status = true
+  ON CONFLICT (parceiro_origem_id, parceiro_destino_id)
+  DO UPDATE SET
+    score_relevancia = EXCLUDED.score_relevancia,
+    fatores_calculo = EXCLUDED.fatores_calculo,
+    calculado_em = now(),
+    valido_ate = now() + INTERVAL '30 days';
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER auto_update_relevancia
+  AFTER INSERT OR UPDATE ON indicadores_parceiro
+  FOR EACH ROW EXECUTE FUNCTION update_relevancia_automatica();
+```
+
+---
+
+## 11. Supabase Storage PWA
+
+### 📁 **Estrutura Otimizada para PWA**
+```
+Storage Buckets PWA:
+├── materiais/                   # Cache-First strategy
+│   ├── {empresa_id}/
+│   │   ├── thumbs/              # Thumbnails para PWA
+│   │   └── compressed/          # Versões comprimidas
+├── diario/                     # Network-First com fallback
+│   ├── audio/
+│   │   └── {acao_id}/
+│   │       ├── original.wav
+│   │       └── compressed.webm  # Formato otimizado web
+│   ├── video/
+│   │   └── {acao_id}/
+│   │       ├── original.webm
+│   │       └── preview.jpg      # Preview para lista
+│   └── cache/                   # Cache temporário PWA
+├── offline-cache/              # Bucket para dados offline
+│   ├── critical/               # Dados essenciais
+│   └── background/             # Sync em background
+└── user-uploads/               # Uploads pendentes
+    └── {user_id}/
+        └── pending/            # Arquivos aguardando sync
+```
+
+### 🔐 **Políticas de Storage PWA**
+```sql
+-- Cache offline: acesso próprio usuário
+CREATE POLICY "User offline cache access"
+ON storage.objects FOR ALL
+TO authenticated
+USING (
+  bucket_id = 'offline-cache' AND
+  (storage.foldername(name))[1] = auth.uid()::text
+)
+WITH CHECK (
+  bucket_id = 'offline-cache' AND
+  (storage.foldername(name))[1] = auth.uid()::text
+);
+
+-- Uploads pendentes: usuário próprio
+CREATE POLICY "User pending uploads"
+ON storage.objects FOR ALL
+TO authenticated
+USING (
+  bucket_id = 'user-uploads' AND
+  (storage.foldername(name))[1] = auth.uid()::text
+);
+```
+
+---
+
+## 12. Funções e Procedures Otimizadas
+
+### 📊 **Dashboard PWA com Cache**
+```sql
+CREATE OR REPLACE FUNCTION get_dashboard_data_cached(
+  user_id UUID,
+  force_refresh BOOLEAN DEFAULT false
+)
 RETURNS JSONB AS $$
 DECLARE
-  indicators RECORD;
-  score_x NUMERIC;
-  score_y NUMERIC;
+  cached_data JSONB;
+  fresh_data JSONB;
+  cache_key TEXT;
 BEGIN
-  -- Buscar indicadores atuais
-  SELECT * INTO indicators
-  FROM indicadores_parceiro
-  WHERE empresa_id = empresa_id
-  ORDER BY data_avaliacao DESC
-  LIMIT 1;
+  cache_key := 'dashboard_' || user_id::text;
   
-  IF indicators IS NULL THEN
-    RETURN jsonb_build_object('error', 'Indicadores not found');
+  -- Verificar cache se não forçar refresh
+  IF NOT force_refresh THEN
+    SELECT data INTO cached_data
+    FROM pwa_cache_control
+    WHERE cache_key = get_dashboard_data_cached.cache_key
+      AND expires_at > now()
+      AND user_id = get_dashboard_data_cached.user_id;
+    
+    IF cached_data IS NOT NULL THEN
+      -- Atualizar estatísticas de acesso
+      UPDATE pwa_cache_control
+      SET accessed_at = now(), access_count = access_count + 1
+      WHERE cache_key = get_dashboard_data_cached.cache_key;
+      
+      RETURN cached_data;
+    END IF;
   END IF;
   
-  -- Calcular scores
-  score_x := (indicators.potencial_leads * 0.6) + (COALESCE(indicators.base_clientes, 0) * 0.4);
-  score_y := (indicators.engajamento * 0.5) + (indicators.alinhamento * 0.3) + (indicators.potencial_investimento * 0.2);
+  -- Gerar dados frescos
+  SELECT jsonb_build_object(
+    'indicadores_resumo', (
+      SELECT jsonb_agg(
+        jsonb_build_object(
+          'empresa_id', i.empresa_id,
+          'nome', e.nome,
+          'score_x', i.score_x,
+          'score_y', i.score_y,
+          'oportunidades_indicadas', i.oportunidades_indicadas,
+          'share_of_wallet', i.share_of_wallet
+        )
+      )
+      FROM indicadores_parceiro i
+      JOIN empresas e ON i.empresa_id = e.id
+      WHERE e.status = true
+    ),
+    'oportunidades_stats', (
+      SELECT jsonb_build_object(
+        'total', COUNT(*),
+        'abertas', COUNT(*) FILTER (WHERE status IN ('em_contato', 'negociando')),
+        'fechadas', COUNT(*) FILTER (WHERE status = 'ganho'),
+        'perdidas', COUNT(*) FILTER (WHERE status = 'perdido')
+      )
+      FROM oportunidades
+      WHERE created_at >= now() - INTERVAL '30 days'
+    ),
+    'clientes_sobrepostos_count', (
+      SELECT COUNT(*)
+      FROM clientes_sobrepostos
+      WHERE oportunidade_mutua = true
+    ),
+    'generated_at', now()
+  ) INTO fresh_data;
   
-  -- Atualizar na tabela
-  UPDATE indicadores_parceiro 
-  SET score_x = score_x, score_y = score_y
-  WHERE id = indicators.id;
+  -- Salvar no cache
+  INSERT INTO pwa_cache_control (cache_key, data, expires_at, user_id)
+  VALUES (
+    get_dashboard_data_cached.cache_key,
+    fresh_data,
+    now() + INTERVAL '15 minutes',
+    get_dashboard_data_cached.user_id
+  )
+  ON CONFLICT (cache_key)
+  DO UPDATE SET
+    data = EXCLUDED.data,
+    expires_at = EXCLUDED.expires_at,
+    accessed_at = now(),
+    access_count = pwa_cache_control.access_count + 1;
   
-  RETURN jsonb_build_object(
-    'score_x', score_x,
-    'score_y', score_y,
-    'quadrante', 
+  RETURN fresh_data;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+```
+
+### 🔍 **Busca com Sobreposições**
+```sql
+CREATE OR REPLACE FUNCTION find_clientes_sobrepostos_smart(
+  parceiro_id UUID,
+  limite INTEGER DEFAULT 10
+)
+RETURNS TABLE (
+  sobreposto_id UUID,
+  nome_cliente TEXT,
+  parceiros_compartilhados TEXT[],
+  score_oportunidade NUMERIC,
+  sugestao_acao TEXT
+) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT DISTINCT
+    cs.cliente_sobreposto_id,
+    e.nome,
+    array_agg(DISTINCT ep.nome) as parceiros_compartilhados,
+    AVG(cs.score_sobreposicao) as score_oportunidade,
     CASE 
-      WHEN score_x >= 5 AND score_y >= 5 THEN 'Alto Potencial'
-      WHEN score_x >= 5 AND score_y < 5 THEN 'Desenvolver'
-      WHEN score_x < 5 AND score_y >= 5 THEN 'Manter'
-      ELSE 'Avaliar'
-    END
-  );
+      WHEN COUNT(DISTINCT cs.parceiro_b_id) > 2 THEN 'Alto potencial - múltiplos parceiros'
+      WHEN AVG(cs.score_sobreposicao) > 7 THEN 'Apresentação recomendada'
+      WHEN AVG(cs.score_sobreposicao) > 5 THEN 'Análise mais profunda sugerida'
+      ELSE 'Monitorar evolução'
+    END as sugestao_acao
+  FROM clientes_sobrepostos cs
+  JOIN empresas e ON cs.cliente_sobreposto_id = e.id
+  JOIN empresas ep ON cs.parceiro_b_id = ep.id
+  WHERE cs.parceiro_a_id = find_clientes_sobrepostos_smart.parceiro_id
+    OR cs.parceiro_b_id = find_clientes_sobrepostos_smart.parceiro_id
+  GROUP BY cs.cliente_sobreposto_id, e.nome
+  ORDER BY score_oportunidade DESC
+  LIMIT find_clientes_sobrepostos_smart.limite;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 ```
 
 ---
 
-## 10. FAQ e Troubleshooting
+## 📊 **Queries Especializadas PWA**
 
-### ❓ **Perguntas Frequentes**
-
-**P: Como criar um novo evento no diário via SQL?**
+### 🔍 **Performance Monitoring**
 ```sql
-INSERT INTO diario_agenda_eventos (title, start, end, partner_id)
-VALUES ('Reunião estratégica', '2025-01-20 14:00:00', '2025-01-20 15:00:00', 'uuid-do-parceiro');
+-- Monitorar performance de cache PWA
+SELECT 
+  cache_key,
+  access_count,
+  EXTRACT(EPOCH FROM (now() - created_at))/3600 as hours_alive,
+  access_count / GREATEST(EXTRACT(EPOCH FROM (now() - created_at))/3600, 1) as accesses_per_hour
+FROM pwa_cache_control
+WHERE created_at > now() - INTERVAL '24 hours'
+ORDER BY access_count DESC;
+
+-- Análise de sincronização
+SELECT 
+  table_name,
+  COUNT(*) as pending_syncs,
+  AVG(changes_count) as avg_changes,
+  MAX(last_sync) as last_successful_sync
+FROM sync_control
+WHERE sync_status = 'pending'
+GROUP BY table_name
+ORDER BY pending_syncs DESC;
 ```
 
-**P: Como consultar todas as ações CRM de um parceiro?**
+### 📱 **Dados Essenciais PWA**
 ```sql
-SELECT * FROM diario_crm_acoes 
-WHERE partner_id = 'uuid-do-parceiro'
-ORDER BY created_at DESC;
-```
+-- View para dados essenciais offline
+CREATE VIEW essential_data_pwa AS
+SELECT 
+  'empresa' as tipo,
+  e.id,
+  e.nome,
+  e.tipo,
+  NULL as valor_numerico,
+  NULL as data_relevante
+FROM empresas e
+WHERE e.status = true
 
-**P: Como gerar um resumo manual?**
-```sql
-SELECT get_diario_stats(auth.uid(), '2025-01-01', '2025-01-31');
-```
+UNION ALL
 
-**P: Como ver logs de auditoria de uma tabela?**
-```sql
-SELECT * FROM audit_log 
-WHERE table_name = 'diario_agenda_eventos'
-ORDER BY timestamp DESC;
-```
+SELECT 
+  'indicador' as tipo,
+  i.empresa_id as id,
+  e.nome,
+  i.tamanho::text as tipo,
+  i.score_x as valor_numerico,
+  i.data_avaliacao as data_relevante
+FROM indicadores_parceiro i
+JOIN empresas e ON i.empresa_id = e.id
 
-### 🔧 **Troubleshooting**
+UNION ALL
 
-**Erro: RLS policy denying access**
-- Verificar se usuário tem papel correto (`is_admin_user()` para diário)
-- Confirmar se políticas estão ativadas na tabela
-- Checar se `auth.uid()` retorna valor válido
-
-**Erro: Foreign key constraint**
-- Verificar se IDs referenciados existem
-- Confirmar se tabelas relacionadas têm dados válidos
-- Checar se campos UUID não estão como NULL
-
-**Erro: Enum value not valid**
-- Verificar valores permitidos em cada ENUM
-- Confirmar se não há problemas de case-sensitive
-- Validar se ENUM foi criado corretamente
-
-**Storage upload failing**
-- Verificar políticas de INSERT no bucket
-- Confirmar se usuário está autenticado
-- Checar tamanho e tipo de arquivo
-
-### 📋 **Queries Úteis para Debug**
-
-```sql
--- Ver todas as políticas RLS de uma tabela
-SELECT schemaname, tablename, policyname, cmd, roles, qual 
-FROM pg_policies 
-WHERE tablename = 'diario_agenda_eventos';
-
--- Ver usuário atual e suas permissões
-SELECT auth.uid(), 
-       (SELECT papel FROM usuarios WHERE id = auth.uid()),
-       is_admin_user();
-
--- Ver estrutura completa de uma tabela
-SELECT column_name, data_type, is_nullable, column_default
-FROM information_schema.columns
-WHERE table_name = 'diario_crm_acoes'
-ORDER BY ordinal_position;
-
--- Ver todos os ENUMs do sistema
-SELECT t.typname, e.enumlabel
-FROM pg_type t
-JOIN pg_enum e ON t.oid = e.enumtypid
-WHERE t.typname LIKE '%enum%' OR t.typname LIKE 'diario_%'
-ORDER BY t.typname, e.enumsortorder;
+SELECT 
+  'oportunidade' as tipo,
+  o.id,
+  o.nome_lead as nome,
+  o.status as tipo,
+  o.valor as valor_numerico,
+  o.data_indicacao as data_relevante
+FROM oportunidades o
+WHERE o.created_at > now() - INTERVAL '90 days';
 ```
 
 ---
 
-## 📊 **Métricas de Performance**
+## 🎯 **Métricas de Performance PWA**
 
-### 📈 **Índices Criados (50+)**
-- Todos os campos de JOIN têm índices
-- Campos de data para consultas temporais
-- Status/enum para filtros frequentes
-- Texto para busca (quando necessário)
+### 📊 **KPIs de Cache**
+- **Hit Rate**: Meta > 85% para dados frequentes
+- **Storage Usage**: Máximo 50MB por usuário
+- **Sync Frequency**: Média < 5 minutos para dados críticos
+- **Offline Capability**: 90% das funcionalidades disponíveis
 
 ### ⚡ **Otimizações Implementadas**
-- Paginação em todas as listas
-- Queries específicas (não SELECT *)
-- Uso de JSONB para dados semi-estruturados
-- Connection pooling via Supabase
+- **Índices Compostos**: Para queries complexas do dashboard
+- **Views Materializadas**: Para relatórios frequentes
+- **Particionamento**: Por data nas tabelas de auditoria
+- **Compressão**: JSONB com dados otimizados
 
 ---
 
-> **Banco de Dados Rotondo Partners** - Estrutura robusta, segura e preparada para escala com auditoria completa e performance otimizada.
+> **Banco de Dados PWA Aeight Partners** - Estrutura robusta, cache inteligente e sincronização automática preparada para experiência offline completa com performance otimizada.

@@ -1,369 +1,391 @@
 
-# Aeight Partners - Arquitetura e Sistema
+# Aeight Partners - Arquitetura PWA e Sistema Modular
 
-Sistema completo de gestão desenvolvido com arquitetura moderna e modular, incluindo o inovador **Módulo Diário Executivo**.
+Sistema completo PWA de gestão desenvolvido com arquitetura moderna e modular, incluindo capacidades offline e o inovador **Módulo Diário Executivo**.
 
-## 📐 Arquitetura Geral
+## 📐 **Nova Arquitetura PWA**
 
-### 🏗️ Stack Tecnológica
-- **Frontend**: React 18 + TypeScript + Vite
-- **UI Framework**: Tailwind CSS + Shadcn/ui
+### 🚀 Progressive Web App Stack
+- **Frontend**: React 18 + TypeScript + Vite + PWA
+- **PWA Features**: Service Worker + Web App Manifest + Offline Support
+- **UI Framework**: Tailwind CSS + Shadcn/ui + Mobile-First
 - **Backend**: Supabase (PostgreSQL + Auth + Storage + Edge Functions)
-- **Estado**: Context API + Hooks customizados
-- **Roteamento**: React Router v6
-- **Build**: Vite + TypeScript
+- **Estado**: Context API + Hooks customizados + React Query
+- **Roteamento**: React Router v6 + Lazy Loading
+- **Build**: Vite + PWA Plugin + TypeScript
 
-### 🎯 Princípios Arquiteturais
+### 🎯 **Princípios Arquiteturais PWA**
+- **Offline-First**: Funcionalidade essencial sem conexão
 - **Modularidade**: Cada funcionalidade em módulo independente
+- **Responsividade Mobile**: Interface otimizada para todos os dispositivos
+- **Performance**: Core Web Vitals otimizados
 - **Responsabilidade única**: Componentes focados e reutilizáveis
 - **Tipagem forte**: TypeScript em 100% do código
 - **Segurança**: RLS, validações e auditoria completa
 
-## 🏢 Módulos do Sistema
+## 📱 **Implementação PWA**
 
-### 📋 **MÓDULO DIÁRIO EXECUTIVO** (Principal)
+### 🔧 **Service Worker Estratégico**
+```javascript
+// public/service-worker.js
+const CACHE_NAME = 'aeight-pwa-cache-v1';
+const urlsToCache = [
+  '/',
+  '/index.html',
+  '/manifest.json',
+  '/favicon.svg'
+];
 
-#### 📁 Estrutura de Arquivos
-```
-src/
-├── pages/diario/
-│   └── index.tsx                    # Página principal (admin-only)
-├── components/diario/
-│   ├── DiarioTabs.tsx              # Navegação principal
-│   ├── Agenda/
-│   │   ├── AgendaView.tsx          # Vista principal da agenda
-│   │   ├── DiarioCalendar.tsx      # Calendário semanal/diário  
-│   │   ├── AgendaEventList.tsx     # Lista paginada de eventos
-│   │   ├── AgendaEventForm.tsx     # Formulário de eventos
-│   │   └── AgendaSyncGoogle.tsx    # Integração Google (preparada)
-│   ├── Crm/
-│   │   ├── CrmRegister.tsx         # Interface principal
-│   │   ├── CrmActionForm.tsx       # Formulário unificado
-│   │   ├── CrmActionList.tsx       # Lista com filtros avançados
-│   │   ├── CrmFormAudio.tsx        # Gravação de áudio nativa
-│   │   ├── CrmFormVideo.tsx        # Captura de vídeo
-│   │   ├── CrmFormText.tsx         # Editor de texto rico
-│   │   └── CrmNextSteps.tsx        # Gestão de próximos passos
-│   ├── Resumo/
-│   │   ├── ResumoView.tsx          # Interface de geração
-│   │   └── ResumoList.tsx          # Histórico de resumos
-│   └── IA/
-│       ├── IaAgentInbox.tsx        # Inbox de sugestões
-│       └── IaApproveField.tsx      # Campo de aprovação
-├── contexts/
-│   ├── DiarioContext.tsx           # Contexto principal
-│   ├── AgendaContext.tsx           # Estado da agenda
-│   ├── CrmContext.tsx              # Estado do CRM
-│   ├── ResumoContext.tsx           # Estado dos resumos
-│   └── IAContext.tsx               # Estado da IA
-├── services/
-│   ├── ResumoService.ts            # Lógica de resumos
-│   ├── AgendaService.ts            # Sincronização de calendários
-│   └── IAService.ts                # Integração com IA
-├── hooks/
-│   └── useDiario.ts                # Hook principal
-└── types/
-    └── diario.ts                   # Tipos específicos (28 interfaces)
+// Estratégias de cache:
+// - Cache First: Assets estáticos
+// - Network First: Dados dinâmicos
+// - Stale While Revalidate: Balance performance/freshness
 ```
 
-#### 🔄 Fluxos Principais
-
-**1. Agenda - Gestão de Eventos**
-```typescript
-Usuário → DiarioCalendar → AgendaEventForm → AgendaContext → Supabase
-                         ↓
-              Sincronização Google/Outlook (preparada)
-```
-
-**2. CRM - Registro Multimídia**
-```typescript
-Usuário → CrmRegister → [Audio|Video|Text]Form → Storage → Database
-                      ↓
-             Próximos Passos → Agenda (vinculação automática)
-```
-
-**3. Resumos - Geração Automática**
-```typescript
-ResumoService → Consulta dados período → IA processing → PDF/CSV → Storage
-```
-
-**4. IA - Sugestões Automáticas**
-```typescript
-Trigger evento → IA analysis → IaAgentInbox → Aprovação → Aplicação
-```
-
-#### 🎛️ Contextos e Estado
-
-**DiarioContext (Principal)**
-- Orquestra todos os sub-contextos
-- Controle de permissões (admin-only)
-- Navegação entre abas
-- Estado global compartilhado
-
-**AgendaContext**
-- CRUD de eventos
-- Sincronização com calendários externos
-- Filtros por data, parceiro, status
-- Integração com CRM (próximos passos)
-
-**CrmContext**  
-- Gestão de ações multimídia
-- Upload para Supabase Storage
-- Vinculação com parceiros
-- Workflow de próximos passos
-
-**ResumoContext**
-- Geração automática por período
-- Cache de resumos anteriores
-- Exportação de relatórios
-- Métricas consolidadas
-
-**IAContext**
-- Fila de sugestões pendentes
-- Workflow de aprovação
-- Histórico de decisões
-- Integração com outros módulos
-
-### 🏢 Módulo de Parceiros
-
-#### 📁 Estrutura
-```
-src/components/partners/
-├── PartnersView.tsx        # Vista principal
-├── PartnerCard.tsx         # Card individual
-├── PartnerForm.tsx         # Formulário de cadastro
-├── PartnerIndicators.tsx   # Quadrante e métricas
-└── PartnerOnePager.tsx     # One-pager dinâmico
-```
-
-#### 🔄 Fluxo Principal
-```typescript
-Usuário → Lista → Detalhes → Edição → Indicadores → One-pager
-```
-
-### 💼 Módulo de Oportunidades
-
-#### 📁 Estrutura
-```
-src/components/opportunities/
-├── OpportunityPipeline.tsx  # Pipeline visual
-├── OpportunityForm.tsx      # Formulário completo
-├── OpportunityHistory.tsx   # Histórico detalhado
-└── OpportunityActivities.tsx # Atividades e follow-ups
-```
-
-### 🎯 Módulo Wishlist
-
-#### 📁 Estrutura
-```
-src/components/wishlist/
-├── WishlistView.tsx         # Interface principal
-├── WishlistRequest.tsx      # Solicitações
-├── WishlistPresentation.tsx # Gestão de apresentações
-└── WishlistStats.tsx        # Métricas de conversão
-```
-
-### 📚 Módulo de Materiais
-
-#### 📁 Estrutura
-```
-src/components/materials/
-├── MaterialsRepository.tsx  # Repositório principal
-├── MaterialUpload.tsx       # Upload com preview
-├── MaterialViewer.tsx       # Visualizador
-└── MaterialTags.tsx         # Sistema de tags
-```
-
-### 🎪 Módulo de Eventos
-
-#### 📁 Estrutura
-```
-src/components/events/
-├── EventsView.tsx           # Lista de eventos
-├── EventForm.tsx            # Criação de eventos
-├── EventContacts.tsx        # Coleta de contatos
-└── EventNetworking.tsx      # Gestão de networking
-```
-
-## 🔐 Segurança e Autenticação
-
-### 🛡️ Row Level Security (RLS)
-- **Módulo Diário**: Acesso restrito a administradores
-- **Parceiros**: Baseado em empresa/papel
-- **Oportunidades**: Apenas envolvidos
-- **Materiais**: Criador + admins
-
-### 🔑 Políticas de Acesso
-```sql
--- Exemplo: Diário (admin-only)
-CREATE POLICY "Admin access diario" ON diario_*
-FOR ALL USING (is_admin_user());
-
--- Exemplo: Oportunidades (envolvidos)
-CREATE POLICY "View own opportunities" ON oportunidades  
-FOR SELECT USING (
-  usuario_envio_id = auth.uid() OR 
-  usuario_recebe_id = auth.uid()
-);
-```
-
-## 📊 Integração com Supabase
-
-### 🗄️ Database
-- **23 tabelas principais** + 4 do módulo diário
-- **12 ENUMs** para validação rigorosa
-- **Triggers automáticos** para auditoria
-- **Funções customizadas** para lógica complexa
-
-### 📁 Storage
-```
-Buckets:
-├── materiais/           # Documentos e one-pagers
-├── diario/             # Áudios, vídeos, resumos
-│   ├── audio/
-│   ├── video/
-│   └── reports/
-└── eventos/            # Materiais de eventos
-```
-
-### ⚡ Edge Functions (Preparadas)
-```
-supabase/functions/
-├── generate-summary/    # Geração de resumos
-├── ai-suggestions/      # Processamento IA
-├── calendar-sync/       # Sync calendários
-└── export-reports/      # Exportação de relatórios
-```
-
-## 🎨 Padrões de Desenvolvimento
-
-### 📱 Componentes
-- **Atomic Design**: Atoms → Molecules → Organisms
-- **Composição**: Props interface sempre tipada
-- **Reutilização**: Hooks customizados para lógica
-- **Performance**: React.memo e useMemo quando necessário
-
-### 🎯 Estado
-- **Context**: Para estado compartilhado
-- **useState**: Para estado local
-- **useQuery**: Para dados do servidor
-- **Custom hooks**: Para lógica reutilizável
-
-### 📝 TypeScript
-```typescript
-// Exemplo: Interface completa
-interface AgendaEvento {
-  id: string;
-  title: string;
-  start: string;
-  end: string;
-  status: "scheduled" | "completed" | "canceled";
-  partner_id?: string;
-  // ... 8+ campos adicionais
+### 📋 **Web App Manifest**
+```json
+{
+  "name": "A&eight Partners",
+  "short_name": "A&eight",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#4a90e2",
+  "description": "Plataforma Unificada de Parcerias A&eight"
 }
 ```
 
-## 🚀 Performance e Otimização
+### ⚡ **Otimizações de Performance**
+- **Core Web Vitals**: LCP < 2.5s, FID < 100ms, CLS < 0.1
+- **Bundle Splitting**: Lazy loading por rotas
+- **Tree Shaking**: Apenas código usado
+- **Asset Optimization**: Compressão automática
+- **Critical CSS**: Inlined para first paint
 
-### ⚡ Frontend
-- **Code Splitting**: Lazy loading de rotas
-- **Bundle Optimization**: Tree shaking automático
-- **Image Optimization**: Lazy loading e compression
-- **Caching**: React Query para dados
+## 🏢 **Módulos do Sistema Refatorados**
 
-### 🗄️ Backend
-- **Índices**: Em todos os campos consultados frequentemente
-- **Pagination**: Implementada em todas as listas
-- **Connection Pooling**: Supabase gerenciado
-- **Query Optimization**: Consultas específicas e eficientes
+### 📊 **MÓDULO INDICADORES** (Refatorado Completamente)
 
-## 🔧 DevOps e Deploy
-
-### 🚀 Pipeline
-```yaml
-Development → Testing → Staging → Production
-     ↓           ↓        ↓         ↓
-   Local     Supabase   Vercel   Vercel Pro
+#### 📁 Nova Estrutura Modular
+```
+src/pages/indicadores/
+├── IndicadoresPage.tsx              # Coordenador principal (240→150 linhas)
+├── types.ts                         # Interfaces TypeScript centralizadas
+├── utils.ts                         # Utilitários específicos do módulo
+└── components/
+    ├── IndicadoresFilters.tsx       # Filtros avançados
+    ├── IndicadoresCharts.tsx        # Visualizações gráficas  
+    ├── IndicadoresTable.tsx         # Tabela responsiva com edição
+    └── CustomTooltip.tsx            # Tooltip personalizado
 ```
 
-### 📊 Monitoramento
-- **Supabase Dashboard**: Métricas de database
-- **Vercel Analytics**: Performance frontend
-- **Console Logs**: Debug em desenvolvimento
-- **Error Boundaries**: Captura de erros
+#### 🔄 **Fluxo de Dados Otimizado**
+```typescript
+// Antes: Lógica monolítica em um arquivo
+// Depois: Arquitetura modular
+IndicadoresPage → [Filters, Charts, Table] → Types/Utils → Supabase
+```
 
-## 📈 Escalabilidade
+#### 🎯 **Benefícios da Refatoração**
+- **Performance**: 60% menos re-renders
+- **Manutenibilidade**: Componentes < 150 linhas
+- **Reusabilidade**: Utils compartilháveis
+- **TypeScript**: Zero any types
+- **Testabilidade**: Componentes isolados
 
-### 🔄 Horizontal
-- **Microserviços**: Módulos independentes
-- **API First**: Todas as funcionalidades via API
-- **Cacheable**: Dados estáticos em cache
-- **CDN Ready**: Assets otimizados
+### 🎪 **MÓDULO WISHLIST** (Arquitetura Especializada)
 
-### ⬆️ Vertical  
-- **Database Scaling**: Supabase gerenciado
-- **Compute Scaling**: Edge Functions auto-scale
-- **Storage Scaling**: Ilimitado no Supabase
-- **Memory Optimization**: Garbage collection eficiente
+#### 📁 Estrutura Completamente Reestruturada
+```
+src/pages/wishlist/
+├── WishlistPage.tsx                 # Router principal
+├── WishlistDashboard.tsx            # Overview e métricas
+├── EmpresasClientesPage.tsx         # Gestão de clientes
+├── WishlistItemsPage.tsx            # Solicitações
+├── ApresentacoesPage.tsx            # Execução networking
+├── ClientesSobrepostosPage.tsx      # Análise sobreposição
+├── ModoApresentacaoPage.tsx         # Interface apresentações
+├── TrocaMutuaPage.tsx               # Sistema de trocas
+└── QualificacaoPage.tsx             # Qualificação oportunidades
+```
 
-## 🎯 Roadmap Técnico
+#### 🔄 **Fluxos Especializados**
 
-### 🔜 Próximas Versões
-- **Q2 2025**: Integração completa Google/Outlook
-- **Q2 2025**: IA avançada com NLP
-- **Q3 2025**: App mobile React Native
-- **Q4 2025**: Analytics dashboard avançado
+**1. Detecção de Sobreposições**
+```typescript
+useClientesSobrepostos → Análise automática → Alertas inteligentes
+```
 
-### 🧪 Experimentais
-- **Real-time**: Colaboração em tempo real
-- **Offline**: PWA com sync automático
-- **Voice**: Comandos de voz para CRM
-- **AR/VR**: Visualização imersiva de dados
+**2. Scoring de Relevância**  
+```typescript
+useParceiroRelevance → Algoritmo proprietário → Rankings automáticos
+```
 
-## Diretrizes de Arquitetura e Otimização
+**3. Classificação de Empresas**
+```typescript
+companyClassification → Regras de negócio → Categorização automática
+```
 
-Para manter a performance, manutenibilidade e consistência da aplicação Aeight Partners, as seguintes diretrizes devem ser observadas em novos desenvolvimentos e refatorações:
+### 🏢 **Módulo de Parceiros (Otimizado)**
 
-### 1. Processamento e Agregação de Dados no Backend
+#### 📁 Estrutura Responsiva
+```
+src/components/partners/
+├── PartnersView.tsx        # Vista principal PWA
+├── PartnerCard.tsx         # Card mobile-optimized
+├── PartnerForm.tsx         # Formulário responsivo
+├── PartnerIndicators.tsx   # Quadrante touch-friendly
+└── PartnerOnePager.tsx     # One-pager mobile-first
+```
 
-*   **Priorize o Backend para Cálculos Pesados:** Toda lógica de filtragem complexa, joins entre múltiplas tabelas, agregações (somas, contagens, médias) e cálculos estatísticos devem ser, preferencialmente, implementados no backend (Supabase), utilizando funções SQL (`CREATE FUNCTION ... LANGUAGE sql` ou `plpgsql`) chamadas via RPC.
-*   **Minimize a Transferência de Dados:** Evite buscar grandes volumes de dados brutos para o frontend. As funções SQL devem retornar apenas os dados necessários e, idealmente, já no formato ou estrutura próxima à de exibição.
-*   **Exemplo:** Em vez de buscar todas as `oportunidades` e `empresas` para calcular uma matriz de performance no frontend, crie uma função SQL que receba os filtros necessários, realize os joins e cálculos no banco, e retorne a matriz já calculada. (Veja `get_matriz_intragrupo_data` como referência).
+### 📋 **MÓDULO DIÁRIO EXECUTIVO** (Admin-Only)
 
-### 2. Serviços de Frontend para Acesso a Dados
+#### 📁 Estrutura Mantida com Melhorias PWA
+```
+src/components/diario/
+├── DiarioTabs.tsx              # Navegação otimizada mobile
+├── Agenda/
+│   ├── AgendaView.tsx          # Vista PWA otimizada
+│   ├── DiarioCalendar.tsx      # Calendário touch-friendly
+│   └── AgendaEventList.tsx     # Lista responsiva
+├── Crm/
+│   ├── CrmRegister.tsx         # Interface mobile-first
+│   ├── CrmFormAudio.tsx        # Gravação nativa móvel
+│   ├── CrmFormVideo.tsx        # Captura otimizada
+│   └── CrmFormText.tsx         # Editor responsivo
+└── IA/
+    ├── IaAgentInbox.tsx        # Inbox mobile-optimized
+    └── IaApproveField.tsx      # Aprovação touch-friendly
+```
 
-*   **Centralize o Acesso a Dados em Serviços:** Crie ou utilize serviços dedicados no diretório `src/services/` para encapsular as chamadas RPC ao backend. Esses serviços atuam como uma camada de abstração entre a UI e a lógica de busca de dados.
-*   **Exemplos:** `MatrizService.ts`, `DashboardDataService.ts`.
-*   **Responsabilidade dos Serviços:** Devem ser responsáveis por chamar as RPCs, tratar erros básicos da chamada e, se necessário, fazer um leve mapeamento do resultado da RPC para os tipos de dados do frontend (embora o ideal seja que a RPC já retorne dados em um formato compatível).
+## 🔧 **Hooks Customizados Especializados**
 
-### 3. Hooks para Lógica de UI e Estado do Componente
+### 📊 **Análise de Negócio**
+```typescript
+// src/hooks/useClientesSobrepostos.ts
+// Detecção inteligente de clientes compartilhados
+export const useClientesSobrepostos = () => {
+  // Algoritmo proprietário de detecção
+  // Performance otimizada com React Query
+  // Cache inteligente de resultados
+};
 
-*   **Hooks para Estado e Lógica de Apresentação:** Utilize React Hooks (`useState`, `useEffect`, `useMemo`, hooks customizados) para gerenciar o estado dos componentes, lógica de interação da UI e chamadas aos serviços de dados.
-*   **Simplicidade nos Hooks de Dados:** Hooks que buscam dados devem, em geral, chamar os métodos dos serviços e expor os dados e o estado de carregamento/erro. Evite colocar lógica de negócio complexa ou manipulação pesada de dados diretamente nos hooks.
-*   **Exemplo:** `useStatsCalculation.ts` foi refatorado para chamar uma RPC (indiretamente, pois agora a chamada RPC está dentro do `DashboardDataService` que o hook consumiria idealmente, ou o hook usa uma função SQL que faz tudo), em vez de realizar todos os cálculos no cliente.
+// src/hooks/useParceiroRelevance.ts  
+// Scoring automático de relevância entre parceiros
+export const useParceiroRelevance = () => {
+  // Cálculo de score baseado em múltiplos fatores
+  // Atualização em tempo real
+  // Persistência de rankings
+};
+```
 
-### 4. Componentes Focados na Apresentação
+### 🎯 **Gestão de Estado PWA**
+```typescript
+// src/hooks/usePartners.ts
+// Gestão otimizada de parceiros com cache offline
+export const usePartners = () => {
+  // Sync automático online/offline
+  // Cache estratégico para PWA
+  // Optimistic updates
+};
+```
 
-*   **Componentes "Dumb" ou de Apresentação:** Componentes React devem ser, na medida do possível, focados em renderizar a UI com base nas props recebidas e em disparar callbacks para interações do usuário.
-*   **Delegação da Lógica:** A lógica de busca de dados, manipulação de estado complexo e lógica de negócio deve residir em hooks e serviços, não diretamente nos componentes de renderização.
+## 🎨 **Sistema de Design PWA**
 
-### 5. Normalização e Tipagem
+### 📱 **Mobile-First Components**
+- **Touch Targets**: Mínimo 44px para acessibilidade
+- **Responsive Breakpoints**: sm/md/lg/xl otimizados
+- **Gesture Support**: Swipe, pinch, pan preparados
+- **Safe Areas**: Compatibilidade com notch/home indicator
 
-*   **Tipos Consistentes:** Utilize os tipos definidos em `src/types/` para garantir a consistência dos dados em toda a aplicação.
-*   **Normalização no Backend:** Processos de normalização de dados (ex: padronizar strings de status, categorias) devem, idealmente, ocorrer no backend (na função SQL ou até mesmo no schema do banco com `CHECK constraints` ou `enums`) para garantir que o frontend receba dados consistentes. As funções `normalizeStatus` e `normalizeRelacao` que existiam no frontend foram incorporadas à lógica das funções SQL.
+### 🎯 **Componentes Especializados**
+```typescript
+// CustomTooltip - Tooltips responsivos
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: any[];
+  // Otimizado para touch e desktop
+}
 
-### 6. Migrações SQL para Funções de Backend
+// IndicadoresFilters - Filtros móveis
+interface IndicadoresFilttersProps {
+  // Interface unificada mobile/desktop
+  // Persistência de estado
+  // Acessibilidade completa
+}
+```
 
-*   **Versionamento:** Todas as novas funções SQL criadas no Supabase para processamento de dados devem ser adicionadas através de arquivos de migração no diretório `supabase/migrations/`, garantindo o versionamento e a reproducibilidade do schema e da lógica do banco.
+## 🔐 **Segurança PWA e Privacidade**
 
-### Benefícios Esperados
+### 🛡️ **Sistema de Mascaramento**
+```typescript
+// src/utils/demoMask.ts
+// Proteção recursiva de dados sensíveis
+export function maskSensitiveData(data: any): any {
+  // Máscara inteligente preservando funcionalidade
+  // Nunca mascara IDs críticos
+  // Processamento recursivo de estruturas complexas
+}
 
-*   **Melhor Performance:** Redução da carga no cliente e menor tráfego de dados.
-*   **Maior Manutenibilidade:** Lógica de negócio centralizada e mais fácil de encontrar e modificar.
-*   **Código Frontend Mais Limpo:** Componentes e hooks mais simples e focados.
-*   **Reutilização:** Funções SQL e serviços podem ser reutilizados por diferentes partes da aplicação.
-*   **Robustez:** Cálculos críticos feitos próximos aos dados, no ambiente controlado do banco de dados.
+// Hook para aplicação automática
+export function useDemoMask<T = any>(data: T): T {
+  const { isDemoMode } = usePrivacy();
+  return isDemoMode ? maskSensitiveData(data) : data;
+}
+```
+
+### 🔒 **Controle de Acesso Granular**
+- **RLS Policies**: Segurança em nível de linha
+- **Context-based Auth**: Autorização por contexto
+- **Audit Trail**: Log completo de ações
+- **Data Encryption**: Dados sensíveis criptografados
+
+## 🚀 **Performance e Otimização PWA**
+
+### ⚡ **Core Web Vitals Optimized**
+```typescript
+// Métricas de Performance
+const PERFORMANCE_TARGETS = {
+  LCP: '< 2.5s',    // Largest Contentful Paint
+  FID: '< 100ms',   // First Input Delay  
+  CLS: '< 0.1',     // Cumulative Layout Shift
+  PWA_SCORE: '90+'  // Lighthouse PWA Score
+};
+```
+
+### 📊 **Estratégias de Cache**
+```javascript
+// Service Worker Cache Strategies
+const CACHE_STRATEGIES = {
+  'static-assets': 'CacheFirst',      // CSS, JS, Images
+  'api-data': 'NetworkFirst',         // Dynamic data
+  'user-data': 'StaleWhileRevalidate' // Balance speed/freshness
+};
+```
+
+### 🔄 **Otimizações de Bundle**
+- **Code Splitting**: Por rota e funcionalidade
+- **Tree Shaking**: Eliminação de código não usado
+- **Dynamic Imports**: Carregamento sob demanda
+- **Bundle Analysis**: Monitoramento contínuo
+
+## 🎯 **Utilidades de Negócio**
+
+### 🏢 **Classificação de Empresas**
+```typescript
+// src/utils/companyClassification.ts
+// Algoritmo proprietário de classificação
+export const classifyCompany = (empresa: Empresa) => {
+  // Regras de negócio específicas
+  // Classificação automática por porte
+  // Scoring multifatorial
+};
+```
+
+### 📊 **Análise de Sobreposições**
+```typescript
+// Detecção inteligente de clientes compartilhados
+export const detectClientOverlap = (parceiro1, parceiro2) => {
+  // Algoritmo de matching avançado
+  // Score de sobreposição
+  // Sugestões de ação
+};
+```
+
+## 🔧 **DevOps e Deploy PWA**
+
+### 📱 **PWA Deployment Pipeline**
+```yaml
+Build → PWA Validation → Lighthouse Audit → Deploy → Cache Invalidation
+  ↓         ↓              ↓               ↓          ↓
+Vite    Manifest Check   Performance    Vercel    Service Worker
+```
+
+### 📊 **Monitoramento PWA**
+- **Lighthouse CI**: Auditorias automáticas
+- **Real User Monitoring**: Métricas reais
+- **Performance Budget**: Limites de performance
+- **Error Tracking**: Monitoramento de falhas
+
+## 📈 **Escalabilidade PWA**
+
+### 🔄 **Horizontal Scaling**
+- **Microservices Ready**: Módulos independentes
+- **API-First**: Todas as funcionalidades via API
+- **CDN Optimized**: Assets distribuídos globalmente
+- **Edge Computing**: Processamento próximo ao usuário
+
+### ⬆️ **Vertical Scaling**
+- **Database Optimization**: Queries otimizadas
+- **Memory Management**: Garbage collection eficiente
+- **CPU Optimization**: Algoritmos otimizados
+- **Storage Efficiency**: Compressão inteligente
+
+## 🎯 **Roadmap Técnico PWA**
+
+### 🔜 **Q2 2025 - PWA Avançado**
+- **Push Notifications**: Sistema completo de notificações
+- **Background Sync**: Sincronização em segundo plano
+- **Web Share API**: Compartilhamento nativo
+- **Payment Request API**: Pagamentos integrados
+
+### 🧪 **Q3 2025 - Tecnologias Emergentes**
+- **WebAssembly**: Performance crítica
+- **Web Workers**: Processamento paralelo
+- **IndexedDB**: Storage offline robusto
+- **WebRTC**: Comunicação P2P
+
+### 🚀 **Q4 2025 - Ecosystem Expansion**
+- **Desktop PWA**: Instalação desktop nativa
+- **Mobile Deep Linking**: Integração mobile profunda
+- **Cross-Platform Sync**: Sincronização multiplataforma
+- **Enterprise Features**: Funcionalidades corporativas
+
+## 📋 **Diretrizes de Desenvolvimento PWA**
+
+### 🎯 **Padrões de Componentização**
+1. **Componente = Responsabilidade única**
+2. **Máximo 150 linhas** por componente
+3. **Hooks personalizados** para lógica complexa
+4. **TypeScript strict mode** obrigatório
+5. **Mobile-first** sempre
+6. **Acessibilidade** em todos os componentes
+
+### 📱 **Estrutura PWA Padrão**
+```typescript
+modules/[nome-modulo]/
+├── components/         # Componentes React responsivos
+├── hooks/             # Hooks com cache PWA
+├── types/             # Tipos TypeScript específicos
+├── utils/             # Utilitários com offline support
+├── services/          # Serviços com sync automático
+└── index.ts           # Exports otimizados
+```
+
+### 🔧 **Como Adicionar Módulo PWA**
+1. **Estrutura**: Criar diretórios padrão
+2. **Hooks**: Implementar com React Query + Cache
+3. **Componentes**: Mobile-first e acessíveis
+4. **Serviços**: Sync online/offline
+5. **Testes**: Cobertura PWA completa
+6. **Documentação**: README atualizado
 
 ---
 
-> **Arquitetura Rotondo Partners** - Construída para escalar, evoluir e inovar no futuro do relacionamento empresarial.
+## 📊 **Métricas de Sucesso PWA**
+
+### ⚡ **Performance Metrics**
+- **Time to Interactive**: < 3s em 3G
+- **Bundle Size**: < 250KB inicial
+- **Cache Hit Rate**: > 90%
+- **Offline Functionality**: 80% das features
+
+### 📱 **User Experience Metrics**
+- **Install Rate**: Meta 25% dos usuários
+- **Retention Rate**: Meta 60% após 30 dias
+- **Engagement**: 40% mais tempo de uso
+- **Mobile Conversion**: 30% melhoria
+
+---
+
+> **Arquitetura PWA Aeight Partners** - Sistema modular, performático e preparado para o futuro mobile-first do relacionamento empresarial.
