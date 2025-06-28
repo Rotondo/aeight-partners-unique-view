@@ -57,7 +57,13 @@ export const usePartners = (options: UsePartnersOptions = {}) => {
       let filteredData = partnersWithDefaults;
       if (options.showAllPartners) {
         // Show all active external partners regardless of client relationships
-        filteredData = getActiveExternalPartners(partnersWithDefaults);
+        const externalPartners = getActiveExternalPartners(partnersWithDefaults);
+        // Ensure the filtered data maintains the required properties
+        filteredData = externalPartners.map(partner => ({
+          ...partner,
+          descricao: partner.descricao || '',
+          created_at: partner.created_at || new Date().toISOString()
+        }));
       }
 
       // Log para debug - remover depois da validação
