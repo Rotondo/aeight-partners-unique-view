@@ -10,6 +10,8 @@ interface MainLayoutProps {
 }
 
 const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
+  console.log('[MainLayout] Renderizando layout principal');
+  
   return (
     <SidebarProvider defaultOpen={true}>
       <div className="min-h-screen flex w-full">

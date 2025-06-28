@@ -7,6 +7,8 @@ import { QuickAccess } from "@/components/dashboard/QuickAccess";
 import { AboutPlatform } from "@/components/dashboard/AboutPlatform";
 
 const Index = () => {
+  console.log('[Index] Renderizando página principal');
+  
   return (
     <OportunidadesProvider>
       <div className="space-y-6">

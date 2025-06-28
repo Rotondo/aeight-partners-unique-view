@@ -1,7 +1,6 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { getActiveExternalPartners } from '@/utils/companyClassification';
 
 interface Partner {
   id: string;
@@ -28,10 +27,14 @@ export const usePartners = (options: UsePartnersOptions = {}) => {
       setLoading(true);
       setError(null);
       
+      console.log('[usePartners] Iniciando carregamento de parceiros com opções:', options);
+      
       // Determinar quais tipos incluir com tipagem explícita
       const allowedTypes: ('parceiro' | 'intragrupo')[] = options.includeIntragroup 
         ? ['parceiro', 'intragrupo'] 
         : ['parceiro'];
+      
+      console.log('[usePartners] Tipos permitidos:', allowedTypes);
       
       const { data, error } = await supabase
         .from('empresas')
@@ -43,8 +46,11 @@ export const usePartners = (options: UsePartnersOptions = {}) => {
       if (error) {
         console.error('Erro ao carregar parceiros:', error);
         setError('Erro ao carregar parceiros');
+        setLoading(false);
         return;
       }
+
+      console.log('[usePartners] Dados recebidos do Supabase:', data);
 
       // Ensure all fields are present first
       const partnersWithDefaults = (data || []).map(partner => ({
@@ -53,34 +59,21 @@ export const usePartners = (options: UsePartnersOptions = {}) => {
         created_at: partner.created_at || new Date().toISOString()
       }));
 
-      // Apply company classification filtering if needed
+      console.log('[usePartners] Parceiros com defaults:', partnersWithDefaults);
+
+      // Se showAllPartners está ativo, vamos simplesmente usar os dados diretamente
+      // sem chamar getActiveExternalPartners que pode estar causando problemas
       let filteredData = partnersWithDefaults;
+      
       if (options.showAllPartners) {
-        // Show all active external partners regardless of client relationships
-        const externalPartners = getActiveExternalPartners(partnersWithDefaults);
-        // Ensure the filtered data maintains the required properties by mapping back to our Partner type
-        filteredData = externalPartners.map(partner => ({
-          id: partner.id,
-          nome: partner.nome,
-          tipo: partner.tipo,
-          status: partner.status,
-          descricao: '', // Default value since getActiveExternalPartners might not return this
-          created_at: new Date().toISOString() // Default value since getActiveExternalPartners might not return this
-        }));
+        console.log('[usePartners] Modo showAllPartners ativo, usando todos os parceiros');
       }
 
-      // Log para debug - remover depois da validação
-      console.log('[usePartners] Carregando parceiros:', {
-        allowedTypes,
-        total: data?.length || 0,
-        filtered: filteredData.length,
-        includeIntragroup: options.includeIntragroup,
-        showAllPartners: options.showAllPartners
-      });
+      console.log('[usePartners] Dados finais:', filteredData);
 
       setPartners(filteredData);
     } catch (err) {
-      console.error('Erro:', err);
+      console.error('Erro no usePartners:', err);
       setError('Erro inesperado ao carregar parceiros');
     } finally {
       setLoading(false);
@@ -88,6 +81,7 @@ export const usePartners = (options: UsePartnersOptions = {}) => {
   };
 
   useEffect(() => {
+    console.log('[usePartners] useEffect executado');
     loadPartners();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [options.includeIntragroup, options.showAllPartners]);
