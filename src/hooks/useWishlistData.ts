@@ -27,6 +27,7 @@ export const useWishlistData = () => {
 
   // Fetch Empresas Clientes (com tratamento robusto)
   const fetchEmpresasClientes = async () => {
+    console.log("[useWishlistData] Iniciando fetchEmpresasClientes...");
     try {
       setLoading(true);
       const { data, error } = await supabase
@@ -58,11 +59,13 @@ export const useWishlistData = () => {
       });
     } finally {
       setLoading(false);
+       console.info("[useWishlistData] fetchEmpresasClientes concluído.");
     }
   };
 
   // Fetch Wishlist Items
   const fetchWishlistItems = async () => {
+    console.log("[useWishlistData] Iniciando fetchWishlistItems...");
     try {
       setLoading(true);
       const { data, error } = await supabase
@@ -96,11 +99,13 @@ export const useWishlistData = () => {
       });
     } finally {
       setLoading(false);
+       console.info("[useWishlistData] fetchWishlistItems concluído.");
     }
   };
 
   // Fetch Apresentações
   const fetchApresentacoes = async () => {
+    console.log("[useWishlistData] Iniciando fetchApresentacoes...");
     try {
       setLoading(true);
       const { data, error } = await supabase
@@ -144,11 +149,13 @@ export const useWishlistData = () => {
       });
     } finally {
       setLoading(false);
+       console.info("[useWishlistData] fetchApresentacoes concluído.");
     }
   };
 
   // Fetch Stats
   const fetchStats = async () => {
+    console.log("[useWishlistData] Iniciando fetchStats...");
     try {
       // Buscar estatísticas básicas
       const [wishlistData, apresentacoesData] = await Promise.all([
@@ -183,6 +190,8 @@ export const useWishlistData = () => {
       setStats(statsData);
     } catch (error) {
       console.error("Erro ao buscar estatísticas:", error);
+    } finally {
+      console.info("[useWishlistData] fetchStats concluído.");
     }
   };
 
