@@ -95,11 +95,17 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Carregar dados iniciais
   useEffect(() => {
-    fetchEmpresasClientes();
-    fetchWishlistItems();
-    fetchApresentacoes();
-    fetchStats();
-  }, []);
+    console.log("[WishlistContext] Iniciando carregamento de dados iniciais...");
+    const loadAllData = async () => {
+      await fetchEmpresasClientes();
+      await fetchWishlistItems();
+      await fetchApresentacoes();
+      await fetchStats();
+      console.log("[WishlistContext] Carregamento de dados iniciais concluído.");
+    };
+    loadAllData();
+  }, []); // Adicionado fetchEmpresasClientes, fetchWishlistItems, fetchApresentacoes, fetchStats às dependências se eles não mudarem. Caso contrário, pode causar loop.
+          // Considerando que são estáveis, mantive o array de dependências vazio para carregar apenas uma vez.
 
   const value: WishlistContextType = {
     empresasClientes,

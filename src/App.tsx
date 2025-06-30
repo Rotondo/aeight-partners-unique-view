@@ -111,17 +111,10 @@ function App() {
                     </MainLayout>
                   </PrivateRoute>
                 } />
-                <Route path="/wishlist" element={
+                <Route path="/wishlist/*" element={
                   <PrivateRoute>
                     <MainLayout>
                       <WishlistPage />
-                    </MainLayout>
-                  </PrivateRoute>
-                } />
-                <Route path="/wishlist/empresas-clientes" element={
-                  <PrivateRoute>
-                    <MainLayout>
-                      <EmpresasClientesPage />
                     </MainLayout>
                   </PrivateRoute>
                 } />

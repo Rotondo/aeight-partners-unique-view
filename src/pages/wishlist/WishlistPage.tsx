@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useEffect } from "react"; // Adicionado useEffect
 import { Routes, Route } from "react-router-dom";
 import { WishlistProvider } from "@/contexts/WishlistContext";
+import WishlistErrorBoundary from "@/components/wishlist/WishlistErrorBoundary"; // Importado
 import WishlistDashboard from "./WishlistDashboard";
 import EmpresasClientesPage from "./EmpresasClientesPage";
 import WishlistItemsPage from "./WishlistItemsPage";
@@ -13,16 +14,17 @@ import QualificacaoPage from "./QualificacaoPage";
 const CONSOLE_PREFIX = "[WishlistPage]";
 
 const WishlistPage: React.FC = () => {
-  React.useEffect(() => {
+  useEffect(() => { // Alterado para useEffect
     console.log(`${CONSOLE_PREFIX} Renderizando WishlistPage, pathname:`, window.location.pathname);
   }, []);
 
   return (
     <WishlistProvider>
-      <div className="container mx-auto px-4 py-6">
-        <Routes>
-          <Route index element={<WishlistDashboard />} />
-          <Route path="clientes" element={<EmpresasClientesPage />} />
+      <WishlistErrorBoundary> {/* Adicionado ErrorBoundary */}
+        <div className="container mx-auto px-4 py-6">
+          <Routes>
+            <Route index element={<WishlistDashboard />} />
+            <Route path="clientes" element={<EmpresasClientesPage />} />
           <Route path="itens" element={<WishlistItemsPage />} />
           <Route path="apresentacoes" element={<ApresentacoesPage />} />
           <Route path="sobrepostos" element={<ClientesSobrepostosPage />} />
@@ -31,6 +33,7 @@ const WishlistPage: React.FC = () => {
           <Route path="qualificacao" element={<QualificacaoPage />} />
         </Routes>
       </div>
+    </WishlistErrorBoundary> {/* Fechado ErrorBoundary */}
     </WishlistProvider>
   );
 };
