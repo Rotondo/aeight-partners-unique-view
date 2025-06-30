@@ -31,3 +31,10 @@ self.addEventListener('activate', event => {
     )
   );
 });
+
+// Permite skipWaiting via mensagem
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
