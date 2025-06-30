@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +25,8 @@ type EmpresaOption = {
   nome: string;
   tipo: EmpresaTipoString;
 };
+
+const CONSOLE_PREFIX = "[EmpresasClientesPage]";
 
 const EmpresasClientesPage: React.FC = () => {
   const {
@@ -133,7 +134,7 @@ const EmpresasClientesPage: React.FC = () => {
       const novosParceiros = parceirosSelecionados.filter(
         (id) => !jaVinculados.includes(id)
       );
-      
+
       // Filter out partners that shouldn't have automatic relationships created
       const validPartners = [];
       for (const parceiroId of novosParceiros) {
@@ -141,10 +142,10 @@ const EmpresasClientesPage: React.FC = () => {
         if (partner && shouldCreateAutomaticClientRelationship(partner.tipo, parceiroId)) {
           validPartners.push(parceiroId);
         } else if (partner) {
-          console.warn(`Skipping automatic relationship creation with ${partner.tipo} company: ${partner.nome}`);
+          console.warn(`${CONSOLE_PREFIX} Skipping automatic relationship creation with ${partner.tipo} company: ${partner.nome}`);
         }
       }
-      
+
       if (validPartners.length > 0) {
         await Promise.all(
           validPartners.map((parceiroId) =>
@@ -158,10 +159,10 @@ const EmpresasClientesPage: React.FC = () => {
           )
         );
       }
-      
+
       // Show warning if some relationships were skipped
       if (validPartners.length < novosParceiros.length) {
-        console.warn("Some relationships were not created due to business rules (preventing automatic Aeight linking)");
+        console.warn(`${CONSOLE_PREFIX} Some relationships were not created due to business rules (preventing automatic Aeight linking)`);
       }
     }
     setModalLoading(false);
@@ -216,7 +217,7 @@ const EmpresasClientesPage: React.FC = () => {
         refreshRelevance();
       }
     } catch (error) {
-      console.error("Erro ao solicitar apresentação:", error);
+      console.error(`${CONSOLE_PREFIX} Erro ao solicitar apresentação:`, error);
     } finally {
       setApresentacaoLoading(false);
     }
@@ -242,30 +243,59 @@ const EmpresasClientesPage: React.FC = () => {
     setModalType("novo");
   };
 
-  // Filtros
-  const filteredClientesVinculados = empresasClientes.filter(
-    (cliente) =>
-      cliente.empresa_cliente?.nome
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
-      cliente.empresa_proprietaria?.nome
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase())
-  );
+  // Filtros robustos: nunca acessar .nome em objeto nulo
+  const filteredClientesVinculados = empresasClientes.filter((cliente) => {
+    try {
+      const clienteNome = cliente.empresa_cliente?.nome || "";
+      const proprietarioNome = cliente.empresa_proprietaria?.nome || "";
+      return (
+        clienteNome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        proprietarioNome.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    } catch (error) {
+      console.error(`${CONSOLE_PREFIX} Erro ao filtrar clientes vinculados:`, error, cliente);
+      return false;
+    }
+  });
 
   const clientesVinculadosIds = new Set(
     empresasClientes.map((c) => c.empresa_cliente_id)
   );
 
-  const filteredClientesNaoVinculados = empresasClientesAll.filter(
-    (cliente) =>
-      !clientesVinculadosIds.has(cliente.id) &&
-      cliente.nome.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredClientesNaoVinculados = empresasClientesAll.filter((cliente) => {
+    try {
+      return (
+        !clientesVinculadosIds.has(cliente.id) &&
+        (cliente.nome || "").toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    } catch (error) {
+      console.error(`${CONSOLE_PREFIX} Erro ao filtrar clientes não vinculados:`, error, cliente);
+      return false;
+    }
+  });
 
-  const filteredParceiros = parceiros.filter((parceiro) =>
-    parceiro.nome.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredParceiros = parceiros.filter((parceiro) => {
+    try {
+      return (parceiro.nome || "")
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase());
+    } catch (error) {
+      console.error(`${CONSOLE_PREFIX} Erro ao filtrar parceiros:`, error, parceiro);
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    // Log de diagnóstico para facilitar troubleshooting
+    console.log(`${CONSOLE_PREFIX} Estado inicial`, {
+      empresasClientes,
+      empresasClientesAll,
+      parceiros,
+      filteredClientesVinculados,
+      filteredClientesNaoVinculados,
+      filteredParceiros,
+    });
+  }, [empresasClientes, empresasClientesAll, parceiros, filteredClientesVinculados, filteredClientesNaoVinculados, filteredParceiros]);
 
   if (loadingEmpresasClientes) {
     return (
