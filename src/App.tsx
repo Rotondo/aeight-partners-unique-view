@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import LoginPage from './pages/auth/LoginPage';
 import Index from './pages/Index';
@@ -19,14 +18,35 @@ import QuadrantePage from './pages/quadrante/QuadrantePage';
 import AdminPage from './pages/admin';
 import RepositorioPage from './pages/repositorio/RepositorioPage';
 import EmpresasClientesPage from './pages/wishlist/EmpresasClientesPage';
+import { registerSW } from './serviceWorkerRegistration';
 
 function App() {
+  const [waitingWorker, setWaitingWorker] = useState<ServiceWorker | null>(null);
+
+  useEffect(() => {
+    registerSW((registration) => {
+      setWaitingWorker(registration.waiting);
+    });
+  }, []);
+
+  const handleUpdate = () => {
+    if (waitingWorker) {
+      waitingWorker.postMessage({ type: 'SKIP_WAITING' });
+      waitingWorker.addEventListener('statechange', (event) => {
+        if (waitingWorker.state === 'activated') {
+          window.location.reload();
+        }
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background font-sans antialiased">
       <AuthProvider>
         <PrivacyProvider>
           <Router>
             <Routes>
+              {/* ... todas as rotas mantidas ... */}
               <Route path="/login" element={<LoginPage />} />
               <Route path="/" element={
                 <PrivateRoute>
@@ -123,6 +143,29 @@ function App() {
           </Router>
         </PrivacyProvider>
       </AuthProvider>
+      {waitingWorker && (
+        <div style={{
+          position: 'fixed', bottom: 16, right: 16, zIndex: 1000,
+          background: '#4a90e2', color: 'white', padding: '12px 24px', borderRadius: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+        }}>
+          <span>Há uma nova versão disponível!</span>
+          <button
+            onClick={handleUpdate}
+            style={{
+              marginLeft: 16,
+              background: 'white',
+              color: '#4a90e2',
+              border: 'none',
+              borderRadius: 4,
+              padding: '8px 16px',
+              fontWeight: 'bold',
+              cursor: 'pointer'
+            }}
+          >
+            Atualizar agora
+          </button>
+        </div>
+      )}
     </div>
   );
 }
