@@ -2,8 +2,6 @@
 import React from "react";
 
 const LoadingScreen: React.FC = () => {
-  console.log('[LoadingScreen] Renderizando tela de carregamento');
-  
   return (
     <div className="flex items-center justify-center min-h-screen bg-background">
       <div className="flex flex-col items-center space-y-4">

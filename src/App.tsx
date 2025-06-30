@@ -18,6 +18,7 @@ import OnePagerPage from './pages/onepager';
 import QuadrantePage from './pages/quadrante/QuadrantePage';
 import AdminPage from './pages/admin';
 import RepositorioPage from './pages/repositorio/RepositorioPage';
+import EmpresasClientesPage from './pages/wishlist/EmpresasClientesPage';
 
 function App() {
   return (
@@ -83,10 +84,17 @@ function App() {
                   </MainLayout>
                 </PrivateRoute>
               } />
-              <Route path="/wishlist/*" element={
+              <Route path="/wishlist" element={
                 <PrivateRoute>
                   <MainLayout>
                     <WishlistPage />
+                  </MainLayout>
+                </PrivateRoute>
+              } />
+              <Route path="/wishlist/empresas-clientes" element={
+                <PrivateRoute>
+                  <MainLayout>
+                    <EmpresasClientesPage />
                   </MainLayout>
                 </PrivateRoute>
               } />

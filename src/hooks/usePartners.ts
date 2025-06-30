@@ -13,7 +13,6 @@ interface Partner {
 
 interface UsePartnersOptions {
   includeIntragroup?: boolean;
-  // New option to show all partners regardless of client relationships
   showAllPartners?: boolean;
 }
 
@@ -27,14 +26,9 @@ export const usePartners = (options: UsePartnersOptions = {}) => {
       setLoading(true);
       setError(null);
       
-      console.log('[usePartners] Iniciando carregamento de parceiros com opções:', options);
-      
-      // Determinar quais tipos incluir com tipagem explícita
       const allowedTypes: ('parceiro' | 'intragrupo')[] = options.includeIntragroup 
         ? ['parceiro', 'intragrupo'] 
         : ['parceiro'];
-      
-      console.log('[usePartners] Tipos permitidos:', allowedTypes);
       
       const { data, error } = await supabase
         .from('empresas')
@@ -46,32 +40,16 @@ export const usePartners = (options: UsePartnersOptions = {}) => {
       if (error) {
         console.error('Erro ao carregar parceiros:', error);
         setError('Erro ao carregar parceiros');
-        setLoading(false);
         return;
       }
 
-      console.log('[usePartners] Dados recebidos do Supabase:', data);
-
-      // Ensure all fields are present first
       const partnersWithDefaults = (data || []).map(partner => ({
         ...partner,
         descricao: partner.descricao || '',
         created_at: partner.created_at || new Date().toISOString()
       }));
 
-      console.log('[usePartners] Parceiros com defaults:', partnersWithDefaults);
-
-      // Se showAllPartners está ativo, vamos simplesmente usar os dados diretamente
-      // sem chamar getActiveExternalPartners que pode estar causando problemas
-      let filteredData = partnersWithDefaults;
-      
-      if (options.showAllPartners) {
-        console.log('[usePartners] Modo showAllPartners ativo, usando todos os parceiros');
-      }
-
-      console.log('[usePartners] Dados finais:', filteredData);
-
-      setPartners(filteredData);
+      setPartners(partnersWithDefaults);
     } catch (err) {
       console.error('Erro no usePartners:', err);
       setError('Erro inesperado ao carregar parceiros');
@@ -81,9 +59,7 @@ export const usePartners = (options: UsePartnersOptions = {}) => {
   };
 
   useEffect(() => {
-    console.log('[usePartners] useEffect executado');
     loadPartners();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [options.includeIntragroup, options.showAllPartners]);
 
   return {
@@ -94,12 +70,10 @@ export const usePartners = (options: UsePartnersOptions = {}) => {
   };
 };
 
-// Hook específico para casos que precisam de intragrupo + parceiro
 export const usePartnersAndIntragroup = () => {
   return usePartners({ includeIntragroup: true });
 };
 
-// Hook específico para Modo Apresentação - mostra todos os parceiros ativos
 export const useAllActivePartners = () => {
   return usePartners({ includeIntragroup: true, showAllPartners: true });
 };
