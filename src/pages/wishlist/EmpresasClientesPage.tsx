@@ -16,7 +16,6 @@ import { useNavigate } from "react-router-dom";
 import { DemoModeToggle } from "@/components/privacy/DemoModeToggle";
 import { DemoModeIndicator } from "@/components/privacy/DemoModeIndicator";
 import { usePrivacy } from "@/contexts/PrivacyContext";
-import { PrivateData } from "@/components/privacy/PrivateData";
 import { shouldCreateAutomaticClientRelationship } from "@/utils/companyClassification";
 import { EmpresaTipoString } from "@/types/common";
 
@@ -101,6 +100,8 @@ const EmpresasClientesPage: React.FC = () => {
             tipo: e.tipo as EmpresaTipoString
           }))
         );
+      } else {
+        console.error(`${CONSOLE_PREFIX} Erro ao buscar empresas do supabase`, error);
       }
     };
     fetchEmpresas();
@@ -243,11 +244,17 @@ const EmpresasClientesPage: React.FC = () => {
     setModalType("novo");
   };
 
-  // Filtros robustos: nunca acessar .nome em objeto nulo
+  // Filtros robustos: nunca acessar .nome em objeto nulo, logando inconsistências
   const filteredClientesVinculados = empresasClientes.filter((cliente) => {
     try {
       const clienteNome = cliente.empresa_cliente?.nome || "";
       const proprietarioNome = cliente.empresa_proprietaria?.nome || "";
+      if (!cliente.empresa_cliente || !cliente.empresa_cliente.nome) {
+        console.warn(`${CONSOLE_PREFIX} Cliente sem nome ou objeto nulo:`, cliente);
+      }
+      if (!cliente.empresa_proprietaria || !cliente.empresa_proprietaria.nome) {
+        console.warn(`${CONSOLE_PREFIX} Proprietário sem nome ou objeto nulo:`, cliente);
+      }
       return (
         clienteNome.toLowerCase().includes(searchTerm.toLowerCase()) ||
         proprietarioNome.toLowerCase().includes(searchTerm.toLowerCase())
@@ -264,6 +271,9 @@ const EmpresasClientesPage: React.FC = () => {
 
   const filteredClientesNaoVinculados = empresasClientesAll.filter((cliente) => {
     try {
+      if (!cliente.nome) {
+        console.warn(`${CONSOLE_PREFIX} Cliente não vinculado sem nome:`, cliente);
+      }
       return (
         !clientesVinculadosIds.has(cliente.id) &&
         (cliente.nome || "").toLowerCase().includes(searchTerm.toLowerCase())
@@ -276,6 +286,9 @@ const EmpresasClientesPage: React.FC = () => {
 
   const filteredParceiros = parceiros.filter((parceiro) => {
     try {
+      if (!parceiro.nome) {
+        console.warn(`${CONSOLE_PREFIX} Parceiro sem nome:`, parceiro);
+      }
       return (parceiro.nome || "")
         .toLowerCase()
         .includes(searchTerm.toLowerCase());

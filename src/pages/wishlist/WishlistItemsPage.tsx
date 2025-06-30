@@ -29,12 +29,13 @@ import { DemoModeToggle } from "@/components/privacy/DemoModeToggle";
 import { DemoModeIndicator } from "@/components/privacy/DemoModeIndicator";
 import { PrivateData } from "@/components/privacy/PrivateData";
 
-// Tipo auxiliar para empresas
 type EmpresaOption = {
   id: string;
   nome: string;
   tipo: string;
 };
+
+const CONSOLE_PREFIX = "[WishlistItemsPage]";
 
 function toSafeString(val: unknown): string {
   return typeof val === "string" ? val : val == null ? "" : String(val);
@@ -43,7 +44,6 @@ function toSafeNumber(val: unknown, fallback = 3): number {
   return typeof val === "number" && !isNaN(val) ? val : fallback;
 }
 
-// Busca o nome do cliente pelo id no array de opções
 function getClienteNomePorId(id: string, clientes: EmpresaOption[]) {
   return clientes.find((c) => c.id === id)?.nome || "";
 }
@@ -62,13 +62,11 @@ const WishlistItemsPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<WishlistStatus | "all">("all");
 
-  // Modal state
   const [modalOpen, setModalOpen] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
   const [editingItem, setEditingItem] = useState<WishlistItem | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
 
-  // Form state
   const [empresas, setEmpresas] = useState<EmpresaOption[]>([]);
   const [empresasClientes, setEmpresasClientes] = useState<EmpresaOption[]>([]);
   const [empresasParceiros, setEmpresasParceiros] = useState<EmpresaOption[]>([]);
@@ -123,10 +121,8 @@ const WishlistItemsPage: React.FC = () => {
     } else {
       resetModal();
     }
-    // eslint-disable-next-line
   }, [editingItem]);
 
-  // Sempre que empresaDesejada mudar, atualize o nome (fallback para quando muda no select)
   useEffect(() => {
     if (empresaDesejada) {
       setEmpresaDesejadaNome(getClienteNomePorId(empresaDesejada, empresasClientes));
@@ -135,7 +131,6 @@ const WishlistItemsPage: React.FC = () => {
     }
   }, [empresaDesejada, empresasClientes]);
 
-  // Função para garantir que o cliente recém-criado esteja no array antes de selecionar
   const handleCriarNovoCliente = async () => {
     if (!novoClienteNome.trim()) return;
     setCriandoNovoCliente(true);
@@ -236,7 +231,7 @@ const WishlistItemsPage: React.FC = () => {
       });
       if (process.env.NODE_ENV === "development") {
         // eslint-disable-next-line no-console
-        console.error("Erro ao salvar wishlist item:", err);
+        console.error(`${CONSOLE_PREFIX} Erro ao salvar wishlist item:`, err);
       }
     } finally {
       setModalLoading(false);
@@ -244,20 +239,36 @@ const WishlistItemsPage: React.FC = () => {
   };
 
   const filteredItems = wishlistItems.filter((item) => {
-    const matchesSearch =
-      (item.empresa_interessada?.nome || "")
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
-      (item.empresa_desejada?.nome || "")
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
-      (item.empresa_proprietaria?.nome || "")
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase());
+    try {
+      const matchesSearch =
+        (item.empresa_interessada?.nome || "")
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase()) ||
+        (item.empresa_desejada?.nome || "")
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase()) ||
+        (item.empresa_proprietaria?.nome || "")
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase());
 
-    const matchesStatus = statusFilter === "all" || item.status === statusFilter;
+      const matchesStatus = statusFilter === "all" || item.status === statusFilter;
 
-    return matchesSearch && matchesStatus;
+      if (
+        !item.empresa_interessada?.nome ||
+        !item.empresa_desejada?.nome ||
+        !item.empresa_proprietaria?.nome
+      ) {
+        console.warn(
+          `${CONSOLE_PREFIX} Item com campos nulos:`,
+          item
+        );
+      }
+
+      return matchesSearch && matchesStatus;
+    } catch (error) {
+      console.error(`${CONSOLE_PREFIX} Erro ao filtrar wishlistItems:`, error, item);
+      return false;
+    }
   });
 
   const getStatusColor = (status: WishlistStatus) => {
@@ -305,6 +316,16 @@ const WishlistItemsPage: React.FC = () => {
     ));
   };
 
+  useEffect(() => {
+    console.log(`${CONSOLE_PREFIX} Estado inicial`, {
+      wishlistItems,
+      empresas,
+      empresasClientes,
+      empresasParceiros,
+      filteredItems,
+    });
+  }, [wishlistItems, empresas, empresasClientes, empresasParceiros, filteredItems]);
+
   if (loadingItems) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -349,182 +370,182 @@ const WishlistItemsPage: React.FC = () => {
                 setModalOpen(true);
               }}
             data-testid="button-nova-solicitacao"
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Nova Solicitação
-          </Button>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>
-                {editingItem
-                  ? "Editar Solicitação de Wishlist"
-                  : "Nova Solicitação de Wishlist"}
-              </DialogTitle>
-              <DialogDescription>
-                Preencha os campos e clique em{" "}
-                {editingItem ? "Salvar Alterações" : "Criar Solicitação"}.
-              </DialogDescription>
-            </DialogHeader>
-            {formError && (
-              <div className="text-red-600 text-sm mb-2">{formError}</div>
-            )}
-            <form
-              onSubmit={handleSubmit}
-              className="space-y-4"
-              autoComplete="off"
             >
-              <div>
-                <label className="block font-medium mb-1">
-                  Quem está solicitando?
-                </label>
-                <Select
-                  value={empresaInteressada || ""}
-                  onValueChange={setEmpresaInteressada}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione empresa (parceiro/intragrupo)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {empresasParceiros.map((e) => (
-                      <SelectItem key={e.id} value={e.id}>
-                        {e.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="block font-medium mb-1">
-                  Cliente ou Lead desejado
-                </label>
-                <Select
-                  value={empresaDesejada || ""}
-                  onValueChange={setEmpresaDesejada}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione cliente/lead">
-                      {empresaDesejada
-                        ? empresaDesejadaNome ||
-                          getClienteNomePorId(empresaDesejada, empresasClientes)
-                        : undefined}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {empresasClientes.map((e) => (
-                      <SelectItem key={e.id} value={e.id}>
-                        {e.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <div className="flex mt-2 gap-2">
-                  <Input
-                    placeholder="Novo cliente/lead"
-                    value={novoClienteNome || ""}
-                    onChange={(e) => setNovoClienteNome(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        handleCriarNovoCliente();
-                      }
-                    }}
-                    disabled={criandoNovoCliente}
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleCriarNovoCliente}
-                    disabled={criandoNovoCliente || !novoClienteNome.trim()}
+              <Plus className="mr-2 h-4 w-4" />
+              Nova Solicitação
+            </Button>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>
+                  {editingItem
+                    ? "Editar Solicitação de Wishlist"
+                    : "Nova Solicitação de Wishlist"}
+                </DialogTitle>
+                <DialogDescription>
+                  Preencha os campos e clique em{" "}
+                  {editingItem ? "Salvar Alterações" : "Criar Solicitação"}.
+                </DialogDescription>
+              </DialogHeader>
+              {formError && (
+                <div className="text-red-600 text-sm mb-2">{formError}</div>
+              )}
+              <form
+                onSubmit={handleSubmit}
+                className="space-y-4"
+                autoComplete="off"
+              >
+                <div>
+                  <label className="block font-medium mb-1">
+                    Quem está solicitando?
+                  </label>
+                  <Select
+                    value={empresaInteressada || ""}
+                    onValueChange={setEmpresaInteressada}
                   >
-                    {criandoNovoCliente && (
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione empresa (parceiro/intragrupo)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {empresasParceiros.map((e) => (
+                        <SelectItem key={e.id} value={e.id}>
+                          {e.nome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="block font-medium mb-1">
+                    Cliente ou Lead desejado
+                  </label>
+                  <Select
+                    value={empresaDesejada || ""}
+                    onValueChange={setEmpresaDesejada}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione cliente/lead">
+                        {empresaDesejada
+                          ? empresaDesejadaNome ||
+                            getClienteNomePorId(empresaDesejada, empresasClientes)
+                          : undefined}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {empresasClientes.map((e) => (
+                        <SelectItem key={e.id} value={e.id}>
+                          {e.nome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <div className="flex mt-2 gap-2">
+                    <Input
+                      placeholder="Novo cliente/lead"
+                      value={novoClienteNome || ""}
+                      onChange={(e) => setNovoClienteNome(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          handleCriarNovoCliente();
+                        }
+                      }}
+                      disabled={criandoNovoCliente}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleCriarNovoCliente}
+                      disabled={criandoNovoCliente || !novoClienteNome.trim()}
+                    >
+                      {criandoNovoCliente && (
+                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                      )}
+                      Adicionar
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    O cliente/lead será criado e vinculado à base Aeight.
+                  </p>
+                </div>
+                <div>
+                  <label className="block font-medium mb-1">
+                    Dono do relacionamento (parceiro ou intragrupo)
+                  </label>
+                  <Select
+                    value={empresaProprietaria || ""}
+                    onValueChange={setEmpresaProprietaria}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione proprietário" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {empresasParceiros.map((e) => (
+                        <SelectItem key={e.id} value={e.id}>
+                          {e.nome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="block font-medium mb-1">Prioridade</label>
+                  <div className="flex gap-1">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        type="button"
+                        key={star}
+                        aria-label={`Prioridade ${star}`}
+                        onClick={() => setPrioridade(star)}
+                        className="focus:outline-none"
+                      >
+                        <Star
+                          className={`h-5 w-5 ${
+                            prioridade >= star
+                              ? "fill-yellow-400 text-yellow-400"
+                              : "text-gray-300"
+                          }`}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="block font-medium mb-1">Motivo</label>
+                  <Input
+                    value={motivo || ""}
+                    onChange={(e) => setMotivo(e.target.value)}
+                    placeholder="Descreva o motivo da solicitação"
+                  />
+                </div>
+                <div>
+                  <label className="block font-medium mb-1">
+                    Observações (opcional)
+                  </label>
+                  <Input
+                    value={observacoes || ""}
+                    onChange={(e) => setObservacoes(e.target.value)}
+                    placeholder="Observações adicionais"
+                  />
+                </div>
+                <div className="flex justify-end">
+                  <Button
+                    type="submit"
+                    disabled={
+                      modalLoading ||
+                      !empresaInteressada ||
+                      !empresaDesejada ||
+                      !empresaProprietaria
+                    }
+                  >
+                    {modalLoading && (
                       <Loader2 className="h-4 w-4 mr-1 animate-spin" />
                     )}
-                    Adicionar
+                    {editingItem ? "Salvar Alterações" : "Criar Solicitação"}
                   </Button>
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  O cliente/lead será criado e vinculado à base Aeight.
-                </p>
-              </div>
-              <div>
-                <label className="block font-medium mb-1">
-                  Dono do relacionamento (parceiro ou intragrupo)
-                </label>
-                <Select
-                  value={empresaProprietaria || ""}
-                  onValueChange={setEmpresaProprietaria}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione proprietário" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {empresasParceiros.map((e) => (
-                      <SelectItem key={e.id} value={e.id}>
-                        {e.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="block font-medium mb-1">Prioridade</label>
-                <div className="flex gap-1">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <button
-                      type="button"
-                      key={star}
-                      aria-label={`Prioridade ${star}`}
-                      onClick={() => setPrioridade(star)}
-                      className="focus:outline-none"
-                    >
-                      <Star
-                        className={`h-5 w-5 ${
-                          prioridade >= star
-                            ? "fill-yellow-400 text-yellow-400"
-                            : "text-gray-300"
-                        }`}
-                      />
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <label className="block font-medium mb-1">Motivo</label>
-                <Input
-                  value={motivo || ""}
-                  onChange={(e) => setMotivo(e.target.value)}
-                  placeholder="Descreva o motivo da solicitação"
-                />
-              </div>
-              <div>
-                <label className="block font-medium mb-1">
-                  Observações (opcional)
-                </label>
-                <Input
-                  value={observacoes || ""}
-                  onChange={(e) => setObservacoes(e.target.value)}
-                  placeholder="Observações adicionais"
-                />
-              </div>
-              <div className="flex justify-end">
-                <Button
-                  type="submit"
-                  disabled={
-                    modalLoading ||
-                    !empresaInteressada ||
-                    !empresaDesejada ||
-                    !empresaProprietaria
-                  }
-                >
-                  {modalLoading && (
-                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                  )}
-                  {editingItem ? "Salvar Alterações" : "Criar Solicitação"}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+              </form>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
@@ -621,15 +642,21 @@ const WishlistItemsPage: React.FC = () => {
                 <div>
                   <CardTitle className="text-lg">
                     <PrivateData type="company">
-                      {(item.empresa_interessada?.nome || "—")}
+                      {item.empresa_interessada?.nome || (
+                        <span style={{ color: "red" }}>[ERRO: Empresa interessada não encontrada]</span>
+                      )}
                     </PrivateData>{" "} →{" "}
                     <PrivateData type="company">
-                      {(item.empresa_desejada?.nome || "—")}
+                      {item.empresa_desejada?.nome || (
+                        <span style={{ color: "red" }}>[ERRO: Empresa desejada não encontrada]</span>
+                      )}
                     </PrivateData>
                   </CardTitle>
                   <CardDescription>
                     Proprietário: <PrivateData type="company">
-                      {(item.empresa_proprietaria?.nome || "—")}
+                      {item.empresa_proprietaria?.nome || (
+                        <span style={{ color: "red" }}>[ERRO: Proprietário não encontrado]</span>
+                      )}
                     </PrivateData>
                   </CardDescription>
                 </div>
@@ -654,7 +681,7 @@ const WishlistItemsPage: React.FC = () => {
                         "dd 'de' MMMM 'de' yyyy",
                         { locale: ptBR }
                       )
-                    : ""}
+                    : <span style={{ color: "red" }}>[ERRO: Data não encontrada]</span>}
                 </div>
                 {item.motivo && (
                   <div>

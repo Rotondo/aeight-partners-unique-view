@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Routes, Route } from "react-router-dom";
 import { WishlistProvider } from "@/contexts/WishlistContext";
@@ -11,7 +10,13 @@ import ModoApresentacaoPage from "./ModoApresentacaoPage";
 import TrocaMutuaPage from "./TrocaMutuaPage";
 import QualificacaoPage from "./QualificacaoPage";
 
+const CONSOLE_PREFIX = "[WishlistPage]";
+
 const WishlistPage: React.FC = () => {
+  React.useEffect(() => {
+    console.log(`${CONSOLE_PREFIX} Renderizando WishlistPage, pathname:`, window.location.pathname);
+  }, []);
+
   return (
     <WishlistProvider>
       <div className="container mx-auto px-4 py-6">
