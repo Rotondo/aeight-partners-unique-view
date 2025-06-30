@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -8,26 +7,60 @@ import { useResumo } from '@/contexts/ResumoContext';
 import { TipoResumo } from '@/types/diario';
 import { DatePicker } from '@/components/ui/date-picker';
 import { ResumoDetailsModal } from './ResumoDetailsModal';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 
 export const ResumoView: React.FC = () => {
-  const { 
-    resumos, 
-    loadingResumos, 
-    generateResumo, 
-    exportResumoToPdf, 
-    exportResumoToCsv 
+  const {
+    resumos,
+    loadingResumos,
+    generateResumo,
+    exportResumoToPdf,
+    exportResumoToCsv
   } = useResumo();
-  
+
   const [tipoResumo, setTipoResumo] = useState<TipoResumo>('semanal');
   const [dataInicio, setDataInicio] = useState<Date | undefined>(undefined);
   const [dataFim, setDataFim] = useState<Date | undefined>(undefined);
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedResumo, setSelectedResumo] = useState<any>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [hasCrmData, setHasCrmData] = useState<boolean | null>(null);
+
+  // Checa se existem ações de CRM reais no período selecionado
+  useEffect(() => {
+    const checkCrmData = async () => {
+      setHasCrmData(null);
+      if (!dataInicio || !dataFim) return;
+      const { data, error } = await supabase
+        .from('diario_crm_acoes')
+        .select('id')
+        .gte('created_at', dataInicio.toISOString())
+        .lte('created_at', dataFim.toISOString())
+        .limit(1);
+
+      if (error) {
+        setHasCrmData(false);
+        return;
+      }
+      setHasCrmData(data && data.length > 0);
+    };
+    checkCrmData();
+  }, [dataInicio, dataFim]);
 
   const handleGenerateResumo = async () => {
     if (!dataInicio || !dataFim) return;
-    
+
+    // Checagem extra de frontend para evitar chamada errada
+    if (!hasCrmData) {
+      toast({
+        title: "Sem dados de CRM",
+        description: "Não existem ações de CRM reais no período selecionado. Não é possível gerar resumo.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsGenerating(true);
     try {
       await generateResumo(
@@ -44,6 +77,13 @@ export const ResumoView: React.FC = () => {
     setSelectedResumo(resumo);
     setShowDetailsModal(true);
   };
+
+  // Só mostra resumos com detalhes válidos
+  const resumosValidos = resumos.filter(r =>
+    Array.isArray(r.principais_realizacoes) &&
+    Array.isArray(r.proximos_passos) &&
+    r.total_acoes_crm > 0
+  );
 
   return (
     <div className="space-y-6">
@@ -69,7 +109,7 @@ export const ResumoView: React.FC = () => {
             Configure o período e tipo - os dados serão extraídos em tempo real
           </CardDescription>
         </CardHeader>
-        
+
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
             <div className="space-y-2">
@@ -85,7 +125,7 @@ export const ResumoView: React.FC = () => {
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="space-y-2">
               <label className="text-sm font-medium">Data Início</label>
               <DatePicker
@@ -93,7 +133,7 @@ export const ResumoView: React.FC = () => {
                 onSelect={setDataInicio}
               />
             </div>
-            
+
             <div className="space-y-2">
               <label className="text-sm font-medium">Data Fim</label>
               <DatePicker
@@ -101,15 +141,29 @@ export const ResumoView: React.FC = () => {
                 onSelect={setDataFim}
               />
             </div>
-            
-            <Button 
+
+            <Button
               onClick={handleGenerateResumo}
-              disabled={!dataInicio || !dataFim || isGenerating}
+              disabled={
+                !dataInicio ||
+                !dataFim ||
+                isGenerating ||
+                hasCrmData === false
+              }
               className="h-10"
             >
-              {isGenerating ? 'Processando...' : 'Gerar com Dados Reais'}
+              {isGenerating
+                ? 'Processando...'
+                : hasCrmData === false
+                  ? 'Sem ações CRM'
+                  : 'Gerar com Dados Reais'}
             </Button>
           </div>
+          {hasCrmData === false && (
+            <div className="text-red-600 mt-2 text-sm">
+              Não existem ações de CRM reais no período selecionado.
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -121,7 +175,7 @@ export const ResumoView: React.FC = () => {
             Clique em "Ver Detalhes" para verificar a origem de cada número
           </CardDescription>
         </CardHeader>
-        
+
         <CardContent>
           {loadingResumos ? (
             <div className="space-y-4">
@@ -131,7 +185,7 @@ export const ResumoView: React.FC = () => {
                 </div>
               ))}
             </div>
-          ) : resumos.length === 0 ? (
+          ) : resumosValidos.length === 0 ? (
             <div className="text-center py-8">
               <TrendingUp className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-medium">Nenhum resumo encontrado</h3>
@@ -141,7 +195,7 @@ export const ResumoView: React.FC = () => {
             </div>
           ) : (
             <div className="space-y-4">
-              {resumos.map((resumo) => (
+              {resumosValidos.map((resumo) => (
                 <Card key={resumo.id} className="hover:shadow-md transition-shadow border-l-4 border-l-blue-500">
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between">
@@ -155,16 +209,16 @@ export const ResumoView: React.FC = () => {
                             Dados Reais
                           </span>
                         </div>
-                        
+
                         <p className="text-muted-foreground mb-3">
-                          Período: {new Date(resumo.periodo_inicio).toLocaleDateString('pt-BR')} 
+                          Período: {new Date(resumo.periodo_inicio).toLocaleDateString('pt-BR')}
                           {' até '}
                           {new Date(resumo.periodo_fim).toLocaleDateString('pt-BR')}
                         </p>
-                        
+
                         <div className="grid grid-cols-3 gap-4 mb-3">
                           <div className="text-center cursor-pointer hover:bg-blue-50 p-2 rounded transition-colors"
-                               onClick={() => handleShowDetails(resumo)}>
+                            onClick={() => handleShowDetails(resumo)}>
                             <div className="text-2xl font-bold text-blue-600">
                               {resumo.total_eventos}
                             </div>
@@ -174,9 +228,9 @@ export const ResumoView: React.FC = () => {
                               Ver detalhes
                             </p>
                           </div>
-                          
+
                           <div className="text-center cursor-pointer hover:bg-green-50 p-2 rounded transition-colors"
-                               onClick={() => handleShowDetails(resumo)}>
+                            onClick={() => handleShowDetails(resumo)}>
                             <div className="text-2xl font-bold text-green-600">
                               {resumo.total_acoes_crm}
                             </div>
@@ -186,9 +240,9 @@ export const ResumoView: React.FC = () => {
                               Ver detalhes
                             </p>
                           </div>
-                          
+
                           <div className="text-center cursor-pointer hover:bg-purple-50 p-2 rounded transition-colors"
-                               onClick={() => handleShowDetails(resumo)}>
+                            onClick={() => handleShowDetails(resumo)}>
                             <div className="text-2xl font-bold text-purple-600">
                               {resumo.total_parceiros_envolvidos}
                             </div>
@@ -199,7 +253,7 @@ export const ResumoView: React.FC = () => {
                             </p>
                           </div>
                         </div>
-                        
+
                         <div className="bg-muted/50 p-3 rounded text-sm">
                           <p className="font-medium mb-1">Principais Realizações:</p>
                           <ul className="text-xs space-y-1">
@@ -209,30 +263,33 @@ export const ResumoView: React.FC = () => {
                           </ul>
                         </div>
                       </div>
-                      
+
                       <div className="flex flex-col gap-2 ml-4">
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => handleShowDetails(resumo)}
+                          disabled={!resumo.total_acoes_crm}
                         >
                           <Eye className="h-4 w-4 mr-2" />
                           Ver Detalhes
                         </Button>
-                        
+
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => exportResumoToPdf(resumo.id)}
+                          disabled={!resumo.total_acoes_crm}
                         >
                           <Download className="h-4 w-4 mr-2" />
                           PDF
                         </Button>
-                        
+
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => exportResumoToCsv(resumo.id)}
+                          disabled={!resumo.total_acoes_crm}
                         >
                           <Download className="h-4 w-4 mr-2" />
                           CSV
@@ -251,25 +308,25 @@ export const ResumoView: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-center">{resumos.length}</div>
+            <div className="text-2xl font-bold text-center">{resumosValidos.length}</div>
             <p className="text-center text-muted-foreground">Total de Resumos</p>
             <p className="text-center text-xs text-green-600 mt-1">Com dados verificáveis</p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="pt-6">
             <div className="text-2xl font-bold text-center text-blue-600">
-              {resumos.filter(r => r.tipo === 'mensal').length}
+              {resumosValidos.filter(r => r.tipo === 'mensal').length}
             </div>
             <p className="text-center text-muted-foreground">Resumos Mensais</p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="pt-6">
             <div className="text-2xl font-bold text-center text-green-600">
-              {resumos.filter(r => r.tipo === 'trimestral').length}
+              {resumosValidos.filter(r => r.tipo === 'trimestral').length}
             </div>
             <p className="text-center text-muted-foreground">Resumos Trimestrais</p>
           </CardContent>
