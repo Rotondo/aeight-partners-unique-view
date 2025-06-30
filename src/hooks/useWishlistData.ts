@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import {
@@ -12,6 +11,13 @@ import {
 } from "@/types";
 import { toast } from "@/hooks/use-toast";
 
+/**
+ * Hook para manipulação de dados da Wishlist e Clientes.
+ * Corrigido para:
+ * - Tratar propriedades nulas vindas de joins do Supabase.
+ * - Evitar tela em branco por erro silencioso de acesso a .nome em objetos undefined.
+ * - Garantir tipos corretos nas saídas.
+ */
 export const useWishlistData = () => {
   const [empresasClientes, setEmpresasClientes] = useState<EmpresaCliente[]>([]);
   const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>([]);
@@ -19,24 +25,30 @@ export const useWishlistData = () => {
   const [stats, setStats] = useState<WishlistStats | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Fetch Empresas Clientes
+  // Fetch Empresas Clientes (com tratamento robusto)
   const fetchEmpresasClientes = async () => {
     try {
       setLoading(true);
       const { data, error } = await supabase
         .from("empresa_clientes")
-        .select(
-          `
+        .select(`
           *,
           empresa_proprietaria:empresas!empresa_clientes_empresa_proprietaria_id_fkey(*),
           empresa_cliente:empresas!empresa_clientes_empresa_cliente_id_fkey(*)
-        `
-        )
+        `)
         .eq("status", true)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setEmpresasClientes(data || []);
+
+      // Corrigir casos onde o join do Supabase retorna null
+      const safeData = (data || []).map((item: any) => ({
+        ...item,
+        empresa_proprietaria: item.empresa_proprietaria || null,
+        empresa_cliente: item.empresa_cliente || null,
+      }));
+
+      setEmpresasClientes(safeData);
     } catch (error) {
       console.error("Erro ao buscar empresas clientes:", error);
       toast({
@@ -55,22 +67,23 @@ export const useWishlistData = () => {
       setLoading(true);
       const { data, error } = await supabase
         .from("wishlist_items")
-        .select(
-          `
+        .select(`
           *,
           empresa_interessada:empresas!wishlist_items_empresa_interessada_id_fkey(*),
           empresa_desejada:empresas!wishlist_items_empresa_desejada_id_fkey(*),
           empresa_proprietaria:empresas!wishlist_items_empresa_proprietaria_id_fkey(*)
-        `
-        )
+        `)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
 
-      // Garantir que os tipos estão corretos
-      const typedData = (data || []).map((item) => ({
+      // Garantir que os tipos estão corretos e nulos tratados
+      const typedData = (data || []).map((item: any) => ({
         ...item,
         status: item.status as WishlistStatus,
+        empresa_interessada: item.empresa_interessada || null,
+        empresa_desejada: item.empresa_desejada || null,
+        empresa_proprietaria: item.empresa_proprietaria || null,
       }));
 
       setWishlistItems(typedData);
@@ -92,8 +105,7 @@ export const useWishlistData = () => {
       setLoading(true);
       const { data, error } = await supabase
         .from("wishlist_apresentacoes")
-        .select(
-          `
+        .select(`
           *,
           empresa_facilitadora:empresas(*),
           wishlist_item:wishlist_items(
@@ -101,21 +113,23 @@ export const useWishlistData = () => {
             empresa_interessada:empresas!wishlist_items_empresa_interessada_id_fkey(*),
             empresa_desejada:empresas!wishlist_items_empresa_desejada_id_fkey(*)
           )
-        `
-        )
+        `)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
 
-      // Garantir que os tipos estão corretos e corrigir o tipo do status do wishlist_item
-      const typedData = (data || []).map((item) => ({
+      // Garantir que os tipos estão corretos e nulos tratados
+      const typedData = (data || []).map((item: any) => ({
         ...item,
         tipo_apresentacao: item.tipo_apresentacao as TipoApresentacao,
         status_apresentacao: item.status_apresentacao as StatusApresentacao,
+        empresa_facilitadora: item.empresa_facilitadora || null,
         wishlist_item: item.wishlist_item
           ? {
               ...item.wishlist_item,
               status: item.wishlist_item.status as WishlistStatus,
+              empresa_interessada: item.wishlist_item.empresa_interessada || null,
+              empresa_desejada: item.wishlist_item.empresa_desejada || null,
             }
           : null,
       }));
@@ -151,16 +165,16 @@ export const useWishlistData = () => {
       const statsData: WishlistStats = {
         totalSolicitacoes: wishlist.length,
         solicitacoesPendentes: wishlist.filter(
-          (item) => item.status === "pendente"
+          (item: any) => item.status === "pendente"
         ).length,
         solicitacoesAprovadas: wishlist.filter(
-          (item) => item.status === "aprovado"
+          (item: any) => item.status === "aprovado"
         ).length,
         apresentacoesRealizadas: apresentacoes.filter(
-          (item) => item.status_apresentacao === "realizada"
+          (item: any) => item.status_apresentacao === "realizada"
         ).length,
         conversaoOportunidades: apresentacoes.filter(
-          (item) => item.converteu_oportunidade
+          (item: any) => item.converteu_oportunidade
         ).length,
         empresasMaisDesejadas: [],
         facilitacoesPorParceiro: [],
