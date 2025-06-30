@@ -1,8 +1,10 @@
+
 import React, { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 import { RepositorioMaterial, RepositorioLink, Categoria, Empresa, RepositorioTag } from '@/types';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { useAuth } from '@/hooks/useAuth';
 import CategoriasList from './CategoriasList';
 import ParceirosList from './ParceirosList';
@@ -263,8 +265,8 @@ const RepositorioPage: React.FC = () => {
   return (
     <div className="flex flex-col h-full">
       <Tabs defaultValue="browse" className="w-full">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">Repositório de Materiais</h1>
+        <div className="flex justify-between items-center mb-4">
+          <h1 className="text-xl font-bold">Repositório de Materiais</h1>
           <TabsList>
             <TabsTrigger value="browse">Navegar</TabsTrigger>
             {user?.papel === 'admin' && (
@@ -277,46 +279,66 @@ const RepositorioPage: React.FC = () => {
         </div>
 
         <TabsContent value="browse" className="mt-0">
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-6 h-[calc(100vh-220px)]">
-            <div className="md:col-span-1 bg-card rounded-lg border shadow-sm overflow-auto">
-              <CategoriasList
-                categorias={categorias}
-                selectedCategoria={selectedCategoria}
-                onSelectCategoria={setSelectedCategoria}
-                isLoading={loading}
-              />
-            </div>
+          <div className="h-[calc(100vh-200px)]">
+            <ResizablePanelGroup direction="horizontal" className="min-h-full">
+              {/* Painel de Categorias */}
+              <ResizablePanel defaultSize={15} minSize={10} maxSize={25}>
+                <div className="h-full bg-card rounded-lg border shadow-sm overflow-auto">
+                  <CategoriasList
+                    categorias={categorias}
+                    selectedCategoria={selectedCategoria}
+                    onSelectCategoria={setSelectedCategoria}
+                    isLoading={loading}
+                  />
+                </div>
+              </ResizablePanel>
 
-            <div className="md:col-span-1 bg-card rounded-lg border shadow-sm overflow-auto">
-              <ParceirosList
-                parceiros={parceiros}
-                selectedParceiro={selectedParceiro}
-                onSelectParceiro={setSelectedParceiro}
-                isLoading={loading}
-              />
-            </div>
+              <ResizableHandle withHandle />
 
-            <div className="md:col-span-2 bg-card rounded-lg border shadow-sm overflow-auto">
-              <MateriaisList
-                materiais={materiais}
-                categorias={categorias}
-                parceiros={allParceiros}
-                tags={tags}
-                isLoading={loading}
-                onRefresh={fetchMateriais}
-              />
-            </div>
+              {/* Painel de Parceiros */}
+              <ResizablePanel defaultSize={15} minSize={10} maxSize={25}>
+                <div className="h-full bg-card rounded-lg border shadow-sm overflow-auto">
+                  <ParceirosList
+                    parceiros={parceiros}
+                    selectedParceiro={selectedParceiro}
+                    onSelectParceiro={setSelectedParceiro}
+                    isLoading={loading}
+                  />
+                </div>
+              </ResizablePanel>
 
-            <div className="md:col-span-1 bg-card rounded-lg border shadow-sm overflow-auto">
-              <LinksList
-                links={links}
-                categorias={categorias}
-                parceiros={allParceiros}
-                tags={tags}
-                isLoading={loading}
-                onRefresh={fetchLinks}
-              />
-            </div>
+              <ResizableHandle withHandle />
+
+              {/* Painel de Materiais */}
+              <ResizablePanel defaultSize={50} minSize={30}>
+                <div className="h-full bg-card rounded-lg border shadow-sm overflow-auto">
+                  <MateriaisList
+                    materiais={materiais}
+                    categorias={categorias}
+                    parceiros={allParceiros}
+                    tags={tags}
+                    isLoading={loading}
+                    onRefresh={fetchMateriais}
+                  />
+                </div>
+              </ResizablePanel>
+
+              <ResizableHandle withHandle />
+
+              {/* Painel de Links */}
+              <ResizablePanel defaultSize={20} minSize={15} maxSize={35}>
+                <div className="h-full bg-card rounded-lg border shadow-sm overflow-auto">
+                  <LinksList
+                    links={links}
+                    categorias={categorias}
+                    parceiros={allParceiros}
+                    tags={tags}
+                    isLoading={loading}
+                    onRefresh={fetchLinks}
+                  />
+                </div>
+              </ResizablePanel>
+            </ResizablePanelGroup>
           </div>
         </TabsContent>
 

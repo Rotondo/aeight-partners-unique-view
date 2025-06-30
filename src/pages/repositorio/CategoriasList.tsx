@@ -1,10 +1,14 @@
+
 import React from 'react';
 import { Categoria } from '@/types';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { FolderOpen, Folder } from 'lucide-react';
 
 interface CategoriasListProps {
   categorias: Categoria[];
   selectedCategoria: Categoria | null;
-  onSelectCategoria: (categoria: Categoria) => void;
+  onSelectCategoria: (categoria: Categoria | null) => void;
   isLoading: boolean;
 }
 
@@ -16,37 +20,52 @@ const CategoriasList: React.FC<CategoriasListProps> = ({
 }) => {
   if (isLoading) {
     return (
-      <div className="p-4">
-        <p className="text-gray-500">Carregando categorias...</p>
-      </div>
-    );
-  }
-
-  if (categorias.length === 0) {
-    return (
-      <div className="p-4">
-        <p className="text-gray-500">Nenhuma categoria disponível.</p>
+      <div className="h-full flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-2"></div>
+          <p className="text-xs text-muted-foreground">Carregando...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <ul className="p-4 space-y-2">
-      {categorias.map((categoria) => (
-        <li key={categoria.id}>
-          <button
-            className={`w-full text-left px-4 py-2 rounded-lg transition ${
-              selectedCategoria?.id === categoria.id
-                ? 'bg-blue-500 text-white'
-                : 'bg-gray-100 hover:bg-gray-200'
-            }`}
-            onClick={() => onSelectCategoria(categoria)}
+    <div className="h-full flex flex-col">
+      <CardHeader className="pb-3 px-3">
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <FolderOpen className="h-4 w-4" />
+          Categorias
+        </CardTitle>
+      </CardHeader>
+      
+      <CardContent className="flex-1 overflow-auto px-3 pb-3">
+        <div className="space-y-1">
+          <Button
+            variant={!selectedCategoria ? "default" : "ghost"}
+            size="sm"
+            onClick={() => onSelectCategoria(null)}
+            className="w-full justify-start text-xs h-8 px-2"
           >
-            {categoria.nome}
-          </button>
-        </li>
-      ))}
-    </ul>
+            <Folder className="mr-1 h-3 w-3 flex-shrink-0" />
+            <span className="truncate">Todas as categorias</span>
+          </Button>
+          
+          {categorias.map((categoria) => (
+            <Button
+              key={categoria.id}
+              variant={selectedCategoria?.id === categoria.id ? "default" : "ghost"}
+              size="sm"
+              onClick={() => onSelectCategoria(categoria)}
+              className="w-full justify-start text-xs h-8 px-2"
+              title={categoria.nome}
+            >
+              <Folder className="mr-1 h-3 w-3 flex-shrink-0" />
+              <span className="truncate">{categoria.nome}</span>
+            </Button>
+          ))}
+        </div>
+      </CardContent>
+    </div>
   );
 };
 
