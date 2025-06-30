@@ -16,6 +16,19 @@ export interface RepositorioMaterial {
   status?: string;
 }
 
+export interface RepositorioLink {
+  id: string;
+  empresa_id: string;
+  categoria_id: string;
+  nome: string;
+  url: string;
+  descricao?: string;
+  tag_categoria: string[];
+  data_upload: string;
+  usuario_upload: string;
+  status?: string;
+}
+
 export interface RepositorioTag {
   id: string;
   nome: string;

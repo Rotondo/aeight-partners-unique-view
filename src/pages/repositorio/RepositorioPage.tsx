@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
-import { RepositorioMaterial, Categoria, Empresa, RepositorioTag } from '@/types';
+import { RepositorioMaterial, RepositorioLink, Categoria, Empresa, RepositorioTag } from '@/types';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/useAuth';
 import CategoriasList from './CategoriasList';
 import ParceirosList from './ParceirosList';
 import MateriaisList from './MateriaisList';
 import MaterialUpload from './MaterialUpload';
+import LinksList from './LinksList';
+import LinkUpload from './LinkUpload';
 
 const RepositorioPage: React.FC = () => {
   const { user } = useAuth();
@@ -18,6 +20,7 @@ const RepositorioPage: React.FC = () => {
   const [allParceiros, setAllParceiros] = useState<Empresa[]>([]);
   const [tags, setTags] = useState<RepositorioTag[]>([]);
   const [materiais, setMateriais] = useState<RepositorioMaterial[]>([]);
+  const [links, setLinks] = useState<RepositorioLink[]>([]);
   const [selectedCategoria, setSelectedCategoria] = useState<Categoria | null>(null);
   const [selectedParceiro, setSelectedParceiro] = useState<Empresa | null>(null);
 
@@ -29,6 +32,17 @@ const RepositorioPage: React.FC = () => {
         ? material.tag_categoria 
         : material.tag_categoria 
           ? [material.tag_categoria] 
+          : []
+    }));
+  };
+
+  const normalizeLinks = (data: any[]): RepositorioLink[] => {
+    return data.map(link => ({
+      ...link,
+      tag_categoria: Array.isArray(link.tag_categoria) 
+        ? link.tag_categoria 
+        : link.tag_categoria 
+          ? [link.tag_categoria] 
           : []
     }));
   };
@@ -55,6 +69,7 @@ const RepositorioPage: React.FC = () => {
       setTags(tagsResult.data || []);
 
       fetchMateriais();
+      fetchLinks();
     } catch (error) {
       console.error('Error fetching initial data:', error);
       toast({
@@ -156,6 +171,37 @@ const RepositorioPage: React.FC = () => {
     }
   };
 
+  const fetchLinks = async () => {
+    try {
+      let query = supabase
+        .from('repositorio_links')
+        .select('*')
+        .eq('status', 'ativo')
+        .order('data_upload', { ascending: false });
+
+      if (selectedCategoria) {
+        query = query.eq('categoria_id', selectedCategoria.id);
+      }
+
+      if (selectedParceiro) {
+        query = query.eq('empresa_id', selectedParceiro.id);
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+
+      setLinks(normalizeLinks(data || []));
+    } catch (error) {
+      console.error('Error fetching links:', error);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível carregar os links.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const fetchMateriaisByFilters = async () => {
     try {
       let query = supabase
@@ -181,9 +227,36 @@ const RepositorioPage: React.FC = () => {
     }
   };
 
+  const fetchLinksByFilters = async () => {
+    try {
+      let query = supabase
+        .from('repositorio_links')
+        .select('*')
+        .eq('status', 'ativo')
+        .order('data_upload', { ascending: false });
+
+      if (selectedCategoria) {
+        query = query.eq('categoria_id', selectedCategoria.id);
+      }
+
+      if (selectedParceiro) {
+        query = query.eq('empresa_id', selectedParceiro.id);
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+
+      setLinks(normalizeLinks(data || []));
+    } catch (error) {
+      console.error('Error fetching links by filters:', error);
+    }
+  };
+
   useEffect(() => {
     if (!loading) {
       fetchMateriaisByFilters();
+      fetchLinksByFilters();
     }
   }, [selectedCategoria, selectedParceiro, loading]);
 
@@ -195,13 +268,16 @@ const RepositorioPage: React.FC = () => {
           <TabsList>
             <TabsTrigger value="browse">Navegar</TabsTrigger>
             {user?.papel === 'admin' && (
-              <TabsTrigger value="upload">Upload</TabsTrigger>
+              <>
+                <TabsTrigger value="upload">Upload Arquivo</TabsTrigger>
+                <TabsTrigger value="links">Adicionar Link</TabsTrigger>
+              </>
             )}
           </TabsList>
         </div>
 
         <TabsContent value="browse" className="mt-0">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 h-[calc(100vh-220px)]">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-6 h-[calc(100vh-220px)]">
             <div className="md:col-span-1 bg-card rounded-lg border shadow-sm overflow-auto">
               <CategoriasList
                 categorias={categorias}
@@ -230,24 +306,52 @@ const RepositorioPage: React.FC = () => {
                 onRefresh={fetchMateriais}
               />
             </div>
+
+            <div className="md:col-span-1 bg-card rounded-lg border shadow-sm overflow-auto">
+              <LinksList
+                links={links}
+                categorias={categorias}
+                parceiros={allParceiros}
+                tags={tags}
+                isLoading={loading}
+                onRefresh={fetchLinks}
+              />
+            </div>
           </div>
         </TabsContent>
 
         {user?.papel === 'admin' && (
-          <TabsContent value="upload" className="mt-0">
-            <MaterialUpload
-              categorias={categorias}
-              parceiros={parceiros}
-              tags={tags}
-              onSuccess={() => {
-                fetchMateriais();
-                toast({
-                  title: 'Sucesso',
-                  description: 'Material enviado com sucesso!',
-                });
-              }}
-            />
-          </TabsContent>
+          <>
+            <TabsContent value="upload" className="mt-0">
+              <MaterialUpload
+                categorias={categorias}
+                parceiros={parceiros}
+                tags={tags}
+                onSuccess={() => {
+                  fetchMateriais();
+                  toast({
+                    title: 'Sucesso',
+                    description: 'Material enviado com sucesso!',
+                  });
+                }}
+              />
+            </TabsContent>
+
+            <TabsContent value="links" className="mt-0">
+              <LinkUpload
+                categorias={categorias}
+                parceiros={parceiros}
+                tags={tags}
+                onSuccess={() => {
+                  fetchLinks();
+                  toast({
+                    title: 'Sucesso',
+                    description: 'Link adicionado com sucesso!',
+                  });
+                }}
+              />
+            </TabsContent>
+          </>
         )}
       </Tabs>
     </div>

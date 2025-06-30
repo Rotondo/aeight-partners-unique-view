@@ -862,6 +862,60 @@ export type Database = {
           },
         ]
       }
+      repositorio_links: {
+        Row: {
+          categoria_id: string
+          data_upload: string
+          descricao: string | null
+          empresa_id: string
+          id: string
+          nome: string
+          status: string | null
+          tag_categoria: string[] | null
+          url: string
+          usuario_upload: string
+        }
+        Insert: {
+          categoria_id: string
+          data_upload?: string
+          descricao?: string | null
+          empresa_id: string
+          id?: string
+          nome: string
+          status?: string | null
+          tag_categoria?: string[] | null
+          url: string
+          usuario_upload: string
+        }
+        Update: {
+          categoria_id?: string
+          data_upload?: string
+          descricao?: string | null
+          empresa_id?: string
+          id?: string
+          nome?: string
+          status?: string | null
+          tag_categoria?: string[] | null
+          url?: string
+          usuario_upload?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "repositorio_links_categoria_id_fkey"
+            columns: ["categoria_id"]
+            isOneToOne: false
+            referencedRelation: "categorias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "repositorio_links_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       repositorio_materiais: {
         Row: {
           arquivo_upload: string | null
