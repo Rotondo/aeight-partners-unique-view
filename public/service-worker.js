@@ -1,4 +1,3 @@
-
 const CACHE_NAME = 'aeight-pwa-cache-v3'; // Atualizado para forçar refresh
 const FALLBACK_CACHE = 'aeight-fallback-cache-v2';
 
@@ -114,7 +113,19 @@ self.addEventListener('fetch', event => {
           })
           .catch(() => {
             // Network failed, try fallback
-            return caches.match(event.request, { cacheName: FALLBACK_CACHE });
+            console.warn('[SW] Fetch falhou; retornando resposta de fallback. Request: ', event.request.url);
+            return caches.match(event.request, { cacheName: FALLBACK_CACHE })
+              .then(fallbackResponse => {
+                if (fallbackResponse) {
+                  return fallbackResponse;
+                }
+                // Se não há fallback específico, retorne uma resposta de erro controlada
+                return new Response('Offline fallback response', {
+                  status: 503,
+                  statusText: 'Service Unavailable',
+                  headers: { 'Content-Type': 'text/plain' }
+                });
+              });
           });
       })
   );
