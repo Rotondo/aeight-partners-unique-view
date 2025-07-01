@@ -67,3 +67,41 @@ export const BREAKPOINTS = {
   DESKTOP: 1024,
   LARGE: 1280
 } as const;
+
+// Default UI settings (placeholder values)
+export const DEFAULTS = {
+  CARD_HEIGHT: '400px',
+  CHART_HEIGHT: '300px', // Used in OpportunitiesChart
+  TABLE_ROW_HEIGHT: '48px',
+} as const;
+
+// Chart Colors (placeholder values)
+export const CHART_COLORS = {
+  PRIMARY: '#8884d8',
+  SECONDARY: '#82ca9d',
+  SUCCESS: '#4caf50',
+  WARNING: '#ffc107',
+  DANGER: '#f44336',
+  PURPLE: '#9c27b0', // Used in OpportunitiesChart
+  INFO: '#2196f3',
+} as const;
+
+
+// Main App Configuration Object
+export const APP_CONFIG = {
+  APP_NAME,
+  APP_VERSION,
+  SUPABASE_URL,
+  SUPABASE_ANON_KEY,
+  STORAGE_BUCKETS,
+  BUCKET_URL,
+  AUTH_CONFIG,
+  OPORTUNIDADE_STATUS,
+  EMPRESA_TIPOS,
+  USER_ROLES,
+  CACHE_CONFIG,
+  PAGINATION_CONFIG,
+  BREAKPOINTS,
+  DEFAULTS, // Added
+  CHART_COLORS, // Added
+} as const;
