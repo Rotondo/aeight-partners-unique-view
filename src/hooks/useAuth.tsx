@@ -70,7 +70,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .eq("email", email)
         .maybeSingle();
       
-      const result = await withTimeout(query, AUTH_TIMEOUT);
+      const result = await withTimeout(query.then(r => r), AUTH_TIMEOUT);
       const { data, error: dbError } = result;
       
       if (dbError) {
