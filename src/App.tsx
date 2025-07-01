@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import LoginPage from './pages/auth/LoginPage';
@@ -17,23 +18,66 @@ import OnePagerPage from './pages/onepager';
 import QuadrantePage from './pages/quadrante/QuadrantePage';
 import AdminPage from './pages/admin';
 import RepositorioPage from './pages/repositorio/RepositorioPage';
-import EmpresasClientesPage from './pages/wishlist/EmpresasClientesPage';
-import { registerSW } from './serviceWorkerRegistration';
+import { registerSW, clearServiceWorkerCache } from './serviceWorkerRegistration';
 import ErrorBoundary from './components/ErrorBoundary';
 
 function App() {
   const [waitingWorker, setWaitingWorker] = useState<ServiceWorker | null>(null);
+  const [showUpdateBanner, setShowUpdateBanner] = useState(false);
+  const [appReady, setAppReady] = useState(false);
 
   useEffect(() => {
+    console.log("[App] Inicializando aplicação...");
+    
+    // Detectar se app está pronta
+    const checkAppReady = () => {
+      setTimeout(() => {
+        setAppReady(true);
+        console.log("[App] Aplicação pronta");
+      }, 100);
+    };
+
+    checkAppReady();
+
+    // Registrar service worker com gerenciamento de updates
     registerSW((registration) => {
+      console.log("[App] Update do service worker disponível");
       setWaitingWorker(registration.waiting);
+      setShowUpdateBanner(true);
     });
+
+    // Log de navegação apenas em desenvolvimento
+    if (process.env.NODE_ENV === 'development') {
+      console.log("[App] Renderizando pathname:", window.location.pathname);
+    }
+
+    // Monitor de performance básico
+    const performanceObserver = new PerformanceObserver((list) => {
+      const entries = list.getEntries();
+      entries.forEach((entry) => {
+        if (entry.entryType === 'navigation') {
+          console.log(`[App] Tempo de carregamento: ${Math.round(entry.duration)}ms`);
+        }
+      });
+    });
+
+    try {
+      performanceObserver.observe({ entryTypes: ['navigation'] });
+    } catch (e) {
+      // Ignorar se não suportado
+    }
+
+    return () => {
+      performanceObserver.disconnect();
+    };
   }, []);
 
-  const handleUpdate = () => {
+  const handleUpdate = async () => {
     if (waitingWorker) {
+      console.log("[App] Aplicando update...");
+      
       waitingWorker.postMessage({ type: 'SKIP_WAITING' });
-      waitingWorker.addEventListener('statechange', (event) => {
+      waitingWorker.addEventListener('statechange', () => {
         if (waitingWorker.state === 'activated') {
           window.location.reload();
         }
@@ -41,10 +85,36 @@ function App() {
     }
   };
 
-  // Log global de navegação
-  useEffect(() => {
-    console.log("[App] Renderizando pathname:", window.location.pathname);
-  }, []);
+  const handleDismissUpdate = () => {
+    setShowUpdateBanner(false);
+  };
+
+  const handleForceRefresh = async () => {
+    console.log("[App] Limpando cache e recarregando...");
+    
+    try {
+      const cleared = await clearServiceWorkerCache();
+      if (cleared) {
+        console.log("[App] Cache limpo com sucesso");
+      }
+    } catch (error) {
+      console.error("[App] Erro ao limpar cache:", error);
+    }
+    
+    window.location.reload();
+  };
+
+  // Loading screen enquanto app não está pronta
+  if (!appReady) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          <span className="text-lg text-muted-foreground">Carregando A&eight Partners...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background font-sans antialiased">
@@ -53,7 +123,6 @@ function App() {
           <PrivacyProvider>
             <Router>
               <Routes>
-                {/* ... todas as rotas mantidas ... */}
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/" element={
                   <PrivateRoute>
@@ -144,27 +213,35 @@ function App() {
           </PrivacyProvider>
         </AuthProvider>
       </ErrorBoundary>
-      {waitingWorker && (
-        <div style={{
-          position: 'fixed', bottom: 16, right: 16, zIndex: 1000,
-          background: '#4a90e2', color: 'white', padding: '12px 24px', borderRadius: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
-        }}>
-          <span>Há uma nova versão disponível!</span>
-          <button
-            onClick={handleUpdate}
-            style={{
-              marginLeft: 16,
-              background: 'white',
-              color: '#4a90e2',
-              border: 'none',
-              borderRadius: 4,
-              padding: '8px 16px',
-              fontWeight: 'bold',
-              cursor: 'pointer'
-            }}
-          >
-            Atualizar agora
-          </button>
+
+      {/* Banner de update aprimorado */}
+      {showUpdateBanner && (
+        <div className="fixed bottom-4 right-4 z-50 max-w-sm">
+          <div className="bg-primary text-primary-foreground p-4 rounded-lg shadow-lg">
+            <div className="flex items-center justify-between mb-2">
+              <span className="font-medium">Nova versão disponível!</span>
+              <button
+                onClick={handleDismissUpdate}
+                className="text-primary-foreground/80 hover:text-primary-foreground"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={handleUpdate}
+                className="bg-primary-foreground text-primary px-3 py-1 rounded font-medium hover:opacity-90"
+              >
+                Atualizar
+              </button>
+              <button
+                onClick={handleForceRefresh}
+                className="bg-transparent border border-primary-foreground text-primary-foreground px-3 py-1 rounded hover:bg-primary-foreground/10"
+              >
+                Forçar
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

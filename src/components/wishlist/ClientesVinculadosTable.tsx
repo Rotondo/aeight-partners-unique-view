@@ -38,6 +38,31 @@ const ClientesVinculadosTable: React.FC<ClientesVinculadosTableProps> = ({
     return obj.nome;
   };
 
+  const renderDesde = (data: string | null | undefined) => {
+    if (!data) {
+      return <span style={{ color: "red" }}>[ERRO: data não encontrada]</span>;
+    }
+    try {
+      return format(new Date(data), "dd/MM/yyyy", { locale: ptBR });
+    } catch {
+      return <span style={{ color: "red" }}>[ERRO: data inválida]</span>;
+    }
+  };
+
+  const renderDesdeTooltip = (data: string | null | undefined) => {
+    if (!data) return "Data de relacionamento não encontrada";
+    try {
+      return (
+        <>
+          Relacionamento ganho em{" "}
+          {format(new Date(data), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+        </>
+      );
+    } catch {
+      return "Data de relacionamento inválida";
+    }
+  };
+
   return (
     <div className="overflow-x-auto rounded-md border bg-background shadow-sm mt-2">
       <table className="min-w-full text-sm align-middle">
@@ -81,31 +106,11 @@ const ClientesVinculadosTable: React.FC<ClientesVinculadosTableProps> = ({
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <span>
-                        {cliente.data_relacionamento
-                          ? format(
-                              new Date(cliente.data_relacionamento),
-                              "dd/MM/yyyy",
-                              { locale: ptBR }
-                            )
-                          : (
-                            <span style={{ color: "red" }}>
-                              [ERRO: data não encontrada]
-                            </span>
-                          )
-                        }
+                        {renderDesde(cliente.data_relacionamento)}
                       </span>
                     </TooltipTrigger>
                     <TooltipContent>
-                      {cliente.data_relacionamento
-                        ? <>
-                            Relacionamento desde{" "}
-                            {format(
-                              new Date(cliente.data_relacionamento),
-                              "dd 'de' MMMM 'de' yyyy",
-                              { locale: ptBR }
-                            )}
-                          </>
-                        : "Data de relacionamento não encontrada"}
+                      {renderDesdeTooltip(cliente.data_relacionamento)}
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>

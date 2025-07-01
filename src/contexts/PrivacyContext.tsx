@@ -15,14 +15,27 @@ interface PrivacyProviderProps {
 
 export const PrivacyProvider: React.FC<PrivacyProviderProps> = ({ children }) => {
   const [isDemoMode, setIsDemoMode] = useState<boolean>(() => {
-    // Carregar do localStorage se existir
-    const saved = localStorage.getItem('aeight-demo-mode');
-    return saved ? JSON.parse(saved) : false;
+    // Verificação segura do localStorage
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const saved = localStorage.getItem('aeight-demo-mode');
+        return saved ? JSON.parse(saved) : false;
+      }
+    } catch (error) {
+      console.warn('[PrivacyContext] Erro ao acessar localStorage:', error);
+    }
+    return false;
   });
 
   // Salvar no localStorage quando mudar
   useEffect(() => {
-    localStorage.setItem('aeight-demo-mode', JSON.stringify(isDemoMode));
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        localStorage.setItem('aeight-demo-mode', JSON.stringify(isDemoMode));
+      }
+    } catch (error) {
+      console.warn('[PrivacyContext] Erro ao salvar no localStorage:', error);
+    }
   }, [isDemoMode]);
 
   const toggleDemoMode = () => {

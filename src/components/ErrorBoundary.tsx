@@ -1,4 +1,7 @@
 import React from "react";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertTriangle, RefreshCw } from "lucide-react";
 
 interface ErrorBoundaryProps {
   children: React.ReactNode;
@@ -8,88 +11,248 @@ interface ErrorBoundaryState {
   hasError: boolean;
   error: Error | null; // Tipo mais específico
   errorInfo: React.ErrorInfo | null; // Tipo mais específico
+  isBlankScreen: boolean;
+  retryCount: number;
 }
 
 export default class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  private blankScreenTimer: NodeJS.Timeout | null = null;
+  private performanceTimer: NodeJS.Timeout | null = null;
+
   constructor(props: ErrorBoundaryProps) {
     super(props);
-    this.state = { hasError: false, error: null, errorInfo: null };
+    this.state = { 
+      hasError: false, 
+      error: null, 
+      errorInfo: null, 
+      isBlankScreen: false,
+      retryCount: 0
+    };
   }
 
-  static getDerivedStateFromError(error: Error): Partial<ErrorBoundaryState> { // Tipo mais específico para o retorno e parâmetro
-    return { hasError: true, error: error }; // errorInfo é definido em componentDidCatch
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error, errorInfo: null, isBlankScreen: false, retryCount: 0 };
   }
 
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) { // Tipos mais específicos
-    // Log para rastreabilidade global
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error("[ErrorBoundary] Erro capturado:", error, errorInfo);
-    this.setState({ errorInfo: errorInfo }); // Definir errorInfo aqui
+    this.setState({ errorInfo });
+
+    // Log estruturado para debugging
+    this.logError('component_error', { error, errorInfo });
   }
 
-  handleReload = () => {
-    window.location.reload();
+  componentDidMount() {
+    // Detector de tela branca
+    this.startBlankScreenDetection();
+    
+    // Monitor de performance
+    this.startPerformanceMonitoring();
+
+    // Listener para erros não capturados
+    window.addEventListener('error', this.handleGlobalError);
+    window.addEventListener('unhandledrejection', this.handleUnhandledRejection);
+  }
+
+  componentWillUnmount() {
+    if (this.blankScreenTimer) clearTimeout(this.blankScreenTimer);
+    if (this.performanceTimer) clearTimeout(this.performanceTimer);
+    
+    window.removeEventListener('error', this.handleGlobalError);
+    window.removeEventListener('unhandledrejection', this.handleUnhandledRejection);
+  }
+
+  private startBlankScreenDetection = () => {
+    // Detecta se a tela está branca após 5 segundos
+    this.blankScreenTimer = setTimeout(() => {
+      const body = document.body;
+      const hasContent = body && (
+        body.children.length > 1 || 
+        body.textContent?.trim().length > 0 ||
+        body.querySelector('[data-testid], [class*="container"], main, section')
+      );
+
+      if (!hasContent && !this.state.hasError) {
+        console.warn('[ErrorBoundary] Tela branca detectada');
+        this.setState({ isBlankScreen: true });
+        this.logError('blank_screen_detected', { timestamp: Date.now() });
+      }
+    }, 5000);
   };
 
-  handleGoBack = () => {
-    window.history.back();
+  private startPerformanceMonitoring = () => {
+    this.performanceTimer = setTimeout(() => {
+      const loadTime = performance.now();
+      this.logError('performance_metric', { 
+        loadTime: Math.round(loadTime),
+        timestamp: Date.now()
+      });
+    }, 1000);
+  };
+
+  private handleGlobalError = (event: ErrorEvent) => {
+    console.error('[ErrorBoundary] Erro global:', event.error);
+    this.logError('global_error', { 
+      message: event.message,
+      filename: event.filename,
+      lineno: event.lineno,
+      colno: event.colno
+    });
+  };
+
+  private handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+    console.error('[ErrorBoundary] Promise rejeitada:', event.reason);
+    this.logError('unhandled_rejection', { reason: event.reason });
+  };
+
+  private logError = (type: string, data: any) => {
+    const getCurrentUrl = (): string => {
+      try {
+        return (typeof window !== 'undefined' && window?.location?.href) || 'unknown';
+      } catch {
+        return 'unknown';
+      }
+    };
+
+    const logEntry = {
+      type,
+      timestamp: new Date().toISOString(),
+      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
+      url: getCurrentUrl(),
+      ...data
+    };
+    
+    console.error(`[ErrorBoundary] ${type}:`, logEntry);
+    
+    // Salvar no localStorage para debugging
+    try {
+      const existingLogs = JSON.parse(localStorage.getItem('error_logs') || '[]');
+      existingLogs.push(logEntry);
+      // Manter apenas os últimos 10 logs
+      const recentLogs = existingLogs.slice(-10);
+      localStorage.setItem('error_logs', JSON.stringify(recentLogs));
+    } catch (e) {
+      console.warn('Não foi possível salvar log de erro');
+    }
+  };
+
+  private handleRetry = () => {
+    this.setState(prevState => ({ 
+      hasError: false, 
+      error: null, 
+      errorInfo: null,
+      isBlankScreen: false,
+      retryCount: prevState.retryCount + 1
+    }));
+  };
+
+  private handleForceReload = () => {
+    this.logError('force_reload_triggered', { retryCount: this.state.retryCount });
+    
+    // Limpar cache se possível
+    if ('caches' in window) {
+      caches.keys().then(names => {
+        names.forEach(name => caches.delete(name));
+      }).finally(() => {
+        this.safeReload();
+      });
+    } else {
+      this.safeReload();
+    }
+  };
+
+  private safeReload = () => {
+    try {
+      if (typeof window !== 'undefined' && window.location) {
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error('[ErrorBoundary] Erro ao recarregar:', error);
+    }
+  };
+
+  private clearErrorLogs = () => {
+    localStorage.removeItem('error_logs');
+    alert('Logs de erro limpos');
   };
 
   render() {
-    if (this.state.hasError) {
+    if (this.state.hasError || this.state.isBlankScreen) {
       return (
-        <div className="flex flex-col items-center justify-center min-h-screen bg-red-50 p-4 text-center">
-          <div className="bg-white p-8 rounded-lg shadow-xl max-w-lg w-full">
-            <svg className="mx-auto h-16 w-16 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-            <h1 className="mt-4 text-2xl font-bold text-red-700">
-              Oops! Algo deu errado.
-            </h1>
-            <p className="mt-2 text-md text-gray-600">
-              Lamentamos o inconveniente. Um erro inesperado ocorreu.
-              Nossa equipe já foi notificada (se o sistema de logging estiver configurado).
-            </p>
-            <p className="mt-2 text-sm text-gray-500">
-              Você pode tentar recarregar a página ou voltar para a página anterior.
-            </p>
+        <div className="min-h-screen bg-background p-6 flex items-center justify-center">
+          <div className="max-w-2xl w-full space-y-4">
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>
+                {this.state.isBlankScreen ? 'Tela Branca Detectada' : 'Erro na Aplicação'}
+              </AlertTitle>
+              <AlertDescription>
+                {this.state.isBlankScreen 
+                  ? 'A aplicação não carregou corretamente. Tente as opções abaixo.'
+                  : 'Ocorreu um erro inesperado. Você pode tentar recuperar a aplicação.'
+                }
+              </AlertDescription>
+            </Alert>
 
-            {this.state.error && (
-              <div className="mt-6 text-left bg-red-50 p-3 rounded-md">
-                <h3 className="text-sm font-semibold text-red-800">Detalhes do Erro:</h3>
-                <pre className="mt-1 text-xs text-red-700 whitespace-pre-wrap break-all">
-                  {this.state.error.toString()}
-                </pre>
-                {this.state.errorInfo && this.state.errorInfo.componentStack && (
-                  <details className="mt-2 text-xs">
-                    <summary className="cursor-pointer text-red-600 hover:text-red-700">
-                      Stack de Componentes
+            <div className="flex flex-wrap gap-3">
+              <Button onClick={this.handleRetry} variant="outline">
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Tentar Novamente ({this.state.retryCount})
+              </Button>
+              
+              <Button onClick={this.handleForceReload} variant="destructive">
+                Forçar Recarregamento
+              </Button>
+
+              <Button 
+                onClick={() => {
+                  try {
+                    if (typeof window !== 'undefined' && window.history) {
+                      window.history.back();
+                    }
+                  } catch (error) {
+                    console.error('[ErrorBoundary] Erro ao voltar:', error);
+                  }
+                }} 
+                variant="ghost"
+              >
+                Voltar
+              </Button>
+            </div>
+
+            {process.env.NODE_ENV === 'development' && (
+              <div className="space-y-2">
+                <Button 
+                  onClick={this.clearErrorLogs} 
+                  variant="ghost" 
+                  size="sm"
+                >
+                  Limpar Logs de Erro
+                </Button>
+                
+                {this.state.error && (
+                  <details className="p-4 bg-muted rounded text-sm">
+                    <summary className="cursor-pointer font-medium">
+                      Detalhes do Erro (Dev)
                     </summary>
-                    <pre className="mt-1 text-red-700 whitespace-pre-wrap break-all">
-                      {this.state.errorInfo.componentStack}
+                    <pre className="mt-2 whitespace-pre-wrap break-all">
+                      {this.state.error.toString()}
+                      {this.state.errorInfo && (
+                        <>
+                          <br /><br />
+                          {this.state.errorInfo.componentStack}
+                        </>
+                      )}
                     </pre>
                   </details>
                 )}
               </div>
             )}
-
-            <div className="mt-8 flex justify-center space-x-4">
-              <button
-                onClick={this.handleReload}
-                className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-              >
-                Recarregar Página
-              </button>
-              <button
-                onClick={this.handleGoBack}
-                className="px-4 py-2 bg-gray-200 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
-              >
-                Voltar
-              </button>
-            </div>
           </div>
         </div>
       );
     }
+
     return this.props.children;
   }
 }

@@ -18,7 +18,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { useWishlist } from "@/contexts/WishlistContext";
-import { Plus, Search, Heart, Calendar, Star, Loader2, ChevronLeft } from "lucide-react";
+import { Plus, Search, Heart, Calendar, Star, Loader2, ChevronLeft, Trash2, Check, X } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { WishlistStatus, WishlistItem } from "@/types";
@@ -28,6 +28,7 @@ import { useNavigate } from "react-router-dom";
 import { DemoModeToggle } from "@/components/privacy/DemoModeToggle";
 import { DemoModeIndicator } from "@/components/privacy/DemoModeIndicator";
 import { PrivateData } from "@/components/privacy/PrivateData";
+import { useWishlistItemMutations } from "@/hooks/useWishlistMutations/wishlistItem";
 
 type EmpresaOption = {
   id: string;
@@ -35,7 +36,7 @@ type EmpresaOption = {
   tipo: string;
 };
 
-const CONSOLE_PREFIX = "[WishlistItemsPage]";
+const CONSOLE_PREFIX = "[WishlistItensPage]";
 
 function toSafeString(val: unknown): string {
   return typeof val === "string" ? val : val == null ? "" : String(val);
@@ -48,7 +49,7 @@ function getClienteNomePorId(id: string, clientes: EmpresaOption[]) {
   return clientes.find((c) => c.id === id)?.nome || "";
 }
 
-const WishlistItemsPage: React.FC = () => {
+const WishlistItensPage: React.FC = () => {
   const {
     wishlistItems,
     loading: loadingItems,
@@ -56,6 +57,9 @@ const WishlistItemsPage: React.FC = () => {
     addWishlistItem,
     updateWishlistItem,
   } = useWishlist();
+
+  // Mutations
+  const { deleteWishlistItem } = useWishlistItemMutations(fetchWishlistItems);
 
   const navigate = useNavigate();
 
@@ -79,6 +83,12 @@ const WishlistItemsPage: React.FC = () => {
   const [observacoes, setObservacoes] = useState<string>("");
   const [criandoNovoCliente, setCriandoNovoCliente] = useState(false);
   const [novoClienteNome, setNovoClienteNome] = useState<string>("");
+
+  // Exclusão
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
+  // Aprovação/Rejeição
+  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
 
   // Buscar empresas para o formulário
   useEffect(() => {
@@ -238,7 +248,7 @@ const WishlistItemsPage: React.FC = () => {
     }
   };
 
-  const filteredItems = wishlistItems.filter((item) => {
+  const filteredItens = wishlistItems.filter((item) => {
     try {
       const matchesSearch =
         (item.empresa_interessada?.nome || "")
@@ -266,7 +276,7 @@ const WishlistItemsPage: React.FC = () => {
 
       return matchesSearch && matchesStatus;
     } catch (error) {
-      console.error(`${CONSOLE_PREFIX} Erro ao filtrar wishlistItems:`, error, item);
+      console.error(`${CONSOLE_PREFIX} Erro ao filtrar wishlistItens:`, error, item);
       return false;
     }
   });
@@ -316,15 +326,80 @@ const WishlistItemsPage: React.FC = () => {
     ));
   };
 
+  // Aprovar item
+  const handleAprovar = async (item: WishlistItem) => {
+    setActionLoadingId(item.id);
+    try {
+      await updateWishlistItem(item.id, { status: "aprovado" });
+      toast({
+        title: "Solicitação aprovada",
+        description: "O item foi aprovado com sucesso.",
+      });
+    } catch (err) {
+      toast({
+        title: "Erro ao aprovar",
+        description: "Não foi possível aprovar o item.",
+        variant: "destructive",
+      });
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  // Rejeitar item
+  const handleRejeitar = async (item: WishlistItem) => {
+    setActionLoadingId(item.id);
+    try {
+      await updateWishlistItem(item.id, { status: "rejeitado" });
+      toast({
+        title: "Solicitação rejeitada",
+        description: "O item foi rejeitado.",
+      });
+    } catch (err) {
+      toast({
+        title: "Erro ao rejeitar",
+        description: "Não foi possível rejeitar o item.",
+        variant: "destructive",
+      });
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  // Deletar item
+  const handleDelete = async (item: WishlistItem) => {
+    if (!window.confirm("Tem certeza que deseja excluir este item da wishlist?")) return;
+    setDeleteLoading(true);
+    try {
+      await deleteWishlistItem(item.id);
+      toast({
+        title: "Item excluído",
+        description: "O item foi removido da wishlist.",
+      });
+      if (editingItem?.id === item.id) {
+        setModalOpen(false);
+        setEditingItem(null);
+      }
+    } catch (err) {
+      toast({
+        title: "Erro ao excluir",
+        description: "Não foi possível excluir o item.",
+        variant: "destructive",
+      });
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
   useEffect(() => {
     console.log(`${CONSOLE_PREFIX} Estado inicial`, {
       wishlistItems,
       empresas,
       empresasClientes,
       empresasParceiros,
-      filteredItems,
+      filteredItens,
     });
-  }, [wishlistItems, empresas, empresasClientes, empresasParceiros, filteredItems]);
+  }, [wishlistItems, empresas, empresasClientes, empresasParceiros, filteredItens]);
 
   if (loadingItems) {
     return (
@@ -349,7 +424,7 @@ const WishlistItemsPage: React.FC = () => {
             Voltar ao Dashboard
           </Button>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Wishlist Items</h1>
+            <h1 className="text-3xl font-bold tracking-tight">Wishlist Itens</h1>
             <p className="text-muted-foreground">
               Gerencie solicitações de interesse e apresentações
             </p>
@@ -527,21 +602,39 @@ const WishlistItemsPage: React.FC = () => {
                     placeholder="Observações adicionais"
                   />
                 </div>
-                <div className="flex justify-end">
-                  <Button
-                    type="submit"
-                    disabled={
-                      modalLoading ||
-                      !empresaInteressada ||
-                      !empresaDesejada ||
-                      !empresaProprietaria
-                    }
-                  >
-                    {modalLoading && (
-                      <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                    )}
-                    {editingItem ? "Salvar Alterações" : "Criar Solicitação"}
-                  </Button>
+                <div className="flex justify-between gap-2">
+                  {editingItem && (
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      className="flex items-center"
+                      onClick={() => handleDelete(editingItem)}
+                      disabled={deleteLoading}
+                    >
+                      {deleteLoading ? (
+                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-4 w-4 mr-1" />
+                      )}
+                      Excluir
+                    </Button>
+                  )}
+                  <div className="flex-1 flex justify-end">
+                    <Button
+                      type="submit"
+                      disabled={
+                        modalLoading ||
+                        !empresaInteressada ||
+                        !empresaDesejada ||
+                        !empresaProprietaria
+                      }
+                    >
+                      {modalLoading && (
+                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                      )}
+                      {editingItem ? "Salvar Alterações" : "Criar Solicitação"}
+                    </Button>
+                  </div>
                 </div>
               </form>
             </DialogContent>
@@ -633,9 +726,9 @@ const WishlistItemsPage: React.FC = () => {
         </Card>
       </div>
 
-      {/* Lista de Items */}
+      {/* Lista de Itens */}
       <div className="grid gap-4">
-        {filteredItems.map((item) => (
+        {filteredItens.map((item) => (
           <Card key={item.id}>
             <CardHeader>
               <div className="flex justify-between items-start">
@@ -706,10 +799,30 @@ const WishlistItemsPage: React.FC = () => {
                 <div className="flex justify-end gap-2 pt-2">
                   {item.status === "pendente" && (
                     <>
-                      <Button variant="outline" size="sm">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleAprovar(item)}
+                        disabled={actionLoadingId === item.id}
+                      >
+                        {actionLoadingId === item.id ? (
+                          <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                        ) : (
+                          <Check className="h-4 w-4 mr-1" />
+                        )}
                         Aprovar
                       </Button>
-                      <Button variant="outline" size="sm">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleRejeitar(item)}
+                        disabled={actionLoadingId === item.id}
+                      >
+                        {actionLoadingId === item.id ? (
+                          <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                        ) : (
+                          <X className="h-4 w-4 mr-1" />
+                        )}
                         Rejeitar
                       </Button>
                     </>
@@ -734,7 +847,7 @@ const WishlistItemsPage: React.FC = () => {
             </CardContent>
           </Card>
         ))}
-        {filteredItems.length === 0 && (
+        {filteredItens.length === 0 && (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
               <Heart className="h-12 w-12 text-muted-foreground mb-4" />
@@ -763,4 +876,4 @@ const WishlistItemsPage: React.FC = () => {
   );
 };
 
-export default WishlistItemsPage;
+export default WishlistItensPage;
