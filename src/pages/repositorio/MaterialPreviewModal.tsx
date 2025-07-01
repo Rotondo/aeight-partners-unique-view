@@ -48,7 +48,7 @@ const MaterialPreviewModal: React.FC<MaterialPreviewModalProps> = ({
       setPublicUrl(url);
 
       // Se for .txt, tentar buscar o conteúdo
-      if (tipo_arquivo === 'txt' || (arquivo_upload && arquivo_upload.toLowerCase().endsWith('.txt'))) {
+      if (isTxtFile(tipo_arquivo, arquivo_upload)) {
         fetch(url)
           .then(response => {
             if (!response.ok) {
