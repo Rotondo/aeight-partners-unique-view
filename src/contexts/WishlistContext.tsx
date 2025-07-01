@@ -1,276 +1,221 @@
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { supabase } from '@/lib/supabase';
+import { toast } from '@/components/ui/use-toast';
 
-import React, { createContext, useContext, useState, useEffect, useRef } from "react";
-import { EmpresaCliente, WishlistItem, WishlistApresentacao, WishlistStats } from "@/types/wishlist";
-import { Oportunidade } from "@/types/oportunidade"; // For convertToOportunidade
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
-import { useToast } from "@/hooks/use-toast";
-
-interface WishlistContextType {
-  // Empresa Cliente
-  empresasClientes: EmpresaCliente[];
-  fetchEmpresasClientes: () => Promise<void>;
-  isLoadingEmpresas: boolean;
-
-  // Wishlist Items
-  wishlistItems: WishlistItem[];
-  fetchWishlistItems: () => Promise<void>;
-  isLoadingWishlist: boolean;
-
-  // Apresentações
-  apresentacoes: WishlistApresentacao[];
-  fetchApresentacoes: () => Promise<void>;
-  isLoadingApresentacoes: boolean;
-
-  // Estado geral
-  isLoading: boolean; // This is a combined loading state
-  error: string | null;
-
-  // Stats
-  stats: WishlistStats | null; // Or appropriate type
-
-  // Mutations - EmpresaCliente
-  addEmpresaCliente: (item: Partial<EmpresaCliente>) => Promise<void>;
-  updateEmpresaCliente: (id: string, updates: Partial<EmpresaCliente>) => Promise<void>;
-
-  // Mutations - WishlistItem
-  addWishlistItem: (item: Partial<WishlistItem>) => Promise<void>;
-  updateWishlistItem: (id: string, updates: Partial<WishlistItem>) => Promise<void>;
-  convertToOportunidade: (item: WishlistItem) => Promise<Oportunidade | null>;
-
-  // Mutations - Apresentacao
-  addApresentacao: (item: Partial<WishlistApresentacao>) => Promise<void>;
-  solicitarApresentacao: (itemId: string, facilitadorId: string) => Promise<void>; // Example signature
+// Definição dos tipos
+export interface WishlistItem {
+  id: string;
+  created_at: string;
+  title: string;
+  description: string | null;
+  url: string | null;
+  priority: 'alta' | 'média' | 'baixa';
+  status: 'pendente' | 'em_andamento' | 'concluído';
+  tipo: 'feature' | 'bug' | 'melhoria' | 'outro';
+  user_id: string;
+  votes: number;
+  assignee_id: string | null;
 }
 
+interface WishlistContextType {
+  wishlistItems: WishlistItem[];
+  isLoading: boolean;
+  error: string | null;
+  addItem: (item: Omit<WishlistItem, 'id' | 'created_at' | 'votes'>) => Promise<void>;
+  updateItem: (id: string, updates: Partial<WishlistItem>) => Promise<void>;
+  deleteItem: (id: string) => Promise<void>;
+  voteItem: (id: string) => Promise<void>;
+  refreshItems: () => Promise<void>;
+}
+
+// Criação do contexto
 const WishlistContext = createContext<WishlistContextType | undefined>(undefined);
 
-// Placeholder functions for mutations
-const placeholderAddEmpresaCliente = async (item: Partial<EmpresaCliente>) => { console.log("addEmpresaCliente called", item); };
-const placeholderUpdateEmpresaCliente = async (id: string, updates: Partial<EmpresaCliente>) => { console.log("updateEmpresaCliente called", id, updates); };
-const placeholderAddWishlistItem = async (item: Partial<WishlistItem>) => { console.log("addWishlistItem called", item); };
-const placeholderUpdateWishlistItem = async (id: string, updates: Partial<WishlistItem>) => { console.log("updateWishlistItem called", id, updates); };
-const placeholderConvertToOportunidade = async (item: WishlistItem): Promise<Oportunidade | null> => { console.log("convertToOportunidade called", item); return null; };
-const placeholderAddApresentacao = async (item: Partial<WishlistApresentacao>) => { console.log("addApresentacao called", item); };
-const placeholderSolicitarApresentacao = async (itemId: string, facilitadorId: string) => { console.log("solicitarApresentacao called", itemId, facilitadorId); };
-
-export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Estados
-  const [empresasClientes, setEmpresasClientes] = useState<EmpresaCliente[]>([]);
+// Provider component
+export function WishlistProvider({ children }: { children: ReactNode }) {
   const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>([]);
-  const [apresentacoes, setApresentacoes] = useState<WishlistApresentacao[]>([]);
-  
-  const [isLoadingEmpresas, setIsLoadingEmpresas] = useState(false);
-  const [isLoadingWishlist, setIsLoadingWishlist] = useState(false);
-  const [isLoadingApresentacoes, setIsLoadingApresentacoes] = useState(false);
-  const [stats, setStats] = useState<WishlistStats | null>(null); // Added stats state
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const { user } = useAuth();
-  const { toast } = useToast();
-  
-  // Ref para evitar dupla execução em StrictMode
-  const initRef = useRef(false);
-
-  const fetchEmpresasClientes = async () => {
-    if (!user) return;
-    
-    console.log("[WishlistContext] Buscando empresas clientes...");
-    setIsLoadingEmpresas(true);
-    setError(null);
-
-    try {
-      const { data, error } = await supabase
-        .from('empresas_clientes')
-        .select(`
-          id,
-          empresa_proprietaria_id,
-          empresa_cliente_id,
-          data_relacionamento,
-          status,
-          observacoes,
-          created_at,
-          updated_at,
-          empresa_cliente:empresas!empresa_clientes_empresa_cliente_id_fkey(id, nome, tipo, status, descricao),
-          empresa_proprietaria:empresas!empresa_clientes_empresa_proprietaria_id_fkey(id, nome, tipo, status, descricao)
-        `)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      console.log("[WishlistContext] Empresas clientes carregadas:", data?.length || 0);
-      setEmpresasClientes((data as EmpresaCliente[]) || []);
-    } catch (error) {
-      console.error("[WishlistContext] Erro ao buscar empresas clientes:", error);
-      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-      setError(errorMessage);
-      toast({
-        title: "Erro",
-        description: "Erro ao carregar empresas clientes",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoadingEmpresas(false);
-    }
-  };
-
-  const fetchWishlistItems = async () => {
-    if (!user) return;
-    
-    console.log("[WishlistContext] Buscando wishlist items...");
-    setIsLoadingWishlist(true);
-    setError(null);
-
-    try {
-      const { data, error } = await supabase
-        .from('wishlist_items')
-        .select(`
-          id,
-          empresa_interessada_id,
-          empresa_desejada_id,
-          empresa_proprietaria_id,
-          motivo,
-          prioridade,
-          status,
-          data_solicitacao,
-          data_resposta,
-          observacoes,
-          created_at,
-          updated_at,
-          empresa_interessada:empresas!wishlist_items_empresa_interessada_id_fkey(id, nome, tipo, status, descricao),
-          empresa_desejada:empresas!wishlist_items_empresa_desejada_id_fkey(id, nome, tipo, status, descricao),
-          empresa_proprietaria:empresas!wishlist_items_empresa_proprietaria_id_fkey(id, nome, tipo, status, descricao)
-        `)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      console.log("[WishlistContext] Wishlist items carregados:", data?.length || 0);
-      setWishlistItems((data as WishlistItem[]) || []);
-    } catch (error) {
-      console.error("[WishlistContext] Erro ao buscar wishlist items:", error);
-      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-      setError(errorMessage);
-      toast({
-        title: "Erro",
-        description: "Erro ao carregar items da wishlist",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoadingWishlist(false);
-    }
-  };
-
-  const fetchApresentacoes = async () => {
-    if (!user) return;
-    
-    console.log("[WishlistContext] Buscando apresentações...");
-    setIsLoadingApresentacoes(true);
-    setError(null);
-
-    try {
-      const { data, error } = await supabase
-        .from('wishlist_apresentacoes')
-        .select(`
-          id,
-          wishlist_item_id,
-          empresa_facilitadora_id,
-          data_apresentacao,
-          tipo_apresentacao,
-          status_apresentacao,
-          feedback,
-          converteu_oportunidade,
-          oportunidade_id,
-          created_at,
-          updated_at,
-          empresa_facilitadora:empresas!wishlist_apresentacoes_empresa_facilitadora_id_fkey(id, nome, tipo, status, descricao),
-          oportunidade:oportunidades!wishlist_apresentacoes_oportunidade_id_fkey(id, nome_lead, status, valor),
-          wishlist_item:wishlist_items!wishlist_apresentacoes_wishlist_item_id_fkey(
-            id,
-            status,
-            empresa_interessada:empresas!wishlist_items_empresa_interessada_id_fkey(id, nome),
-            empresa_desejada:empresas!wishlist_items_empresa_desejada_id_fkey(id, nome),
-            empresa_proprietaria:empresas!wishlist_items_empresa_proprietaria_id_fkey(id, nome)
-          )
-        `)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      console.log("[WishlistContext] Apresentações carregadas:", data?.length || 0);
-      setApresentacoes((data as WishlistApresentacao[]) || []);
-    } catch (error) {
-      console.error("[WishlistContext] Erro ao buscar apresentações:", error);
-      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-      setError(errorMessage);
-      toast({
-        title: "Erro",
-        description: "Erro ao carregar apresentações",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoadingApresentacoes(false);
-    }
-  };
-
-  // Inicialização com proteção contra dupla execução
+  // Carregar itens quando o componente montar
   useEffect(() => {
-    if (!user || initRef.current) return;
-    
-    initRef.current = true;
-    console.log("[WishlistContext] Inicializando contexto para usuário:", user.id);
-    
-    // Executar todos os fetches em paralelo
-    Promise.all([
-      fetchEmpresasClientes(),
-      fetchWishlistItems(),
-      fetchApresentacoes()
-    ]).then(() => {
-      console.log("[WishlistContext] Inicialização completa");
-    });
+    fetchWishlistItems();
+  }, []);
 
-    return () => {
-      initRef.current = false;
-    };
-  }, [user]);
+  async function fetchWishlistItems() {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const { data, error } = await supabase
+        .from('wishlist')
+        .select('*')
+        .order('votes', { ascending: false });
+      
+      if (error) throw new Error(error.message);
+      
+      setWishlistItems(data || []);
+    } catch (err) {
+      console.error('Erro ao buscar itens da wishlist:', err);
+      setError(err instanceof Error ? err.message : 'Erro desconhecido ao buscar wishlist');
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível carregar os itens da wishlist',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }
 
-  const isLoading = isLoadingEmpresas || isLoadingWishlist || isLoadingApresentacoes;
+  async function addItem(item: Omit<WishlistItem, 'id' | 'created_at' | 'votes'>) {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const { data, error } = await supabase
+        .from('wishlist')
+        .insert({ ...item, votes: 0 })
+        .select()
+        .single();
+      
+      if (error) throw new Error(error.message);
+      
+      setWishlistItems(prev => [data, ...prev]);
+      toast({
+        title: 'Sucesso',
+        description: 'Item adicionado à wishlist',
+      });
+    } catch (err) {
+      console.error('Erro ao adicionar item à wishlist:', err);
+      setError(err instanceof Error ? err.message : 'Erro desconhecido ao adicionar item');
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível adicionar o item à wishlist',
+        variant: 'destructive',
+      });
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  }
 
-  const value: WishlistContextType = {
-    // Empresa Cliente
-    empresasClientes,
-    fetchEmpresasClientes,
-    isLoadingEmpresas,
+  async function updateItem(id: string, updates: Partial<WishlistItem>) {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const { error } = await supabase
+        .from('wishlist')
+        .update(updates)
+        .eq('id', id);
+      
+      if (error) throw new Error(error.message);
+      
+      setWishlistItems(prev => 
+        prev.map(item => item.id === id ? { ...item, ...updates } : item)
+      );
+      
+      toast({
+        title: 'Sucesso',
+        description: 'Item atualizado com sucesso',
+      });
+    } catch (err) {
+      console.error('Erro ao atualizar item da wishlist:', err);
+      setError(err instanceof Error ? err.message : 'Erro desconhecido ao atualizar item');
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível atualizar o item',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }
 
-    // Wishlist Items
+  async function deleteItem(id: string) {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const { error } = await supabase
+        .from('wishlist')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw new Error(error.message);
+      
+      setWishlistItems(prev => prev.filter(item => item.id !== id));
+      
+      toast({
+        title: 'Sucesso',
+        description: 'Item removido da wishlist',
+      });
+    } catch (err) {
+      console.error('Erro ao excluir item da wishlist:', err);
+      setError(err instanceof Error ? err.message : 'Erro desconhecido ao excluir item');
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível remover o item',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function voteItem(id: string) {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      // Primeiro, obtenha o item atual para incrementar o contador de votos
+      const item = wishlistItems.find(i => i.id === id);
+      if (!item) throw new Error('Item não encontrado');
+      
+      const newVotes = (item.votes || 0) + 1;
+      
+      const { error } = await supabase
+        .from('wishlist')
+        .update({ votes: newVotes })
+        .eq('id', id);
+      
+      if (error) throw new Error(error.message);
+      
+      setWishlistItems(prev => 
+        prev.map(item => item.id === id ? { ...item, votes: newVotes } : item)
+      );
+      
+      toast({
+        title: 'Voto registrado',
+        description: 'Seu voto foi contabilizado com sucesso',
+      });
+    } catch (err) {
+      console.error('Erro ao votar em item da wishlist:', err);
+      setError(err instanceof Error ? err.message : 'Erro desconhecido ao votar');
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível registrar seu voto',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function refreshItems() {
+    return fetchWishlistItems();
+  }
+
+  const value = {
     wishlistItems,
-    fetchWishlistItems,
-    isLoadingWishlist,
-
-    // Apresentações
-    apresentacoes,
-    fetchApresentacoes,
-    isLoadingApresentacoes,
-
-    // Estado geral
     isLoading,
     error,
-
-    // Stats
-    stats,
-
-    // Mutations - EmpresaCliente
-    addEmpresaCliente: placeholderAddEmpresaCliente,
-    updateEmpresaCliente: placeholderUpdateEmpresaCliente,
-
-    // Mutations - WishlistItem
-    addWishlistItem: placeholderAddWishlistItem,
-    updateWishlistItem: placeholderUpdateWishlistItem,
-    convertToOportunidade: placeholderConvertToOportunidade,
-
-    // Mutations - Apresentacao
-    addApresentacao: placeholderAddApresentacao,
-    solicitarApresentacao: placeholderSolicitarApresentacao,
+    addItem,
+    updateItem,
+    deleteItem,
+    voteItem,
+    refreshItems,
   };
 
   return (
@@ -278,12 +223,16 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       {children}
     </WishlistContext.Provider>
   );
-};
+}
 
-export const useWishlist = () => {
+// Hook para usar o contexto
+export function useWishlist() {
   const context = useContext(WishlistContext);
   if (context === undefined) {
-    throw new Error("useWishlist deve ser usado dentro de um WishlistProvider");
+    throw new Error('useWishlist deve ser usado dentro de um WishlistProvider');
   }
   return context;
-};
+}
+
+// Exportação padrão para permitir imports mais limpos
+export default WishlistProvider;
