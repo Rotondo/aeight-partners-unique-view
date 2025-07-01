@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -154,10 +155,20 @@ export default class ErrorBoundary extends React.Component<ErrorBoundaryProps, E
       caches.keys().then(names => {
         names.forEach(name => caches.delete(name));
       }).finally(() => {
-        window.location.reload();
+        this.safeReload();
       });
     } else {
-      window.location.reload();
+      this.safeReload();
+    }
+  };
+
+  private safeReload = () => {
+    try {
+      if (typeof window !== 'undefined' && window.location) {
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error('[ErrorBoundary] Erro ao recarregar:', error);
     }
   };
 
@@ -195,7 +206,15 @@ export default class ErrorBoundary extends React.Component<ErrorBoundaryProps, E
               </Button>
 
               <Button 
-                onClick={() => window.history.back()} 
+                onClick={() => {
+                  try {
+                    if (typeof window !== 'undefined' && window.history) {
+                      window.history.back();
+                    }
+                  } catch (error) {
+                    console.error('[ErrorBoundary] Erro ao voltar:', error);
+                  }
+                }} 
                 variant="ghost"
               >
                 Voltar

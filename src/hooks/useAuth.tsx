@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -70,7 +71,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .eq("email", email)
         .maybeSingle();
       
-      const result = await withTimeout(query.then(r => r), AUTH_TIMEOUT);
+      // Convert PromiseLike to Promise for withTimeout compatibility
+      const result = await withTimeout(Promise.resolve(query), AUTH_TIMEOUT);
       const { data, error: dbError } = result;
       
       if (dbError) {
