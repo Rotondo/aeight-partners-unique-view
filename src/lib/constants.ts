@@ -1,4 +1,3 @@
-
 // Constantes globais da aplicação
 export const APP_NAME = "A&eight Partners";
 export const APP_VERSION = "2.0.0";
@@ -68,24 +67,32 @@ export const BREAKPOINTS = {
   LARGE: 1280
 } as const;
 
-// Default UI settings (placeholder values)
+// Default UI settings
 export const DEFAULTS = {
   CARD_HEIGHT: '400px',
-  CHART_HEIGHT: '300px', // Used in OpportunitiesChart
+  CHART_HEIGHT: '300px',
   TABLE_ROW_HEIGHT: '48px',
+  PAGINATION_LIMIT: 10
 } as const;
 
-// Chart Colors (placeholder values)
+// Chart Colors
 export const CHART_COLORS = {
-  PRIMARY: '#8884d8',
-  SECONDARY: '#82ca9d',
-  SUCCESS: '#4caf50',
-  WARNING: '#ffc107',
-  DANGER: '#f44336',
-  PURPLE: '#9c27b0', // Used in OpportunitiesChart
-  INFO: '#2196f3',
+  PRIMARY: '#0088fe',
+  SECONDARY: '#00c49f',
+  SUCCESS: '#10b981',
+  WARNING: '#f59e0b',
+  DANGER: '#ef4444',
+  PURPLE: '#8b5cf6',
+  INFO: '#2196f3'
 } as const;
 
+// Status color mappings
+export const STATUS_COLORS = {
+  em_contato: "#f59e0b",
+  negociando: "#8b5cf6", 
+  ganho: "#10b981",
+  perdido: "#ef4444"
+} as const;
 
 // Main App Configuration Object
 export const APP_CONFIG = {
@@ -102,6 +109,23 @@ export const APP_CONFIG = {
   CACHE_CONFIG,
   PAGINATION_CONFIG,
   BREAKPOINTS,
-  DEFAULTS, // Added
-  CHART_COLORS, // Added
+  DEFAULTS,
+  CHART_COLORS
+} as const;
+
+// API endpoints and external URLs
+const SUPABASE_PROJECT_ID = import.meta.env.VITE_SUPABASE_PROJECT_ID || 'amuadbftctnmckncgeua';
+const STORAGE_BASE_URL = `https://${SUPABASE_PROJECT_ID}.supabase.co/storage/v1/object/public`;
+
+export const EXTERNAL_URLS = {
+  SUPABASE_DASHBOARD: `https://supabase.com/dashboard/project/${SUPABASE_PROJECT_ID}`,
+  DOCUMENTATION: "https://docs.lovable.dev/",
+  MATERIAIS_BUCKET_PUBLIC_URL: `${STORAGE_BASE_URL}/materiais/`
+} as const;
+
+// Form validation constants
+export const VALIDATION = {
+  EMAIL_REGEX: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+  PHONE_REGEX: /^[\+]?[1-9][\d]{0,15}$/,
+  MIN_PASSWORD_LENGTH: 6
 } as const;

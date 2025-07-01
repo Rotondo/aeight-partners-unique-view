@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -10,8 +9,8 @@ interface ErrorBoundaryProps {
 
 interface ErrorBoundaryState {
   hasError: boolean;
-  error: any;
-  errorInfo: any;
+  error: Error | null; // Tipo mais específico
+  errorInfo: React.ErrorInfo | null; // Tipo mais específico
   isBlankScreen: boolean;
   retryCount: number;
 }
@@ -31,11 +30,11 @@ export default class ErrorBoundary extends React.Component<ErrorBoundaryProps, E
     };
   }
 
-  static getDerivedStateFromError(error: any) {
-    return { hasError: true, error: error, errorInfo: null };
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error, errorInfo: null, isBlankScreen: false, retryCount: 0 };
   }
 
-  componentDidCatch(error: any, errorInfo: any) {
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error("[ErrorBoundary] Erro capturado:", error, errorInfo);
     this.setState({ errorInfo });
 
