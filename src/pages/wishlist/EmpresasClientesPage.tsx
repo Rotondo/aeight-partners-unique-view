@@ -1,17 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useWishlist } from "@/contexts/WishlistContext";
-import { Plus, Search, Building2, TrendingUp, ArrowLeft } from "lucide-react";
+import { Plus, Building2, TrendingUp, ArrowLeft } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import ParceiroRelevanceCard from "@/components/wishlist/ParceiroRelevanceCard";
 import { useParceiroRelevance } from "@/hooks/useParceiroRelevance";
-import ClientesVinculadosTable from "@/components/wishlist/ClientesVinculadosTable";
-import ClientesNaoVinculadosTable from "@/components/wishlist/ClientesNaoVinculadosTable";
 import ClienteFormModal from "@/components/wishlist/ClienteFormModal";
 import ApresentacaoModal from "@/components/wishlist/ApresentacaoModal";
-import ClientesStats from "@/components/wishlist/ClientesStats";
+import ClientSearchFilters from "@/components/wishlist/ClientSearchFilters";
+import ClientesTabContent from "@/components/wishlist/ClientesTabContent";
+import RelevanciaTabContent from "@/components/wishlist/RelevanciaTabContent";
 import { useNavigate } from "react-router-dom";
 import { DemoModeToggle } from "@/components/privacy/DemoModeToggle";
 import { DemoModeIndicator } from "@/components/privacy/DemoModeIndicator";
@@ -295,30 +293,6 @@ const EmpresasClientesPage: React.FC = () => {
   // Garantindo que empresasClientes é um array
   const empresasClientesArray = Array.isArray(empresasClientes) ? empresasClientes : [];
 
-  // Filtros robustos: nunca acessar .nome em objeto nulo, logando inconsistências
-  const filteredClientesVinculados = empresasClientesArray.filter((cliente) => {
-    try {
-      if (!cliente) return false;
-      
-      const clienteNome = cliente?.empresa_cliente?.nome || "";
-      const proprietarioNome = cliente?.empresa_proprietaria?.nome || "";
-      
-      if (!cliente.empresa_cliente || !cliente.empresa_cliente.nome) {
-        console.warn(`${CONSOLE_PREFIX} Cliente sem nome ou objeto nulo:`, cliente);
-      }
-      if (!cliente.empresa_proprietaria || !cliente.empresa_proprietaria.nome) {
-        console.warn(`${CONSOLE_PREFIX} Proprietário sem nome ou objeto nulo:`, cliente);
-      }
-      return (
-        clienteNome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        proprietarioNome.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    } catch (error) {
-      console.error(`${CONSOLE_PREFIX} Erro ao filtrar clientes vinculados:`, error, cliente);
-      return false;
-    }
-  });
-
   const clientesVinculadosIds = new Set(
     empresasClientesArray.map((c) => c?.empresa_cliente_id).filter(Boolean)
   );
@@ -330,10 +304,7 @@ const EmpresasClientesPage: React.FC = () => {
       if (!cliente.nome) {
         console.warn(`${CONSOLE_PREFIX} Cliente não vinculado sem nome:`, cliente);
       }
-      return (
-        !clientesVinculadosIds.has(cliente.id) &&
-        (cliente.nome || "").toLowerCase().includes(searchTerm.toLowerCase())
-      );
+      return !clientesVinculadosIds.has(cliente.id);
     } catch (error) {
       console.error(`${CONSOLE_PREFIX} Erro ao filtrar clientes não vinculados:`, error, cliente);
       return false;
@@ -425,95 +396,29 @@ const EmpresasClientesPage: React.FC = () => {
         </TabsList>
 
         {/* Search */}
-        <div className="flex items-center space-x-2 mt-4">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder={
-                activeTab === "clientes"
-                  ? "Buscar por empresa ou proprietário..."
-                  : "Buscar parceiros..."
-              }
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-8"
-            />
-          </div>
-        </div>
+        <ClientSearchFilters
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          activeTab={activeTab}
+        />
 
         <TabsContent value="clientes" className="space-y-6">
-          {/* Estatísticas */}
-          <ClientesStats
-            empresasClientes={empresasClientesArray}
+          <ClientesTabContent
+            empresasClientesArray={empresasClientesArray}
+            searchTerm={searchTerm}
+            filteredClientesNaoVinculados={filteredClientesNaoVinculados}
+            onEditar={handleEditar}
+            onSolicitarApresentacao={handleSolicitarApresentacao}
+            onVincularCliente={handleVincularCliente}
           />
-
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-semibold mb-2">Clientes Vinculados</h3>
-              <ClientesVinculadosTable
-                clientesVinculados={filteredClientesVinculados}
-                onEditar={handleEditar}
-                onSolicitarApresentacao={handleSolicitarApresentacao}
-              />
-            </div>
-
-            <div>
-              <h3 className="text-lg font-semibold mb-2">Clientes Disponíveis para Vinculação</h3>
-              <div className="overflow-x-auto rounded-md border bg-background shadow-sm">
-                <table className="min-w-full text-sm align-middle">
-                  <thead>
-                    <tr className="border-b text-muted-foreground">
-                      <th className="px-3 py-2 text-left font-medium">Cliente</th>
-                      <th className="px-3 py-2 text-left font-medium">Proprietário</th>
-                      <th className="px-3 py-2 text-left font-medium">Status</th>
-                      <th className="px-3 py-2 text-left font-medium">Desde</th>
-                      <th className="px-3 py-2 text-left font-medium">Ações</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <ClientesNaoVinculadosTable
-                      clientesNaoVinculados={filteredClientesNaoVinculados}
-                      onVincular={handleVincularCliente}
-                    />
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
         </TabsContent>
 
         <TabsContent value="relevancia" className="space-y-6">
-          {loadingRelevance ? (
-            <div className="flex items-center justify-center h-64">
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-                <p className="mt-4 text-muted-foreground">Calculando relevância...</p>
-              </div>
-            </div>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {filteredParceiros.map((parceiro) => (
-                <ParceiroRelevanceCard
-                  key={parceiro.id}
-                  parceiro={parceiro}
-                />
-              ))}
-
-              {filteredParceiros.length === 0 && (
-                <div className="col-span-full py-12 text-center text-muted-foreground">
-                  <TrendingUp className="h-12 w-12 mx-auto mb-2 text-muted-foreground" />
-                  <div className="text-lg font-semibold mb-1">
-                    Nenhum parceiro encontrado
-                  </div>
-                  <div>
-                    {searchTerm
-                      ? "Tente ajustar os filtros de busca"
-                      : "Aguarde o cálculo da relevância dos parceiros"}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
+          <RelevanciaTabContent
+            loadingRelevance={loadingRelevance}
+            filteredParceiros={filteredParceiros}
+            searchTerm={searchTerm}
+          />
         </TabsContent>
       </Tabs>
 
