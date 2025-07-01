@@ -1,31 +1,110 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { supabase } from '@/lib/supabase';
-import { toast } from '@/components/ui/use-toast';
 
-// Definição dos tipos
+import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
+import { supabase } from '@/lib/supabase';
+import { toast } from '@/hooks/use-toast';
+import { useWishlistData } from '@/hooks/useWishlistData';
+import { useWishlistMutations } from '@/hooks/useWishlistMutations';
+
+const CONSOLE_PREFIX = "[WishlistContext]";
+
+// Definição dos tipos básicos para o contexto
 export interface WishlistItem {
   id: string;
   created_at: string;
-  title: string;
-  description: string | null;
-  url: string | null;
-  priority: 'alta' | 'média' | 'baixa';
-  status: 'pendente' | 'em_andamento' | 'concluído';
-  tipo: 'feature' | 'bug' | 'melhoria' | 'outro';
-  user_id: string;
-  votes: number;
-  assignee_id: string | null;
+  title?: string;
+  description?: string | null;
+  url?: string | null;
+  priority?: 'alta' | 'média' | 'baixa';
+  status?: 'pendente' | 'em_andamento' | 'concluído';
+  tipo?: 'feature' | 'bug' | 'melhoria' | 'outro';
+  user_id?: string;
+  votes?: number;
+  assignee_id?: string | null;
+  empresa_interessada_id: string;
+  empresa_desejada_id: string;
+  empresa_proprietaria_id: string;
+  motivo?: string;
+  prioridade: number;
+  data_solicitacao: string;
+  data_resposta?: string;
+  observacoes?: string;
+  updated_at: string;
+  empresa_interessada?: any;
+  empresa_desejada?: any;
+  empresa_proprietaria?: any;
+  apresentacoes?: any[];
+}
+
+export interface EmpresaCliente {
+  id: string;
+  empresa_proprietaria_id: string;
+  empresa_cliente_id: string;
+  data_relacionamento: string;
+  status: boolean;
+  observacoes?: string;
+  created_at: string;
+  updated_at: string;
+  empresa_proprietaria?: any;
+  empresa_cliente?: any;
+}
+
+export interface WishlistApresentacao {
+  id: string;
+  wishlist_item_id: string;
+  empresa_facilitadora_id: string;
+  data_apresentacao: string;
+  tipo_apresentacao: string;
+  status_apresentacao: string;
+  feedback?: string;
+  converteu_oportunidade: boolean;
+  oportunidade_id?: string;
+  created_at: string;
+  updated_at: string;
+  wishlist_item?: WishlistItem;
+  empresa_facilitadora?: any;
+  oportunidade?: any;
+}
+
+export interface WishlistStats {
+  totalSolicitacoes: number;
+  solicitacoesPendentes: number;
+  solicitacoesAprovadas: number;
+  apresentacoesRealizadas: number;
+  conversaoOportunidades: number;
+  empresasMaisDesejadas: { nome: string; total: number }[];
+  facilitacoesPorParceiro: { parceiro: string; total: number }[];
 }
 
 interface WishlistContextType {
+  // Estado principal
   wishlistItems: WishlistItem[];
-  isLoading: boolean;
+  empresasClientes: EmpresaCliente[];
+  apresentacoes: WishlistApresentacao[];
+  stats: WishlistStats | null;
+  loading: boolean;
   error: string | null;
-  addItem: (item: Omit<WishlistItem, 'id' | 'created_at' | 'votes'>) => Promise<void>;
-  updateItem: (id: string, updates: Partial<WishlistItem>) => Promise<void>;
-  deleteItem: (id: string) => Promise<void>;
-  voteItem: (id: string) => Promise<void>;
+
+  // Funções de busca
+  fetchWishlistItems: () => Promise<void>;
+  fetchEmpresasClientes: () => Promise<void>;
+  fetchApresentacoes: () => Promise<void>;
+  fetchStats: () => Promise<void>;
   refreshItems: () => Promise<void>;
+
+  // Mutations para wishlist items
+  addItem?: (item: Omit<WishlistItem, 'id' | 'created_at' | 'votes'>) => Promise<void>;
+  updateItem?: (id: string, updates: Partial<WishlistItem>) => Promise<void>;
+  deleteItem?: (id: string) => Promise<void>;
+  voteItem?: (id: string) => Promise<void>;
+
+  // Mutations para empresas clientes
+  addEmpresaCliente?: (data: any) => Promise<void>;
+  updateEmpresaCliente?: (id: string, updates: any) => Promise<void>;
+  deleteEmpresaCliente?: (id: string) => Promise<void>;
+
+  // Mutations para apresentações
+  solicitarApresentacao?: (data: any) => Promise<void>;
+  updateApresentacao?: (id: string, updates: any) => Promise<void>;
 }
 
 // Criação do contexto
@@ -33,189 +112,196 @@ const WishlistContext = createContext<WishlistContextType | undefined>(undefined
 
 // Provider component
 export function WishlistProvider({ children }: { children: ReactNode }) {
-  const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const initializationRef = useRef(false);
 
-  // Carregar itens quando o componente montar
-  useEffect(() => {
-    fetchWishlistItems();
-  }, []);
+  // Usar o hook de dados
+  const {
+    empresasClientes,
+    wishlistItems,
+    apresentacoes,
+    stats,
+    setEmpresasClientes,
+    setWishlistItems,
+    setApresentacoes,
+    setStats,
+    fetchEmpresasClientes: fetchEmpresasClientesData,
+    fetchWishlistItems: fetchWishlistItemsData,
+    fetchApresentacoes: fetchApresentacoesData,
+    fetchStats: fetchStatsData,
+  } = useWishlistData();
 
-  async function fetchWishlistItems() {
+  // Usar o hook de mutations
+  const {
+    addEmpresaCliente,
+    updateEmpresaCliente,
+    deleteEmpresaCliente,
+    solicitarApresentacao,
+    updateApresentacao,
+  } = useWishlistMutations({
+    setEmpresasClientes,
+    setWishlistItems,
+    setApresentacoes,
+    setStats,
+  });
+
+  // Função de inicialização dos dados
+  const initializeData = async () => {
+    if (initializationRef.current) {
+      console.log(`${CONSOLE_PREFIX} Inicialização já em andamento, pulando...`);
+      return;
+    }
+
+    console.log(`${CONSOLE_PREFIX} Iniciando carregamento inicial de dados...`);
+    initializationRef.current = true;
+    setLoading(true);
+    setError(null);
+
     try {
-      setIsLoading(true);
-      setError(null);
-      
-      const { data, error } = await supabase
-        .from('wishlist')
-        .select('*')
-        .order('votes', { ascending: false });
-      
-      if (error) throw new Error(error.message);
-      
-      setWishlistItems(data || []);
+      // Carregar empresas clientes primeiro (dados principais)
+      console.log(`${CONSOLE_PREFIX} Carregando empresas clientes...`);
+      await fetchEmpresasClientesData();
+
+      // Carregar demais dados em paralelo
+      console.log(`${CONSOLE_PREFIX} Carregando dados complementares...`);
+      await Promise.all([
+        fetchWishlistItemsData(),
+        fetchApresentacoesData(),
+        fetchStatsData(),
+      ]);
+
+      console.log(`${CONSOLE_PREFIX} Todos os dados carregados com sucesso`);
     } catch (err) {
-      console.error('Erro ao buscar itens da wishlist:', err);
-      setError(err instanceof Error ? err.message : 'Erro desconhecido ao buscar wishlist');
+      const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido';
+      console.error(`${CONSOLE_PREFIX} Erro no carregamento inicial:`, err);
+      setError(errorMessage);
       toast({
         title: 'Erro',
-        description: 'Não foi possível carregar os itens da wishlist',
+        description: 'Não foi possível carregar os dados da wishlist',
         variant: 'destructive',
       });
     } finally {
-      setIsLoading(false);
+      setLoading(false);
+      initializationRef.current = false;
     }
-  }
+  };
 
-  async function addItem(item: Omit<WishlistItem, 'id' | 'created_at' | 'votes'>) {
+  // Carregar dados quando o componente montar
+  useEffect(() => {
+    initializeData();
+  }, []); // Apenas na montagem inicial
+
+  // Função para recarregar todos os dados
+  const refreshItems = async () => {
+    console.log(`${CONSOLE_PREFIX} Atualizando todos os dados...`);
+    setLoading(true);
+    setError(null);
+
     try {
-      setIsLoading(true);
-      setError(null);
-      
-      const { data, error } = await supabase
-        .from('wishlist')
-        .insert({ ...item, votes: 0 })
-        .select()
-        .single();
-      
-      if (error) throw new Error(error.message);
-      
-      setWishlistItems(prev => [data, ...prev]);
-      toast({
-        title: 'Sucesso',
-        description: 'Item adicionado à wishlist',
-      });
+      await Promise.all([
+        fetchEmpresasClientesData(),
+        fetchWishlistItemsData(),
+        fetchApresentacoesData(),
+        fetchStatsData(),
+      ]);
+      console.log(`${CONSOLE_PREFIX} Dados atualizados com sucesso`);
     } catch (err) {
-      console.error('Erro ao adicionar item à wishlist:', err);
-      setError(err instanceof Error ? err.message : 'Erro desconhecido ao adicionar item');
+      const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido';
+      console.error(`${CONSOLE_PREFIX} Erro na atualização:`, err);
+      setError(errorMessage);
       toast({
         title: 'Erro',
-        description: 'Não foi possível adicionar o item à wishlist',
+        description: 'Não foi possível atualizar os dados',
         variant: 'destructive',
       });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Funções de busca individuais
+  const fetchWishlistItems = async () => {
+    setLoading(true);
+    try {
+      await fetchWishlistItemsData();
+    } catch (err) {
+      console.error(`${CONSOLE_PREFIX} Erro ao buscar wishlist items:`, err);
       throw err;
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
-  }
+  };
 
-  async function updateItem(id: string, updates: Partial<WishlistItem>) {
+  const fetchEmpresasClientes = async () => {
+    setLoading(true);
     try {
-      setIsLoading(true);
-      setError(null);
-      
-      const { error } = await supabase
-        .from('wishlist')
-        .update(updates)
-        .eq('id', id);
-      
-      if (error) throw new Error(error.message);
-      
-      setWishlistItems(prev => 
-        prev.map(item => item.id === id ? { ...item, ...updates } : item)
-      );
-      
-      toast({
-        title: 'Sucesso',
-        description: 'Item atualizado com sucesso',
-      });
+      await fetchEmpresasClientesData();
     } catch (err) {
-      console.error('Erro ao atualizar item da wishlist:', err);
-      setError(err instanceof Error ? err.message : 'Erro desconhecido ao atualizar item');
-      toast({
-        title: 'Erro',
-        description: 'Não foi possível atualizar o item',
-        variant: 'destructive',
-      });
+      console.error(`${CONSOLE_PREFIX} Erro ao buscar empresas clientes:`, err);
+      throw err;
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
-  }
+  };
 
-  async function deleteItem(id: string) {
+  const fetchApresentacoes = async () => {
+    setLoading(true);
     try {
-      setIsLoading(true);
-      setError(null);
-      
-      const { error } = await supabase
-        .from('wishlist')
-        .delete()
-        .eq('id', id);
-      
-      if (error) throw new Error(error.message);
-      
-      setWishlistItems(prev => prev.filter(item => item.id !== id));
-      
-      toast({
-        title: 'Sucesso',
-        description: 'Item removido da wishlist',
-      });
+      await fetchApresentacoesData();
     } catch (err) {
-      console.error('Erro ao excluir item da wishlist:', err);
-      setError(err instanceof Error ? err.message : 'Erro desconhecido ao excluir item');
-      toast({
-        title: 'Erro',
-        description: 'Não foi possível remover o item',
-        variant: 'destructive',
-      });
+      console.error(`${CONSOLE_PREFIX} Erro ao buscar apresentações:`, err);
+      throw err;
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
-  }
+  };
 
-  async function voteItem(id: string) {
+  const fetchStats = async () => {
+    setLoading(true);
     try {
-      setIsLoading(true);
-      setError(null);
-      
-      // Primeiro, obtenha o item atual para incrementar o contador de votos
-      const item = wishlistItems.find(i => i.id === id);
-      if (!item) throw new Error('Item não encontrado');
-      
-      const newVotes = (item.votes || 0) + 1;
-      
-      const { error } = await supabase
-        .from('wishlist')
-        .update({ votes: newVotes })
-        .eq('id', id);
-      
-      if (error) throw new Error(error.message);
-      
-      setWishlistItems(prev => 
-        prev.map(item => item.id === id ? { ...item, votes: newVotes } : item)
-      );
-      
-      toast({
-        title: 'Voto registrado',
-        description: 'Seu voto foi contabilizado com sucesso',
-      });
+      await fetchStatsData();
     } catch (err) {
-      console.error('Erro ao votar em item da wishlist:', err);
-      setError(err instanceof Error ? err.message : 'Erro desconhecido ao votar');
-      toast({
-        title: 'Erro',
-        description: 'Não foi possível registrar seu voto',
-        variant: 'destructive',
-      });
+      console.error(`${CONSOLE_PREFIX} Erro ao buscar estatísticas:`, err);
+      throw err;
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
-  }
+  };
 
-  async function refreshItems() {
-    return fetchWishlistItems();
-  }
+  // Logs de diagnóstico
+  useEffect(() => {
+    console.log(`${CONSOLE_PREFIX} Estado atual:`, {
+      empresasClientes: empresasClientes?.length || 0,
+      wishlistItems: wishlistItems?.length || 0,
+      apresentacoes: apresentacoes?.length || 0,
+      loading,
+      error,
+    });
+  }, [empresasClientes, wishlistItems, apresentacoes, loading, error]);
 
-  const value = {
-    wishlistItems,
-    isLoading,
+  const value: WishlistContextType = {
+    // Estado
+    wishlistItems: wishlistItems || [],
+    empresasClientes: empresasClientes || [],
+    apresentacoes: apresentacoes || [],
+    stats,
+    loading,
     error,
-    addItem,
-    updateItem,
-    deleteItem,
-    voteItem,
+
+    // Funções de busca
+    fetchWishlistItems,
+    fetchEmpresasClientes,
+    fetchApresentacoes,
+    fetchStats,
     refreshItems,
+
+    // Mutations
+    addEmpresaCliente,
+    updateEmpresaCliente,
+    deleteEmpresaCliente,
+    solicitarApresentacao,
+    updateApresentacao,
   };
 
   return (

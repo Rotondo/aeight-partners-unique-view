@@ -28,14 +28,16 @@ type EmpresaOption = {
 const CONSOLE_PREFIX = "[EmpresasClientesPage]";
 
 const EmpresasClientesPage: React.FC = () => {
+  // Garantir que useWishlist retorne dados válidos
+  const wishlistContext = useWishlist();
   const {
-    empresasClientes = [], // Adiciona valor padrão para evitar undefined
-    loading: loadingEmpresasClientes,
+    empresasClientes = [],
+    loading: loadingEmpresasClientes = false,
     fetchEmpresasClientes,
     addEmpresaCliente,
     updateEmpresaCliente,
     solicitarApresentacao,
-  } = useWishlist() || {}; // Adiciona valor padrão caso useWishlist retorne undefined
+  } = wishlistContext || {};
 
   const { parceiros = [], loading: loadingRelevance, refresh: refreshRelevance } = useParceiroRelevance() || {};
 
@@ -65,44 +67,51 @@ const EmpresasClientesPage: React.FC = () => {
   const [empresasClientesAll, setEmpresasClientesAll] = useState<EmpresaOption[]>([]);
 
   // Demo mode context
-  const { isDemoMode } = usePrivacy() || {}; // Adiciona valor padrão
+  const { isDemoMode } = usePrivacy() || {};
 
   // Navegação
   const navigate = useNavigate();
+
+  // Forçar carregamento inicial ao montar o componente
+  useEffect(() => {
+    console.log(`${CONSOLE_PREFIX} Componente montado, forçando carregamento de dados...`);
+    if (fetchEmpresasClientes) {
+      fetchEmpresasClientes();
+    }
+  }, [fetchEmpresasClientes]);
 
   // Buscar empresas para o formulário
   useEffect(() => {
     const fetchEmpresas = async () => {
       try {
+        console.log(`${CONSOLE_PREFIX} Buscando empresas para formulário...`);
         const { data, error } = await supabase
           .from("empresas")
           .select("id,nome,tipo")
           .order("nome");
 
         if (!error && data) {
-          setEmpresasClientesOptions(
-            data.filter((e: any) => e.tipo === "cliente").map((e: any) => ({
-              id: e.id,
-              nome: e.nome,
-              tipo: e.tipo as EmpresaTipoString
-            }))
-          );
-          setEmpresasParceiros(
-            data.filter((e: any) => e.tipo === "parceiro" || e.tipo === "intragrupo").map((e: any) => ({
-              id: e.id,
-              nome: e.nome,
-              tipo: e.tipo as EmpresaTipoString
-            }))
-          );
-          setEmpresasClientesAll(
-            data.filter((e: any) => e.tipo === "cliente").map((e: any) => ({
-              id: e.id,
-              nome: e.nome,
-              tipo: e.tipo as EmpresaTipoString
-            }))
-          );
+          console.log(`${CONSOLE_PREFIX} Empresas encontradas:`, data.length);
+          
+          const clientes = data.filter((e: any) => e.tipo === "cliente").map((e: any) => ({
+            id: e.id,
+            nome: e.nome,
+            tipo: e.tipo as EmpresaTipoString
+          }));
+          
+          const parceiros = data.filter((e: any) => e.tipo === "parceiro" || e.tipo === "intragrupo").map((e: any) => ({
+            id: e.id,
+            nome: e.nome,
+            tipo: e.tipo as EmpresaTipoString
+          }));
+
+          setEmpresasClientesOptions(clientes);
+          setEmpresasParceiros(parceiros);
+          setEmpresasClientesAll(clientes);
+          
+          console.log(`${CONSOLE_PREFIX} Configurado: ${clientes.length} clientes, ${parceiros.length} parceiros`);
         } else {
-          console.error(`${CONSOLE_PREFIX} Erro ao buscar empresas do supabase`, error);
+          console.error(`${CONSOLE_PREFIX} Erro ao buscar empresas do supabase:`, error);
         }
       } catch (err) {
         console.error(`${CONSOLE_PREFIX} Erro na busca de empresas:`, err);
@@ -110,6 +119,15 @@ const EmpresasClientesPage: React.FC = () => {
     };
     fetchEmpresas();
   }, []);
+
+  // Log de estado para depuração
+  useEffect(() => {
+    console.log(`${CONSOLE_PREFIX} Estado atual:`, {
+      empresasClientes: empresasClientes?.length || 0,
+      loading: loadingEmpresasClientes,
+      hasData: Array.isArray(empresasClientes) && empresasClientes.length > 0
+    });
+  }, [empresasClientes, loadingEmpresasClientes]);
 
   const resetModal = () => {
     setParceirosSelecionados([]);
@@ -120,7 +138,6 @@ const EmpresasClientesPage: React.FC = () => {
   };
 
   const parceirosJaVinculadosAoCliente = (clienteId: string) => {
-    // Proteção contra empresasClientes undefined
     if (!empresasClientes || !Array.isArray(empresasClientes)) {
       console.warn(`${CONSOLE_PREFIX} empresasClientes não é um array`, empresasClientes);
       return [];
@@ -342,18 +359,6 @@ const EmpresasClientesPage: React.FC = () => {
     }
   });
 
-  useEffect(() => {
-    // Log de diagnóstico para facilitar troubleshooting
-    console.log(`${CONSOLE_PREFIX} Estado inicial`, {
-      empresasClientes: empresasClientesArray,
-      empresasClientesAll,
-      parceiros: parceirosArray,
-      filteredClientesVinculados,
-      filteredClientesNaoVinculados,
-      filteredParceiros,
-    });
-  }, [empresasClientesArray, empresasClientesAll, parceirosArray, filteredClientesVinculados, filteredClientesNaoVinculados, filteredParceiros]);
-
   if (loadingEmpresasClientes) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -442,16 +447,39 @@ const EmpresasClientesPage: React.FC = () => {
             empresasClientes={empresasClientesArray}
           />
 
-          <ClientesVinculadosTable
-            clientesVinculados={filteredClientesVinculados}
-            onEditar={handleEditar}
-            onSolicitarApresentacao={handleSolicitarApresentacao}
-          />
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-lg font-semibold mb-2">Clientes Vinculados</h3>
+              <ClientesVinculadosTable
+                clientesVinculados={filteredClientesVinculados}
+                onEditar={handleEditar}
+                onSolicitarApresentacao={handleSolicitarApresentacao}
+              />
+            </div>
 
-          <ClientesNaoVinculadosTable
-            clientesNaoVinculados={filteredClientesNaoVinculados}
-            onVincular={handleVincularCliente}
-          />
+            <div>
+              <h3 className="text-lg font-semibold mb-2">Clientes Disponíveis para Vinculação</h3>
+              <div className="overflow-x-auto rounded-md border bg-background shadow-sm">
+                <table className="min-w-full text-sm align-middle">
+                  <thead>
+                    <tr className="border-b text-muted-foreground">
+                      <th className="px-3 py-2 text-left font-medium">Cliente</th>
+                      <th className="px-3 py-2 text-left font-medium">Proprietário</th>
+                      <th className="px-3 py-2 text-left font-medium">Status</th>
+                      <th className="px-3 py-2 text-left font-medium">Desde</th>
+                      <th className="px-3 py-2 text-left font-medium">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <ClientesNaoVinculadosTable
+                      clientesNaoVinculados={filteredClientesNaoVinculados}
+                      onVincular={handleVincularCliente}
+                    />
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
         </TabsContent>
 
         <TabsContent value="relevancia" className="space-y-6">

@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import {
@@ -11,12 +12,11 @@ import {
 } from "@/types";
 import { toast } from "@/hooks/use-toast";
 
+const CONSOLE_PREFIX = "[useWishlistData]";
+
 /**
  * Hook para manipulação de dados da Wishlist e Clientes.
- * Corrigido para:
- * - Tratar propriedades nulas vindas de joins do Supabase.
- * - Evitar tela em branco por erro silencioso de acesso a .nome em objetos undefined.
- * - Garantir tipos corretos nas saídas.
+ * Corrigido para garantir carregamento correto dos relacionamentos entre empresas.
  */
 export const useWishlistData = () => {
   const [empresasClientes, setEmpresasClientes] = useState<EmpresaCliente[]>([]);
@@ -25,47 +25,102 @@ export const useWishlistData = () => {
   const [stats, setStats] = useState<WishlistStats | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Fetch Empresas Clientes (com tratamento robusto)
+  // Fetch Empresas Clientes com join correto
   const fetchEmpresasClientes = async () => {
-    console.log("[useWishlistData] Iniciando fetchEmpresasClientes...");
+    console.log(`${CONSOLE_PREFIX} Iniciando fetchEmpresasClientes...`);
     try {
       setLoading(true);
+      
+      // Query com joins explícitos para garantir que os dados sejam carregados
       const { data, error } = await supabase
         .from("empresa_clientes")
         .select(`
-          *,
-          empresa_proprietaria:empresas!empresa_clientes_empresa_proprietaria_id_fkey(*),
-          empresa_cliente:empresas!empresa_clientes_empresa_cliente_id_fkey(*)
+          id,
+          empresa_proprietaria_id,
+          empresa_cliente_id,
+          data_relacionamento,
+          status,
+          observacoes,
+          created_at,
+          updated_at,
+          empresa_proprietaria:empresas!empresa_clientes_empresa_proprietaria_id_fkey(
+            id,
+            nome,
+            tipo,
+            status
+          ),
+          empresa_cliente:empresas!empresa_clientes_empresa_cliente_id_fkey(
+            id,
+            nome,
+            tipo,
+            status
+          )
         `)
         .eq("status", true)
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error(`${CONSOLE_PREFIX} Erro na query empresa_clientes:`, error);
+        throw error;
+      }
 
-      // Corrigir casos onde o join do Supabase retorna null
-      const safeData = (data || []).map((item: any) => ({
-        ...item,
-        empresa_proprietaria: item.empresa_proprietaria || null,
-        empresa_cliente: item.empresa_cliente || null,
-      }));
+      console.log(`${CONSOLE_PREFIX} Dados brutos recebidos:`, data);
 
-      setEmpresasClientes(safeData);
+      if (!data || data.length === 0) {
+        console.warn(`${CONSOLE_PREFIX} Nenhum registro encontrado na tabela empresa_clientes`);
+        setEmpresasClientes([]);
+        return;
+      }
+
+      // Processar dados garantindo que os joins não sejam null
+      const processedData = data.map((item: any) => {
+        const processed = {
+          ...item,
+          empresa_proprietaria: item.empresa_proprietaria || {
+            id: item.empresa_proprietaria_id,
+            nome: '[Empresa não encontrada]',
+            tipo: 'parceiro',
+            status: false
+          },
+          empresa_cliente: item.empresa_cliente || {
+            id: item.empresa_cliente_id,
+            nome: '[Cliente não encontrado]',
+            tipo: 'cliente',
+            status: false
+          },
+        };
+
+        // Log de diagnóstico para cada item
+        if (!item.empresa_proprietaria) {
+          console.warn(`${CONSOLE_PREFIX} Proprietário não encontrado para relacionamento ${item.id}`);
+        }
+        if (!item.empresa_cliente) {
+          console.warn(`${CONSOLE_PREFIX} Cliente não encontrado para relacionamento ${item.id}`);
+        }
+
+        return processed;
+      });
+
+      console.log(`${CONSOLE_PREFIX} Dados processados:`, processedData);
+      setEmpresasClientes(processedData);
+
     } catch (error) {
-      console.error("Erro ao buscar empresas clientes:", error);
+      console.error(`${CONSOLE_PREFIX} Erro ao buscar empresas clientes:`, error);
       toast({
         title: "Erro",
         description: "Erro ao carregar empresas clientes",
         variant: "destructive",
       });
+      setEmpresasClientes([]);
     } finally {
       setLoading(false);
-       console.info("[useWishlistData] fetchEmpresasClientes concluído.");
+      console.log(`${CONSOLE_PREFIX} fetchEmpresasClientes concluído.`);
     }
   };
 
   // Fetch Wishlist Items
   const fetchWishlistItems = async () => {
-    console.log("[useWishlistData] Iniciando fetchWishlistItems...");
+    console.log(`${CONSOLE_PREFIX} Iniciando fetchWishlistItems...`);
     try {
       setLoading(true);
       const { data, error } = await supabase
@@ -91,7 +146,7 @@ export const useWishlistData = () => {
 
       setWishlistItems(typedData);
     } catch (error) {
-      console.error("Erro ao buscar wishlist items:", error);
+      console.error(`${CONSOLE_PREFIX} Erro ao buscar wishlist items:`, error);
       toast({
         title: "Erro",
         description: "Erro ao carregar itens da wishlist",
@@ -99,13 +154,13 @@ export const useWishlistData = () => {
       });
     } finally {
       setLoading(false);
-       console.info("[useWishlistData] fetchWishlistItems concluído.");
+      console.log(`${CONSOLE_PREFIX} fetchWishlistItems concluído.`);
     }
   };
 
   // Fetch Apresentações
   const fetchApresentacoes = async () => {
-    console.log("[useWishlistData] Iniciando fetchApresentacoes...");
+    console.log(`${CONSOLE_PREFIX} Iniciando fetchApresentacoes...`);
     try {
       setLoading(true);
       const { data, error } = await supabase
@@ -141,7 +196,7 @@ export const useWishlistData = () => {
 
       setApresentacoes(typedData);
     } catch (error) {
-      console.error("Erro ao buscar apresentações:", error);
+      console.error(`${CONSOLE_PREFIX} Erro ao buscar apresentações:`, error);
       toast({
         title: "Erro",
         description: "Erro ao carregar apresentações",
@@ -149,13 +204,13 @@ export const useWishlistData = () => {
       });
     } finally {
       setLoading(false);
-       console.info("[useWishlistData] fetchApresentacoes concluído.");
+      console.log(`${CONSOLE_PREFIX} fetchApresentacoes concluído.`);
     }
   };
 
   // Fetch Stats
   const fetchStats = async () => {
-    console.log("[useWishlistData] Iniciando fetchStats...");
+    console.log(`${CONSOLE_PREFIX} Iniciando fetchStats...`);
     try {
       // Buscar estatísticas básicas
       const [wishlistData, apresentacoesData] = await Promise.all([
@@ -189,9 +244,9 @@ export const useWishlistData = () => {
 
       setStats(statsData);
     } catch (error) {
-      console.error("Erro ao buscar estatísticas:", error);
+      console.error(`${CONSOLE_PREFIX} Erro ao buscar estatísticas:`, error);
     } finally {
-      console.info("[useWishlistData] fetchStats concluído.");
+      console.log(`${CONSOLE_PREFIX} fetchStats concluído.`);
     }
   };
 
