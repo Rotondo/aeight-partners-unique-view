@@ -28,9 +28,13 @@ export const APP_CONFIG = {
 } as const;
 
 // API endpoints and external URLs
+const SUPABASE_PROJECT_ID = import.meta.env.VITE_SUPABASE_PROJECT_ID || 'amuadbftctnmckncgeua';
+const STORAGE_BASE_URL = `https://${SUPABASE_PROJECT_ID}.supabase.co/storage/v1/object/public`;
+
 export const EXTERNAL_URLS = {
-  SUPABASE_DASHBOARD: `https://supabase.com/dashboard/project/${import.meta.env.VITE_SUPABASE_PROJECT_ID || 'amuadbftctnmckncgeua'}`,
-  DOCUMENTATION: "https://docs.lovable.dev/"
+  SUPABASE_DASHBOARD: `https://supabase.com/dashboard/project/${SUPABASE_PROJECT_ID}`,
+  DOCUMENTATION: "https://docs.lovable.dev/",
+  MATERIAIS_BUCKET_PUBLIC_URL: `${STORAGE_BASE_URL}/materiais/`, // Adicionada URL do bucket de materiais
 } as const;
 
 // Form validation constants

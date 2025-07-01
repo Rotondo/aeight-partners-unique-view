@@ -1,8 +1,11 @@
 
 import React from "react";
+import { Navigate, useLocation } from "react-router-dom"; // Adicionado Navigate e useLocation
 import { useAuth } from "@/hooks/useAuth";
 import LoadingScreen from "@/components/ui/LoadingScreen";
-import LoginForm from "./LoginForm";
+// LoginForm não é mais renderizado diretamente aqui, então pode ser removido se não houver outro uso.
+// Por enquanto, vou manter caso haja outros usos ou para referência.
+// import LoginForm from "./LoginForm";
 
 interface PrivateRouteProps {
   children: React.ReactNode;
@@ -14,16 +17,19 @@ export const PrivateRoute: React.FC<PrivateRouteProps> = ({
   requireAdmin = false 
 }) => {
   const { user, isAuthenticated, loading } = useAuth();
+  const location = useLocation(); // Hook para obter a localização atual
 
   if (loading) {
     return <LoadingScreen />;
   }
 
-  if (!isAuthenticated || !user) {
-    return <LoginForm />;
+  if (!isAuthenticated) { // Apenas isAuthenticated é suficiente aqui, user será null se não autenticado
+    // Redireciona para a página de login, guardando a localização original
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   // Enhanced admin check with proper validation
+  // Verifica se o usuário existe antes de acessar 'papel'
   if (requireAdmin && user.papel !== 'admin') {
     return (
       <div className="flex items-center justify-center min-h-screen">

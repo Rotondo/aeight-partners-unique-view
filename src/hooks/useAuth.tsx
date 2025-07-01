@@ -1,6 +1,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import type { Session, AuthError, User as SupabaseAuthUser } from "@supabase/supabase-js"; // Importar tipos
 
 interface User {
   id: string;
@@ -125,10 +126,78 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Inicialização: tenta restaurar a sessão persistida e busca dados do usuário da tabela usuarios
   useEffect(() => {
     if (isDevelopment) {
-      console.log('useEffect de inicialização executado');
+      console.log('AuthProvider: useEffect de inicialização - configurando onAuthStateChange');
     }
-    refreshUser();
+    setLoading(true);
+
+    // Função para buscar dados do usuário do Supabase Auth e então da tabela 'usuarios'
+    const updateUserState = async (sessionUser: SupabaseAuthUser | null) => { // Tipo ajustado
+      if (sessionUser?.email) {
+        if (isDevelopment) {
+          console.log('AuthProvider: onAuthStateChange - SIGNED_IN, buscando dados do DB para', sessionUser.email);
+        }
+        const dbUser = await fetchUserFromDB(sessionUser.email);
+        setUser(dbUser);
+        if (!dbUser) {
+            setError("Usuário autenticado mas não encontrado na base de dados ou inativo.");
+        }
+      } else {
+        if (isDevelopment) {
+          console.log('AuthProvider: onAuthStateChange - SIGNED_OUT ou sem email');
+        }
+        setUser(null);
+      }
+      setLoading(false);
+    };
+
+    // Pega a sessão atual imediatamente ao carregar
+    supabase.auth.getSession().then(async (response: { data: { session: Session | null }; error: AuthError | null }) => {
+      if (response.error) {
+        console.error("AuthProvider: Erro ao obter sessão inicial (na resposta)", response.error);
+        setUser(null);
+        setLoading(false);
+        setError("Falha ao verificar sessão de autenticação: " + response.error.message);
+        return;
+      }
+
+      const currentSession = response.data.session; // Renomeado para evitar conflito com 'session' do onAuthStateChange
+      if (isDevelopment) {
+        console.log('AuthProvider: getSession inicial', currentSession ? `usuário ${currentSession.user.email}` : 'sem sessão');
+      }
+      // currentSession.user já é do tipo SupabaseAuthUser | null aqui.
+      // updateUserState espera sessionUser: SupabaseAuthUser | null (após ajuste no updateUserState)
+      await updateUserState(currentSession?.user ?? null);
+    }).catch(err => {
+        // Este catch lida com erros na execução da Promise getSession() em si, não erros na resposta.
+        console.error("AuthProvider: Erro crítico ao executar getSession()", err);
+        setUser(null);
+        setLoading(false);
+        setError("Falha crítica ao verificar sessão de autenticação.");
+    });
+
+    // Ouve por mudanças no estado de autenticação
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      async (event, session: Session | null) => { // Adicionada tipagem para session
+        if (isDevelopment) {
+          console.log('AuthProvider: onAuthStateChange evento:', event, session ? `usuário ${session.user.email}` : 'sem sessão');
+        }
+        setLoading(true); // Define loading true no início de cada mudança de estado
+        // session.user já é do tipo SupabaseAuthUser | null aqui.
+        await updateUserState(session?.user ?? null);
+      }
+    );
+
+    return () => {
+      if (isDevelopment) {
+        console.log('AuthProvider: useEffect de inicialização - limpando listener onAuthStateChange');
+      }
+      authListener?.subscription?.unsubscribe();
+    };
   }, []);
+
+  // Ajustar o tipo do parâmetro sessionUser em updateUserState
+  // ... (será feito na próxima modificação) ...
+
 
   const login = async (email: string, senha: string): Promise<boolean> => {
     // Input validation

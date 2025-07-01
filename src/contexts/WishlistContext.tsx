@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useEffect } from "react";
+import React, { createContext, useContext, useEffect, useRef } from "react"; // Adicionado useRef
 import {
   EmpresaCliente,
   WishlistItem,
@@ -93,19 +93,34 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({
     fetchApresentacoes
   );
 
+  const initialDataLoaded = useRef(false); // Ref para rastrear o carregamento inicial em StrictMode
+
   // Carregar dados iniciais
   useEffect(() => {
+    // Evitar dupla chamada em desenvolvimento com React.StrictMode
+    if (process.env.NODE_ENV === 'development') {
+      if (initialDataLoaded.current) {
+        console.log("[WishlistContext] StrictMode: Carregamento inicial já realizado, pulando segunda chamada.");
+        return;
+      }
+      initialDataLoaded.current = true;
+    }
+
     console.log("[WishlistContext] Iniciando carregamento de dados iniciais...");
     const loadAllData = async () => {
+      // As chamadas são sequenciais para evitar sobrecarregar o setLoading individual de useWishlistData
+      // Se pudessem ser paralelas e o setLoading fosse global, Promise.all seria uma opção.
       await fetchEmpresasClientes();
       await fetchWishlistItems();
       await fetchApresentacoes();
-      await fetchStats();
+      await fetchStats(); // fetchStats já tem seu próprio try/catch e não afeta o loading global do useWishlistData
       console.log("[WishlistContext] Carregamento de dados iniciais concluído.");
     };
+
     loadAllData();
-  }, []); // Adicionado fetchEmpresasClientes, fetchWishlistItems, fetchApresentacoes, fetchStats às dependências se eles não mudarem. Caso contrário, pode causar loop.
-          // Considerando que são estáveis, mantive o array de dependências vazio para carregar apenas uma vez.
+    // Adicionar as funções de fetch ao array de dependências para seguir as regras do hook useEffect.
+    // Essas funções vêm de useWishlistData e devem ser estáveis.
+  }, [fetchEmpresasClientes, fetchWishlistItems, fetchApresentacoes, fetchStats]);
 
   const value: WishlistContextType = {
     empresasClientes,

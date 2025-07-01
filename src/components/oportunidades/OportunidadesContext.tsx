@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode, useEffect } from "react";
+import React, { createContext, useContext, useState, ReactNode, useEffect, useRef } from "react"; // Adicionado useRef
 import { Oportunidade, StatusOportunidade, OportunidadesFilterParams, Usuario } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
@@ -435,10 +435,31 @@ export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ child
     }
   }, [filterParams, oportunidades]);
 
+  const initialDataLoaded = useRef(false); // Ref para rastrear o carregamento inicial
+
   useEffect(() => {
-    fetchOportunidades();
+    // Evitar dupla chamada em desenvolvimento com React.StrictMode
+    // e garantir que só carregue se o usuário estiver presente e válido.
+    if (user && validateUUID(user.id)) {
+      if (process.env.NODE_ENV === 'development') {
+        if (initialDataLoaded.current) {
+          console.log("[OportunidadesContext] StrictMode: Carregamento inicial já realizado ou em andamento, pulando segunda chamada.");
+          return;
+        }
+        initialDataLoaded.current = true;
+      }
+      fetchOportunidades();
+    } else {
+      // Se não houver usuário ou ID inválido, limpa os dados e reseta o flag
+      setOportunidades([]);
+      setFilteredOportunidades([]);
+      setIsLoading(false);
+      initialDataLoaded.current = false; // Permite carregar se o usuário logar depois
+      console.log("[OportunidadesContext] Usuário não disponível ou ID inválido, dados de oportunidades limpos.");
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+  }, [user]); // fetchOportunidades não precisa estar aqui se for estável e chamado internamente.
+              // A dependência em 'user' é a chave para disparar o carregamento.
 
   const value = {
     oportunidades: oportunidadesMasked,
