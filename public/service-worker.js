@@ -61,8 +61,13 @@ self.addEventListener('fetch', event => {
             }
           ).catch(error => {
             // O fetch pode falhar por vários motivos (offline, DNS, etc.)
-            console.warn('[SW] Fetch falhou; returning undefined. Request: ', event.request.url, error);
-            // Poderia retornar uma resposta de fallback customizada aqui se necessário
+            console.warn('[SW] Fetch falhou; retornando resposta de fallback. Request: ', event.request.url, error);
+            // Retorna uma resposta de fallback genérica
+            return new Response('Offline fallback response', {
+              status: 503,
+              statusText: 'Service Unavailable',
+              headers: { 'Content-Type': 'text/plain' }
+            });
           });
         })
     );
