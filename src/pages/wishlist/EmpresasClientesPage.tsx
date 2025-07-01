@@ -29,15 +29,15 @@ const CONSOLE_PREFIX = "[EmpresasClientesPage]";
 
 const EmpresasClientesPage: React.FC = () => {
   const {
-    empresasClientes,
+    empresasClientes = [], // Adiciona valor padrão para evitar undefined
     loading: loadingEmpresasClientes,
     fetchEmpresasClientes,
     addEmpresaCliente,
     updateEmpresaCliente,
     solicitarApresentacao,
-  } = useWishlist();
+  } = useWishlist() || {}; // Adiciona valor padrão caso useWishlist retorne undefined
 
-  const { parceiros, loading: loadingRelevance, refresh: refreshRelevance } = useParceiroRelevance();
+  const { parceiros = [], loading: loadingRelevance, refresh: refreshRelevance } = useParceiroRelevance() || {};
 
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("clientes");
@@ -65,7 +65,7 @@ const EmpresasClientesPage: React.FC = () => {
   const [empresasClientesAll, setEmpresasClientesAll] = useState<EmpresaOption[]>([]);
 
   // Demo mode context
-  const { isDemoMode } = usePrivacy();
+  const { isDemoMode } = usePrivacy() || {}; // Adiciona valor padrão
 
   // Navegação
   const navigate = useNavigate();
@@ -73,35 +73,39 @@ const EmpresasClientesPage: React.FC = () => {
   // Buscar empresas para o formulário
   useEffect(() => {
     const fetchEmpresas = async () => {
-      const { data, error } = await supabase
-        .from("empresas")
-        .select("id,nome,tipo")
-        .order("nome");
+      try {
+        const { data, error } = await supabase
+          .from("empresas")
+          .select("id,nome,tipo")
+          .order("nome");
 
-      if (!error && data) {
-        setEmpresasClientesOptions(
-          data.filter((e: any) => e.tipo === "cliente").map((e: any) => ({
-            id: e.id,
-            nome: e.nome,
-            tipo: e.tipo as EmpresaTipoString
-          }))
-        );
-        setEmpresasParceiros(
-          data.filter((e: any) => e.tipo === "parceiro" || e.tipo === "intragrupo").map((e: any) => ({
-            id: e.id,
-            nome: e.nome,
-            tipo: e.tipo as EmpresaTipoString
-          }))
-        );
-        setEmpresasClientesAll(
-          data.filter((e: any) => e.tipo === "cliente").map((e: any) => ({
-            id: e.id,
-            nome: e.nome,
-            tipo: e.tipo as EmpresaTipoString
-          }))
-        );
-      } else {
-        console.error(`${CONSOLE_PREFIX} Erro ao buscar empresas do supabase`, error);
+        if (!error && data) {
+          setEmpresasClientesOptions(
+            data.filter((e: any) => e.tipo === "cliente").map((e: any) => ({
+              id: e.id,
+              nome: e.nome,
+              tipo: e.tipo as EmpresaTipoString
+            }))
+          );
+          setEmpresasParceiros(
+            data.filter((e: any) => e.tipo === "parceiro" || e.tipo === "intragrupo").map((e: any) => ({
+              id: e.id,
+              nome: e.nome,
+              tipo: e.tipo as EmpresaTipoString
+            }))
+          );
+          setEmpresasClientesAll(
+            data.filter((e: any) => e.tipo === "cliente").map((e: any) => ({
+              id: e.id,
+              nome: e.nome,
+              tipo: e.tipo as EmpresaTipoString
+            }))
+          );
+        } else {
+          console.error(`${CONSOLE_PREFIX} Erro ao buscar empresas do supabase`, error);
+        }
+      } catch (err) {
+        console.error(`${CONSOLE_PREFIX} Erro na busca de empresas:`, err);
       }
     };
     fetchEmpresas();
@@ -115,65 +119,82 @@ const EmpresasClientesPage: React.FC = () => {
     setModalType("novo");
   };
 
-  const parceirosJaVinculadosAoCliente = (clienteId: string) =>
-    empresasClientes
+  const parceirosJaVinculadosAoCliente = (clienteId: string) => {
+    // Proteção contra empresasClientes undefined
+    if (!empresasClientes || !Array.isArray(empresasClientes)) {
+      console.warn(`${CONSOLE_PREFIX} empresasClientes não é um array`, empresasClientes);
+      return [];
+    }
+    
+    return empresasClientes
       .filter((v) => v.empresa_cliente_id === clienteId)
       .map((v) => v.empresa_proprietaria_id);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setModalLoading(true);
 
-    if (modalType === "editar" && editRelacionamentoId) {
-      await updateEmpresaCliente(editRelacionamentoId, {
-        empresa_proprietaria_id: parceirosSelecionados[0],
-        empresa_cliente_id: empresaCliente,
-        observacoes,
-      });
-    } else {
-      const jaVinculados = parceirosJaVinculadosAoCliente(empresaCliente);
-      const novosParceiros = parceirosSelecionados.filter(
-        (id) => !jaVinculados.includes(id)
-      );
+    try {
+      if (modalType === "editar" && editRelacionamentoId) {
+        await updateEmpresaCliente?.(editRelacionamentoId, {
+          empresa_proprietaria_id: parceirosSelecionados[0],
+          empresa_cliente_id: empresaCliente,
+          observacoes,
+        });
+      } else {
+        const jaVinculados = parceirosJaVinculadosAoCliente(empresaCliente);
+        const novosParceiros = parceirosSelecionados.filter(
+          (id) => !jaVinculados.includes(id)
+        );
 
-      // Filter out partners that shouldn't have automatic relationships created
-      const validPartners = [];
-      for (const parceiroId of novosParceiros) {
-        const partner = empresasParceiros.find(p => p.id === parceiroId);
-        if (partner && shouldCreateAutomaticClientRelationship(partner.tipo, parceiroId)) {
-          validPartners.push(parceiroId);
-        } else if (partner) {
-          console.warn(`${CONSOLE_PREFIX} Skipping automatic relationship creation with ${partner.tipo} company: ${partner.nome}`);
+        // Filter out partners that shouldn't have automatic relationships created
+        const validPartners = [];
+        for (const parceiroId of novosParceiros) {
+          const partner = empresasParceiros.find(p => p.id === parceiroId);
+          if (partner && shouldCreateAutomaticClientRelationship(partner.tipo, parceiroId)) {
+            validPartners.push(parceiroId);
+          } else if (partner) {
+            console.warn(`${CONSOLE_PREFIX} Skipping automatic relationship creation with ${partner.tipo} company: ${partner.nome}`);
+          }
+        }
+
+        if (validPartners.length > 0 && addEmpresaCliente) {
+          await Promise.all(
+            validPartners.map((parceiroId) =>
+              addEmpresaCliente({
+                empresa_proprietaria_id: parceiroId,
+                empresa_cliente_id: empresaCliente,
+                status: true,
+                data_relacionamento: new Date().toISOString(),
+                observacoes,
+              })
+            )
+          );
+        }
+
+        // Show warning if some relationships were skipped
+        if (validPartners.length < novosParceiros.length) {
+          console.warn(`${CONSOLE_PREFIX} Some relationships were not created due to business rules (preventing automatic Aeight linking)`);
         }
       }
-
-      if (validPartners.length > 0) {
-        await Promise.all(
-          validPartners.map((parceiroId) =>
-            addEmpresaCliente({
-              empresa_proprietaria_id: parceiroId,
-              empresa_cliente_id: empresaCliente,
-              status: true,
-              data_relacionamento: new Date().toISOString(),
-              observacoes,
-            })
-          )
-        );
-      }
-
-      // Show warning if some relationships were skipped
-      if (validPartners.length < novosParceiros.length) {
-        console.warn(`${CONSOLE_PREFIX} Some relationships were not created due to business rules (preventing automatic Aeight linking)`);
-      }
+    } catch (error) {
+      console.error(`${CONSOLE_PREFIX} Erro ao salvar relacionamento:`, error);
+    } finally {
+      setModalLoading(false);
+      setModalOpen(false);
+      resetModal();
+      fetchEmpresasClientes?.();
+      refreshRelevance?.();
     }
-    setModalLoading(false);
-    setModalOpen(false);
-    resetModal();
-    fetchEmpresasClientes();
-    refreshRelevance();
   };
 
   const handleEditar = (relacionamento: any) => {
+    if (!relacionamento) {
+      console.warn(`${CONSOLE_PREFIX} Tentativa de editar relacionamento nulo`);
+      return;
+    }
+    
     const clienteId = relacionamento.empresa_cliente_id;
     const nome = relacionamento.empresa_cliente?.nome;
 
@@ -197,6 +218,11 @@ const EmpresasClientesPage: React.FC = () => {
   };
 
   const handleSolicitarApresentacao = (relacionamento: any) => {
+    if (!relacionamento) {
+      console.warn(`${CONSOLE_PREFIX} Tentativa de solicitar apresentação com relacionamento nulo`);
+      return;
+    }
+    
     setApresentacaoCliente(relacionamento);
     setModalApresentacaoOpen(true);
   };
@@ -215,7 +241,7 @@ const EmpresasClientesPage: React.FC = () => {
         setModalApresentacaoOpen(false);
         setApresentacaoCliente(null);
         setApresentacaoObs("");
-        refreshRelevance();
+        refreshRelevance?.();
       }
     } catch (error) {
       console.error(`${CONSOLE_PREFIX} Erro ao solicitar apresentação:`, error);
@@ -225,6 +251,11 @@ const EmpresasClientesPage: React.FC = () => {
   };
 
   const handleVincularCliente = (cliente: EmpresaOption) => {
+    if (!cliente) {
+      console.warn(`${CONSOLE_PREFIX} Tentativa de vincular cliente nulo`);
+      return;
+    }
+    
     if (
       cliente.id &&
       cliente.nome &&
@@ -244,11 +275,17 @@ const EmpresasClientesPage: React.FC = () => {
     setModalType("novo");
   };
 
+  // Garantindo que empresasClientes é um array
+  const empresasClientesArray = Array.isArray(empresasClientes) ? empresasClientes : [];
+
   // Filtros robustos: nunca acessar .nome em objeto nulo, logando inconsistências
-  const filteredClientesVinculados = empresasClientes.filter((cliente) => {
+  const filteredClientesVinculados = empresasClientesArray.filter((cliente) => {
     try {
-      const clienteNome = cliente.empresa_cliente?.nome || "";
-      const proprietarioNome = cliente.empresa_proprietaria?.nome || "";
+      if (!cliente) return false;
+      
+      const clienteNome = cliente?.empresa_cliente?.nome || "";
+      const proprietarioNome = cliente?.empresa_proprietaria?.nome || "";
+      
       if (!cliente.empresa_cliente || !cliente.empresa_cliente.nome) {
         console.warn(`${CONSOLE_PREFIX} Cliente sem nome ou objeto nulo:`, cliente);
       }
@@ -266,11 +303,13 @@ const EmpresasClientesPage: React.FC = () => {
   });
 
   const clientesVinculadosIds = new Set(
-    empresasClientes.map((c) => c.empresa_cliente_id)
+    empresasClientesArray.map((c) => c?.empresa_cliente_id).filter(Boolean)
   );
 
   const filteredClientesNaoVinculados = empresasClientesAll.filter((cliente) => {
     try {
+      if (!cliente || !cliente.id) return false;
+      
       if (!cliente.nome) {
         console.warn(`${CONSOLE_PREFIX} Cliente não vinculado sem nome:`, cliente);
       }
@@ -284,8 +323,13 @@ const EmpresasClientesPage: React.FC = () => {
     }
   });
 
-  const filteredParceiros = parceiros.filter((parceiro) => {
+  // Garantindo que parceiros é um array
+  const parceirosArray = Array.isArray(parceiros) ? parceiros : [];
+
+  const filteredParceiros = parceirosArray.filter((parceiro) => {
     try {
+      if (!parceiro) return false;
+      
       if (!parceiro.nome) {
         console.warn(`${CONSOLE_PREFIX} Parceiro sem nome:`, parceiro);
       }
@@ -301,14 +345,14 @@ const EmpresasClientesPage: React.FC = () => {
   useEffect(() => {
     // Log de diagnóstico para facilitar troubleshooting
     console.log(`${CONSOLE_PREFIX} Estado inicial`, {
-      empresasClientes,
+      empresasClientes: empresasClientesArray,
       empresasClientesAll,
-      parceiros,
+      parceiros: parceirosArray,
       filteredClientesVinculados,
       filteredClientesNaoVinculados,
       filteredParceiros,
     });
-  }, [empresasClientes, empresasClientesAll, parceiros, filteredClientesVinculados, filteredClientesNaoVinculados, filteredParceiros]);
+  }, [empresasClientesArray, empresasClientesAll, parceirosArray, filteredClientesVinculados, filteredClientesNaoVinculados, filteredParceiros]);
 
   if (loadingEmpresasClientes) {
     return (
@@ -395,7 +439,7 @@ const EmpresasClientesPage: React.FC = () => {
         <TabsContent value="clientes" className="space-y-6">
           {/* Estatísticas */}
           <ClientesStats
-            empresasClientes={empresasClientes}
+            empresasClientes={empresasClientesArray}
           />
 
           <ClientesVinculadosTable
