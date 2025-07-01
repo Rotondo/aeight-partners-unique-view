@@ -16,14 +16,23 @@ import { useNavigate } from "react-router-dom";
 import { DemoModeToggle } from "@/components/privacy/DemoModeToggle";
 import { DemoModeIndicator } from "@/components/privacy/DemoModeIndicator";
 import { usePrivacy } from "@/contexts/PrivacyContext";
-import { shouldCreateAutomaticClientRelationship } from "@/utils/companyClassification";
+// import { shouldCreateAutomaticClientRelationship } from "@/utils/companyClassification"; // May not be needed directly in new handleSubmit
 import { EmpresaTipoString } from "@/types/common";
+import { ClienteParaAdicionar } from "@/components/wishlist/ClienteFormModal"; // Import the new type
+import { useToast } from "@/hooks/use-toast";
 
+
+// Keep EmpresaOption for fetching, but modal will use ParceiroOption
 type EmpresaOption = {
   id: string;
   nome: string;
   tipo: EmpresaTipoString;
 };
+
+interface ParceiroOption { // For the Combobox in the modal
+  value: string;
+  label: string;
+}
 
 const CONSOLE_PREFIX = "[EmpresasClientesPage]";
 
@@ -33,35 +42,33 @@ const EmpresasClientesPage: React.FC = () => {
     loading: loadingEmpresasClientes,
     fetchEmpresasClientes,
     addEmpresaCliente,
-    updateEmpresaCliente,
+    // updateEmpresaCliente, // Assuming edit is out of scope for now for this modal
     solicitarApresentacao,
+    createEmpresa, // Added from context
   } = useWishlist();
+  const { toast } = useToast();
 
   const { parceiros, loading: loadingRelevance, refresh: refreshRelevance } = useParceiroRelevance();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("clientes");
 
-  // Modal states
-  const [modalOpen, setModalOpen] = useState(false);
-  const [modalLoading, setModalLoading] = useState(false);
-  const [modalType, setModalType] = useState<"novo" | "editar">("novo");
-  const [editRelacionamentoId, setEditRelacionamentoId] = useState<string | null>(null);
+  // Modal states for the new "Add Clients to Partner" modal
+  const [isAddClientsModalOpen, setIsAddClientsModalOpen] = useState(false);
+  const [isSubmittingClients, setIsSubmittingClients] = useState(false);
 
-  // Solicitar apresentação
+  // Solicitar apresentação (remains the same)
   const [modalApresentacaoOpen, setModalApresentacaoOpen] = useState(false);
   const [apresentacaoCliente, setApresentacaoCliente] = useState<any | null>(null);
   const [apresentacaoLoading, setApresentacaoLoading] = useState(false);
   const [apresentacaoObs, setApresentacaoObs] = useState("");
 
-  // Form state
+  // Data for forms/modals
+  // empresasClientesOptions is for the old modal's client dropdown, might be removable if edit is separate
   const [empresasClientesOptions, setEmpresasClientesOptions] = useState<EmpresaOption[]>([]);
-  const [empresasParceiros, setEmpresasParceiros] = useState<EmpresaOption[]>([]);
-  const [parceirosSelecionados, setParceirosSelecionados] = useState<string[]>([]);
-  const [empresaCliente, setEmpresaCliente] = useState<string>("");
-  const [observacoes, setObservacoes] = useState("");
+  const [empresasParceirosOptions, setEmpresasParceirosOptions] = useState<ParceiroOption[]>([]); // For the new modal's Parceiro Combobox
 
-  // Estado para todas as empresas do tipo cliente
+  // Estado para todas as empresas do tipo cliente (for ClientesNaoVinculadosTable)
   const [empresasClientesAll, setEmpresasClientesAll] = useState<EmpresaOption[]>([]);
 
   // Demo mode context
@@ -79,18 +86,18 @@ const EmpresasClientesPage: React.FC = () => {
         .order("nome");
 
       if (!error && data) {
-        setEmpresasClientesOptions(
+        setEmpresasClientesOptions( // This might still be needed if an "Edit" modal is separate
           data.filter((e: any) => e.tipo === "cliente").map((e: any) => ({
             id: e.id,
             nome: e.nome,
             tipo: e.tipo as EmpresaTipoString
           }))
         );
-        setEmpresasParceiros(
+        setEmpresasParceirosOptions( // Changed state variable name and mapping
           data.filter((e: any) => e.tipo === "parceiro" || e.tipo === "intragrupo").map((e: any) => ({
-            id: e.id,
-            nome: e.nome,
-            tipo: e.tipo as EmpresaTipoString
+            value: e.id, // For Combobox
+            label: e.nome, // For Combobox
+            // tipo: e.tipo as EmpresaTipoString // Keep original type if needed elsewhere
           }))
         );
         setEmpresasClientesAll(
@@ -107,94 +114,61 @@ const EmpresasClientesPage: React.FC = () => {
     fetchEmpresas();
   }, []);
 
-  const resetModal = () => {
-    setParceirosSelecionados([]);
-    setEmpresaCliente("");
-    setObservacoes("");
-    setEditRelacionamentoId(null);
-    setModalType("novo");
-  };
-
-  const parceirosJaVinculadosAoCliente = (clienteId: string) =>
-    empresasClientes
-      .filter((v) => v.empresa_cliente_id === clienteId)
-      .map((v) => v.empresa_proprietaria_id);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setModalLoading(true);
-
-    if (modalType === "editar" && editRelacionamentoId) {
-      await updateEmpresaCliente(editRelacionamentoId, {
-        empresa_proprietaria_id: parceirosSelecionados[0],
-        empresa_cliente_id: empresaCliente,
-        observacoes,
-      });
-    } else {
-      const jaVinculados = parceirosJaVinculadosAoCliente(empresaCliente);
-      const novosParceiros = parceirosSelecionados.filter(
-        (id) => !jaVinculados.includes(id)
-      );
-
-      // Filter out partners that shouldn't have automatic relationships created
-      const validPartners = [];
-      for (const parceiroId of novosParceiros) {
-        const partner = empresasParceiros.find(p => p.id === parceiroId);
-        if (partner && shouldCreateAutomaticClientRelationship(partner.tipo, parceiroId)) {
-          validPartners.push(parceiroId);
-        } else if (partner) {
-          console.warn(`${CONSOLE_PREFIX} Skipping automatic relationship creation with ${partner.tipo} company: ${partner.nome}`);
+  const handleSubmitBatchClients = async (
+    parceiroId: string,
+    clientes: ClienteParaAdicionar[],
+    observacoes: string
+  ) => {
+    setIsSubmittingClients(true);
+    try {
+      const promises = clientes.map(async (cliente) => {
+        let clienteIdToUse = cliente.id;
+        if (cliente.isNew && !cliente.id) {
+          // Create new empresa if it's new
+          const novaEmpresa = await createEmpresa({ nome: cliente.nome, tipo: 'cliente' });
+          if (novaEmpresa && novaEmpresa.id) {
+            clienteIdToUse = novaEmpresa.id;
+            // Optionally update local list of all client companies if needed immediately
+            // setEmpresasClientesAll(prev => [...prev, {id: novaEmpresa.id, nome: novaEmpresa.nome, tipo: 'cliente'}]);
+          } else {
+            throw new Error(`Falha ao criar nova empresa cliente: ${cliente.nome}`);
+          }
         }
-      }
 
-      if (validPartners.length > 0) {
-        await Promise.all(
-          validPartners.map((parceiroId) =>
-            addEmpresaCliente({
-              empresa_proprietaria_id: parceiroId,
-              empresa_cliente_id: empresaCliente,
-              status: true,
-              data_relacionamento: new Date().toISOString(),
-              observacoes,
-            })
-          )
-        );
-      }
+        if (!clienteIdToUse) {
+           throw new Error(`ID do cliente inválido para ${cliente.nome}`);
+        }
 
-      // Show warning if some relationships were skipped
-      if (validPartners.length < novosParceiros.length) {
-        console.warn(`${CONSOLE_PREFIX} Some relationships were not created due to business rules (preventing automatic Aeight linking)`);
-      }
+        // TODO: Check if this client is already linked to this partner to prevent duplicates?
+        // This check might be better done in the modal before adding to `clientesParaAdicionar`
+        // or as a database constraint. For now, proceeding with add.
+
+        return addEmpresaCliente({
+          empresa_proprietaria_id: parceiroId,
+          empresa_cliente_id: clienteIdToUse,
+          status: true,
+          data_relacionamento: new Date().toISOString(),
+          observacoes,
+        });
+      });
+
+      await Promise.all(promises);
+
+      toast({ title: "Sucesso", description: `${clientes.length} cliente(s) adicionado(s) ao parceiro.`});
+      setIsAddClientsModalOpen(false); // Close modal on success
+      fetchEmpresasClientes(); // Refresh main list
+      refreshRelevance(); // Refresh relevance scores
+    } catch (error) {
+      console.error(`${CONSOLE_PREFIX} Erro ao submeter clientes em lote:`, error);
+      const errorMessage = error instanceof Error ? error.message : "Erro desconhecido";
+      toast({ title: "Erro na Submissão", description: `Falha: ${errorMessage}`, variant: "destructive" });
+    } finally {
+      setIsSubmittingClients(false);
     }
-    setModalLoading(false);
-    setModalOpen(false);
-    resetModal();
-    fetchEmpresasClientes();
-    refreshRelevance();
   };
 
-  const handleEditar = (relacionamento: any) => {
-    const clienteId = relacionamento.empresa_cliente_id;
-    const nome = relacionamento.empresa_cliente?.nome;
-
-    if (
-      clienteId &&
-      nome &&
-      !empresasClientesOptions.some((e) => e.id === clienteId)
-    ) {
-      setEmpresasClientesOptions((prev) => [
-        ...prev,
-        { id: clienteId, nome, tipo: "cliente" as EmpresaTipoString },
-      ]);
-    }
-
-    setModalType("editar");
-    setEditRelacionamentoId(relacionamento.id);
-    setParceirosSelecionados([relacionamento.empresa_proprietaria_id]);
-    setEmpresaCliente(clienteId);
-    setObservacoes(relacionamento.observacoes || "");
-    setModalOpen(true);
-  };
+  // handleEditar can be re-implemented later if needed for a different modal or flow
+  // For now, it's removed to simplify focus on the new "add batch" modal
 
   const handleSolicitarApresentacao = (relacionamento: any) => {
     setApresentacaoCliente(relacionamento);
@@ -352,12 +326,11 @@ const EmpresasClientesPage: React.FC = () => {
           <DemoModeToggle />
           <Button
             onClick={() => {
-              setModalOpen(true);
-              setModalType("novo");
+              setIsAddClientsModalOpen(true); // Open the new modal
             }}
           >
             <Plus className="mr-2 h-4 w-4" />
-            Adicionar Cliente
+            Adicionar Cliente(s)
           </Button>
         </div>
       </div>
@@ -400,13 +373,25 @@ const EmpresasClientesPage: React.FC = () => {
 
           <ClientesVinculadosTable
             clientesVinculados={filteredClientesVinculados}
-            onEditar={handleEditar}
+            onEditar={(rel) => {
+              console.log("Editar clicado (funcionalidade pendente/separada):", rel);
+              // Implementar lógica de edição aqui, possivelmente abrindo um modal diferente
+              // ou re-habilitando o 'setModalType("editar")' e passando dados para o ClienteFormModal
+              // se ele for adaptado para também suportar edição no futuro.
+               toast({ title: "Info", description: "Funcionalidade de editar relacionamento pendente."});
+            }}
             onSolicitarApresentacao={handleSolicitarApresentacao}
           />
 
           <ClientesNaoVinculadosTable
             clientesNaoVinculados={filteredClientesNaoVinculados}
-            onVincular={handleVincularCliente}
+            onVincular={(cliente) => {
+                // This was for the old modal. For the new one, user directly picks partner.
+                // We could open the new modal with this client pre-filled if desired,
+                // but it's simpler to just open the modal for general add.
+                setIsAddClientsModalOpen(true);
+                 toast({ title: "Info", description: `Selecione o parceiro e adicione '${cliente.nome}' à lista de clientes no modal.`});
+            }}
           />
         </TabsContent>
 
@@ -445,29 +430,16 @@ const EmpresasClientesPage: React.FC = () => {
         </TabsContent>
       </Tabs>
 
-      {/* Modals */}
+      {/* New Modal Invocation */}
       <ClienteFormModal
-        isOpen={modalOpen}
-        onClose={() => {
-          setModalOpen(false);
-          resetModal();
-        }}
-        modalType={modalType}
-        editRelacionamentoId={editRelacionamentoId}
-        parceirosSelecionados={parceirosSelecionados}
-        setParceirosSelecionados={setParceirosSelecionados}
-        empresaCliente={empresaCliente}
-        setEmpresaCliente={setEmpresaCliente}
-        observacoes={observacoes}
-        setObservacoes={setObservacoes}
-        onSubmit={handleSubmit}
-        modalLoading={modalLoading}
-        empresasClientesOptions={empresasClientesOptions}
-        setEmpresasClientesOptions={(empresas: EmpresaOption[]) => setEmpresasClientesOptions(empresas)}
-        empresasParceiros={empresasParceiros}
-        parceirosJaVinculadosAoCliente={parceirosJaVinculadosAoCliente}
+        isOpen={isAddClientsModalOpen}
+        onClose={() => setIsAddClientsModalOpen(false)}
+        onSubmit={handleSubmitBatchClients}
+        modalLoading={isSubmittingClients}
+        empresasParceiros={empresasParceirosOptions}
       />
 
+      {/* ApresentacaoModal remains the same */}
       <ApresentacaoModal
         isOpen={modalApresentacaoOpen}
         onClose={() => setModalApresentacaoOpen(false)}

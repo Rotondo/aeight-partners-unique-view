@@ -41,12 +41,15 @@ interface WishlistContextType {
   // Mutations - Apresentacao
   addApresentacao: (item: Partial<WishlistApresentacao>) => Promise<void>;
   solicitarApresentacao: (itemId: string, facilitadorId: string) => Promise<void>; // Example signature
+
+  // Search/Create Empresas (for autocompletes and on-the-fly creation)
+  searchEmpresas: (searchTerm: string, tipo?: EmpresaTipoString) => Promise<Empresa[]>;
+  createEmpresa: (empresaData: Partial<Empresa>) => Promise<Empresa | null>;
 }
 
 const WishlistContext = createContext<WishlistContextType | undefined>(undefined);
 
-// Placeholder functions for mutations
-const placeholderAddEmpresaCliente = async (item: Partial<EmpresaCliente>) => { console.log("addEmpresaCliente called", item); };
+// Placeholder functions for mutations (some will be replaced)
 const placeholderUpdateEmpresaCliente = async (id: string, updates: Partial<EmpresaCliente>) => { console.log("updateEmpresaCliente called", id, updates); };
 const placeholderAddWishlistItem = async (item: Partial<WishlistItem>) => { console.log("addWishlistItem called", item); };
 const placeholderUpdateWishlistItem = async (id: string, updates: Partial<WishlistItem>) => { console.log("updateWishlistItem called", id, updates); };
@@ -71,6 +74,80 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   
   // Ref para evitar dupla execução em StrictMode
   const initRef = useRef(false);
+
+  // --- Implementations for new context functions ---
+
+  const addEmpresaCliente = async (item: Partial<EmpresaCliente>) => {
+    if (!item.empresa_proprietaria_id || !item.empresa_cliente_id) {
+      console.error("[WishlistContext] ID do proprietário e ID do cliente são obrigatórios para criar relacionamento.");
+      toast({ title: "Erro", description: "Faltam IDs para criar relacionamento.", variant: "destructive" });
+      return;
+    }
+    try {
+      const newItemData = {
+        ...item,
+        data_relacionamento: item.data_relacionamento || new Date().toISOString(),
+        status: item.status !== undefined ? item.status : true,
+      };
+      const { error } = await supabase.from('empresas_clientes').insert(newItemData);
+      if (error) throw error;
+      toast({ title: "Sucesso", description: "Relacionamento cliente-parceiro adicionado." });
+      // Consider direct state update or rely on page to refetch
+      // await fetchEmpresasClientes(); // Option: refetch directly
+    } catch (error) {
+      console.error("[WishlistContext] Erro ao adicionar empresa cliente:", error);
+      const errorMessage = error instanceof Error ? error.message : "Erro desconhecido";
+      toast({ title: "Erro", description: `Falha ao adicionar relacionamento: ${errorMessage}`, variant: "destructive" });
+      throw error; // Re-throw to allow calling function to handle
+    }
+  };
+
+  const searchEmpresas = async (searchTerm: string, tipo?: EmpresaTipoString): Promise<Empresa[]> => {
+    if (!searchTerm.trim()) return [];
+    try {
+      let query = supabase
+        .from('empresas')
+        .select('id, nome, tipo, status, descricao'); // Ensure all fields for Empresa type are here
+
+      if (tipo) {
+        query = query.eq('tipo', tipo);
+      }
+      query = query.ilike('nome', `%${searchTerm}%`).limit(10);
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return (data as Empresa[]) || [];
+    } catch (error) {
+      console.error('[WishlistContext] Erro ao buscar empresas:', error);
+      toast({ title: "Erro de Busca", description: "Falha ao buscar empresas.", variant: "destructive" });
+      return [];
+    }
+  };
+
+  const createEmpresa = async (empresaData: Partial<Empresa>): Promise<Empresa | null> => {
+    try {
+      const newEmpresaData = {
+        ...empresaData,
+        tipo: empresaData.tipo || 'cliente',
+        status: empresaData.status !== undefined ? empresaData.status : true
+      };
+      const { data, error } = await supabase
+        .from('empresas')
+        .insert(newEmpresaData)
+        .select('id, nome, tipo, status, descricao') // Ensure all fields for Empresa type
+        .single();
+      if (error) throw error;
+      toast({ title: "Sucesso", description: `Empresa "${data.nome}" criada.` });
+      return data as Empresa;
+    } catch (error) {
+      console.error('[WishlistContext] Erro ao criar empresa:', error);
+      const errorMessage = error instanceof Error ? error.message : "Erro desconhecido";
+      toast({ title: "Erro ao Criar", description: `Falha ao criar empresa: ${errorMessage}`, variant: "destructive" });
+      return null;
+    }
+  };
+
+  // --- End of new context functions ---
 
   const fetchEmpresasClientes = async () => {
     if (!user) return;
@@ -260,8 +337,8 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     stats,
 
     // Mutations - EmpresaCliente
-    addEmpresaCliente: placeholderAddEmpresaCliente,
-    updateEmpresaCliente: placeholderUpdateEmpresaCliente,
+    addEmpresaCliente, // Implemented
+    updateEmpresaCliente: placeholderUpdateEmpresaCliente, // Still placeholder
 
     // Mutations - WishlistItem
     addWishlistItem: placeholderAddWishlistItem,
@@ -271,6 +348,10 @@ export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     // Mutations - Apresentacao
     addApresentacao: placeholderAddApresentacao,
     solicitarApresentacao: placeholderSolicitarApresentacao,
+
+    // Search/Create Empresas
+    searchEmpresas, // Implemented
+    createEmpresa, // Implemented
   };
 
   return (
