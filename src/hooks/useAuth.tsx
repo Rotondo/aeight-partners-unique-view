@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -65,13 +64,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       logAuth('fetchUserFromDB_attempt', { email, attempt });
       
-      const query = supabase
-        .from("usuarios")
-        .select("*")
-        .eq("email", email)
-        .maybeSingle();
-      
-      const { data, error: dbError } = await withTimeout(query, AUTH_TIMEOUT);
+      const { data, error: dbError } = await withTimeout(
+        supabase
+          .from("usuarios")
+          .select("*")
+          .eq("email", email)
+          .maybeSingle(),
+        AUTH_TIMEOUT
+      );
       
       if (dbError) {
         throw dbError;

@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -111,7 +110,7 @@ export default class ErrorBoundary extends React.Component<ErrorBoundaryProps, E
       type,
       timestamp: new Date().toISOString(),
       userAgent: navigator.userAgent,
-      url: typeof window !== 'undefined' ? window.location.href : 'unknown',
+      url: (typeof window !== 'undefined' && window.location) ? window.location.href : 'unknown',
       ...data
     };
     
