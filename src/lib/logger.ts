@@ -148,6 +148,15 @@ class Logger {
     this.info('PERFORMANCE', `${metric}: ${value}ms`, data);
   }
 
+  // Métodos específicos para eventos
+  eventLog(action: string, eventId?: string, data?: any) {
+    this.info('EVENTOS', `${action}${eventId ? ` - Event: ${eventId}` : ''}`, data);
+  }
+
+  contactLog(action: string, contactId?: string, data?: any) {
+    this.info('CONTATOS', `${action}${contactId ? ` - Contact: ${contactId}` : ''}`, data);
+  }
+
   // Métodos utilitários
   getLogs(): LogEntry[] {
     try {

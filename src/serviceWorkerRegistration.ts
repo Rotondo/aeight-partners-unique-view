@@ -43,7 +43,9 @@ export function registerSW(onUpdate?: (registration: ServiceWorkerRegistration) 
         window.addEventListener('online', () => {
           console.log('[SW] Conexão restaurada');
           // Tentar sincronizar dados quando voltar online
-          registration.sync?.register('background-sync');
+          if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+            navigator.serviceWorker.controller.postMessage({ type: 'BACKGROUND_SYNC' });
+          }
         });
 
         window.addEventListener('offline', () => {

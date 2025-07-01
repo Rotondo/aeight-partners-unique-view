@@ -111,7 +111,7 @@ export default class ErrorBoundary extends React.Component<ErrorBoundaryProps, E
       type,
       timestamp: new Date().toISOString(),
       userAgent: navigator.userAgent,
-      url: window.location.href,
+      url: typeof window !== 'undefined' ? window.location.href : 'unknown',
       ...data
     };
     
