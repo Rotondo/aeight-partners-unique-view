@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -106,11 +107,19 @@ export default class ErrorBoundary extends React.Component<ErrorBoundaryProps, E
   };
 
   private logError = (type: string, data: any) => {
+    const getCurrentUrl = (): string => {
+      try {
+        return window?.location?.href || 'unknown';
+      } catch {
+        return 'unknown';
+      }
+    };
+
     const logEntry = {
       type,
       timestamp: new Date().toISOString(),
       userAgent: navigator.userAgent,
-      url: (typeof window !== 'undefined' && window.location) ? window.location.href : 'unknown',
+      url: getCurrentUrl(),
       ...data
     };
     

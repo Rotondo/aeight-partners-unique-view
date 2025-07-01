@@ -64,14 +64,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       logAuth('fetchUserFromDB_attempt', { email, attempt });
       
-      const { data, error: dbError } = await withTimeout(
-        supabase
-          .from("usuarios")
-          .select("*")
-          .eq("email", email)
-          .maybeSingle(),
-        AUTH_TIMEOUT
-      );
+      const query = supabase
+        .from("usuarios")
+        .select("*")
+        .eq("email", email)
+        .maybeSingle();
+      
+      const result = await withTimeout(query, AUTH_TIMEOUT);
+      const { data, error: dbError } = result;
       
       if (dbError) {
         throw dbError;
