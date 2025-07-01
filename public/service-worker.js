@@ -1,6 +1,6 @@
 
-const CACHE_NAME = 'aeight-pwa-cache-v2';
-const FALLBACK_CACHE = 'aeight-fallback-cache-v1';
+const CACHE_NAME = 'aeight-pwa-cache-v3'; // Atualizado para forçar refresh
+const FALLBACK_CACHE = 'aeight-fallback-cache-v2';
 
 // URLs essenciais para cache
 const urlsToCache = [
@@ -43,13 +43,44 @@ self.addEventListener('install', event => {
   );
 });
 
-// Estratégia de fetch com fallback inteligente
+// Estratégia Network-First para HTML, Cache-First para outros assets
 self.addEventListener('fetch', event => {
   // Ignorar requests não-HTTP
   if (!event.request.url.startsWith('http')) {
     return;
   }
 
+  // Network-First para navegação (HTML)
+  if (event.request.destination === 'document' || event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .then(response => {
+          // Se network responde, cache e retorna
+          if (response && response.status === 200) {
+            const responseToCache = response.clone();
+            caches.open(CACHE_NAME)
+              .then(cache => {
+                cache.put(event.request, responseToCache);
+              });
+          }
+          return response;
+        })
+        .catch(() => {
+          // Se network falha, tenta cache
+          return caches.match(event.request)
+            .then(response => {
+              if (response) {
+                return response;
+              }
+              // Último recurso: fallback para index.html
+              return caches.match('/index.html');
+            });
+        })
+    );
+    return;
+  }
+
+  // Cache-First para outros assets (JS, CSS, imagens, etc.)
   event.respondWith(
     caches.match(event.request)
       .then(response => {
@@ -83,11 +114,6 @@ self.addEventListener('fetch', event => {
           })
           .catch(() => {
             // Network failed, try fallback
-            if (event.request.destination === 'document') {
-              return caches.match('/index.html');
-            }
-            
-            // For other requests, return from fallback cache
             return caches.match(event.request, { cacheName: FALLBACK_CACHE });
           });
       })
@@ -129,8 +155,18 @@ self.addEventListener('message', (event) => {
       caches.keys().then(keyList => {
         return Promise.all(keyList.map(key => caches.delete(key)));
       }).then(() => {
-        event.ports[0].postMessage({ success: true });
+        if (event.ports[0]) {
+          event.ports[0].postMessage({ success: true });
+        }
       })
+    );
+  }
+  
+  // Background sync
+  if (event.data && event.data.type === 'BACKGROUND_SYNC') {
+    event.waitUntil(
+      // Implementar sync de dados quando necessário
+      Promise.resolve()
     );
   }
 });
@@ -141,7 +177,7 @@ self.addEventListener('sync', event => {
   
   if (event.tag === 'background-sync') {
     event.waitUntil(
-      // Aqui podería implementar sync de dados quando voltar online
+      // Aqui poderia implementar sync de dados quando voltar online
       Promise.resolve()
     );
   }

@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import LoginPage from './pages/auth/LoginPage';
@@ -17,7 +18,6 @@ import OnePagerPage from './pages/onepager';
 import QuadrantePage from './pages/quadrante/QuadrantePage';
 import AdminPage from './pages/admin';
 import RepositorioPage from './pages/repositorio/RepositorioPage';
-import EmpresasClientesPage from './pages/wishlist/EmpresasClientesPage';
 import { registerSW, clearServiceWorkerCache } from './serviceWorkerRegistration';
 import ErrorBoundary from './components/ErrorBoundary';
 
