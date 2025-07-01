@@ -74,11 +74,12 @@ const EmpresasClientesPage: React.FC = () => {
 
   // Forçar carregamento inicial ao montar o componente
   useEffect(() => {
-    console.log(`${CONSOLE_PREFIX} Componente montado, forçando carregamento de dados...`);
+    // Só rodar uma vez na montagem!
     if (fetchEmpresasClientes) {
       fetchEmpresasClientes();
     }
-  }, [fetchEmpresasClientes]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Buscar empresas para o formulário
   useEffect(() => {
@@ -92,23 +93,25 @@ const EmpresasClientesPage: React.FC = () => {
 
         if (!error && data) {
           console.log(`${CONSOLE_PREFIX} Empresas encontradas:`, data.length);
-          
+
           const clientes = data.filter((e: any) => e.tipo === "cliente").map((e: any) => ({
             id: e.id,
             nome: e.nome,
-            tipo: e.tipo as EmpresaTipoString
+            tipo: e.tipo as EmpresaTipoString,
           }));
-          
-          const parceiros = data.filter((e: any) => e.tipo === "parceiro" || e.tipo === "intragrupo").map((e: any) => ({
-            id: e.id,
-            nome: e.nome,
-            tipo: e.tipo as EmpresaTipoString
-          }));
+
+          const parceiros = data
+            .filter((e: any) => e.tipo === "parceiro" || e.tipo === "intragrupo")
+            .map((e: any) => ({
+              id: e.id,
+              nome: e.nome,
+              tipo: e.tipo as EmpresaTipoString,
+            }));
 
           setEmpresasClientesOptions(clientes);
           setEmpresasParceiros(parceiros);
           setEmpresasClientesAll(clientes);
-          
+
           console.log(`${CONSOLE_PREFIX} Configurado: ${clientes.length} clientes, ${parceiros.length} parceiros`);
         } else {
           console.error(`${CONSOLE_PREFIX} Erro ao buscar empresas do supabase:`, error);
@@ -125,7 +128,7 @@ const EmpresasClientesPage: React.FC = () => {
     console.log(`${CONSOLE_PREFIX} Estado atual:`, {
       empresasClientes: empresasClientes?.length || 0,
       loading: loadingEmpresasClientes,
-      hasData: Array.isArray(empresasClientes) && empresasClientes.length > 0
+      hasData: Array.isArray(empresasClientes) && empresasClientes.length > 0,
     });
   }, [empresasClientes, loadingEmpresasClientes]);
 
@@ -142,10 +145,8 @@ const EmpresasClientesPage: React.FC = () => {
       console.warn(`${CONSOLE_PREFIX} empresasClientes não é um array`, empresasClientes);
       return [];
     }
-    
-    return empresasClientes
-      .filter((v) => v.empresa_cliente_id === clienteId)
-      .map((v) => v.empresa_proprietaria_id);
+
+    return empresasClientes.filter((v) => v.empresa_cliente_id === clienteId).map((v) => v.empresa_proprietaria_id);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -161,14 +162,12 @@ const EmpresasClientesPage: React.FC = () => {
         });
       } else {
         const jaVinculados = parceirosJaVinculadosAoCliente(empresaCliente);
-        const novosParceiros = parceirosSelecionados.filter(
-          (id) => !jaVinculados.includes(id)
-        );
+        const novosParceiros = parceirosSelecionados.filter((id) => !jaVinculados.includes(id));
 
         // Filter out partners that shouldn't have automatic relationships created
         const validPartners = [];
         for (const parceiroId of novosParceiros) {
-          const partner = empresasParceiros.find(p => p.id === parceiroId);
+          const partner = empresasParceiros.find((p) => p.id === parceiroId);
           if (partner && shouldCreateAutomaticClientRelationship(partner.tipo, parceiroId)) {
             validPartners.push(parceiroId);
           } else if (partner) {
@@ -192,7 +191,9 @@ const EmpresasClientesPage: React.FC = () => {
 
         // Show warning if some relationships were skipped
         if (validPartners.length < novosParceiros.length) {
-          console.warn(`${CONSOLE_PREFIX} Some relationships were not created due to business rules (preventing automatic Aeight linking)`);
+          console.warn(
+            `${CONSOLE_PREFIX} Some relationships were not created due to business rules (preventing automatic Aeight linking)`
+          );
         }
       }
     } catch (error) {
@@ -211,15 +212,11 @@ const EmpresasClientesPage: React.FC = () => {
       console.warn(`${CONSOLE_PREFIX} Tentativa de editar relacionamento nulo`);
       return;
     }
-    
+
     const clienteId = relacionamento.empresa_cliente_id;
     const nome = relacionamento.empresa_cliente?.nome;
 
-    if (
-      clienteId &&
-      nome &&
-      !empresasClientesOptions.some((e) => e.id === clienteId)
-    ) {
+    if (clienteId && nome && !empresasClientesOptions.some((e) => e.id === clienteId)) {
       setEmpresasClientesOptions((prev) => [
         ...prev,
         { id: clienteId, nome, tipo: "cliente" as EmpresaTipoString },
@@ -239,7 +236,7 @@ const EmpresasClientesPage: React.FC = () => {
       console.warn(`${CONSOLE_PREFIX} Tentativa de solicitar apresentação com relacionamento nulo`);
       return;
     }
-    
+
     setApresentacaoCliente(relacionamento);
     setModalApresentacaoOpen(true);
   };
@@ -272,12 +269,8 @@ const EmpresasClientesPage: React.FC = () => {
       console.warn(`${CONSOLE_PREFIX} Tentativa de vincular cliente nulo`);
       return;
     }
-    
-    if (
-      cliente.id &&
-      cliente.nome &&
-      !empresasClientesOptions.some((e) => e.id === cliente.id)
-    ) {
+
+    if (cliente.id && cliente.nome && !empresasClientesOptions.some((e) => e.id === cliente.id)) {
       setEmpresasClientesOptions((prev) => [
         ...prev,
         {
@@ -299,10 +292,10 @@ const EmpresasClientesPage: React.FC = () => {
   const filteredClientesVinculados = empresasClientesArray.filter((cliente) => {
     try {
       if (!cliente) return false;
-      
+
       const clienteNome = cliente?.empresa_cliente?.nome || "";
       const proprietarioNome = cliente?.empresa_proprietaria?.nome || "";
-      
+
       if (!cliente.empresa_cliente || !cliente.empresa_cliente.nome) {
         console.warn(`${CONSOLE_PREFIX} Cliente sem nome ou objeto nulo:`, cliente);
       }
@@ -319,14 +312,12 @@ const EmpresasClientesPage: React.FC = () => {
     }
   });
 
-  const clientesVinculadosIds = new Set(
-    empresasClientesArray.map((c) => c?.empresa_cliente_id).filter(Boolean)
-  );
+  const clientesVinculadosIds = new Set(empresasClientesArray.map((c) => c?.empresa_cliente_id).filter(Boolean));
 
   const filteredClientesNaoVinculados = empresasClientesAll.filter((cliente) => {
     try {
       if (!cliente || !cliente.id) return false;
-      
+
       if (!cliente.nome) {
         console.warn(`${CONSOLE_PREFIX} Cliente não vinculado sem nome:`, cliente);
       }
@@ -346,13 +337,11 @@ const EmpresasClientesPage: React.FC = () => {
   const filteredParceiros = parceirosArray.filter((parceiro) => {
     try {
       if (!parceiro) return false;
-      
+
       if (!parceiro.nome) {
         console.warn(`${CONSOLE_PREFIX} Parceiro sem nome:`, parceiro);
       }
-      return (parceiro.nome || "")
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase());
+      return (parceiro.nome || "").toLowerCase().includes(searchTerm.toLowerCase());
     } catch (error) {
       console.error(`${CONSOLE_PREFIX} Erro ao filtrar parceiros:`, error, parceiro);
       return false;
@@ -443,9 +432,7 @@ const EmpresasClientesPage: React.FC = () => {
 
         <TabsContent value="clientes" className="space-y-6">
           {/* Estatísticas */}
-          <ClientesStats
-            empresasClientes={empresasClientesArray}
-          />
+          <ClientesStats empresasClientes={empresasClientesArray} />
 
           <div className="space-y-6">
             <div>
@@ -493,18 +480,13 @@ const EmpresasClientesPage: React.FC = () => {
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {filteredParceiros.map((parceiro) => (
-                <ParceiroRelevanceCard
-                  key={parceiro.id}
-                  parceiro={parceiro}
-                />
+                <ParceiroRelevanceCard key={parceiro.id} parceiro={parceiro} />
               ))}
 
               {filteredParceiros.length === 0 && (
                 <div className="col-span-full py-12 text-center text-muted-foreground">
                   <TrendingUp className="h-12 w-12 mx-auto mb-2 text-muted-foreground" />
-                  <div className="text-lg font-semibold mb-1">
-                    Nenhum parceiro encontrado
-                  </div>
+                  <div className="text-lg font-semibold mb-1">Nenhum parceiro encontrado</div>
                   <div>
                     {searchTerm
                       ? "Tente ajustar os filtros de busca"
