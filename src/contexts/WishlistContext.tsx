@@ -1,9 +1,16 @@
-
-import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
-import { supabase } from '@/lib/supabase';
-import { toast } from '@/hooks/use-toast';
-import { useWishlistData } from '@/hooks/useWishlistData';
-import { useWishlistMutations } from '@/hooks/useWishlistMutations';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+  useRef,
+  useCallback,
+} from "react";
+import { supabase } from "@/lib/supabase";
+import { toast } from "@/hooks/use-toast";
+import { useWishlistData } from "@/hooks/useWishlistData";
+import { useWishlistMutations } from "@/hooks/useWishlistMutations";
 
 const CONSOLE_PREFIX = "[WishlistContext]";
 
@@ -14,9 +21,9 @@ export interface WishlistItem {
   title?: string;
   description?: string | null;
   url?: string | null;
-  priority?: 'alta' | 'média' | 'baixa';
-  status?: 'pendente' | 'em_andamento' | 'concluído';
-  tipo?: 'feature' | 'bug' | 'melhoria' | 'outro';
+  priority?: "alta" | "média" | "baixa";
+  status?: "pendente" | "em_andamento" | "concluído";
+  tipo?: "feature" | "bug" | "melhoria" | "outro";
   user_id?: string;
   votes?: number;
   assignee_id?: string | null;
@@ -92,7 +99,7 @@ interface WishlistContextType {
   refreshItems: () => Promise<void>;
 
   // Mutations para wishlist items
-  addItem?: (item: Omit<WishlistItem, 'id' | 'created_at' | 'votes'>) => Promise<void>;
+  addItem?: (item: Omit<WishlistItem, "id" | "created_at" | "votes">) => Promise<void>;
   updateItem?: (id: string, updates: Partial<WishlistItem>) => Promise<void>;
   deleteItem?: (id: string) => Promise<void>;
   voteItem?: (id: string) => Promise<void>;
@@ -147,7 +154,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
   });
 
   // Função de inicialização dos dados
-  const initializeData = async () => {
+  const initializeData = useCallback(async () => {
     if (initializationRef.current) {
       console.log(`${CONSOLE_PREFIX} Inicialização já em andamento, pulando...`);
       return;
@@ -173,27 +180,28 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
 
       console.log(`${CONSOLE_PREFIX} Todos os dados carregados com sucesso`);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido';
+      const errorMessage = err instanceof Error ? err.message : "Erro desconhecido";
       console.error(`${CONSOLE_PREFIX} Erro no carregamento inicial:`, err);
       setError(errorMessage);
       toast({
-        title: 'Erro',
-        description: 'Não foi possível carregar os dados da wishlist',
-        variant: 'destructive',
+        title: "Erro",
+        description: "Não foi possível carregar os dados da wishlist",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
       initializationRef.current = false;
     }
-  };
+  }, [fetchEmpresasClientesData, fetchWishlistItemsData, fetchApresentacoesData, fetchStatsData]);
 
   // Carregar dados quando o componente montar
   useEffect(() => {
     initializeData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Apenas na montagem inicial
 
   // Função para recarregar todos os dados
-  const refreshItems = async () => {
+  const refreshItems = useCallback(async () => {
     console.log(`${CONSOLE_PREFIX} Atualizando todos os dados...`);
     setLoading(true);
     setError(null);
@@ -207,21 +215,21 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
       ]);
       console.log(`${CONSOLE_PREFIX} Dados atualizados com sucesso`);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido';
+      const errorMessage = err instanceof Error ? err.message : "Erro desconhecido";
       console.error(`${CONSOLE_PREFIX} Erro na atualização:`, err);
       setError(errorMessage);
       toast({
-        title: 'Erro',
-        description: 'Não foi possível atualizar os dados',
-        variant: 'destructive',
+        title: "Erro",
+        description: "Não foi possível atualizar os dados",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
-  };
+  }, [fetchEmpresasClientesData, fetchWishlistItemsData, fetchApresentacoesData, fetchStatsData]);
 
-  // Funções de busca individuais
-  const fetchWishlistItems = async () => {
+  // Funções de busca individuais, todas memorizadas!
+  const fetchWishlistItems = useCallback(async () => {
     setLoading(true);
     try {
       await fetchWishlistItemsData();
@@ -231,9 +239,9 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [fetchWishlistItemsData]);
 
-  const fetchEmpresasClientes = async () => {
+  const fetchEmpresasClientes = useCallback(async () => {
     setLoading(true);
     try {
       await fetchEmpresasClientesData();
@@ -243,9 +251,9 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [fetchEmpresasClientesData]);
 
-  const fetchApresentacoes = async () => {
+  const fetchApresentacoes = useCallback(async () => {
     setLoading(true);
     try {
       await fetchApresentacoesData();
@@ -255,9 +263,9 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [fetchApresentacoesData]);
 
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     setLoading(true);
     try {
       await fetchStatsData();
@@ -267,7 +275,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [fetchStatsData]);
 
   // Logs de diagnóstico
   useEffect(() => {
@@ -315,7 +323,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
 export function useWishlist() {
   const context = useContext(WishlistContext);
   if (context === undefined) {
-    throw new Error('useWishlist deve ser usado dentro de um WishlistProvider');
+    throw new Error("useWishlist deve ser usado dentro de um WishlistProvider");
   }
   return context;
 }
