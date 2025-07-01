@@ -21,8 +21,8 @@ const WishlistDashboard: React.FC = () => {
 
     // Adicionar wishlist items recentes
     const recentWishlistItems = wishlistItems
-      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-      .slice(0, 3);
+      ?.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      ?.slice(0, 3) || [];
 
     recentWishlistItems.forEach(item => {
       activities.push({
@@ -35,9 +35,9 @@ const WishlistDashboard: React.FC = () => {
 
     // Adicionar apresentações recentes
     const recentApresentacoes = apresentacoes
-      .filter(a => a.converteu_oportunidade)
-      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-      .slice(0, 2);
+      ?.filter(a => a.converteu_oportunidade)
+      ?.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      ?.slice(0, 2) || [];
 
     recentApresentacoes.forEach(apresentacao => {
       activities.push({
