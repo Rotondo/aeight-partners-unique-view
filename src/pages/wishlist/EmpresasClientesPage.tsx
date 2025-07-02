@@ -18,6 +18,7 @@ import { DemoModeIndicator } from "@/components/privacy/DemoModeIndicator";
 import { usePrivacy } from "@/contexts/PrivacyContext";
 import { shouldCreateAutomaticClientRelationship } from "@/utils/companyClassification";
 import { EmpresaTipoString } from "@/types/common";
+import BulkClienteFormModal from "@/components/wishlist/BulkClienteFormModal";
 
 type EmpresaOption = {
   id: string;
@@ -49,6 +50,9 @@ const EmpresasClientesPage: React.FC = () => {
   const [modalLoading, setModalLoading] = useState(false);
   const [modalType, setModalType] = useState<"novo" | "editar">("novo");
   const [editRelacionamentoId, setEditRelacionamentoId] = useState<string | null>(null);
+
+  // Bulk modal state
+  const [bulkModalOpen, setBulkModalOpen] = useState(false);
 
   // Solicitar apresentação
   const [modalApresentacaoOpen, setModalApresentacaoOpen] = useState(false);
@@ -389,6 +393,13 @@ const EmpresasClientesPage: React.FC = () => {
         <div className="flex gap-2">
           <DemoModeToggle />
           <Button
+            variant="outline"
+            onClick={() => setBulkModalOpen(true)}
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Múltiplos Clientes
+          </Button>
+          <Button
             onClick={() => {
               setModalOpen(true);
               setModalType("novo");
@@ -530,6 +541,13 @@ const EmpresasClientesPage: React.FC = () => {
         setApresentacaoObs={setApresentacaoObs}
         onSubmit={handleSubmitApresentacao}
         loading={apresentacaoLoading}
+      />
+
+      <BulkClienteFormModal
+        isOpen={bulkModalOpen}
+        onClose={() => setBulkModalOpen(false)}
+        empresasParceiros={empresasParceiros}
+        fetchEmpresasClientes={fetchEmpresasClientes}
       />
     </div>
   );
