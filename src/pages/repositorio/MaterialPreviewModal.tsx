@@ -11,11 +11,14 @@ interface MaterialPreviewModalProps {
   tipo_arquivo: string;
 }
 
-// BUCKET_URL foi removido daqui
-
+// Utility functions
 function sanitizePath(path: string | undefined | null): string | null {
   if (!path || typeof path !== 'string') return null;
   return path.replace(/^\/+/, '').trim();
+}
+
+function isTextFile(tipo_arquivo: string, arquivo_upload?: string | null): boolean {
+  return tipo_arquivo === 'txt' || (arquivo_upload && arquivo_upload.toLowerCase().endsWith('.txt')) || false;
 }
 
 const MaterialPreviewModal: React.FC<MaterialPreviewModalProps> = ({
@@ -48,7 +51,7 @@ const MaterialPreviewModal: React.FC<MaterialPreviewModalProps> = ({
       setPublicUrl(url);
 
       // Se for .txt, tentar buscar o conteúdo
-      if (isTxtFile(tipo_arquivo, arquivo_upload)) {
+      if (isTextFile(tipo_arquivo, arquivo_upload)) {
         fetch(url)
           .then(response => {
             if (!response.ok) {

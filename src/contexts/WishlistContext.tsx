@@ -14,73 +14,19 @@ import { useWishlistMutations } from "@/hooks/useWishlistMutations";
 
 const CONSOLE_PREFIX = "[WishlistContext]";
 
-// Definição dos tipos básicos para o contexto
-export interface WishlistItem {
-  id: string;
-  created_at: string;
-  title?: string;
-  description?: string | null;
-  url?: string | null;
-  priority?: "alta" | "média" | "baixa";
-  status?: "pendente" | "em_andamento" | "concluído";
-  tipo?: "feature" | "bug" | "melhoria" | "outro";
-  user_id?: string;
-  votes?: number;
-  assignee_id?: string | null;
-  empresa_interessada_id: string;
-  empresa_desejada_id: string;
-  empresa_proprietaria_id: string;
-  motivo?: string;
-  prioridade: number;
-  data_solicitacao: string;
-  data_resposta?: string;
-  observacoes?: string;
-  updated_at: string;
-  empresa_interessada?: any;
-  empresa_desejada?: any;
-  empresa_proprietaria?: any;
-  apresentacoes?: any[];
-}
+// Import types from types file
+import { 
+  WishlistItem as WishlistItemType,
+  EmpresaCliente as EmpresaClienteType,
+  WishlistApresentacao as WishlistApresentacaoType,
+  WishlistStats as WishlistStatsType
+} from "@/types/wishlist";
 
-export interface EmpresaCliente {
-  id: string;
-  empresa_proprietaria_id: string;
-  empresa_cliente_id: string;
-  data_relacionamento: string;
-  status: boolean;
-  observacoes?: string;
-  created_at: string;
-  updated_at: string;
-  empresa_proprietaria?: any;
-  empresa_cliente?: any;
-}
-
-export interface WishlistApresentacao {
-  id: string;
-  wishlist_item_id: string;
-  empresa_facilitadora_id: string;
-  data_apresentacao: string;
-  tipo_apresentacao: string;
-  status_apresentacao: string;
-  feedback?: string;
-  converteu_oportunidade: boolean;
-  oportunidade_id?: string;
-  created_at: string;
-  updated_at: string;
-  wishlist_item?: WishlistItem;
-  empresa_facilitadora?: any;
-  oportunidade?: any;
-}
-
-export interface WishlistStats {
-  totalSolicitacoes: number;
-  solicitacoesPendentes: number;
-  solicitacoesAprovadas: number;
-  apresentacoesRealizadas: number;
-  conversaoOportunidades: number;
-  empresasMaisDesejadas: { nome: string; total: number }[];
-  facilitacoesPorParceiro: { parceiro: string; total: number }[];
-}
+// Use imported types
+export type WishlistItem = WishlistItemType;
+export type EmpresaCliente = EmpresaClienteType;
+export type WishlistApresentacao = WishlistApresentacaoType;
+export type WishlistStats = WishlistStatsType;
 
 interface WishlistContextType {
   // Estado principal
@@ -99,10 +45,9 @@ interface WishlistContextType {
   refreshItems: () => Promise<void>;
 
   // Mutations para wishlist items
-  addItem?: (item: Omit<WishlistItem, "id" | "created_at" | "votes">) => Promise<void>;
-  updateItem?: (id: string, updates: Partial<WishlistItem>) => Promise<void>;
-  deleteItem?: (id: string) => Promise<void>;
-  voteItem?: (id: string) => Promise<void>;
+  addWishlistItem?: (item: Omit<WishlistItem, "id" | "created_at" | "updated_at">) => Promise<void>;
+  updateWishlistItem?: (id: string, updates: Partial<WishlistItem>) => Promise<void>;
+  deleteWishlistItem?: (id: string) => Promise<void>;
 
   // Mutations para empresas clientes
   addEmpresaCliente?: (data: any) => Promise<void>;
@@ -110,8 +55,10 @@ interface WishlistContextType {
   deleteEmpresaCliente?: (id: string) => Promise<void>;
 
   // Mutations para apresentações
-  solicitarApresentacao?: (data: any) => Promise<void>;
+  addApresentacao?: (data: any) => Promise<void>;
   updateApresentacao?: (id: string, updates: any) => Promise<void>;
+  convertToOportunidade?: (itemId: string, oportunidadeData: any) => Promise<void>;
+  solicitarApresentacao?: (data: any) => Promise<void>;
 }
 
 // Criação do contexto
@@ -144,14 +91,18 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     addEmpresaCliente,
     updateEmpresaCliente,
     deleteEmpresaCliente,
-    solicitarApresentacao,
+    addWishlistItem,
+    updateWishlistItem,
+    deleteWishlistItem,
+    addApresentacao,
     updateApresentacao,
-  } = useWishlistMutations({
-    setEmpresasClientes,
-    setWishlistItems,
-    setApresentacoes,
-    setStats,
-  });
+    convertToOportunidade,
+    solicitarApresentacao,
+  } = useWishlistMutations(
+    fetchEmpresasClientesData,
+    fetchWishlistItemsData,
+    fetchApresentacoesData
+  );
 
   // Função de inicialização dos dados
   const initializeData = useCallback(async () => {
@@ -305,11 +256,16 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     refreshItems,
 
     // Mutations
+    addWishlistItem,
+    updateWishlistItem,
+    deleteWishlistItem,
     addEmpresaCliente,
     updateEmpresaCliente,
     deleteEmpresaCliente,
-    solicitarApresentacao,
+    addApresentacao,
     updateApresentacao,
+    convertToOportunidade,
+    solicitarApresentacao,
   };
 
   return (
