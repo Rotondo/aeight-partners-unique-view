@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -15,7 +16,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { useWishlist } from "@/contexts/WishlistContext";
-import { Plus, ChevronLeft, Loader2 } from "lucide-react";
+import { Plus, ChevronLeft, Loader2, Trash2, Star } from "lucide-react";
 import { WishlistStatus, WishlistItem } from "@/types";
 import { supabase } from "@/lib/supabase";
 import { toast } from "@/hooks/use-toast";
