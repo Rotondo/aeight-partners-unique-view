@@ -36,7 +36,7 @@ const WishlistItensPage: React.FC = () => {
   // Fetch wishlist items when component mounts
   useEffect(() => {
     fetchWishlistItems();
-  }, []);
+  }, [fetchWishlistItems]);
 
   // Aprovar item com integração CRM
   const handleAprovar = async (item: WishlistItem) => {
