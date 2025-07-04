@@ -24,6 +24,7 @@ import { supabase } from "@/lib/supabase";
 import { useWishlist } from "@/contexts/WishlistContext";
 import { useClientesPorEmpresa } from "@/hooks/useClientesPorEmpresa";
 import ClienteMultiSelect, { ClienteSelecionado } from "./ClienteMultiSelect";
+import { CrmService } from "@/services/CrmService";
 
 interface EmpresaOption {
   id: string;
@@ -234,6 +235,27 @@ const WishlistSolicitacaoModal: React.FC<WishlistSolicitacaoModalProps> = ({
       // Atualizar lista
       await fetchWishlistItems?.();
 
+      // Integração CRM: Criar ações de follow-up para solicitações
+      try {
+        const userId = (await supabase.auth.getUser()).data.user?.id;
+        if (userId) {
+          // Criar ação CRM para acompanhar a solicitação
+          const crmAction = {
+            description: `Acompanhar solicitação wishlist: ${getEmpresaNome(empresaSolicitante)} → ${getEmpresaNome(empresaDemandada)}`,
+            communication_method: 'email' as const,
+            status: 'pending' as const,
+            partner_id: empresaDemandada,
+            content: `Solicitação de ${clientesSelecionados.length} cliente(s). Motivo: ${motivo}${solicitarReciprocidade ? ' (com reciprocidade)' : ''}`,
+            next_step_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 dias
+            next_steps: 'Verificar status da solicitação e processar apresentações'
+          };
+
+          await CrmService.createAcao(crmAction, userId);
+        }
+      } catch (crmError) {
+        console.warn('Erro ao criar ação CRM (não crítico):', crmError);
+      }
+
       // Mensagem de sucesso
       const totalSolicitacoes = clientesSelecionados.length + (solicitarReciprocidade ? 1 : 0);
       toast({
@@ -361,15 +383,34 @@ const WishlistSolicitacaoModal: React.FC<WishlistSolicitacaoModalProps> = ({
               />
             </div>
 
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="reciprocidade"
-                checked={solicitarReciprocidade}
-                onCheckedChange={(checked) => setSolicitarReciprocidade(checked === true)}
-              />
-              <label htmlFor="reciprocidade" className="text-sm">
-                Solicitar reciprocidade (trocar clientes mutuamente)
-              </label>
+            <div className="space-y-3">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="reciprocidade"
+                  checked={solicitarReciprocidade}
+                  onCheckedChange={(checked) => setSolicitarReciprocidade(checked === true)}
+                />
+                <label htmlFor="reciprocidade" className="text-sm font-medium">
+                  Solicitar reciprocidade (trocar clientes mutuamente)
+                </label>
+              </div>
+              
+              {solicitarReciprocidade && (
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                    <div className="text-sm">
+                      <p className="font-medium text-blue-900 mb-1">
+                        Fluxo de Reciprocidade Ativado
+                      </p>
+                      <p className="text-blue-700">
+                        Uma solicitação recíproca automática será criada: <strong>{getEmpresaNome(empresaDemandada)}</strong> solicitará 
+                        clientes de <strong>{getEmpresaNome(empresaSolicitante)}</strong> com os mesmos critérios.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         );
@@ -417,10 +458,24 @@ const WishlistSolicitacaoModal: React.FC<WishlistSolicitacaoModalProps> = ({
               )}
 
               {solicitarReciprocidade && (
-                <div className="p-3 bg-muted rounded-lg">
-                  <p className="text-sm">
-                    ✓ Solicitação recíproca será criada automaticamente
-                  </p>
+                <div className="p-4 bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-400 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 bg-green-100 rounded-full p-1">
+                      <Check className="h-4 w-4 text-green-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-green-900 mb-1">
+                        Solicitação Recíproca Automática
+                      </p>
+                      <p className="text-sm text-green-700 mb-2">
+                        <strong>{getEmpresaNome(empresaDemandada)}</strong> também solicitará 
+                        clientes de <strong>{getEmpresaNome(empresaSolicitante)}</strong>
+                      </p>
+                      <div className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded">
+                        📋 Motivo: "Reciprocidade - {motivo}"
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
