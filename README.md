@@ -48,6 +48,18 @@ src/pages/indicadores/
 ### 🎪 **Sistema Wishlist Aprimorado**
 Reestruturação completa com novas funcionalidades:
 
+#### 🔄 **Novo Fluxo de Reciprocidade Guiada**
+- **Seleção em duas etapas**: Primeiro seleciona clientes desejados, depois clientes para reciprocidade
+- **Preview duplo**: Visualização completa de ambas as direções antes de confirmar
+- **Validação inteligente**: Só permite conclusão após confirmar ambas as seleções
+- **Integração automática com CRM**: Registro detalhado de todas as operações
+
+#### 🤖 **Automação CRM Integrada**
+- **Registro automático**: Cada solicitação de wishlist gera ação no CRM
+- **Conteúdo detalhado**: Lista completa de clientes, prioridades e direções
+- **Partner ID inteligente**: Sempre identifica corretamente a empresa parceira
+- **Metadata estruturada**: Informações completas para análise posterior
+
 #### 📋 Páginas Especializadas
 - **WishlistDashboard**: Overview geral e métricas
 - **EmpresasClientesPage**: Gestão de clientes
