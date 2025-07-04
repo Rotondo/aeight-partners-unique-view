@@ -1,8 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -18,18 +15,19 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { useWishlist } from "@/contexts/WishlistContext";
-import { Plus, Search, Heart, Calendar, Star, Loader2, ChevronLeft, Trash2, Check, X } from "lucide-react";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { Plus, ChevronLeft, Loader2 } from "lucide-react";
 import { WishlistStatus, WishlistItem } from "@/types";
 import { supabase } from "@/lib/supabase";
 import { toast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { DemoModeToggle } from "@/components/privacy/DemoModeToggle";
 import { DemoModeIndicator } from "@/components/privacy/DemoModeIndicator";
-import { PrivateData } from "@/components/privacy/PrivateData";
 import { useWishlistItemMutations } from "@/hooks/useWishlistMutations/wishlistItem";
 import WishlistSolicitacaoModal from "@/components/wishlist/WishlistSolicitacaoModal";
+import FiltroWishlistItens from "@/components/wishlist/FiltroWishlistItens";
+import ListaWishlistItens from "@/components/wishlist/ListaWishlistItens";
+import WishlistStats from "@/components/wishlist/WishlistStats";
+import { filterWishlistItems, toSafeString, toSafeNumber } from "@/utils/wishlistUtils";
 
 type EmpresaOption = {
   id: string;
@@ -39,15 +37,8 @@ type EmpresaOption = {
 
 const CONSOLE_PREFIX = "[WishlistItensPage]";
 
-// IMPORTANTE: src/pages/wishlist/WishlistItemsPage.tsx tem 879+ linhas. 
-// Considere refatorar este arquivo em componentes menores para melhor manutenibilidade.
-
-function toSafeString(val: unknown): string {
-  return typeof val === "string" ? val : val == null ? "" : String(val);
-}
-function toSafeNumber(val: unknown, fallback = 3): number {
-  return typeof val === "number" && !isNaN(val) ? val : fallback;
-}
+// IMPORTANTE: src/pages/wishlist/WishlistItemsPage.tsx foi refatorado em componentes menores.
+// Agora utiliza FiltroWishlistItens, ListaWishlistItens, WishlistStats, e WishlistItemCard
 
 function getClienteNomePorId(id: string, clientes: EmpresaOption[]) {
   return clientes.find((c) => c.id === id)?.nome || "";
@@ -253,83 +244,8 @@ const WishlistItensPage: React.FC = () => {
     }
   };
 
-  const filteredItens = wishlistItems.filter((item) => {
-    try {
-      const matchesSearch =
-        (item.empresa_interessada?.nome || "")
-          .toLowerCase()
-          .includes(searchTerm.toLowerCase()) ||
-        (item.empresa_desejada?.nome || "")
-          .toLowerCase()
-          .includes(searchTerm.toLowerCase()) ||
-        (item.empresa_proprietaria?.nome || "")
-          .toLowerCase()
-          .includes(searchTerm.toLowerCase());
-
-      const matchesStatus = statusFilter === "all" || item.status === statusFilter;
-
-      if (
-        !item.empresa_interessada?.nome ||
-        !item.empresa_desejada?.nome ||
-        !item.empresa_proprietaria?.nome
-      ) {
-        console.warn(
-          `${CONSOLE_PREFIX} Item com campos nulos:`,
-          item
-        );
-      }
-
-      return matchesSearch && matchesStatus;
-    } catch (error) {
-      console.error(`${CONSOLE_PREFIX} Erro ao filtrar wishlistItens:`, error, item);
-      return false;
-    }
-  });
-
-  const getStatusColor = (status: WishlistStatus) => {
-    switch (status) {
-      case "pendente":
-        return "secondary";
-      case "em_andamento":
-        return "outline";
-      case "aprovado":
-        return "default";
-      case "rejeitado":
-        return "destructive";
-      case "convertido":
-        return "default";
-      default:
-        return "secondary";
-    }
-  };
-
-  const getStatusLabel = (status: WishlistStatus) => {
-    switch (status) {
-      case "pendente":
-        return "Pendente";
-      case "em_andamento":
-        return "Em Andamento";
-      case "aprovado":
-        return "Aprovado";
-      case "rejeitado":
-        return "Rejeitado";
-      case "convertido":
-        return "Convertido";
-      default:
-        return status;
-    }
-  };
-
-  const getPriorityStars = (prioridade: number) => {
-    return Array.from({ length: 5 }, (_, i) => (
-      <Star
-        key={i}
-        className={`h-3 w-3 ${
-          i < prioridade ? "fill-yellow-400 text-yellow-400" : "text-gray-300"
-        }`}
-      />
-    ));
-  };
+  // Filtrar itens usando a função utilitária
+  const filteredItens = filterWishlistItems(wishlistItems, searchTerm, statusFilter);
 
   // Aprovar item
   const handleAprovar = async (item: WishlistItem) => {
@@ -655,232 +571,30 @@ const WishlistItensPage: React.FC = () => {
       </div>
 
       {/* Filters */}
-      <div className="flex items-center space-x-2">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por empresa..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-8"
-          />
-        </div>
-        <Select
-          value={statusFilter}
-          onValueChange={(value: WishlistStatus | "all") => setStatusFilter(value)}
-        >
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Filtrar por status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos os status</SelectItem>
-            <SelectItem value="pendente">Pendente</SelectItem>
-            <SelectItem value="em_andamento">Em Andamento</SelectItem>
-            <SelectItem value="aprovado">Aprovado</SelectItem>
-            <SelectItem value="rejeitado">Rejeitado</SelectItem>
-            <SelectItem value="convertido">Convertido</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      <FiltroWishlistItens
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        statusFilter={statusFilter}
+        onStatusChange={setStatusFilter}
+      />
 
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total</CardTitle>
-            <Heart className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{wishlistItems.length}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pendentes</CardTitle>
-            <Badge variant="secondary">
-              {wishlistItems.filter((i) => i.status === "pendente").length}
-            </Badge>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {wishlistItems.filter((i) => i.status === "pendente").length}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Aprovados</CardTitle>
-            <Badge variant="default">
-              {wishlistItems.filter((i) => i.status === "aprovado").length}
-            </Badge>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {wishlistItems.filter((i) => i.status === "aprovado").length}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Convertidos</CardTitle>
-            <Badge variant="default">
-              {wishlistItems.filter((i) => i.status === "convertido").length}
-            </Badge>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {wishlistItems.filter((i) => i.status === "convertido").length}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <WishlistStats items={wishlistItems} />
 
       {/* Lista de Itens */}
-      <div className="grid gap-4">
-        {filteredItens.map((item) => (
-          <Card key={item.id}>
-            <CardHeader>
-              <div className="flex justify-between items-start">
-                <div>
-                  <CardTitle className="text-lg">
-                    <PrivateData type="company">
-                      {item.empresa_interessada?.nome || (
-                        <span style={{ color: "red" }}>[ERRO: Empresa interessada não encontrada]</span>
-                      )}
-                    </PrivateData>{" "} →{" "}
-                    <PrivateData type="company">
-                      {item.empresa_desejada?.nome || (
-                        <span style={{ color: "red" }}>[ERRO: Empresa desejada não encontrada]</span>
-                      )}
-                    </PrivateData>
-                  </CardTitle>
-                  <CardDescription>
-                    Proprietário: <PrivateData type="company">
-                      {item.empresa_proprietaria?.nome || (
-                        <span style={{ color: "red" }}>[ERRO: Proprietário não encontrado]</span>
-                      )}
-                    </PrivateData>
-                  </CardDescription>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant={getStatusColor(item.status)}>
-                    {getStatusLabel(item.status)}
-                  </Badge>
-                  <div className="flex items-center">
-                    {getPriorityStars(toSafeNumber(item.prioridade, 3))}
-                  </div>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex items-center text-sm text-muted-foreground">
-                  <Calendar className="mr-2 h-4 w-4" />
-                  Solicitado em{" "}
-                  {item.data_solicitacao
-                    ? format(
-                        new Date(item.data_solicitacao),
-                        "dd 'de' MMMM 'de' yyyy",
-                        { locale: ptBR }
-                      )
-                    : <span style={{ color: "red" }}>[ERRO: Data não encontrada]</span>}
-                </div>
-                {item.motivo && (
-                  <div>
-                    <p className="text-sm font-medium">Motivo:</p>
-                    <p className="text-sm text-muted-foreground">
-                      <PrivateData type="generic">
-                        {item.motivo}
-                      </PrivateData>
-                    </p>
-                  </div>
-                )}
-                {item.observacoes && (
-                  <div>
-                    <p className="text-sm font-medium">Observações:</p>
-                    <p className="text-sm text-muted-foreground">
-                      <PrivateData type="generic">
-                        {item.observacoes}
-                      </PrivateData>
-                    </p>
-                  </div>
-                )}
-                <div className="flex justify-end gap-2 pt-2">
-                  {item.status === "pendente" && (
-                    <>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleAprovar(item)}
-                        disabled={actionLoadingId === item.id}
-                      >
-                        {actionLoadingId === item.id ? (
-                          <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                        ) : (
-                          <Check className="h-4 w-4 mr-1" />
-                        )}
-                        Aprovar
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleRejeitar(item)}
-                        disabled={actionLoadingId === item.id}
-                      >
-                        {actionLoadingId === item.id ? (
-                          <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                        ) : (
-                          <X className="h-4 w-4 mr-1" />
-                        )}
-                        Rejeitar
-                      </Button>
-                    </>
-                  )}
-                  {item.status === "aprovado" && (
-                    <Button variant="outline" size="sm">
-                      Facilitar Apresentação
-                    </Button>
-                  )}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setEditingItem(item);
-                      setModalOpen(true);
-                    }}
-                  >
-                    Editar
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-        {filteredItens.length === 0 && (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <Heart className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">
-                Nenhum item encontrado
-              </h3>
-              <p className="text-muted-foreground text-center mb-4">
-                {searchTerm || statusFilter !== "all"
-                  ? "Tente ajustar os filtros de busca"
-                  : "Adicione o primeiro item à wishlist"}
-              </p>
-              <Button
-                onClick={() => setNovoModalOpen(true)}
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Nova Solicitação
-              </Button>
-            </CardContent>
-          </Card>
-        )}
-      </div>
+      <ListaWishlistItens
+        items={filteredItens}
+        onAprovar={handleAprovar}
+        onRejeitar={handleRejeitar}
+        onEditar={(item) => {
+          setEditingItem(item);
+          setModalOpen(true);
+        }}
+        onNovaSolicitacao={() => setNovoModalOpen(true)}
+        actionLoadingId={actionLoadingId}
+        searchTerm={searchTerm}
+        hasStatusFilter={statusFilter !== "all"}
+      />
 
       {/* Novo Modal Aprimorado */}
       <WishlistSolicitacaoModal
