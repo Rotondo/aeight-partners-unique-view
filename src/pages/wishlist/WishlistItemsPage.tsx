@@ -29,6 +29,7 @@ import { DemoModeToggle } from "@/components/privacy/DemoModeToggle";
 import { DemoModeIndicator } from "@/components/privacy/DemoModeIndicator";
 import { PrivateData } from "@/components/privacy/PrivateData";
 import { useWishlistItemMutations } from "@/hooks/useWishlistMutations/wishlistItem";
+import WishlistSolicitacaoModal from "@/components/wishlist/WishlistSolicitacaoModal";
 
 type EmpresaOption = {
   id: string;
@@ -37,6 +38,9 @@ type EmpresaOption = {
 };
 
 const CONSOLE_PREFIX = "[WishlistItensPage]";
+
+// IMPORTANTE: src/pages/wishlist/WishlistItemsPage.tsx tem 879+ linhas. 
+// Considere refatorar este arquivo em componentes menores para melhor manutenibilidade.
 
 function toSafeString(val: unknown): string {
   return typeof val === "string" ? val : val == null ? "" : String(val);
@@ -67,6 +71,7 @@ const WishlistItensPage: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<WishlistStatus | "all">("all");
 
   const [modalOpen, setModalOpen] = useState(false);
+  const [novoModalOpen, setNovoModalOpen] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
   const [editingItem, setEditingItem] = useState<WishlistItem | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
@@ -440,14 +445,21 @@ const WishlistItensPage: React.FC = () => {
             }}
           >
             <Button
+              onClick={() => setNovoModalOpen(true)}
+              data-testid="button-nova-solicitacao"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Nova Solicitação
+            </Button>
+            <Button
+              variant="outline"
               onClick={() => {
                 setEditingItem(null);
                 setModalOpen(true);
               }}
-            data-testid="button-nova-solicitacao"
             >
               <Plus className="mr-2 h-4 w-4" />
-              Nova Solicitação
+              Solicitação Manual
             </Button>
             <DialogContent>
               <DialogHeader>
@@ -860,10 +872,7 @@ const WishlistItensPage: React.FC = () => {
                   : "Adicione o primeiro item à wishlist"}
               </p>
               <Button
-                onClick={() => {
-                  setEditingItem(null);
-                  setModalOpen(true);
-                }}
+                onClick={() => setNovoModalOpen(true)}
               >
                 <Plus className="mr-2 h-4 w-4" />
                 Nova Solicitação
@@ -872,6 +881,12 @@ const WishlistItensPage: React.FC = () => {
           </Card>
         )}
       </div>
+
+      {/* Novo Modal Aprimorado */}
+      <WishlistSolicitacaoModal
+        isOpen={novoModalOpen}
+        onClose={() => setNovoModalOpen(false)}
+      />
     </div>
   );
 };
