@@ -215,6 +215,118 @@ interface IndicadoresFilttersProps {
 }
 ```
 
+### 🎪 **Arquitetura Modular Wishlist**
+Sistema de componentes refatorado para máxima reutilização e manutenibilidade:
+
+```typescript
+// src/components/wishlist/
+// Estrutura modular com responsabilidades únicas
+
+// FiltroWishlistItens - Filtros inteligentes
+interface FiltroWishlistItensProps {
+  searchTerm: string;
+  onSearchChange: (value: string) => void;
+  statusFilter: WishlistStatus | "all";
+  onStatusChange: (value: WishlistStatus | "all") => void;
+}
+
+// ListaWishlistItens - Container otimizado
+interface ListaWishlistItensProps {
+  items: WishlistItem[];
+  loading: boolean;
+  onItemClick: (item: WishlistItem) => void;
+  emptyMessage?: string;
+}
+
+// WishlistItemCard - Exibição individual
+interface WishlistItemCardProps {
+  item: WishlistItem;
+  onClick: () => void;
+  className?: string;
+}
+
+// WishlistStats - Métricas em tempo real
+interface WishlistStatsProps {
+  totalItems: number;
+  pendingItems: number;
+  approvedItems: number;
+  rejectedItems: number;
+}
+```
+
+**Benefícios da Arquitetura Modular:**
+- **Redução de 32%**: 894 → 608 linhas no componente principal
+- **Componentes focados**: Cada um com responsabilidade única
+- **Reutilização**: Componentes podem ser usados em outras páginas
+- **Performance**: Otimização de re-renders e bundle splitting
+- **Testabilidade**: Unidades menores e mais fáceis de testar
+
+### 🔄 **Fluxo de Reciprocidade Guiada**
+Sistema avançado de controle de reciprocidade em wishlist:
+
+```typescript
+// Estados do fluxo
+type Step = "empresas" | "clientes" | "detalhes" | "clientes_reciprocidade" | "preview";
+
+// Lógica condicional de passos
+const nextStep = () => {
+  if (currentStep === "detalhes") {
+    if (solicitarReciprocidade) {
+      setCurrentStep("clientes_reciprocidade");
+    } else {
+      setCurrentStep("preview");
+    }
+  }
+  // ... outros passos
+};
+
+// Integração CRM automática
+const createCrmAction = async (wishlistData: WishlistRequest) => {
+  const crmAction = {
+    description: `Solicitação de Wishlist concluída entre ${empresaSolicitante} e ${empresaDesejada}`,
+    content: generateDetailedContent(wishlistData),
+    communication_method: "outro" as const,
+    status: "concluida" as const,
+    partner_id: identifyExternalPartner(wishlistData),
+    metadata: {
+      wishlist_request: true,
+      reciprocidade: solicitarReciprocidade,
+      clientes_solicitados: clientesSelecionados,
+      clientes_reciprocidade: clientesReciprocidadeSelecionados,
+      // ... metadata completa
+    }
+  };
+  
+  return await createAcaoCrm(crmAction);
+};
+```
+
+### 📊 **Utilitários Wishlist**
+```typescript
+// src/utils/wishlistUtils.ts
+// Funções utilitárias compartilhadas
+
+export const filterWishlistItems = (
+  items: WishlistItem[],
+  searchTerm: string,
+  statusFilter: WishlistStatus | "all"
+): WishlistItem[] => {
+  // Filtro inteligente com busca avançada
+  // Suporte a múltiplos critérios
+  // Performance otimizada
+};
+
+export const toSafeString = (value: any): string => {
+  // Conversão segura para string
+  // Tratamento de valores nulos/undefined
+};
+
+export const toSafeNumber = (value: any): number => {
+  // Conversão segura para número
+  // Valores padrão seguros
+};
+```
+
 ## 🔐 **Segurança PWA e Privacidade**
 
 ### 🛡️ **Sistema de Mascaramento**

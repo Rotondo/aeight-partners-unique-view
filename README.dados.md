@@ -418,6 +418,134 @@ CREATE INDEX idx_crm_upload_pending ON diario_crm_acoes(upload_progress)
   WHERE upload_progress < 100;
 ```
 
+#### **🤖 Integração Automática CRM - Wishlist**
+Nova funcionalidade de integração automática com CRM para todas as solicitações de wishlist:
+
+```sql
+-- Estrutura da tabela diario_crm_acoes já existente, com novos campos específicos
+ALTER TABLE diario_crm_acoes ADD COLUMN IF NOT EXISTS wishlist_metadata JSONB;
+ALTER TABLE diario_crm_acoes ADD COLUMN IF NOT EXISTS partner_id UUID;
+ALTER TABLE diario_crm_acoes ADD COLUMN IF NOT EXISTS reciprocidade_info JSONB;
+
+-- Índices para performance das consultas de wishlist
+CREATE INDEX idx_crm_wishlist_metadata ON diario_crm_acoes
+  USING gin(wishlist_metadata) WHERE wishlist_metadata IS NOT NULL;
+CREATE INDEX idx_crm_partner_id ON diario_crm_acoes(partner_id) 
+  WHERE partner_id IS NOT NULL;
+
+-- Função para criação automática de ação CRM
+CREATE OR REPLACE FUNCTION create_wishlist_crm_action(
+  p_empresa_solicitante TEXT,
+  p_empresa_demandada TEXT,
+  p_clientes_solicitados JSONB,
+  p_clientes_reciprocidade JSONB DEFAULT NULL,
+  p_motivo TEXT DEFAULT '',
+  p_partner_id UUID DEFAULT NULL,
+  p_user_id UUID DEFAULT NULL
+) RETURNS UUID AS $$
+DECLARE
+  v_crm_id UUID;
+  v_description TEXT;
+  v_content TEXT;
+  v_metadata JSONB;
+BEGIN
+  -- Gerar descrição automática
+  v_description := format('Solicitação de Wishlist concluída entre %s e %s', 
+    p_empresa_solicitante, p_empresa_demandada);
+  
+  -- Construir conteúdo detalhado
+  v_content := format('Solicitação de Wishlist concluída:
+
+DIREÇÃO PRINCIPAL:
+%s → %s
+Clientes solicitados (%s):', 
+    p_empresa_solicitante, 
+    p_empresa_demandada,
+    jsonb_array_length(p_clientes_solicitados)
+  );
+  
+  -- Adicionar lista de clientes solicitados
+  FOR i IN 0..jsonb_array_length(p_clientes_solicitados)-1 LOOP
+    v_content := v_content || format('
+• %s (Prioridade: %s)', 
+      (p_clientes_solicitados->i->>'nome'),
+      (p_clientes_solicitados->i->>'prioridade')
+    );
+  END LOOP;
+  
+  -- Adicionar reciprocidade se existir
+  IF p_clientes_reciprocidade IS NOT NULL THEN
+    v_content := v_content || format('
+
+DIREÇÃO RECÍPROCA:
+%s → %s
+Clientes solicitados (%s):', 
+      p_empresa_demandada,
+      p_empresa_solicitante,
+      jsonb_array_length(p_clientes_reciprocidade)
+    );
+    
+    FOR i IN 0..jsonb_array_length(p_clientes_reciprocidade)-1 LOOP
+      v_content := v_content || format('
+• %s (Prioridade: %s)', 
+        (p_clientes_reciprocidade->i->>'nome'),
+        (p_clientes_reciprocidade->i->>'prioridade')
+      );
+    END LOOP;
+  END IF;
+  
+  -- Adicionar motivo
+  IF p_motivo != '' THEN
+    v_content := v_content || format('
+
+Motivo: %s', p_motivo);
+  END IF;
+  
+  -- Construir metadata estruturada
+  v_metadata := jsonb_build_object(
+    'wishlist_request', true,
+    'empresa_solicitante', p_empresa_solicitante,
+    'empresa_demandada', p_empresa_demandada,
+    'reciprocidade', p_clientes_reciprocidade IS NOT NULL,
+    'clientes_solicitados', p_clientes_solicitados,
+    'clientes_reciprocidade', COALESCE(p_clientes_reciprocidade, '[]'::jsonb),
+    'motivo', p_motivo,
+    'created_at', now()
+  );
+  
+  -- Inserir ação CRM
+  INSERT INTO diario_crm_acoes (
+    description,
+    content,
+    communication_method,
+    status,
+    partner_id,
+    user_id,
+    wishlist_metadata,
+    metadata
+  ) VALUES (
+    v_description,
+    v_content,
+    'outro',
+    'concluida',
+    p_partner_id,
+    COALESCE(p_user_id, auth.uid()),
+    v_metadata,
+    v_metadata
+  ) RETURNING id INTO v_crm_id;
+  
+  RETURN v_crm_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+```
+
+**Características da Integração CRM:**
+- **Automática**: Toda solicitação de wishlist gera ação CRM
+- **Detalhada**: Conteúdo completo com ambas as direções
+- **Metadata**: Dados estruturados para análise e relatórios
+- **Partner ID**: Identificação automática do parceiro externo
+- **Auditoria**: Registro completo de usuário e timestamps
+
 ---
 
 ## 7. Módulos Core - Database
