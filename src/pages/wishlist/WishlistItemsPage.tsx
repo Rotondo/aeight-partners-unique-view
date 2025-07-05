@@ -10,6 +10,7 @@ import { DemoModeIndicator } from "@/components/privacy/DemoModeIndicator";
 import { useWishlistItemMutations } from "@/hooks/useWishlistMutations/wishlistItem";
 import WishlistSolicitacaoModal from "@/components/wishlist/WishlistSolicitacaoModal";
 import WishlistFormModal from "@/components/wishlist/WishlistFormModal";
+import WishlistFluxoAprimorado from "@/components/wishlist/WishlistFluxoAprimorado";
 import FiltroWishlistItens from "@/components/wishlist/FiltroWishlistItens";
 import ListaWishlistItens from "@/components/wishlist/ListaWishlistItens";
 import WishlistStats from "@/components/wishlist/WishlistStats";
@@ -39,6 +40,7 @@ const WishlistItensPage: React.FC = () => {
 
   const [formModalOpen, setFormModalOpen] = useState(false);
   const [novoModalOpen, setNovoModalOpen] = useState(false);
+  const [fluxoAprimoradoOpen, setFluxoAprimoradoOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<WishlistItem | null>(null);
 
   // Aprovação/Rejeição
@@ -140,6 +142,15 @@ const WishlistItensPage: React.FC = () => {
         <div className="flex items-center gap-2 flex-shrink-0">
           <DemoModeToggle />
           <Button
+            onClick={() => setFluxoAprimoradoOpen(true)}
+            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+            data-testid="button-fluxo-aprimorado"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Fluxo Aprimorado
+          </Button>
+          <Button
+            variant="outline"
             onClick={() => setNovoModalOpen(true)}
             data-testid="button-nova-solicitacao"
           >
@@ -186,6 +197,11 @@ const WishlistItensPage: React.FC = () => {
       />
 
       {/* Modais */}
+      <WishlistFluxoAprimorado
+        isOpen={fluxoAprimoradoOpen}
+        onClose={() => setFluxoAprimoradoOpen(false)}
+      />
+      
       <WishlistSolicitacaoModal
         isOpen={novoModalOpen}
         onClose={() => setNovoModalOpen(false)}
