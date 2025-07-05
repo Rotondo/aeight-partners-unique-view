@@ -352,7 +352,7 @@ const WishlistSolicitacaoModal: React.FC<WishlistSolicitacaoModalProps> = ({
       const crmAction = {
         description: `Solicitação de Wishlist concluída entre ${empresaSolicitanteNome} e ${empresaDemandadaNome}`,
         content: contentDetails,
-        communication_method: "outro" as const,
+        communication_method: "email" as const,
         status: "concluida" as const,
         partner_id: partnerId,
         metadata: {
