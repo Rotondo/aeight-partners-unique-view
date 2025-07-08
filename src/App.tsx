@@ -9,6 +9,7 @@ import { AuthProvider } from './hooks/useAuth';
 import WishlistPage from './pages/wishlist/WishlistPage';
 import DiarioPage from './pages/diario';
 import EventosPage from './pages/eventos/EventosPage';
+import MapaParceirosPage from './pages/mapa-parceiros/MapaParceirosPage';
 import OportunidadesPageContainer from './pages/oportunidades';
 import OportunidadesDashboardPage from './pages/oportunidades-dashboard';
 import IndicadoresPage from './pages/indicadores/IndicadoresPage';
@@ -199,6 +200,13 @@ function App() {
                     <PrivateRoute>
                       <MainLayout>
                         <EventosPage />
+                      </MainLayout>
+                    </PrivateRoute>
+                  } />
+                  <Route path="/mapa-parceiros" element={
+                    <PrivateRoute>
+                      <MainLayout>
+                        <MapaParceirosPage />
                       </MainLayout>
                     </PrivateRoute>
                   } />

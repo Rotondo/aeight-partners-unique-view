@@ -88,6 +88,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       adminOnly: false
     },
     {
+      title: "Mapa de Parceiros",
+      url: "/mapa-parceiros",
+      icon: Users,
+      description: "Mapa sequencial de parceiros",
+      adminOnly: false
+    },
+    {
       title: "Diário",
       url: "/diario",
       icon: BookOpen,
