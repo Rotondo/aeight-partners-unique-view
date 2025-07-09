@@ -26,19 +26,19 @@ export interface SubnivelEtapa {
 
 export interface ParceiroMapa {
   id: string;
-  empresa_id?: string;
-  nome: string;
-  descricao?: string;
-  website?: string;
-  contato_email?: string;
-  contato_telefone?: string;
-  logo_url?: string;
+  empresa_id: string;
   status: 'ativo' | 'inativo' | 'pendente';
   performance_score: number;
   observacoes?: string;
   created_at: string;
   updated_at: string;
   associacoes?: AssociacaoParceiroEtapa[];
+  empresa?: {
+    id: string;
+    nome: string;
+    descricao?: string;
+    tipo: string;
+  };
 }
 
 export interface AssociacaoParceiroEtapa {

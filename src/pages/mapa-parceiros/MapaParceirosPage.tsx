@@ -16,8 +16,8 @@ import { useNavigate } from 'react-router-dom';
 import { useMapaParceiros } from '@/hooks/useMapaParceiros';
 import MapaParceirosSidebar from '@/components/mapa-parceiros/MapaParceirosSidebar';
 import ParceiroCard from '@/components/mapa-parceiros/ParceiroCard';
-import ParceiroDetalhes from '@/components/mapa-parceiros/ParceiroDetalhes';
-import ParceiroFormModal from '@/components/mapa-parceiros/ParceiroFormModal';
+import ParceiroDetalhesSimplificado from '@/components/mapa-parceiros/ParceiroDetalhesSimplificado';
+import EmpresaSelector from '@/components/mapa-parceiros/EmpresaSelector';
 import { ParceiroMapa } from '@/types/mapa-parceiros';
 import { DemoModeIndicator } from '@/components/privacy/DemoModeIndicator';
 import { DemoModeToggle } from '@/components/privacy/DemoModeToggle';
@@ -44,8 +44,7 @@ const MapaParceirosPage: React.FC = () => {
   const [etapaSelecionada, setEtapaSelecionada] = useState<string>();
   const [parceiroSelecionado, setParceiroSelecionado] = useState<ParceiroMapa | null>(null);
   const [showDetalhes, setShowDetalhes] = useState(false);
-  const [showFormModal, setShowFormModal] = useState(false);
-  const [parceiroEditando, setParceiroEditando] = useState<ParceiroMapa | null>(null);
+  const [showEmpresaSelector, setShowEmpresaSelector] = useState(false);
   const [visualizacao, setVisualizacao] = useState<'grid' | 'lista'>('grid');
 
   const handleToggleEtapa = (etapaId: string) => {
@@ -69,30 +68,15 @@ const MapaParceirosPage: React.FC = () => {
   };
 
   const handleNovoParceiro = () => {
-    setParceiroEditando(null);
-    setShowFormModal(true);
+    setShowEmpresaSelector(true);
   };
 
-  const handleEditarParceiro = (parceiro: ParceiroMapa) => {
-    setParceiroEditando(parceiro);
-    setShowFormModal(true);
-  };
-
-  const handleSalvarParceiro = async (dados: Partial<ParceiroMapa>) => {
-    if (parceiroEditando) {
-      await atualizarParceiro(parceiroEditando.id, dados);
-      if (parceiroSelecionado?.id === parceiroEditando.id) {
-        setParceiroSelecionado({ ...parceiroSelecionado, ...dados });
-      }
-    } else {
-      await criarParceiro(dados);
-    }
-    setShowFormModal(false);
-    setParceiroEditando(null);
+  const handleSalvarEmpresaParceiro = async (dados: { empresa_id: string; status: string; performance_score: number; observacoes?: string }) => {
+    await criarParceiro({ ...dados, status: dados.status as 'ativo' | 'inativo' | 'pendente' });
   };
 
   const handleDeletarParceiro = async (parceiro: ParceiroMapa) => {
-    if (window.confirm(`Tem certeza que deseja remover o parceiro "${parceiro.nome}"?`)) {
+    if (window.confirm(`Tem certeza que deseja remover o parceiro "${parceiro.empresa?.nome}"?`)) {
       await deletarParceiro(parceiro.id);
       if (parceiroSelecionado?.id === parceiro.id) {
         setShowDetalhes(false);
@@ -233,7 +217,7 @@ const MapaParceirosPage: React.FC = () => {
                                 key={parceiro.id}
                                 parceiro={parceiro}
                                 onClick={() => handleParceiroClick(parceiro)}
-                                onEdit={() => handleEditarParceiro(parceiro)}
+                                onEdit={() => {}}
                                 onDelete={() => handleDeletarParceiro(parceiro)}
                               />
                             ))}
@@ -245,7 +229,7 @@ const MapaParceirosPage: React.FC = () => {
                                 key={parceiro.id}
                                 parceiro={parceiro}
                                 onClick={() => handleParceiroClick(parceiro)}
-                                onEdit={() => handleEditarParceiro(parceiro)}
+                                onEdit={() => {}}
                                 onDelete={() => handleDeletarParceiro(parceiro)}
                                 compact
                               />
@@ -287,7 +271,7 @@ const MapaParceirosPage: React.FC = () => {
                           key={parceiro.id}
                           parceiro={parceiro}
                           onClick={() => handleParceiroClick(parceiro)}
-                          onEdit={() => handleEditarParceiro(parceiro)}
+                          onEdit={() => {}}
                           onDelete={() => handleDeletarParceiro(parceiro)}
                         />
                       ))}
@@ -299,7 +283,7 @@ const MapaParceirosPage: React.FC = () => {
                           key={parceiro.id}
                           parceiro={parceiro}
                           onClick={() => handleParceiroClick(parceiro)}
-                          onEdit={() => handleEditarParceiro(parceiro)}
+                          onEdit={() => {}}
                           onDelete={() => handleDeletarParceiro(parceiro)}
                           compact
                         />
@@ -326,7 +310,7 @@ const MapaParceirosPage: React.FC = () => {
 
         {/* Painel de Detalhes */}
         {showDetalhes && parceiroSelecionado && (
-          <ParceiroDetalhes
+          <ParceiroDetalhesSimplificado
             parceiro={parceiroSelecionado}
             etapas={etapas}
             subniveis={subniveis}
@@ -343,14 +327,10 @@ const MapaParceirosPage: React.FC = () => {
       </div>
 
       {/* Modais */}
-      <ParceiroFormModal
-        isOpen={showFormModal}
-        onClose={() => {
-          setShowFormModal(false);
-          setParceiroEditando(null);
-        }}
-        onSave={handleSalvarParceiro}
-        parceiro={parceiroEditando}
+      <EmpresaSelector
+        isOpen={showEmpresaSelector}
+        onClose={() => setShowEmpresaSelector(false)}
+        onSave={handleSalvarEmpresaParceiro}
       />
     </div>
   );

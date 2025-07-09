@@ -72,6 +72,9 @@ const ParceiroCard: React.FC<ParceiroCardProps> = ({
       .slice(0, 2);
   };
 
+  const nomeEmpresa = parceiro.empresa?.nome || 'Empresa sem nome';
+  const descricaoEmpresa = parceiro.empresa?.descricao || 'Sem descrição';
+
   const renderStars = (score: number) => {
     const stars = Math.round(score / 20); // Converte 0-100 para 0-5 estrelas
     return Array.from({ length: 5 }, (_, i) => (
@@ -94,16 +97,15 @@ const ParceiroCard: React.FC<ParceiroCardProps> = ({
         <CardContent className="p-3">
           <div className="flex items-center gap-3">
             <Avatar className="h-8 w-8">
-              <AvatarImage src={parceiro.logo_url} alt={parceiro.nome} />
               <AvatarFallback className="text-xs">
-                {getInitials(parceiro.nome)}
+                {getInitials(nomeEmpresa)}
               </AvatarFallback>
             </Avatar>
             
             <div className="flex-1 min-w-0">
-              <h4 className="text-sm font-medium truncate">{parceiro.nome}</h4>
+              <h4 className="text-sm font-medium truncate">{nomeEmpresa}</h4>
               <p className="text-xs text-muted-foreground truncate">
-                {parceiro.descricao || 'Sem descrição'}
+                {descricaoEmpresa}
               </p>
             </div>
             
@@ -128,14 +130,13 @@ const ParceiroCard: React.FC<ParceiroCardProps> = ({
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3" onClick={onClick}>
             <Avatar className="h-12 w-12">
-              <AvatarImage src={parceiro.logo_url} alt={parceiro.nome} />
-              <AvatarFallback>{getInitials(parceiro.nome)}</AvatarFallback>
+              <AvatarFallback>{getInitials(nomeEmpresa)}</AvatarFallback>
             </Avatar>
             
             <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-lg truncate">{parceiro.nome}</h3>
+              <h3 className="font-semibold text-lg truncate">{nomeEmpresa}</h3>
               <p className="text-sm text-muted-foreground line-clamp-2">
-                {parceiro.descricao || 'Sem descrição disponível'}
+                {descricaoEmpresa}
               </p>
             </div>
           </div>
@@ -155,14 +156,6 @@ const ParceiroCard: React.FC<ParceiroCardProps> = ({
                 <Edit className="h-4 w-4 mr-2" />
                 Editar
               </DropdownMenuItem>
-              {parceiro.website && (
-                <DropdownMenuItem 
-                  onClick={() => window.open(parceiro.website, '_blank')}
-                >
-                  <ExternalLink className="h-4 w-4 mr-2" />
-                  Visitar Site
-                </DropdownMenuItem>
-              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem 
                 onClick={onDelete}
@@ -193,28 +186,12 @@ const ParceiroCard: React.FC<ParceiroCardProps> = ({
           </Badge>
         </div>
 
-        {/* Contatos */}
+        {/* Informações da Empresa */}
         <div className="space-y-2">
-          {parceiro.website && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Globe className="h-4 w-4" />
-              <span className="truncate">{parceiro.website}</span>
-            </div>
-          )}
-          
-          {parceiro.contato_email && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Mail className="h-4 w-4" />
-              <span className="truncate">{parceiro.contato_email}</span>
-            </div>
-          )}
-          
-          {parceiro.contato_telefone && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Phone className="h-4 w-4" />
-              <span>{parceiro.contato_telefone}</span>
-            </div>
-          )}
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span className="font-medium">Tipo:</span>
+            <span className="capitalize">{parceiro.empresa?.tipo}</span>
+          </div>
         </div>
       </CardContent>
     </Card>

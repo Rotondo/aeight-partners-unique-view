@@ -65,8 +65,11 @@ export const useMapaParceiros = () => {
     try {
       const { data, error } = await supabase
         .from('parceiros_mapa')
-        .select('*')
-        .order('nome');
+        .select(`
+          *,
+          empresa:empresas(id, nome, descricao, tipo)
+        `)
+        .order('created_at');
       
       if (error) throw error;
       setParceiros((data || []) as ParceiroMapa[]);
@@ -266,8 +269,8 @@ export const useMapaParceiros = () => {
     if (filtros.busca) {
       const busca = filtros.busca.toLowerCase();
       parceirosFiltrados = parceirosFiltrados.filter(p => 
-        p.nome.toLowerCase().includes(busca) ||
-        p.descricao?.toLowerCase().includes(busca)
+        p.empresa?.nome.toLowerCase().includes(busca) ||
+        p.empresa?.descricao?.toLowerCase().includes(busca)
       );
     }
 

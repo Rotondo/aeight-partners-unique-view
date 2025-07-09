@@ -957,55 +957,37 @@ export type Database = {
       }
       parceiros_mapa: {
         Row: {
-          contato_email: string | null
-          contato_telefone: string | null
           created_at: string
-          descricao: string | null
-          empresa_id: string | null
+          empresa_id: string
           id: string
-          logo_url: string | null
-          nome: string
           observacoes: string | null
           performance_score: number | null
           status: string
           updated_at: string
-          website: string | null
         }
         Insert: {
-          contato_email?: string | null
-          contato_telefone?: string | null
           created_at?: string
-          descricao?: string | null
-          empresa_id?: string | null
+          empresa_id: string
           id?: string
-          logo_url?: string | null
-          nome: string
           observacoes?: string | null
           performance_score?: number | null
           status?: string
           updated_at?: string
-          website?: string | null
         }
         Update: {
-          contato_email?: string | null
-          contato_telefone?: string | null
           created_at?: string
-          descricao?: string | null
-          empresa_id?: string | null
+          empresa_id?: string
           id?: string
-          logo_url?: string | null
-          nome?: string
           observacoes?: string | null
           performance_score?: number | null
           status?: string
           updated_at?: string
-          website?: string | null
         }
         Relationships: [
           {
             foreignKeyName: "parceiros_mapa_empresa_id_fkey"
             columns: ["empresa_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "empresas"
             referencedColumns: ["id"]
           },
