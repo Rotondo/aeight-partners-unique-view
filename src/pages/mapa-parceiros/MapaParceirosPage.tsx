@@ -21,9 +21,11 @@ import EmpresaSelector from '@/components/mapa-parceiros/EmpresaSelector';
 import { ParceiroMapa } from '@/types/mapa-parceiros';
 import { DemoModeIndicator } from '@/components/privacy/DemoModeIndicator';
 import { DemoModeToggle } from '@/components/privacy/DemoModeToggle';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const MapaParceirosPage: React.FC = () => {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const {
     etapas,
     subniveis,
@@ -118,29 +120,33 @@ const MapaParceirosPage: React.FC = () => {
       
       {/* Header */}
       <div className="flex-shrink-0 border-b border-border bg-background">
-        <div className="flex items-center justify-between p-4">
-          <div className="flex items-center gap-4">
+        <div className="flex items-center justify-between p-3 sm:p-4">
+          <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
             <Button 
               variant="outline" 
-              size="sm"
+              size={isMobile ? "sm" : "sm"}
               onClick={() => navigate('/')}
             >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Voltar
+              <ArrowLeft className="h-4 w-4 mr-1 sm:mr-2" />
+              {!isMobile && "Voltar"}
             </Button>
             
-            <div>
-              <h1 className="text-2xl font-bold">Mapa Sequencial de Parceiros</h1>
-              <p className="text-muted-foreground">
-                Gestão de parceiros por etapa da jornada do e-commerce
-              </p>
+            <div className="min-w-0 flex-1">
+              <h1 className="text-lg sm:text-2xl font-bold truncate">
+                {isMobile ? "Mapa de Parceiros" : "Mapa Sequencial de Parceiros"}
+              </h1>
+              {!isMobile && (
+                <p className="text-muted-foreground text-sm">
+                  Gestão de parceiros por etapa da jornada do e-commerce
+                </p>
+              )}
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
-            <DemoModeToggle />
+          <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+            {!isMobile && <DemoModeToggle />}
             
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-2">
               <Button
                 variant={visualizacao === 'grid' ? 'default' : 'outline'}
                 size="sm"
@@ -157,9 +163,9 @@ const MapaParceirosPage: React.FC = () => {
               </Button>
             </div>
 
-            <Button onClick={handleNovoParceiro}>
-              <Plus className="h-4 w-4 mr-2" />
-              Novo Parceiro
+            <Button onClick={handleNovoParceiro} size={isMobile ? "sm" : "default"}>
+              <Plus className="h-4 w-4 mr-1 sm:mr-2" />
+              {isMobile ? "Novo" : "Novo Parceiro"}
             </Button>
           </div>
         </div>
@@ -209,33 +215,33 @@ const MapaParceirosPage: React.FC = () => {
                         <p className="text-muted-foreground">{etapa.descricao}</p>
                       )}
 
-                      {parceirosDaEtapa.length > 0 ? (
-                        visualizacao === 'grid' ? (
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {parceirosDaEtapa.map((parceiro) => (
-                              <ParceiroCard
-                                key={parceiro.id}
-                                parceiro={parceiro}
-                                onClick={() => handleParceiroClick(parceiro)}
-                                onEdit={() => {}}
-                                onDelete={() => handleDeletarParceiro(parceiro)}
-                              />
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="space-y-2">
-                            {parceirosDaEtapa.map((parceiro) => (
-                              <ParceiroCard
-                                key={parceiro.id}
-                                parceiro={parceiro}
-                                onClick={() => handleParceiroClick(parceiro)}
-                                onEdit={() => {}}
-                                onDelete={() => handleDeletarParceiro(parceiro)}
-                                compact
-                              />
-                            ))}
-                          </div>
-                        )
+                       {parceirosDaEtapa.length > 0 ? (
+                         visualizacao === 'grid' && !isMobile ? (
+                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
+                             {parceirosDaEtapa.map((parceiro) => (
+                               <ParceiroCard
+                                 key={parceiro.id}
+                                 parceiro={parceiro}
+                                 onClick={() => handleParceiroClick(parceiro)}
+                                 onEdit={() => {}}
+                                 onDelete={() => handleDeletarParceiro(parceiro)}
+                               />
+                             ))}
+                           </div>
+                         ) : (
+                           <div className="space-y-2">
+                             {parceirosDaEtapa.map((parceiro) => (
+                               <ParceiroCard
+                                 key={parceiro.id}
+                                 parceiro={parceiro}
+                                 onClick={() => handleParceiroClick(parceiro)}
+                                 onEdit={() => {}}
+                                 onDelete={() => handleDeletarParceiro(parceiro)}
+                                 compact
+                               />
+                             ))}
+                           </div>
+                         )
                       ) : (
                         <div className="text-center py-12">
                           <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
@@ -263,33 +269,33 @@ const MapaParceirosPage: React.FC = () => {
                   </Badge>
                 </div>
 
-                {parceiros.length > 0 ? (
-                  visualizacao === 'grid' ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                      {parceiros.map((parceiro) => (
-                        <ParceiroCard
-                          key={parceiro.id}
-                          parceiro={parceiro}
-                          onClick={() => handleParceiroClick(parceiro)}
-                          onEdit={() => {}}
-                          onDelete={() => handleDeletarParceiro(parceiro)}
-                        />
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {parceiros.map((parceiro) => (
-                        <ParceiroCard
-                          key={parceiro.id}
-                          parceiro={parceiro}
-                          onClick={() => handleParceiroClick(parceiro)}
-                          onEdit={() => {}}
-                          onDelete={() => handleDeletarParceiro(parceiro)}
-                          compact
-                        />
-                      ))}
-                    </div>
-                  )
+                 {parceiros.length > 0 ? (
+                   visualizacao === 'grid' && !isMobile ? (
+                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4">
+                       {parceiros.map((parceiro) => (
+                         <ParceiroCard
+                           key={parceiro.id}
+                           parceiro={parceiro}
+                           onClick={() => handleParceiroClick(parceiro)}
+                           onEdit={() => {}}
+                           onDelete={() => handleDeletarParceiro(parceiro)}
+                         />
+                       ))}
+                     </div>
+                   ) : (
+                     <div className="space-y-2">
+                       {parceiros.map((parceiro) => (
+                         <ParceiroCard
+                           key={parceiro.id}
+                           parceiro={parceiro}
+                           onClick={() => handleParceiroClick(parceiro)}
+                           onEdit={() => {}}
+                           onDelete={() => handleDeletarParceiro(parceiro)}
+                           compact
+                         />
+                       ))}
+                     </div>
+                   )
                 ) : (
                   <div className="text-center py-12">
                     <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />

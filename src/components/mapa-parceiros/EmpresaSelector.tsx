@@ -5,6 +5,9 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Dialog,
   DialogContent,
@@ -14,6 +17,7 @@ import {
 } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { Check, X } from 'lucide-react';
 
 interface Empresa {
   id: string;
@@ -28,18 +32,22 @@ interface EmpresaSelectorProps {
   onSave: (dados: { empresa_id: string; status: string; performance_score: number; observacoes?: string }) => Promise<void>;
 }
 
+interface EmpresaSelection extends Empresa {
+  selected: boolean;
+}
+
 const EmpresaSelector: React.FC<EmpresaSelectorProps> = ({
   isOpen,
   onClose,
   onSave
 }) => {
-  const [empresas, setEmpresas] = useState<Empresa[]>([]);
+  const [empresas, setEmpresas] = useState<EmpresaSelection[]>([]);
   const [empresasParceiros, setEmpresasParceiros] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   const [formData, setFormData] = useState({
-    empresa_id: '',
     status: 'ativo' as 'ativo' | 'inativo' | 'pendente',
-    performance_score: 0,
+    performance_score: 80,
     observacoes: ''
   });
 
@@ -60,7 +68,9 @@ const EmpresaSelector: React.FC<EmpresaSelectorProps> = ({
         .order('nome');
       
       if (error) throw error;
-      setEmpresas(data || []);
+      
+      const empresasDisponiveis = (data || []).filter(empresa => !empresasParceiros.has(empresa.id));
+      setEmpresas(empresasDisponiveis.map(empresa => ({ ...empresa, selected: false })));
     } catch (error) {
       console.error('Erro ao carregar empresas:', error);
       toast({
@@ -88,10 +98,12 @@ const EmpresaSelector: React.FC<EmpresaSelectorProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.empresa_id) {
+    const empresasSelecionadas = empresas.filter(emp => emp.selected);
+    
+    if (empresasSelecionadas.length === 0) {
       toast({
         title: "Erro",
-        description: "Selecione uma empresa.",
+        description: "Selecione pelo menos uma empresa.",
         variant: "destructive",
       });
       return;
@@ -99,54 +111,149 @@ const EmpresaSelector: React.FC<EmpresaSelectorProps> = ({
 
     setLoading(true);
     try {
-      await onSave(formData);
+      for (const empresa of empresasSelecionadas) {
+        await onSave({
+          empresa_id: empresa.id,
+          status: formData.status,
+          performance_score: formData.performance_score,
+          observacoes: formData.observacoes
+        });
+      }
+      
+      toast({
+        title: "Sucesso",
+        description: `${empresasSelecionadas.length} parceiros adicionados com sucesso.`,
+      });
+      
       onClose();
       setFormData({
-        empresa_id: '',
         status: 'ativo',
-        performance_score: 0,
+        performance_score: 80,
         observacoes: ''
       });
+      setEmpresas(prev => prev.map(emp => ({ ...emp, selected: false })));
+      setSearchTerm('');
     } catch (error) {
-      console.error('Erro ao salvar parceiro:', error);
+      console.error('Erro ao salvar parceiros:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao adicionar parceiros.",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  const empresasDisponiveis = empresas.filter(empresa => !empresasParceiros.has(empresa.id));
+  const empresasFiltradas = empresas.filter(empresa => 
+    empresa.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    empresa.tipo.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const empresasSelecionadas = empresas.filter(emp => emp.selected);
+
+  const toggleEmpresa = (empresaId: string) => {
+    setEmpresas(prev => prev.map(emp => 
+      emp.id === empresaId ? { ...emp, selected: !emp.selected } : emp
+    ));
+  };
+
+  const toggleTodos = () => {
+    const todosNaoSelecionados = empresasFiltradas.some(emp => !emp.selected);
+    setEmpresas(prev => prev.map(emp => 
+      empresasFiltradas.find(filtered => filtered.id === emp.id) 
+        ? { ...emp, selected: todosNaoSelecionados }
+        : emp
+    ));
+  };
+
+  const limparSelecao = () => {
+    setEmpresas(prev => prev.map(emp => ({ ...emp, selected: false })));
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[600px] max-h-[80vh]">
         <DialogHeader>
-          <DialogTitle>Adicionar Empresa como Parceiro</DialogTitle>
+          <DialogTitle className="flex items-center justify-between">
+            Adicionar Empresas como Parceiros
+            {empresasSelecionadas.length > 0 && (
+              <Badge variant="secondary">
+                {empresasSelecionadas.length} selecionadas
+              </Badge>
+            )}
+          </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Seleção de Empresa */}
+          {/* Busca e Controles */}
+          <div className="space-y-3">
+            <div>
+              <Label htmlFor="search">Buscar Empresas</Label>
+              <Input
+                id="search"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Digite o nome ou tipo da empresa..."
+                className="mt-1"
+              />
+            </div>
+            
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={toggleTodos}
+                className="flex-1"
+              >
+                <Check className="h-4 w-4 mr-2" />
+                {empresasFiltradas.some(emp => !emp.selected) ? 'Selecionar Todas' : 'Desmarcar Todas'}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={limparSelecao}
+                disabled={empresasSelecionadas.length === 0}
+              >
+                <X className="h-4 w-4 mr-2" />
+                Limpar
+              </Button>
+            </div>
+          </div>
+
+          {/* Lista de Empresas */}
           <div>
-            <Label htmlFor="empresa">Empresa *</Label>
-            <Select value={formData.empresa_id} onValueChange={(value) => setFormData(prev => ({ ...prev, empresa_id: value }))}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione uma empresa" />
-              </SelectTrigger>
-              <SelectContent>
-                {empresasDisponiveis.map((empresa) => (
-                  <SelectItem key={empresa.id} value={empresa.id}>
-                    <div>
-                      <div className="font-medium">{empresa.nome}</div>
-                      <div className="text-xs text-muted-foreground capitalize">{empresa.tipo}</div>
+            <Label>Empresas Disponíveis ({empresasFiltradas.length})</Label>
+            <ScrollArea className="h-64 mt-2 border rounded-md p-2">
+              {empresasFiltradas.length > 0 ? (
+                <div className="space-y-2">
+                  {empresasFiltradas.map((empresa) => (
+                    <div
+                      key={empresa.id}
+                      className="flex items-center space-x-3 p-2 rounded-md hover:bg-muted cursor-pointer"
+                      onClick={() => toggleEmpresa(empresa.id)}
+                    >
+                      <Checkbox
+                        checked={empresa.selected}
+                        onChange={() => toggleEmpresa(empresa.id)}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-sm truncate">{empresa.nome}</div>
+                        <div className="text-xs text-muted-foreground capitalize">
+                          {empresa.tipo} {empresa.descricao && `• ${empresa.descricao}`}
+                        </div>
+                      </div>
                     </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {empresasDisponiveis.length === 0 && (
-              <p className="text-xs text-muted-foreground mt-1">
-                Todas as empresas disponíveis já são parceiros
-              </p>
-            )}
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  {searchTerm ? 'Nenhuma empresa encontrada' : 'Todas as empresas já são parceiros'}
+                </div>
+              )}
+            </ScrollArea>
           </div>
 
           {/* Status */}
@@ -170,13 +277,13 @@ const EmpresaSelector: React.FC<EmpresaSelectorProps> = ({
           {/* Performance Score */}
           <div>
             <Label htmlFor="performance_score">
-              Performance Score: {formData.performance_score}%
+              Performance Inicial: {formData.performance_score}%
             </Label>
             <Slider
               value={[formData.performance_score]}
               onValueChange={(value) => setFormData(prev => ({ ...prev, performance_score: value[0] }))}
               max={100}
-              step={1}
+              step={5}
               className="mt-2"
             />
             <div className="flex justify-between text-xs text-muted-foreground mt-1">
@@ -184,6 +291,9 @@ const EmpresaSelector: React.FC<EmpresaSelectorProps> = ({
               <span>50%</span>
               <span>100%</span>
             </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Será aplicado a todos os parceiros selecionados
+            </p>
           </div>
 
           {/* Observações */}
@@ -209,9 +319,12 @@ const EmpresaSelector: React.FC<EmpresaSelectorProps> = ({
             </Button>
             <Button 
               type="submit" 
-              disabled={loading || !formData.empresa_id}
+              disabled={loading || empresasSelecionadas.length === 0}
             >
-              {loading ? 'Adicionando...' : 'Adicionar Parceiro'}
+              {loading 
+                ? 'Adicionando...' 
+                : `Adicionar ${empresasSelecionadas.length} Parceiro${empresasSelecionadas.length !== 1 ? 's' : ''}`
+              }
             </Button>
           </DialogFooter>
         </form>

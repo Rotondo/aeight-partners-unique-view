@@ -5,13 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
   MoreHorizontal, 
-  Globe, 
-  Mail, 
-  Phone, 
   Star,
   Edit,
-  Trash2,
-  ExternalLink
+  Trash2
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -20,7 +16,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { ParceiroMapa } from '@/types/mapa-parceiros';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface ParceiroCardProps {
   parceiro: ParceiroMapa;
@@ -37,16 +40,18 @@ const ParceiroCard: React.FC<ParceiroCardProps> = ({
   onDelete,
   compact = false
 }) => {
+  const isMobile = useIsMobile();
+  
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'ativo':
-        return 'bg-green-500';
+        return 'hsl(var(--success))';
       case 'inativo':
-        return 'bg-red-500';
+        return 'hsl(var(--destructive))';
       case 'pendente':
-        return 'bg-yellow-500';
+        return 'hsl(var(--warning))';
       default:
-        return 'bg-gray-500';
+        return 'hsl(var(--muted))';
     }
   };
 
@@ -75,126 +80,157 @@ const ParceiroCard: React.FC<ParceiroCardProps> = ({
   const nomeEmpresa = parceiro.empresa?.nome || 'Empresa sem nome';
   const descricaoEmpresa = parceiro.empresa?.descricao || 'Sem descrição';
 
-  const renderStars = (score: number) => {
-    const stars = Math.round(score / 20); // Converte 0-100 para 0-5 estrelas
-    return Array.from({ length: 5 }, (_, i) => (
-      <Star
-        key={i}
-        className={`h-3 w-3 ${
-          i < stars ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'
-        }`}
-      />
-    ));
+  const getPerformanceColor = (score: number) => {
+    if (score >= 80) return 'hsl(var(--success))';
+    if (score >= 60) return 'hsl(var(--warning))';
+    return 'hsl(var(--destructive))';
   };
 
-  if (compact) {
+  if (compact || isMobile) {
     return (
-      <Card 
-        className="cursor-pointer hover:shadow-md transition-shadow border-l-4"
-        style={{ borderLeftColor: getStatusColor(parceiro.status) }}
-        onClick={onClick}
-      >
-        <CardContent className="p-3">
-          <div className="flex items-center gap-3">
-            <Avatar className="h-8 w-8">
-              <AvatarFallback className="text-xs">
-                {getInitials(nomeEmpresa)}
-              </AvatarFallback>
-            </Avatar>
-            
-            <div className="flex-1 min-w-0">
-              <h4 className="text-sm font-medium truncate">{nomeEmpresa}</h4>
-              <p className="text-xs text-muted-foreground truncate">
-                {descricaoEmpresa}
-              </p>
-            </div>
-            
-            <div className="flex items-center gap-2">
-              <div className="flex">{renderStars(parceiro.performance_score)}</div>
+      <TooltipProvider>
+        <Card 
+          className="cursor-pointer hover:shadow-md transition-all duration-200 border-l-4 hover:scale-[1.02]"
+          style={{ borderLeftColor: getStatusColor(parceiro.status) }}
+          onClick={onClick}
+        >
+          <CardContent className="p-3">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <Avatar className="h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0">
+                <AvatarFallback className="text-xs sm:text-sm font-medium">
+                  {getInitials(nomeEmpresa)}
+                </AvatarFallback>
+              </Avatar>
+              
+              <div className="flex-1 min-w-0">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <h4 className="text-sm sm:text-base font-medium truncate cursor-help">
+                      {nomeEmpresa}
+                    </h4>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{nomeEmpresa}</p>
+                  </TooltipContent>
+                </Tooltip>
+                
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-xs text-muted-foreground capitalize truncate">
+                    {parceiro.empresa?.tipo}
+                  </span>
+                  {parceiro.performance_score > 0 && (
+                    <div 
+                      className="w-2 h-2 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: getPerformanceColor(parceiro.performance_score) }}
+                      title={`Performance: ${parceiro.performance_score}%`}
+                    />
+                  )}
+                </div>
+              </div>
+              
               <Badge 
                 variant="secondary" 
-                className={`text-white ${getStatusColor(parceiro.status)}`}
+                className="text-xs flex-shrink-0"
+                style={{ 
+                  backgroundColor: getStatusColor(parceiro.status),
+                  color: 'white'
+                }}
               >
                 {getStatusText(parceiro.status)}
               </Badge>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </TooltipProvider>
     );
   }
 
   return (
-    <Card className="cursor-pointer hover:shadow-lg transition-all duration-200 group">
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-3" onClick={onClick}>
-            <Avatar className="h-12 w-12">
-              <AvatarFallback>{getInitials(nomeEmpresa)}</AvatarFallback>
-            </Avatar>
-            
-            <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-lg truncate">{nomeEmpresa}</h3>
-              <p className="text-sm text-muted-foreground line-clamp-2">
-                {descricaoEmpresa}
-              </p>
+    <TooltipProvider>
+      <Card className="cursor-pointer hover:shadow-lg transition-all duration-200 group hover:scale-[1.02]">
+        <CardHeader className="pb-3">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-3 flex-1 min-w-0" onClick={onClick}>
+              <Avatar className="h-12 w-12 flex-shrink-0">
+                <AvatarFallback className="font-semibold">
+                  {getInitials(nomeEmpresa)}
+                </AvatarFallback>
+              </Avatar>
+              
+              <div className="flex-1 min-w-0">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <h3 className="font-semibold text-lg truncate cursor-help">
+                      {nomeEmpresa}
+                    </h3>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{nomeEmpresa}</p>
+                  </TooltipContent>
+                </Tooltip>
+                
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-sm text-muted-foreground capitalize">
+                    {parceiro.empresa?.tipo}
+                  </span>
+                  {parceiro.performance_score > 0 && (
+                    <div className="flex items-center gap-1">
+                      <div 
+                        className="w-3 h-3 rounded-full"
+                        style={{ backgroundColor: getPerformanceColor(parceiro.performance_score) }}
+                      />
+                      <span className="text-xs text-muted-foreground">
+                        {parceiro.performance_score}%
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
-          </div>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={onEdit}>
-                <Edit className="h-4 w-4 mr-2" />
-                Editar
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem 
-                onClick={onDelete}
-                className="text-destructive focus:text-destructive"
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Remover
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </CardHeader>
-
-      <CardContent className="pt-0" onClick={onClick}>
-        {/* Performance Score */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Performance:</span>
-            <div className="flex">{renderStars(parceiro.performance_score)}</div>
-            <span className="text-sm font-medium">{parceiro.performance_score}%</span>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                >
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={onEdit}>
+                  <Edit className="h-4 w-4 mr-2" />
+                  Editar
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  onClick={onDelete}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Remover
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
-          
-          <Badge 
-            variant="secondary" 
-            className={`text-white ${getStatusColor(parceiro.status)}`}
-          >
-            {getStatusText(parceiro.status)}
-          </Badge>
-        </div>
+        </CardHeader>
 
-        {/* Informações da Empresa */}
-        <div className="space-y-2">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span className="font-medium">Tipo:</span>
-            <span className="capitalize">{parceiro.empresa?.tipo}</span>
+        <CardContent className="pt-0" onClick={onClick}>
+          <div className="flex items-center justify-between">
+            <Badge 
+              variant="secondary" 
+              style={{ 
+                backgroundColor: getStatusColor(parceiro.status),
+                color: 'white'
+              }}
+            >
+              {getStatusText(parceiro.status)}
+            </Badge>
           </div>
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </TooltipProvider>
   );
 };
 
