@@ -51,12 +51,20 @@ const EmpresaSelector: React.FC<EmpresaSelectorProps> = ({
     observacoes: ''
   });
 
+  // Carrega empresas já parceiras antes das empresas disponíveis
+  useEffect(() => {
+    if (isOpen) {
+      carregarEmpresasParceiros();
+    }
+    // eslint-disable-next-line
+  }, [isOpen]);
+
   useEffect(() => {
     if (isOpen) {
       carregarEmpresas();
-      carregarEmpresasParceiros();
     }
-  }, [isOpen]);
+    // eslint-disable-next-line
+  }, [empresasParceiros, isOpen]);
 
   const carregarEmpresas = async () => {
     try {
@@ -66,13 +74,10 @@ const EmpresaSelector: React.FC<EmpresaSelectorProps> = ({
         .eq('status', true)
         .neq('tipo', 'cliente')
         .order('nome');
-      
       if (error) throw error;
-      
       const empresasDisponiveis = (data || []).filter(empresa => !empresasParceiros.has(empresa.id));
       setEmpresas(empresasDisponiveis.map(empresa => ({ ...empresa, selected: false })));
     } catch (error) {
-      console.error('Erro ao carregar empresas:', error);
       toast({
         title: "Erro",
         description: "Não foi possível carregar as empresas.",
@@ -86,20 +91,20 @@ const EmpresaSelector: React.FC<EmpresaSelectorProps> = ({
       const { data, error } = await supabase
         .from('parceiros_mapa')
         .select('empresa_id');
-      
       if (error) throw error;
-      const idsEmpresasParceiros = new Set(data?.map(p => p.empresa_id) || []);
-      setEmpresasParceiros(idsEmpresasParceiros);
+      setEmpresasParceiros(new Set(data?.map(p => p.empresa_id) || []));
     } catch (error) {
-      console.error('Erro ao carregar empresas parceiros:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao carregar empresas já parceiras.",
+        variant: "destructive",
+      });
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     const empresasSelecionadas = empresas.filter(emp => emp.selected);
-    
     if (empresasSelecionadas.length === 0) {
       toast({
         title: "Erro",
@@ -108,7 +113,6 @@ const EmpresaSelector: React.FC<EmpresaSelectorProps> = ({
       });
       return;
     }
-
     setLoading(true);
     try {
       for (const empresa of empresasSelecionadas) {
@@ -119,12 +123,10 @@ const EmpresaSelector: React.FC<EmpresaSelectorProps> = ({
           observacoes: formData.observacoes
         });
       }
-      
       toast({
         title: "Sucesso",
         description: `${empresasSelecionadas.length} parceiros adicionados com sucesso.`,
       });
-      
       onClose();
       setFormData({
         status: 'ativo',
@@ -134,7 +136,6 @@ const EmpresaSelector: React.FC<EmpresaSelectorProps> = ({
       setEmpresas(prev => prev.map(emp => ({ ...emp, selected: false })));
       setSearchTerm('');
     } catch (error) {
-      console.error('Erro ao salvar parceiros:', error);
       toast({
         title: "Erro",
         description: "Erro ao adicionar parceiros.",
@@ -145,26 +146,40 @@ const EmpresaSelector: React.FC<EmpresaSelectorProps> = ({
     }
   };
 
-  const empresasFiltradas = empresas.filter(empresa => 
+  const empresasFiltradas = empresas.filter(empresa =>
     empresa.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
     empresa.tipo.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const empresasSelecionadas = empresas.filter(emp => emp.selected);
 
-  const toggleEmpresa = (empresaId: string) => {
-    setEmpresas(prev => prev.map(emp => 
-      emp.id === empresaId ? { ...emp, selected: !emp.selected } : emp
-    ));
+  // Corrige seleção: clique no checkbox ou na linha, mas sem eventos duplicados
+  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>, empresaId: string) => {
+    e.stopPropagation();
+    setEmpresas(prev =>
+      prev.map(emp =>
+        emp.id === empresaId ? { ...emp, selected: !emp.selected } : emp
+      )
+    );
+  };
+
+  const handleRowClick = (empresaId: string) => {
+    setEmpresas(prev =>
+      prev.map(emp =>
+        emp.id === empresaId ? { ...emp, selected: !emp.selected } : emp
+      )
+    );
   };
 
   const toggleTodos = () => {
     const todosNaoSelecionados = empresasFiltradas.some(emp => !emp.selected);
-    setEmpresas(prev => prev.map(emp => 
-      empresasFiltradas.find(filtered => filtered.id === emp.id) 
-        ? { ...emp, selected: todosNaoSelecionados }
-        : emp
-    ));
+    setEmpresas(prev =>
+      prev.map(emp =>
+        empresasFiltradas.find(filtered => filtered.id === emp.id)
+          ? { ...emp, selected: todosNaoSelecionados }
+          : emp
+      )
+    );
   };
 
   const limparSelecao = () => {
@@ -198,7 +213,6 @@ const EmpresaSelector: React.FC<EmpresaSelectorProps> = ({
                 className="mt-1"
               />
             </div>
-            
             <div className="flex gap-2">
               <Button
                 type="button"
@@ -233,11 +247,17 @@ const EmpresaSelector: React.FC<EmpresaSelectorProps> = ({
                     <div
                       key={empresa.id}
                       className="flex items-center space-x-3 p-2 rounded-md hover:bg-muted cursor-pointer"
-                      onClick={() => toggleEmpresa(empresa.id)}
+                      onClick={() => handleRowClick(empresa.id)}
+                      tabIndex={0}
+                      role="checkbox"
+                      aria-checked={empresa.selected}
                     >
                       <Checkbox
                         checked={empresa.selected}
-                        onChange={() => toggleEmpresa(empresa.id)}
+                        onChange={e => handleCheckboxChange(e, empresa.id)}
+                        onClick={e => e.stopPropagation()}
+                        tabIndex={-1}
+                        aria-label={`Selecionar empresa ${empresa.nome}`}
                       />
                       <div className="flex-1 min-w-0">
                         <div className="font-medium text-sm truncate">{empresa.nome}</div>
@@ -259,8 +279,8 @@ const EmpresaSelector: React.FC<EmpresaSelectorProps> = ({
           {/* Status */}
           <div>
             <Label htmlFor="status">Status</Label>
-            <Select 
-              value={formData.status} 
+            <Select
+              value={formData.status}
               onValueChange={(value) => setFormData(prev => ({ ...prev, status: value as any }))}
             >
               <SelectTrigger>
@@ -309,20 +329,20 @@ const EmpresaSelector: React.FC<EmpresaSelectorProps> = ({
           </div>
 
           <DialogFooter className="gap-2">
-            <Button 
-              type="button" 
-              variant="outline" 
+            <Button
+              type="button"
+              variant="outline"
               onClick={onClose}
               disabled={loading}
             >
               Cancelar
             </Button>
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               disabled={loading || empresasSelecionadas.length === 0}
             >
-              {loading 
-                ? 'Adicionando...' 
+              {loading
+                ? 'Adicionando...'
                 : `Adicionar ${empresasSelecionadas.length} Parceiro${empresasSelecionadas.length !== 1 ? 's' : ''}`
               }
             </Button>
