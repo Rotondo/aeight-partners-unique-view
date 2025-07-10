@@ -52,100 +52,17 @@ const MapaParceirosSidebar: React.FC<MapaParceirosSidebarProps> = ({
   };
 
   return (
-    <div className="w-80 bg-background border-r border-border h-full overflow-y-auto">
-      <div className="p-4 space-y-6">
-        {/* Estatísticas */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <BarChart3 className="h-4 w-4" />
-              Resumo Geral
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">Total de Parceiros</span>
-              <Badge variant="secondary">{stats.totalParceiros}</Badge>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">Ativos</span>
-              <Badge variant="default" className="bg-green-500">{stats.parceirosAtivos}</Badge>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">Performance Média</span>
-              <Badge variant="outline">{Math.round(stats.performanceMedia)}%</Badge>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Filtros */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Filter className="h-4 w-4" />
-              Filtros
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {/* Busca */}
-            <div className="relative">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar parceiros..."
-                value={filtros.busca || ''}
-                onChange={(e) => handleBuscaChange(e.target.value)}
-                className="pl-8"
-              />
-            </div>
-
-            {/* Status */}
-            <Select value={filtros.status || 'todos'} onValueChange={handleStatusChange}>
-              <SelectTrigger>
-                <SelectValue placeholder="Filtrar por status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos os Status</SelectItem>
-                <SelectItem value="ativo">Ativo</SelectItem>
-                <SelectItem value="inativo">Inativo</SelectItem>
-                <SelectItem value="pendente">Pendente</SelectItem>
-              </SelectContent>
-            </Select>
-
-            {/* Etapa */}
-            <Select value={filtros.etapa || 'todas'} onValueChange={handleEtapaChange}>
-              <SelectTrigger>
-                <SelectValue placeholder="Filtrar por etapa" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todas">Todas as Etapas</SelectItem>
-                {etapas.map((etapa) => (
-                  <SelectItem key={etapa.id} value={etapa.id}>
-                    {etapa.ordem}. {etapa.nome}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={limparFiltros}
-              className="w-full"
-            >
-              Limpar Filtros
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Lista de Etapas */}
-        <Card>
-          <CardHeader className="pb-2">
+    <div className="w-80 bg-background border-r border-border h-full overflow-y-auto flex flex-col relative">
+      {/* Jornada do E-commerce sempre ancorada no topo */}
+      <div className="p-4 pb-2">
+        <Card className="shadow-none border-none p-0 bg-transparent">
+          <CardHeader className="pb-2 pt-0 px-0">
             <CardTitle className="text-sm flex items-center gap-2">
               <Users className="h-4 w-4" />
               Jornada do E-commerce
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-1 p-2">
+          <CardContent className="space-y-1 p-2 pt-0">
             {etapas.map((etapa) => {
               const subnivelsDaEtapa = getSubniveisPorEtapa(etapa.id);
               const isExpanded = expandedEtapas.has(etapa.id);
@@ -211,6 +128,61 @@ const MapaParceirosSidebar: React.FC<MapaParceirosSidebarProps> = ({
             })}
           </CardContent>
         </Card>
+      </div>
+
+      {/* Filtros minimalistas no topo, à direita */}
+      <div className="px-4 pt-2 pb-4">
+        <div className="flex flex-col gap-2">
+          {/* Busca */}
+          <div className="relative">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar parceiros..."
+              value={filtros.busca || ''}
+              onChange={(e) => handleBuscaChange(e.target.value)}
+              className="pl-8 rounded-md h-9 bg-muted border"
+            />
+          </div>
+
+          <div className="flex items-center gap-2">
+            {/* Status */}
+            <Select value={filtros.status || 'todos'} onValueChange={handleStatusChange}>
+              <SelectTrigger className="rounded-md h-9 bg-muted border px-2 w-full">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos Status</SelectItem>
+                <SelectItem value="ativo">Ativo</SelectItem>
+                <SelectItem value="inativo">Inativo</SelectItem>
+                <SelectItem value="pendente">Pendente</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Etapa */}
+            <Select value={filtros.etapa || 'todas'} onValueChange={handleEtapaChange}>
+              <SelectTrigger className="rounded-md h-9 bg-muted border px-2 w-full">
+                <SelectValue placeholder="Etapa" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todas">Todas Etapas</SelectItem>
+                {etapas.map((etapa) => (
+                  <SelectItem key={etapa.id} value={etapa.id}>
+                    {etapa.ordem}. {etapa.nome}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={limparFiltros}
+            className="w-full text-xs mt-1"
+          >
+            Limpar Filtros
+          </Button>
+        </div>
       </div>
     </div>
   );
