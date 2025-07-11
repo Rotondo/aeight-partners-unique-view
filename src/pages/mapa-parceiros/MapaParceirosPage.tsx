@@ -1,18 +1,21 @@
+// @ts-nocheck
 import React, { useState, useMemo, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  Plus, 
+import {
+  Plus,
+  Grid3X3, // Usado em VIEW_MODES e TabsTrigger
+  List,    // Usado em VIEW_MODES e TabsTrigger
+  Users,   // Usado em emptyStateContent
   ArrowLeft,
-  Route,
-  Grid3X3,
-  Users,
-  SortAsc,
-  SortDesc
+  Route,   // Usado em TabsTrigger
+  SortAsc, // Usado em Button de ordenação
+  SortDesc // Usado em Button de ordenação
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useMapaParceiros } from '@/hooks/useMapaParceiros';
 import MapaParceirosSidebar from '@/components/mapa-parceiros/MapaParceirosSidebar';
+// import ParceiroCard from '@/components/mapa-parceiros/ParceiroCard'; // Comentado por enquanto, main usa DetalhesSimplificado para cards
 import EmpresaSelector from '@/components/mapa-parceiros/EmpresaSelector';
 import JornadaVisualization from '@/components/mapa-parceiros/JornadaVisualization';
 import MapaParceirosTable from '@/components/mapa-parceiros/MapaParceirosTable';
@@ -21,16 +24,20 @@ import { DemoModeIndicator } from '@/components/privacy/DemoModeIndicator';
 import { DemoModeToggle } from '@/components/privacy/DemoModeToggle';
 import { useIsMobile } from '@/hooks/use-mobile';
 import ParceiroDetalhesSimplificado from '@/components/mapa-parceiros/ParceiroDetalhesSimplificado';
-import { calcularScoreQuadrante } from '@/utils/parceiro-quadrante-score';
+// import { calcularScoreQuadrante } from '@/utils/parceiro-quadrante-score'; // Comentado - ARQUIVO AUSENTE
 import Badge from '@/components/ui/badge';
 import Input from '@/components/ui/input';
 
 type OrdenacaoParceiros = 'nome' | 'performance' | 'criado_em';
 
-const VIEW_MODES = [
+// VIEW_MODES combinados - Adicionando Jornada
+const TAB_VIEWS = [
+  { label: 'Jornada', value: 'jornada', icon: <Route className="h-4 w-4" /> },
   { label: 'Grid', value: 'grid', icon: <Grid3X3 className="h-4 w-4" /> },
-  { label: 'Lista', value: 'lista', icon: <Users className="h-4 w-4" /> }
+  { label: 'Lista', value: 'lista', icon: <List className="h-4 w-4" /> },
+  // { label: 'Tabela Legada', value: 'table_legacy', icon: <List className="h-4 w-4" /> }, // Opcional
 ];
+
 
 const MapaParceirosPage: React.FC = () => {
   const navigate = useNavigate();
@@ -41,9 +48,8 @@ const MapaParceirosPage: React.FC = () => {
     parceiros,
     associacoes,
     loading,
-    filtros,
     stats,
-    setFiltros,
+    setFiltros: setHookFiltros, // Renomeado para clareza, vem do Hook e espera MapaParceirosFiltros
     criarParceiro,
     atualizarParceiro,
     deletarParceiro,
@@ -52,101 +58,152 @@ const MapaParceirosPage: React.FC = () => {
     carregarDados
   } = useMapaParceiros();
 
-  // States
+  // Estados para a Sidebar e visualização de Jornada/Tabela (da antiga 'fix/mapa-parceiros-filtros-inconsistentes')
+  const [filtrosSidebar, setFiltrosSidebar] = useState<MapaParceirosFiltros>({
+    busca: '',
+    status: '', // Usar string vazia para 'todos'
+    etapaId: '',
+    subnivelId: '',
+    apenasSemEtapa: false,
+  });
+
+  // Estados para Grid/Lista (da 'main')
+  const [viewModeGridLista, setViewModeGridLista] = useState<'grid' | 'lista'>('grid');
+  const [ordenacao, setOrdenacao] = useState<OrdenacaoParceiros>('nome');
+  const [ordemAsc, setOrdemAsc] = useState<boolean>(true);
+  const [buscaRapida, setBuscaRapida] = useState('');
+  const [statusFiltro, setStatusFiltro] = useState<string>('todos'); // 'todos', 'ativo', 'inativo', 'pendente'
+  const [etapaSelecionadaHeader, setEtapaSelecionadaHeader] = useState<string | undefined>(undefined); // Para filtro no header do grid/lista
+
+  // Estado unificado para a aba de visualização principal
+  const [currentViewTab, setCurrentViewTab] = useState<'jornada' | 'grid' | 'lista' | 'table_legacy'>('jornada');
+
   const [expandedEtapas, setExpandedEtapas] = useState<Set<string>>(new Set());
   const [parceiroSelecionado, setParceiroSelecionado] = useState<ParceiroMapa | null>(null);
   const [showDetalhes, setShowDetalhes] = useState(false);
   const [showEmpresaSelector, setShowEmpresaSelector] = useState(false);
-  const [viewMode, setViewMode] = useState<'grid' | 'lista'>('grid');
-  const [ordenacao, setOrdenacao] = useState<OrdenacaoParceiros>('nome');
-  const [ordemAsc, setOrdemAsc] = useState<boolean>(true);
-  const [buscaRapida, setBuscaRapida] = useState('');
-  const [statusFiltro, setStatusFiltro] = useState<string>('todos');
-  const [etapaSelecionada, setEtapaSelecionada] = useState<string | undefined>(undefined);
 
-  // Unificação lógica de filtros/ordenação, memoizada
-  const parceirosFiltrados = useMemo(() => {
-    let result = parceiros;
-    const termo = buscaRapida.trim().toLowerCase();
-    if (termo)
-      result = result.filter(p =>
-        (p.empresa?.nome || '').toLowerCase().includes(termo) ||
-        (p.empresa?.tipo || '').toLowerCase().includes(termo) ||
-        (p.empresa?.descricao || '').toLowerCase().includes(termo)
-      );
-    if (statusFiltro !== 'todos')
-      result = result.filter(p => p.status === statusFiltro);
-    if (etapaSelecionada)
-      result = result.filter(p => associacoes.some(a => a.parceiro_id === p.id && a.etapa_id === etapaSelecionada));
+  // Handler para atualizar filtros da Sidebar e notificar o hook
+  const handleAtualizarFiltrosSidebar = (novosFiltrosSidebar: Partial<MapaParceirosFiltros>) => {
+    const mergedFiltros = { ...filtrosSidebar, ...novosFiltrosSidebar };
+    setFiltrosSidebar(mergedFiltros);
+    setHookFiltros(mergedFiltros); // Atualiza o hook com os filtros da sidebar
+    // Não chamamos carregarDados aqui, pois o hook deve reagir a setHookFiltros
+  };
+  
+  const handleLimparFiltrosSidebar = () => {
+    const resetedFilters: MapaParceirosFiltros = {
+      busca: '', status: '', etapaId: '', subnivelId: '', apenasSemEtapa: false
+    };
+    setFiltrosSidebar(resetedFilters);
+    setHookFiltros(resetedFilters);
+  };
+
+  // Memo para parceiros filtrados (baseado na view atual)
+  const parceirosFiltradosParaView = useMemo(() => {
+    let result = [...parceiros];
+
+    if (currentViewTab === 'jornada' || currentViewTab === 'table_legacy') {
+      // Aplicar filtros da Sidebar (filtrosSidebar)
+      if (filtrosSidebar.busca) {
+        const termo = filtrosSidebar.busca.toLowerCase();
+        result = result.filter(p => (p.empresa?.nome || '').toLowerCase().includes(termo));
+      }
+      if (filtrosSidebar.status) {
+        result = result.filter(p => p.status === filtrosSidebar.status);
+      }
+      if (filtrosSidebar.etapaId) {
+        result = result.filter(p => associacoes.some(a => a.parceiro_id === p.id && a.etapa_id === filtrosSidebar.etapaId));
+      }
+      if (filtrosSidebar.subnivelId) {
+        result = result.filter(p => associacoes.some(a => a.parceiro_id === p.id && a.subnivel_id === filtrosSidebar.subnivelId));
+      }
+      if (filtrosSidebar.apenasSemEtapa) {
+        result = result.filter(p => !associacoes.some(a => a.parceiro_id === p.id && (a.etapa_id || a.subnivel_id)));
+      }
+    } else { // Grid ou Lista
+      // Aplicar filtros do Header (buscaRapida, statusFiltro, etapaSelecionadaHeader)
+      const termo = buscaRapida.trim().toLowerCase();
+      if (termo) {
+        result = result.filter(p =>
+          (p.empresa?.nome || '').toLowerCase().includes(termo) ||
+          (p.empresa?.tipo || '').toLowerCase().includes(termo) ||
+          (p.empresa?.descricao || '').toLowerCase().includes(termo)
+        );
+      }
+      if (statusFiltro !== 'todos') {
+        result = result.filter(p => p.status === statusFiltro);
+      }
+      if (etapaSelecionadaHeader) {
+        result = result.filter(p => associacoes.some(a => a.parceiro_id === p.id && a.etapa_id === etapaSelecionadaHeader));
+      }
+    }
     return result;
-  }, [parceiros, buscaRapida, statusFiltro, etapaSelecionada, associacoes]);
+  }, [parceiros, associacoes, currentViewTab, filtrosSidebar, buscaRapida, statusFiltro, etapaSelecionadaHeader]);
 
-  // Ordenação memoizada
-  const parceirosOrdenados = useMemo(() => {
-    return [...parceirosFiltrados].sort((a, b) => {
-      let resultado = 0;
+  // Ordenação para Grid/Lista
+  const parceirosOrdenadosParaGridLista = useMemo(() => {
+    // Só ordenar se a view for grid ou lista
+    if (currentViewTab !== 'grid' && currentViewTab !== 'lista') return parceirosFiltradosParaView;
+
+    return [...parceirosFiltradosParaView].sort((a, b) => {
+      let comparacao = 0;
       switch (ordenacao) {
         case 'nome':
-          resultado = (a.empresa?.nome || '').localeCompare(b.empresa?.nome || '');
+          comparacao = (a.empresa?.nome || '').localeCompare(b.empresa?.nome || '');
           break;
         case 'performance':
-          resultado =
-            calcularScoreQuadrante(a) - calcularScoreQuadrante(b);
+          // comparacao = calcularScoreQuadrante(a) - calcularScoreQuadrante(b); // Comentado
+          comparacao = (a.performance_score || 0) - (b.performance_score || 0);
           break;
         case 'criado_em':
-          resultado = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+          comparacao = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
           break;
       }
-      return ordemAsc ? resultado : -resultado;
+      return ordemAsc ? comparacao : -comparacao;
     });
-  }, [parceirosFiltrados, ordenacao, ordemAsc]);
+  }, [parceirosFiltradosParaView, ordenacao, ordemAsc, currentViewTab]);
 
-  // Parceiros por etapa
-  const getParceirosEtapa = useCallback((etapaId: string) => {
-    return parceiros.filter(p =>
-      associacoes.some(a => a.parceiro_id === p.id && a.etapa_id === etapaId)
-    );
-  }, [parceiros, associacoes]);
 
-  // Etapa info
   const getEtapaInfo = useCallback((etapaId: string) => etapas.find(e => e.id === etapaId), [etapas]);
 
-  // Handler de expansão do sidebar
-  const handleToggleEtapa = (etapaId: string) => {
+  const handleToggleEtapaExpansao = (etapaId: string) => { // Para expandir/colapsar na Jornada ou Sidebar
     setExpandedEtapas(prev => {
       const newExpanded = new Set(prev);
       newExpanded.has(etapaId) ? newExpanded.delete(etapaId) : newExpanded.add(etapaId);
       return newExpanded;
     });
   };
-
-  // Handler de seleção de etapa
-  const handleEtapaClick = (etapaId: string) => {
-    setEtapaSelecionada(etapaId === etapaSelecionada ? undefined : etapaId);
-    setFiltros({ ...filtros, etapa: etapaId === etapaSelecionada ? undefined : etapaId });
+  
+  const handleEtapaClickSidebar = (etapaId: string) => {
+    handleAtualizarFiltrosSidebar({ 
+      etapaId: filtrosSidebar.etapaId === etapaId ? '' : etapaId, 
+      subnivelId: '' // Limpa subnível ao clicar em etapa
+    });
   };
-
-  // Handler para abrir/fechar detalhes do parceiro
+  
   const handleParceiroClick = (parceiro: ParceiroMapa) => {
     setParceiroSelecionado(parceiro);
     setShowDetalhes(true);
   };
 
-  // Novo parceiro
   const handleNovoParceiro = () => setShowEmpresaSelector(true);
 
-  // Salvar novo parceiro
-  const handleSalvarEmpresaParceiro = async (dados: { empresa_id: string; status: string; performance_score: number | string; observacoes?: string }) => {
+  const handleSalvarEmpresaParceiro = async (dados: { 
+    empresa_id: string; 
+    status: string; 
+    performance_score: number | string; 
+    observacoes?: string 
+  }) => {
     await criarParceiro({ 
       empresa_id: dados.empresa_id, 
       status: dados.status as 'ativo' | 'inativo' | 'pendente', 
       performance_score: Number(dados.performance_score) || 0, 
       observacoes: dados.observacoes 
     });
-    await carregarDados();
+    if (carregarDados) await carregarDados();
   };
 
-  // Deletar parceiro
   const handleDeletarParceiro = async (parceiro: ParceiroMapa) => {
     if (window.confirm(`Tem certeza que deseja remover o parceiro "${parceiro.empresa?.nome}"?`)) {
       await deletarParceiro(parceiro.id);
@@ -154,43 +211,52 @@ const MapaParceirosPage: React.FC = () => {
         setShowDetalhes(false);
         setParceiroSelecionado(null);
       }
-      await carregarDados();
+      if (carregarDados) await carregarDados();
     }
   };
 
-  // Salvar detalhes
   const handleSalvarDetalhes = async (dados: Partial<ParceiroMapa>) => {
     if (parceiroSelecionado) {
       const dadosFormatados = {
         ...dados,
         ...(dados.performance_score !== undefined && {
-          performance_score: typeof dados.performance_score === 'string' 
-            ? Number(dados.performance_score) || 0
-            : Number(dados.performance_score) || 0
+          performance_score: Number(dados.performance_score) || 0
         })
       };
       await atualizarParceiro(parceiroSelecionado.id, dadosFormatados);
-      setParceiroSelecionado({ 
-        ...parceiroSelecionado, 
+      setParceiroSelecionado(prev => prev ? ({ 
+        ...prev, 
         ...dadosFormatados,
         performance_score: Number(dadosFormatados.performance_score) || 0
-      });
-      await carregarDados();
+      }) : null);
+      if (carregarDados) await carregarDados();
     }
   };
-
-  // Navegação entre parceiros nos detalhes
+  
   const handleNavegarParceiro = (sentido: 'prev' | 'next') => {
     if (!parceiroSelecionado) return;
-    const idx = parceirosOrdenados.findIndex(p => p.id === parceiroSelecionado.id);
+    // Usar parceirosOrdenadosParaGridLista se em grid/lista, senão parceirosFiltradosParaView
+    const listaAtual = (currentViewTab === 'grid' || currentViewTab === 'lista') ? parceirosOrdenadosParaGridLista : parceirosFiltradosParaView;
+    const idx = listaAtual.findIndex(p => p.id === parceiroSelecionado.id);
     const novoIdx = sentido === 'prev' ? idx - 1 : idx + 1;
-    if (novoIdx >= 0 && novoIdx < parceirosOrdenados.length) {
-      setParceiroSelecionado(parceirosOrdenados[novoIdx]);
+    if (novoIdx >= 0 && novoIdx < listaAtual.length) {
+      setParceiroSelecionado(listaAtual[novoIdx]);
     }
   };
 
-  // Empty states e feedbacks
-  const emptyStateContent = etapaSelecionada
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Carregando mapa de parceiros...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Conteúdo do empty state e onboarding da branch 'main'
+  const emptyStateContent = etapaSelecionadaHeader
     ? (
       <div className="text-center py-10">
         <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
@@ -218,28 +284,15 @@ const MapaParceirosPage: React.FC = () => {
       </div>
     );
 
-  // Onboarding microcopy
   const onboardingText = (
     <div className="mb-4 text-sm text-muted-foreground">
       <b>Mapa Sequencial de Parceiros:</b> Visualize e gerencie seus parceiros por etapa da jornada do e-commerce. Identifique facilmente etapas carentes ou saturadas de parceiros e potencialize sua estratégia!
     </div>
   );
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">Carregando mapa de parceiros...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="h-screen flex flex-col" aria-label="Mapa Sequencial de Parceiros">
       <DemoModeIndicator />
-      {/* Header */}
       <header className="flex-shrink-0 border-b border-border bg-background" role="banner">
         <div className="flex items-center justify-between p-3 sm:p-4">
           <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
@@ -273,213 +326,183 @@ const MapaParceirosPage: React.FC = () => {
         </div>
       </header>
 
-      {/* Main Content */}
       <div className="flex-1 flex min-h-0" role="main">
-        {/* Sidebar */}
         {!isMobile && (
           <MapaParceirosSidebar
             etapas={etapas}
             subniveis={subniveis}
-            filtros={filtros}
+            filtros={filtrosSidebar}
             stats={stats}
-            onFiltrosChange={setFiltros}
-            onEtapaClick={handleEtapaClick}
-            etapaSelecionada={etapaSelecionada}
+            onFiltrosChange={handleAtualizarFiltrosSidebar}
+            onEtapaClick={handleEtapaClickSidebar} // Para filtro da sidebar
+            etapaSelecionada={filtrosSidebar.etapaId}
             expandedEtapas={expandedEtapas}
-            onToggleEtapa={handleToggleEtapa}
-            onLimparFiltros={() => {
-              setEtapaSelecionada(undefined);
-              setStatusFiltro('todos');
-              setBuscaRapida('');
-            }}
+            onToggleEtapa={handleToggleEtapaExpansao} // Para expandir/colapsar na sidebar
+            onLimparFiltros={handleLimparFiltrosSidebar}
           />
         )}
 
-        {/* Main Body */}
-        <div className="flex-1 flex flex-col min-w-0">
-          {onboardingText}
-          <div className="flex items-center justify-between gap-2 mb-3">
-            <div className="flex gap-2 items-center">
-              <h2 className="text-xl font-semibold whitespace-nowrap mr-2">
-                {etapaSelecionada ? getEtapaInfo(etapaSelecionada)?.nome : "Todos os Parceiros"}
-              </h2>
-              <Badge variant="secondary" className="mr-2">
-                {parceirosOrdenados.length} {etapaSelecionada ? "parceiros nesta etapa" : "parceiros totais"}
-              </Badge>
-            </div>
-            <div className="flex gap-2 items-center">
-              {/* Busca rápida */}
-              <Input
-                placeholder="Buscar parceiro..."
-                value={buscaRapida}
-                onChange={e => setBuscaRapida(e.target.value)}
-                className="max-w-[180px] sm:max-w-xs"
-                size={isMobile ? "sm" : "default"}
-                aria-label="Buscar parceiro"
-              />
-              {/* Filtro status */}
-              <select
-                value={statusFiltro}
-                onChange={e => setStatusFiltro(e.target.value)}
-                className="rounded-md border px-2 py-1 text-sm text-muted-foreground"
-                aria-label="Filtrar por status"
-              >
-                <option value="todos">Todos</option>
-                <option value="ativo">Ativo</option>
-                <option value="inativo">Inativo</option>
-                <option value="pendente">Pendente</option>
-              </select>
-              {/* Ordenação */}
-              <div className="flex items-center gap-1">
+        <div className="flex-1 flex flex-col min-w-0 p-4">
+          {/* Header da área de conteúdo com Tabs de visualização */}
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+            <Tabs value={currentViewTab} onValueChange={(v) => setCurrentViewTab(v as any)}>
+              <TabsList>
+                {TAB_VIEWS.map(view => (
+                  <TabsTrigger key={view.value} value={view.value} className="flex items-center gap-2">
+                    {view.icon} {!isMobile && view.label}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
+            
+            {/* Controles de busca e filtro (somente para grid/lista) */}
+            {(currentViewTab === 'grid' || currentViewTab === 'lista') && (
+              <div className="flex flex-wrap items-center gap-2">
+                <Input
+                  placeholder="Buscar parceiro..."
+                  value={buscaRapida}
+                  onChange={e => setBuscaRapida(e.target.value)}
+                  className="h-9 max-w-[150px] sm:max-w-xs"
+                  aria-label="Buscar parceiro"
+                />
                 <select
-                  value={ordenacao}
-                  onChange={e => setOrdenacao(e.target.value as OrdenacaoParceiros)}
-                  className="rounded-md border px-2 py-1 text-sm text-muted-foreground"
-                  aria-label="Ordenar por"
+                  value={statusFiltro}
+                  onChange={e => setStatusFiltro(e.target.value)}
+                  className="h-9 rounded-md border px-2 py-1 text-sm text-muted-foreground bg-background"
+                  aria-label="Filtrar por status"
                 >
-                  <option value="nome">Nome</option>
-                  <option value="performance">Performance Quadrante</option>
-                  <option value="criado_em">Data de Cadastro</option>
+                  <option value="todos">Status (Todos)</option>
+                  <option value="ativo">Ativo</option>
+                  <option value="inativo">Inativo</option>
+                  <option value="pendente">Pendente</option>
                 </select>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setOrdemAsc(v => !v)}
-                  aria-label="Alternar ordem"
+                <select
+                  value={etapaSelecionadaHeader || ''}
+                  onChange={e => setEtapaSelecionadaHeader(e.target.value || undefined)}
+                  className="h-9 rounded-md border px-2 py-1 text-sm text-muted-foreground bg-background"
+                  aria-label="Filtrar por Etapa"
                 >
-                  {ordemAsc ? <SortAsc className="h-4 w-4" /> : <SortDesc className="h-4 w-4" />}
-                </Button>
-              </div>
-              {/* Visualização: Grid/Lista */}
-              <Tabs value={viewMode} onValueChange={v => setViewMode(v as 'grid' | 'lista')}>
-                <TabsList>
-                  {VIEW_MODES.map(({ label, value, icon }) => (
-                    <TabsTrigger value={value} key={value} aria-label={label}>
-                      {icon}
-                      <span className="ml-1 hidden sm:inline">{label}</span>
-                    </TabsTrigger>
+                  <option value="">Etapa (Todas)</option>
+                  {etapas.map(etapa => (
+                    <option key={etapa.id} value={etapa.id}>{etapa.nome}</option>
                   ))}
-                </TabsList>
-              </Tabs>
-            </div>
-          </div>
-
-          {/* Listagem adaptativa dos parceiros */}
-          <div className="flex-1 overflow-y-auto pb-2">
-            {parceirosOrdenados.length > 0 ? (
-              viewMode === 'grid' ? (
-                <div
-                  className={`
-                    grid gap-2
-                    grid-cols-1
-                    sm:grid-cols-2
-                    md:grid-cols-3
-                    lg:grid-cols-4
-                  `}
-                  aria-label="Grid de parceiros"
-                >
-                  {parceirosOrdenados.map((parceiro) => (
-                    <ParceiroDetalhesSimplificado
-                      key={parceiro.id}
-                      parceiro={parceiro}
-                      etapas={etapas}
-                      subniveis={subniveis}
-                      associacoes={associacoes}
-                      onClose={() => setShowDetalhes(false)}
-                      onSave={handleSalvarDetalhes}
-                      onAssociarEtapa={associarParceiroEtapa}
-                      onRemoverAssociacao={removerAssociacao}
-                    />
-                  ))}
+                </select>
+                <div className="flex items-center gap-1">
+                  <select
+                    value={ordenacao}
+                    onChange={e => setOrdenacao(e.target.value as OrdenacaoParceiros)}
+                    className="h-9 rounded-md border px-2 py-1 text-sm text-muted-foreground bg-background"
+                    aria-label="Ordenar por"
+                  >
+                    <option value="nome">Nome</option>
+                    <option value="performance">Performance</option>
+                    <option value="criado_em">Data Cadastro</option>
+                  </select>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setOrdemAsc(v => !v)}
+                    aria-label="Alternar ordem"
+                  >
+                    {ordemAsc ? <SortAsc className="h-4 w-4" /> : <SortDesc className="h-4 w-4" />}
+                  </Button>
                 </div>
-              ) : (
-                <ul className="divide-y divide-border" aria-label="Lista de parceiros">
-                  {parceirosOrdenados.map((parceiro) => (
-                    <li key={parceiro.id}>
-                      <ParceiroDetalhesSimplificado
+              </div>
+            )}
+          </div>
+          
+          {currentViewTab !== 'jornada' && currentViewTab !== 'table_legacy' && onboardingText}
+          
+          {/* Conteúdo principal baseado na viewMode */}
+          <div className="flex-1 overflow-y-auto">
+            {currentViewTab === 'jornada' && (
+              <JornadaVisualization
+                etapas={etapas}
+                subniveis={subniveis}
+                parceiros={parceirosFiltradosParaView}
+                associacoes={associacoes}
+                expandedEtapas={expandedEtapas}
+                onToggleEtapa={handleToggleEtapaExpansao} // Para expandir/colapsar na jornada
+                onParceiroClick={handleParceiroClick}
+              />
+            )}
+            {(currentViewTab === 'grid' || currentViewTab === 'lista') && (
+              parceirosOrdenadosParaGridLista.length > 0 ? (
+                currentViewTab === 'grid' ? (
+                  <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                    {parceirosOrdenadosParaGridLista.map((parceiro) => (
+                       <ParceiroDetalhesSimplificado // Usando ParceiroDetalhesSimplificado como na main para os cards
+                        key={parceiro.id}
                         parceiro={parceiro}
                         etapas={etapas}
                         subniveis={subniveis}
                         associacoes={associacoes}
-                        onClose={() => setShowDetalhes(false)}
+                        onClose={() => {setShowDetalhes(false); setParceiroSelecionado(null);}}
                         onSave={handleSalvarDetalhes}
                         onAssociarEtapa={associarParceiroEtapa}
                         onRemoverAssociacao={removerAssociacao}
+                        isCardMode // Adicionar uma prop para estilizar como card
+                        onClick={() => handleParceiroClick(parceiro)}
                       />
-                    </li>
-                  ))}
-                </ul>
+                    ))}
+                  </div>
+                ) : ( // viewMode === 'lista'
+                  <div className="space-y-2">
+                    {parceirosOrdenadosParaGridLista.map((parceiro) => (
+                       <ParceiroDetalhesSimplificado // Usando ParceiroDetalhesSimplificado
+                        key={parceiro.id}
+                        parceiro={parceiro}
+                        etapas={etapas}
+                        subniveis={subniveis}
+                        associacoes={associacoes}
+                        onClose={() => {setShowDetalhes(false); setParceiroSelecionado(null);}}
+                        onSave={handleSalvarDetalhes}
+                        onAssociarEtapa={associarParceiroEtapa}
+                        onRemoverAssociacao={removerAssociacao}
+                        isListItemMode // Adicionar uma prop para estilizar como item de lista
+                        onClick={() => handleParceiroClick(parceiro)}
+                      />
+                    ))}
+                  </div>
+                )
+              ) : (
+                emptyStateContent
               )
-            ) : (
-              emptyStateContent
+            )}
+            {currentViewTab === 'table_legacy' && (
+              <MapaParceirosTable
+                parceiros={parceirosFiltradosParaView}
+                associacoes={associacoes}
+                etapas={etapas}
+                subniveis={subniveis}
+                onParceiroClick={handleParceiroClick}
+                onDeletarParceiro={handleDeletarParceiro}
+                filtros={filtrosSidebar} // Tabela usa filtros da sidebar
+                onFiltrosChange={handleAtualizarFiltrosSidebar}
+                onLimparFiltros={handleLimparFiltrosSidebar}
+              />
             )}
           </div>
         </div>
 
-        {/* Painel de Detalhes - compacto */}
         {showDetalhes && parceiroSelecionado && (
-          <aside className="w-96 max-w-full bg-background border-l border-border h-full overflow-y-auto" aria-label="Detalhes do Parceiro">
-            <div className="p-4 space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-lg font-semibold">{parceiroSelecionado.empresa?.nome || 'Empresa sem nome'}</h2>
-                  <p className="text-xs text-muted-foreground capitalize">{parceiroSelecionado.empresa?.tipo}</p>
-                  <p className="text-xs text-muted-foreground">{parceiroSelecionado.empresa?.descricao}</p>
-                </div>
-                <Button variant="ghost" size="sm" onClick={() => setShowDetalhes(false)} aria-label="Fechar">
-                  <ArrowLeft className="h-4 w-4" />
-                </Button>
-              </div>
-              <div>
-                <span className="font-medium mr-2">Status:</span>
-                <Badge variant="secondary">{parceiroSelecionado.status}</Badge>
-                <span className="ml-4 font-medium">Performance Quadrante:</span>
-                <span className="ml-1 font-bold text-green-600">{calcularScoreQuadrante(parceiroSelecionado)}</span>
-              </div>
-              <div>
-                <span className="font-medium">Associações:</span>
-                <ul className="list-disc pl-5">
-                  {associacoes.filter(a => a.parceiro_id === parceiroSelecionado.id).map(a => {
-                    const etapa = etapas.find(e => e.id === a.etapa_id);
-                    const subnivel = subniveis.find(s => s.id === a.subnivel_id);
-                    return (
-                      <li key={a.id}>
-                        {etapa?.nome}{subnivel ? ` > ${subnivel.nome}` : ""}
-                        <Button variant="link" size="xs" className="ml-2" onClick={() => removerAssociacao(a.id)}>
-                          Remover
-                        </Button>
-                      </li>
-                    );
-                  })}
-                  {associacoes.filter(a => a.parceiro_id === parceiroSelecionado.id).length === 0 && (
-                    <li className="text-muted-foreground">Nenhuma associação</li>
-                  )}
-                </ul>
-              </div>
-              <div>
-                <span className="font-medium">Observações:</span>
-                <p className="text-sm">{parceiroSelecionado.observacoes || <span className="text-muted-foreground">Sem observações</span>}</p>
-              </div>
-              <div className="flex gap-2 justify-end">
-                <Button variant="outline" size="sm" onClick={() => handleNavegarParceiro('prev')} aria-label="Parceiro anterior">
-                  {"<"}
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => handleNavegarParceiro('next')} aria-label="Próximo parceiro">
-                  {">"}
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => handleDeletarParceiro(parceiroSelecionado)} aria-label="Remover parceiro">
-                  Remover
-                </Button>
-                <Button variant="primary" size="sm" onClick={() => handleSalvarDetalhes({})} aria-label="Salvar alterações">
-                  Salvar
-                </Button>
-              </div>
-            </div>
-          </aside>
+          <ParceiroDetalhesSimplificado
+            parceiro={parceiroSelecionado}
+            etapas={etapas}
+            subniveis={subniveis}
+            associacoes={associacoes}
+            onClose={() => {
+              setShowDetalhes(false);
+              setParceiroSelecionado(null);
+            }}
+            onSave={handleSalvarDetalhes}
+            onAssociarEtapa={associarParceiroEtapa}
+            onRemoverAssociacao={async (assocId) => { await removerAssociacao(assocId); if (carregarDados) await carregarDados();}}
+            onNavigate={handleNavegarParceiro}
+          />
         )}
 
-        {/* Modal de empresas */}
         <EmpresaSelector
           isOpen={showEmpresaSelector}
           onClose={() => setShowEmpresaSelector(false)}

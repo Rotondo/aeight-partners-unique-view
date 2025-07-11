@@ -94,15 +94,23 @@ const JornadaVisualization: React.FC<JornadaVisualizationProps> = ({
       <div className="relative">
         <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-border hidden md:block" />
         
-        {etapas.map((etapa) => {
+        {etapas.filter(Boolean).map((etapa) => {
+          if (!etapa || !etapa.id) return null; // Pular etapas inválidas
+
           const isExpanded = expandedEtapas.has(etapa.id);
           const subniveisDaEtapa = getSubniveisPorEtapa(etapa.id);
           const parceirosDaEtapa = getParceirosPorEtapa(etapa.id, associacoes, parceiros);
-          const parceirosPorSubnivel = subniveisDaEtapa.map(subnivel => ({
-            subnivel,
-            parceiros: getParceirosPorSubnivel(subnivel.id, associacoes, parceiros)
-          }));
-          const totalParceiros = parceirosDaEtapa.length + parceirosPorSubnivel.reduce((acc, item) => acc + item.parceiros.length, 0);
+
+          const parceirosPorSubnivel = subniveisDaEtapa.filter(Boolean).map(subnivel => {
+            if (!subnivel || !subnivel.id) return { subnivel: {id: '', nome: 'Inválido'}, parceiros: [] }; // Fallback para subnível inválido
+            return {
+              subnivel,
+              parceiros: getParceirosPorSubnivel(subnivel.id, associacoes, parceiros)
+            };
+          }).filter(item => item.subnivel.id); // Remover fallbacks se não quisermos renderizá-los
+
+          const totalParceiros = parceirosDaEtapa.length +
+                                 parceirosPorSubnivel.reduce((acc, item) => acc + (item.parceiros?.length || 0), 0);
 
           return (
             <div key={etapa.id} className="relative mb-8">
@@ -114,7 +122,7 @@ const JornadaVisualization: React.FC<JornadaVisualizationProps> = ({
               <Card className="ml-0 md:ml-16 cursor-pointer hover:shadow-md transition-shadow">
                 <CardContent 
                   className="p-6"
-                  onClick={() => onToggleEtapa(etapa.id)}
+                  onClick={() => etapa && etapa.id && onToggleEtapa(etapa.id)}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
@@ -122,10 +130,10 @@ const JornadaVisualization: React.FC<JornadaVisualizationProps> = ({
                         className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm"
                         style={{ backgroundColor: etapa.cor || '#3B82F6' }}
                       >
-                        {etapa.ordem}
+                        {etapa.ordem || '?'}
                       </div>
                       <div>
-                        <h3 className="text-lg font-semibold">{etapa.nome}</h3>
+                        <h3 className="text-lg font-semibold">{etapa.nome || 'Etapa sem nome'}</h3>
                         {etapa.descricao && (
                           <p className="text-sm text-muted-foreground mt-1">{etapa.descricao}</p>
                         )}
@@ -149,67 +157,17 @@ const JornadaVisualization: React.FC<JornadaVisualizationProps> = ({
 
               {isExpanded && (
                 <div className="ml-4 md:ml-20 mt-4 space-y-4">
-                  {parceirosDaEtapa.length > 0 && (
+                  {parceirosDaEtapa && parceirosDaEtapa.length > 0 && (
                     <div className="space-y-2">
                       <h4 className="text-sm font-medium text-muted-foreground">Parceiros da etapa</h4>
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                        {parceirosDaEtapa.map((parceiro) => (
-                          <Card 
-                            key={parceiro.id}
-                            className="cursor-pointer hover:bg-muted transition-colors"
-                            onClick={(e) => {e.stopPropagation(); onParceiroClick(parceiro);}}
-                          >
-                            <CardContent className="p-4">
-                              <div className="flex items-center gap-3">
-                                <Avatar className="h-10 w-10 flex-shrink-0">
-                                  <AvatarImage 
-                                    src={parceiro.empresa?.logo_url} 
-                                    alt={parceiro.empresa?.nome}
-                                    className="object-contain"
-                                  />
-                                  <AvatarFallback className="text-xs">
-                                    {getInitials(parceiro.empresa?.nome)}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <div className="flex-1 min-w-0">
-                                  <p className="font-medium truncate">{parceiro.empresa?.nome}</p>
-                                  <div className="flex items-center gap-2 mt-1">
-                                    <Badge className={`text-xs px-2 py-1 ${getStatusColor(parceiro.status)}`}>
-                                      {parceiro.status.charAt(0).toUpperCase() + parceiro.status.slice(1)}
-                                    </Badge>
-                                  </div>
-                                  {parceiro.performance_score > 0 && (
-                                    <div className="flex items-center gap-1 mt-1">
-                                      {renderStars(parceiro.performance_score)}
-                                      <span className={`text-xs font-medium ml-1 ${getPerformanceColor(parceiro.performance_score)}`}>
-                                        {parceiro.performance_score}%
-                                      </span>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                        {parceirosDaEtapa.filter(Boolean).map((parceiro) => {
+                          if (!parceiro || !parceiro.id) return null;
+                          const empresaNome = parceiro.empresa?.nome || 'Parceiro sem nome';
+                          const statusParceiro = parceiro.status || 'desconhecido';
+                          const performanceScore = parceiro.performance_score || 0;
 
-                  {parceirosPorSubnivel.map(({ subnivel, parceiros: parceirosDosSubniveis }) => (
-                    <div key={subnivel.id} className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-muted-foreground/40" />
-                        <h4 className="text-sm font-medium">{subnivel.nome}</h4>
-                        {parceirosDosSubniveis.length > 0 && (
-                          <Badge variant="outline" className="text-xs">
-                            {parceirosDosSubniveis.length}
-                          </Badge>
-                        )}
-                      </div>
-                      
-                      {parceirosDosSubniveis.length > 0 && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 ml-4">
-                          {parceirosDosSubniveis.map((parceiro) => (
+                          return (
                             <Card 
                               key={parceiro.id}
                               className="cursor-pointer hover:bg-muted transition-colors"
@@ -220,25 +178,25 @@ const JornadaVisualization: React.FC<JornadaVisualizationProps> = ({
                                   <Avatar className="h-10 w-10 flex-shrink-0">
                                     <AvatarImage 
                                       src={parceiro.empresa?.logo_url} 
-                                      alt={parceiro.empresa?.nome}
+                                      alt={empresaNome}
                                       className="object-contain"
                                     />
                                     <AvatarFallback className="text-xs">
-                                      {getInitials(parceiro.empresa?.nome)}
+                                      {getInitials(empresaNome)}
                                     </AvatarFallback>
                                   </Avatar>
                                   <div className="flex-1 min-w-0">
-                                    <p className="font-medium truncate">{parceiro.empresa?.nome}</p>
+                                    <p className="font-medium truncate">{empresaNome}</p>
                                     <div className="flex items-center gap-2 mt-1">
-                                      <Badge className={`text-xs px-2 py-1 ${getStatusColor(parceiro.status)}`}>
-                                        {parceiro.status.charAt(0).toUpperCase() + parceiro.status.slice(1)}
+                                      <Badge className={`text-xs px-2 py-1 ${getStatusColor(statusParceiro)}`}>
+                                        {statusParceiro.charAt(0).toUpperCase() + statusParceiro.slice(1)}
                                       </Badge>
                                     </div>
-                                    {parceiro.performance_score > 0 && (
+                                    {performanceScore > 0 && (
                                       <div className="flex items-center gap-1 mt-1">
-                                        {renderStars(parceiro.performance_score)}
-                                        <span className={`text-xs font-medium ml-1 ${getPerformanceColor(parceiro.performance_score)}`}>
-                                          {parceiro.performance_score}%
+                                        {renderStars(performanceScore)}
+                                        <span className={`text-xs font-medium ml-1 ${getPerformanceColor(performanceScore)}`}>
+                                          {performanceScore}%
                                         </span>
                                       </div>
                                     )}
@@ -246,11 +204,79 @@ const JornadaVisualization: React.FC<JornadaVisualizationProps> = ({
                                 </div>
                               </CardContent>
                             </Card>
-                          ))}
-                        </div>
-                      )}
+                          );
+                        })}
+                      </div>
                     </div>
-                  ))}
+                  )}
+
+                  {parceirosPorSubnivel.filter(Boolean).map(({ subnivel, parceiros: parceirosDosSubniveis }) => {
+                    if (!subnivel || !subnivel.id) return null;
+
+                    return (
+                      <div key={subnivel.id} className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-muted-foreground/40" />
+                          <h4 className="text-sm font-medium">{subnivel.nome || 'Subnível sem nome'}</h4>
+                          {parceirosDosSubniveis && parceirosDosSubniveis.length > 0 && (
+                            <Badge variant="outline" className="text-xs">
+                              {parceirosDosSubniveis.length}
+                            </Badge>
+                          )}
+                        </div>
+
+                        {parceirosDosSubniveis && parceirosDosSubniveis.length > 0 && (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 ml-4">
+                            {parceirosDosSubniveis.filter(Boolean).map((parceiro) => {
+                              if (!parceiro || !parceiro.id) return null;
+                              const empresaNome = parceiro.empresa?.nome || 'Parceiro sem nome';
+                              const statusParceiro = parceiro.status || 'desconhecido';
+                              const performanceScore = parceiro.performance_score || 0;
+
+                              return (
+                                <Card
+                                  key={parceiro.id}
+                                  className="cursor-pointer hover:bg-muted transition-colors"
+                                  onClick={(e) => {e.stopPropagation(); onParceiroClick(parceiro);}}
+                                >
+                                  <CardContent className="p-4">
+                                    <div className="flex items-center gap-3">
+                                      <Avatar className="h-10 w-10 flex-shrink-0">
+                                        <AvatarImage
+                                          src={parceiro.empresa?.logo_url}
+                                          alt={empresaNome}
+                                          className="object-contain"
+                                        />
+                                        <AvatarFallback className="text-xs">
+                                          {getInitials(empresaNome)}
+                                        </AvatarFallback>
+                                      </Avatar>
+                                      <div className="flex-1 min-w-0">
+                                        <p className="font-medium truncate">{empresaNome}</p>
+                                        <div className="flex items-center gap-2 mt-1">
+                                          <Badge className={`text-xs px-2 py-1 ${getStatusColor(statusParceiro)}`}>
+                                            {statusParceiro.charAt(0).toUpperCase() + statusParceiro.slice(1)}
+                                          </Badge>
+                                        </div>
+                                        {performanceScore > 0 && (
+                                          <div className="flex items-center gap-1 mt-1">
+                                            {renderStars(performanceScore)}
+                                            <span className={`text-xs font-medium ml-1 ${getPerformanceColor(performanceScore)}`}>
+                                              {performanceScore}%
+                                            </span>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </CardContent>
+                                </Card>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
