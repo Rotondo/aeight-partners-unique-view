@@ -40,16 +40,26 @@ const TAB_VIEWS = [
 
 
 const MapaParceirosPage: React.FC = () => {
+  const {
+    etapas,
+    subniveis,
+    parceiros,
+    associacoes,
+    expandedEtapas,
+    onToggleEtapa,
+    onParceiroClick
+  } = useMapaParceiros();
+
   return (
     <div>
       <JornadaVisualization
-        etapas={[]}
-        subniveis={[]}
-        parceiros={[]}
-        associacoes={[]}
-        expandedEtapas={new Set()}
-        onToggleEtapa={() => {}}
-        onParceiroClick={() => {}}
+        etapas={etapas}
+        subniveis={subniveis}
+        parceiros={parceiros}
+        associacoes={associacoes}
+        expandedEtapas={expandedEtapas || new Set()}
+        onToggleEtapa={onToggleEtapa || (() => {})}
+        onParceiroClick={onParceiroClick || (() => {})}
       />
     </div>
   );
