@@ -38,6 +38,7 @@ export interface ParceiroMapa {
     nome: string;
     descricao?: string;
     tipo: string;
+    logo_url?: string;
   };
 }
 
@@ -55,14 +56,17 @@ export interface AssociacaoParceiroEtapa {
 }
 
 export interface MapaParceirosFiltros {
-  etapa?: string;
-  status?: string;
   busca?: string;
+  status?: string;
+  etapaId?: string;
+  subnivelId?: string;
+  apenasSemEtapa?: boolean;
 }
 
 export interface MapaParceirosStats {
   totalParceiros: number;
   parceirosPorEtapa: Record<string, number>;
+  parceirosPorSubnivel: Record<string, number>; // Adicionado para correção do erro
   parceirosAtivos: number;
   parceirosInativos: number;
   performanceMedia: number;

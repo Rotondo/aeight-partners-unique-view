@@ -1,36 +1,35 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  Plus,
-  Search,
-  Grid3X3,
-  List,
-  Filter,
-  Users,
+import { 
+  Plus, 
   ArrowLeft,
+  Route,
+  Grid3X3,
+  Users,
   SortAsc,
   SortDesc
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useMapaParceiros } from '@/hooks/useMapaParceiros';
 import MapaParceirosSidebar from '@/components/mapa-parceiros/MapaParceirosSidebar';
-import ParceiroCard from '@/components/mapa-parceiros/ParceiroCard';
 import EmpresaSelector from '@/components/mapa-parceiros/EmpresaSelector';
-import { ParceiroMapa } from '@/types/mapa-parceiros';
+import JornadaVisualization from '@/components/mapa-parceiros/JornadaVisualization';
+import MapaParceirosTable from '@/components/mapa-parceiros/MapaParceirosTable';
+import { ParceiroMapa, AssociacaoParceiroEtapa, EtapaJornada, MapaParceirosFiltros } from '@/types/mapa-parceiros';
 import { DemoModeIndicator } from '@/components/privacy/DemoModeIndicator';
 import { DemoModeToggle } from '@/components/privacy/DemoModeToggle';
 import { useIsMobile } from '@/hooks/use-mobile';
 import ParceiroDetalhesSimplificado from '@/components/mapa-parceiros/ParceiroDetalhesSimplificado';
 import { calcularScoreQuadrante } from '@/utils/parceiro-quadrante-score';
+import Badge from '@/components/ui/badge';
+import Input from '@/components/ui/input';
 
 type OrdenacaoParceiros = 'nome' | 'performance' | 'criado_em';
 
 const VIEW_MODES = [
   { label: 'Grid', value: 'grid', icon: <Grid3X3 className="h-4 w-4" /> },
-  { label: 'Lista', value: 'lista', icon: <List className="h-4 w-4" /> }
+  { label: 'Lista', value: 'lista', icon: <Users className="h-4 w-4" /> }
 ];
 
 const MapaParceirosPage: React.FC = () => {
@@ -55,7 +54,6 @@ const MapaParceirosPage: React.FC = () => {
 
   // States
   const [expandedEtapas, setExpandedEtapas] = useState<Set<string>>(new Set());
-  const [etapaSelecionada, setEtapaSelecionada] = useState<string>();
   const [parceiroSelecionado, setParceiroSelecionado] = useState<ParceiroMapa | null>(null);
   const [showDetalhes, setShowDetalhes] = useState(false);
   const [showEmpresaSelector, setShowEmpresaSelector] = useState(false);
@@ -64,6 +62,7 @@ const MapaParceirosPage: React.FC = () => {
   const [ordemAsc, setOrdemAsc] = useState<boolean>(true);
   const [buscaRapida, setBuscaRapida] = useState('');
   const [statusFiltro, setStatusFiltro] = useState<string>('todos');
+  const [etapaSelecionada, setEtapaSelecionada] = useState<string | undefined>(undefined);
 
   // Unificação lógica de filtros/ordenação, memoizada
   const parceirosFiltrados = useMemo(() => {
@@ -137,8 +136,13 @@ const MapaParceirosPage: React.FC = () => {
   const handleNovoParceiro = () => setShowEmpresaSelector(true);
 
   // Salvar novo parceiro
-  const handleSalvarEmpresaParceiro = async (dados: { empresa_id: string; status: string; performance_score: number; observacoes?: string }) => {
-    await criarParceiro({ ...dados, status: dados.status as 'ativo' | 'inativo' | 'pendente' });
+  const handleSalvarEmpresaParceiro = async (dados: { empresa_id: string; status: string; performance_score: number | string; observacoes?: string }) => {
+    await criarParceiro({ 
+      empresa_id: dados.empresa_id, 
+      status: dados.status as 'ativo' | 'inativo' | 'pendente', 
+      performance_score: Number(dados.performance_score) || 0, 
+      observacoes: dados.observacoes 
+    });
     await carregarDados();
   };
 
@@ -157,8 +161,20 @@ const MapaParceirosPage: React.FC = () => {
   // Salvar detalhes
   const handleSalvarDetalhes = async (dados: Partial<ParceiroMapa>) => {
     if (parceiroSelecionado) {
-      await atualizarParceiro(parceiroSelecionado.id, dados);
-      setParceiroSelecionado({ ...parceiroSelecionado, ...dados });
+      const dadosFormatados = {
+        ...dados,
+        ...(dados.performance_score !== undefined && {
+          performance_score: typeof dados.performance_score === 'string' 
+            ? Number(dados.performance_score) || 0
+            : Number(dados.performance_score) || 0
+        })
+      };
+      await atualizarParceiro(parceiroSelecionado.id, dadosFormatados);
+      setParceiroSelecionado({ 
+        ...parceiroSelecionado, 
+        ...dadosFormatados,
+        performance_score: Number(dadosFormatados.performance_score) || 0
+      });
       await carregarDados();
     }
   };
@@ -260,17 +276,24 @@ const MapaParceirosPage: React.FC = () => {
       {/* Main Content */}
       <div className="flex-1 flex min-h-0" role="main">
         {/* Sidebar */}
-        <MapaParceirosSidebar
-          etapas={etapas}
-          subniveis={subniveis}
-          filtros={filtros}
-          stats={stats}
-          onFiltrosChange={setFiltros}
-          onEtapaClick={handleEtapaClick}
-          etapaSelecionada={etapaSelecionada}
-          expandedEtapas={expandedEtapas}
-          onToggleEtapa={handleToggleEtapa}
-        />
+        {!isMobile && (
+          <MapaParceirosSidebar
+            etapas={etapas}
+            subniveis={subniveis}
+            filtros={filtros}
+            stats={stats}
+            onFiltrosChange={setFiltros}
+            onEtapaClick={handleEtapaClick}
+            etapaSelecionada={etapaSelecionada}
+            expandedEtapas={expandedEtapas}
+            onToggleEtapa={handleToggleEtapa}
+            onLimparFiltros={() => {
+              setEtapaSelecionada(undefined);
+              setStatusFiltro('todos');
+              setBuscaRapida('');
+            }}
+          />
+        )}
 
         {/* Main Body */}
         <div className="flex-1 flex flex-col min-w-0">
@@ -357,16 +380,16 @@ const MapaParceirosPage: React.FC = () => {
                   aria-label="Grid de parceiros"
                 >
                   {parceirosOrdenados.map((parceiro) => (
-                    <ParceiroCard
+                    <ParceiroDetalhesSimplificado
                       key={parceiro.id}
                       parceiro={parceiro}
-                      onClick={() => handleParceiroClick(parceiro)}
-                      onEdit={() => handleParceiroClick(parceiro)}
-                      onDelete={() => handleDeletarParceiro(parceiro)}
-                      compact={isMobile}
-                      showActions
-                      etapaAssociada={associacoes.filter(a => a.parceiro_id === parceiro.id).map(a => etapas.find(e => e.id === a.etapa_id)?.nome).filter(Boolean) as string[]}
-                      quadranteScore={calcularScoreQuadrante(parceiro)}
+                      etapas={etapas}
+                      subniveis={subniveis}
+                      associacoes={associacoes}
+                      onClose={() => setShowDetalhes(false)}
+                      onSave={handleSalvarDetalhes}
+                      onAssociarEtapa={associarParceiroEtapa}
+                      onRemoverAssociacao={removerAssociacao}
                     />
                   ))}
                 </div>
@@ -374,15 +397,15 @@ const MapaParceirosPage: React.FC = () => {
                 <ul className="divide-y divide-border" aria-label="Lista de parceiros">
                   {parceirosOrdenados.map((parceiro) => (
                     <li key={parceiro.id}>
-                      <ParceiroCard
+                      <ParceiroDetalhesSimplificado
                         parceiro={parceiro}
-                        onClick={() => handleParceiroClick(parceiro)}
-                        onEdit={() => handleParceiroClick(parceiro)}
-                        onDelete={() => handleDeletarParceiro(parceiro)}
-                        compact={false}
-                        showActions
-                        etapaAssociada={associacoes.filter(a => a.parceiro_id === parceiro.id).map(a => etapas.find(e => e.id === a.etapa_id)?.nome).filter(Boolean) as string[]}
-                        quadranteScore={calcularScoreQuadrante(parceiro)}
+                        etapas={etapas}
+                        subniveis={subniveis}
+                        associacoes={associacoes}
+                        onClose={() => setShowDetalhes(false)}
+                        onSave={handleSalvarDetalhes}
+                        onAssociarEtapa={associarParceiroEtapa}
+                        onRemoverAssociacao={removerAssociacao}
                       />
                     </li>
                   ))}
