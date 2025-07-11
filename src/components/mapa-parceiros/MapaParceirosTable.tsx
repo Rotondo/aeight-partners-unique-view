@@ -91,39 +91,35 @@ const MapaParceirosTable: React.FC<MapaParceirosTableProps> = ({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">
+        <h3 className="text-base font-semibold">
           Lista de Parceiros ({sortedParceiros.length})
         </h3>
         <Button variant="ghost" size="sm" onClick={onLimparFiltros}>
           Limpar Filtros
         </Button>
       </div>
-      <div className="overflow-x-auto rounded-lg border border-border bg-background">
-        <table className="min-w-full divide-y divide-border text-sm">
+      <div className="overflow-x-auto rounded border border-border bg-background">
+        <table className="min-w-full divide-y divide-border text-xs">
           <thead>
             <tr className="bg-muted">
-              <th className="p-2 font-semibold cursor-pointer text-left" onClick={() => handleSort('nome')}>
+              <th className="p-1 font-semibold cursor-pointer text-left" onClick={() => handleSort('nome')}>
                 Nome {orderBy === 'nome' && (orderDirection === 'asc' ? '↑' : '↓')}
               </th>
-              <th className="p-2 font-semibold cursor-pointer text-left" onClick={() => handleSort('status')}>
-                Status {orderBy === 'status' && (orderDirection === 'asc' ? '↑' : '↓')}
-              </th>
-              <th className="p-2 font-semibold cursor-pointer text-left" onClick={() => handleSort('etapa')}>
+              <th className="p-1 font-semibold cursor-pointer text-left" onClick={() => handleSort('etapa')}>
                 Etapa da Jornada {orderBy === 'etapa' && (orderDirection === 'asc' ? '↑' : '↓')}
               </th>
-              <th className="p-2 font-semibold cursor-pointer text-left" onClick={() => handleSort('subnivel')}>
+              <th className="p-1 font-semibold cursor-pointer text-left" onClick={() => handleSort('subnivel')}>
                 Subnível {orderBy === 'subnivel' && (orderDirection === 'asc' ? '↑' : '↓')}
               </th>
-              <th className="p-2 font-semibold text-center">Performance</th>
-              <th className="p-2 font-semibold text-center">Ações</th>
+              <th className="p-1 font-semibold text-center">Ações</th>
             </tr>
           </thead>
           <tbody>
             {sortedParceiros.length === 0 ? (
               <tr>
-                <td colSpan={6} className="text-center py-6 text-muted-foreground">
+                <td colSpan={4} className="text-center py-4 text-muted-foreground text-xs">
                   Nenhum parceiro encontrado.<br />
                   Adicione novos parceiros ou ajuste os filtros.
                 </td>
@@ -135,43 +131,23 @@ const MapaParceirosTable: React.FC<MapaParceirosTableProps> = ({
                 const subniveisParceiro = getSubniveisParceiro(parceiro.id, associacoes, subniveis);
 
                 return (
-                  <tr key={parceiro.id} className="hover:bg-muted/50 transition-colors cursor-pointer" onClick={() => onParceiroClick(parceiro)}>
-                    <td className="p-2 min-w-[160px] font-medium">
+                  <tr key={parceiro.id} className="hover:bg-muted/30 transition-colors cursor-pointer min-h-8" onClick={() => onParceiroClick(parceiro)}>
+                    <td className="p-1 min-w-[120px] font-medium whitespace-nowrap">
                       {nomeEmpresa}
                     </td>
-                    <td className="p-2">
-                      <Badge className={`text-xs px-2 py-1 ${getStatusColor(parceiro.status)}`}>
-                        {parceiro.status.charAt(0).toUpperCase() + parceiro.status.slice(1)}
-                      </Badge>
-                    </td>
-                    <td className="p-2">
+                    <td className="p-1 whitespace-nowrap">
                       {etapasParceiro.length > 0
-                        ? etapasParceiro.map((etapa, idx) => (
-                            <Badge key={idx} variant="outline" className="mr-1 text-xs px-2 py-1 max-w-[120px] truncate">
-                              {etapa}
-                            </Badge>
-                          ))
-                        : <span className="italic text-muted-foreground text-xs">Sem etapa</span>
+                        ? etapasParceiro.join(", ")
+                        : <span className="italic text-muted-foreground">Sem etapa</span>
                       }
                     </td>
-                    <td className="p-2">
+                    <td className="p-1 whitespace-nowrap">
                       {subniveisParceiro.length > 0
-                        ? subniveisParceiro.map((sn, idx) => (
-                            <Badge key={idx} variant="secondary" className="mr-1 text-xs px-2 py-1 max-w-[120px] truncate">
-                              {sn}
-                            </Badge>
-                          ))
-                        : <span className="italic text-muted-foreground text-xs">Sem subnível</span>
+                        ? subniveisParceiro.join(", ")
+                        : <span className="italic text-muted-foreground">Sem subnível</span>
                       }
                     </td>
-                    <td className="p-2 text-center">
-                      {parceiro.performance_score > 0 && (
-                        <Badge variant="outline" className="text-xs">
-                          {parceiro.performance_score}%
-                        </Badge>
-                      )}
-                    </td>
-                    <td className="p-2 text-center">
+                    <td className="p-1 text-center whitespace-nowrap">
                       <Button
                         variant="ghost"
                         size="icon"
