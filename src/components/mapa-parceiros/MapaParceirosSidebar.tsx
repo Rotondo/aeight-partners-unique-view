@@ -24,6 +24,8 @@ interface MapaParceirosSidebarProps {
   expandedEtapas: Set<string>;
   onToggleEtapa: (etapaId: string) => void;
   onLimparFiltros?: () => void;
+  onSubnivelClick?: (subnivelId: string) => void;
+  subnivelSelecionado?: string;
 }
 
 const MapaParceirosSidebar: React.FC<MapaParceirosSidebarProps> = ({
@@ -36,7 +38,9 @@ const MapaParceirosSidebar: React.FC<MapaParceirosSidebarProps> = ({
   etapaSelecionada,
   expandedEtapas,
   onToggleEtapa,
-  onLimparFiltros
+  onLimparFiltros,
+  onSubnivelClick,
+  subnivelSelecionado
 }) => {
   const handleBuscaChange = (valor: string) => {
     onFiltrosChange({ ...filtros, busca: valor });
@@ -212,13 +216,14 @@ const MapaParceirosSidebar: React.FC<MapaParceirosSidebarProps> = ({
                         <div className="space-y-1">
                           {subnivelsDaEtapa.map((subnivel) => {
                             const parceirosSubnivel = stats.parceirosPorSubnivel[subnivel.id] || 0;
+                            const isSubnivelSelecionado = subnivel.id === filtros.subnivelId || subnivel.id === (typeof subnivelSelecionado === 'string' && subnivelSelecionado);
                             return (
                               <div
                                 key={subnivel.id}
                                 className={`flex items-center gap-2 py-1 px-2 rounded text-xs hover:bg-muted/30 cursor-pointer ${
-                                  filtros.subnivelId === subnivel.id ? 'bg-primary/10 text-primary' : 'text-muted-foreground'
+                                  isSubnivelSelecionado ? 'bg-primary/10 text-primary' : 'text-muted-foreground'
                                 }`}
-                                onClick={() => handleSubnivelChange(subnivel.id)}
+                                onClick={() => onSubnivelClick && onSubnivelClick(subnivel.id)}
                               >
                                 <div className="w-2 h-2 rounded-full bg-muted-foreground/40" />
                                 <span className="truncate">{subnivel.nome}</span>

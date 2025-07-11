@@ -50,12 +50,43 @@ const MapaParceirosPage: React.FC = () => {
 
   // Estado de filtros
   const [filtros, setFiltros] = useState({} as any);
+  const [etapaSelecionada, setEtapaSelecionada] = useState<string | undefined>(undefined);
+  const [subnivelSelecionado, setSubnivelSelecionado] = useState<string | undefined>(undefined);
 
-  // Filtragem de parceiros conforme apenasSemEtapa
+  // Handlers para clique na sidebar
+  const handleEtapaClick = (etapaId: string) => {
+    setEtapaSelecionada(etapaId);
+    setSubnivelSelecionado(undefined);
+    setFiltros((prev: any) => ({ ...prev, etapaId, subnivelId: undefined }));
+  };
+  const handleSubnivelClick = (subnivelId: string) => {
+    setSubnivelSelecionado(subnivelId);
+    // Descobrir etapa correspondente
+    const subnivel = subniveis.find(s => s.id === subnivelId);
+    setEtapaSelecionada(subnivel?.etapa_id);
+    setFiltros((prev: any) => ({ ...prev, etapaId: subnivel?.etapa_id, subnivelId }));
+  };
+
+  // Handler para limpar filtros
+  const handleLimparFiltros = () => {
+    setFiltros({});
+    setEtapaSelecionada(undefined);
+    setSubnivelSelecionado(undefined);
+  };
+
+  // Filtragem de parceiros conforme apenasSemEtapa, etapaId, subnivelId
   let parceiros = parceirosOriginais;
   if (filtros.apenasSemEtapa) {
     parceiros = parceirosOriginais.filter(p =>
       !associacoes.some(a => a.parceiro_id === p.id && (a.etapa_id || a.subnivel_id))
+    );
+  } else if (filtros.subnivelId) {
+    parceiros = parceirosOriginais.filter(p =>
+      associacoes.some(a => a.parceiro_id === p.id && a.subnivel_id === filtros.subnivelId)
+    );
+  } else if (filtros.etapaId) {
+    parceiros = parceirosOriginais.filter(p =>
+      associacoes.some(a => a.parceiro_id === p.id && a.etapa_id === filtros.etapaId)
     );
   }
 
@@ -93,11 +124,13 @@ const MapaParceirosPage: React.FC = () => {
             performanceMedia: 0
           }}
           onFiltrosChange={setFiltros}
-          onEtapaClick={() => {}}
-          etapaSelecionada={''}
-          expandedEtapas={new Set()}
-          onToggleEtapa={() => {}}
-          onLimparFiltros={() => setFiltros({})}
+          onEtapaClick={handleEtapaClick}
+          etapaSelecionada={etapaSelecionada}
+          expandedEtapas={new Set([etapaSelecionada].filter(Boolean) as string[])}
+          onToggleEtapa={setEtapaSelecionada}
+          onLimparFiltros={handleLimparFiltros}
+          onSubnivelClick={handleSubnivelClick}
+          subnivelSelecionado={subnivelSelecionado}
         />
       </div>
       <div style={{ flex: 1, padding: 24 }}>

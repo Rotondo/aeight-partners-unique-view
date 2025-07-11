@@ -256,7 +256,7 @@ const MapaParceirosTable: React.FC<MapaParceirosTableProps> = ({
                 return (
                   <tr key={parceiro.id} className={`hover:bg-muted/30 transition-colors cursor-pointer min-h-8 ${isEdited ? 'bg-yellow-50' : ''}`} onClick={() => setEditParceiro(parceiro)}>
                     <td className="p-1 text-center">
-                      <Checkbox checked={selectedParceiros.includes(parceiro.id)} onCheckedChange={checked => handleSelectParceiro(parceiro.id, !!checked)} />
+                      <Checkbox checked={selectedParceiros.includes(parceiro.id)} onCheckedChange={checked => handleSelectParceiro(parceiro.id, !!checked)} onClick={e => e.stopPropagation()} />
                     </td>
                     <td className="p-1 min-w-[120px] font-medium whitespace-nowrap">
                       {nomeEmpresa}
