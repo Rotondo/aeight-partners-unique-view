@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -16,6 +15,39 @@ interface JornadaVisualizationProps {
   onParceiroClick: (parceiro: ParceiroMapa) => void;
 }
 
+// Utilitário para buscar parceiros associados a uma etapa específica e a seus subníveis
+function getParceirosPorEtapa(etapaId: string, associacoes: AssociacaoParceiroEtapa[], parceiros: ParceiroMapa[]) {
+  const parceirosDaEtapa = associacoes
+    .filter(a => a.etapa_id === etapaId && !a.subnivel_id)
+    .map(a => parceiros.find(p => p.id === a.parceiro_id))
+    .filter(Boolean) as ParceiroMapa[];
+  return parceirosDaEtapa;
+}
+
+function getParceirosPorSubnivel(subnivelId: string, associacoes: AssociacaoParceiroEtapa[], parceiros: ParceiroMapa[]) {
+  const parceirosDoSubnivel = associacoes
+    .filter(a => a.subnivel_id === subnivelId)
+    .map(a => parceiros.find(p => p.id === a.parceiro_id))
+    .filter(Boolean) as ParceiroMapa[];
+  return parceirosDoSubnivel;
+}
+
+const getInitials = (nome: string | undefined) => {
+  if (!nome) return "";
+  return nome
+    .split(" ")
+    .map((word) => word[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+};
+
+const getPerformanceColor = (score: number) => {
+  if (score >= 80) return "text-green-600";
+  if (score >= 60) return "text-yellow-600";
+  return "text-red-600";
+};
+
 const JornadaVisualization: React.FC<JornadaVisualizationProps> = ({
   etapas,
   subniveis,
@@ -27,32 +59,6 @@ const JornadaVisualization: React.FC<JornadaVisualizationProps> = ({
 }) => {
   const getSubniveisPorEtapa = (etapaId: string) => {
     return subniveis.filter(s => s.etapa_id === etapaId);
-  };
-
-  const getParceirosPorSubnivel = (subnivelId: string) => {
-    const associacoesDosSubniveis = associacoes.filter(a => a.subnivel_id === subnivelId);
-    return associacoesDosSubniveis.map(a => a.parceiro).filter(Boolean) as ParceiroMapa[];
-  };
-
-  const getParceirosPorEtapa = (etapaId: string) => {
-    const associacoesDaEtapa = associacoes.filter(a => a.etapa_id === etapaId && !a.subnivel_id);
-    return associacoesDaEtapa.map(a => a.parceiro).filter(Boolean) as ParceiroMapa[];
-  };
-
-  const getInitials = (nome: string | undefined) => {
-    if (!nome) return "";
-    return nome
-      .split(" ")
-      .map((word) => word[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
-  };
-
-  const getPerformanceColor = (score: number) => {
-    if (score >= 80) return "text-green-600";
-    if (score >= 60) return "text-yellow-600";
-    return "text-red-600";
   };
 
   return (
@@ -68,13 +74,20 @@ const JornadaVisualization: React.FC<JornadaVisualizationProps> = ({
         {/* Linha conectora */}
         <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-border hidden md:block" />
         
-        {etapas.map((etapa, index) => {
+        {etapas.map((etapa) => {
           const isExpanded = expandedEtapas.has(etapa.id);
           const subniveisDaEtapa = getSubniveisPorEtapa(etapa.id);
-          const parceirosDaEtapa = getParceirosPorEtapa(etapa.id);
-          const totalParceiros = subniveisDaEtapa.reduce((acc, sub) => 
-            acc + getParceirosPorSubnivel(sub.id).length, 0
-          ) + parceirosDaEtapa.length;
+
+          // Parceiros diretamente na etapa
+          const parceirosDaEtapa = getParceirosPorEtapa(etapa.id, associacoes, parceiros);
+
+          // Parceiros em cada subnível da etapa
+          const parceirosPorSubnivel = subniveisDaEtapa.map(subnivel => ({
+            subnivel,
+            parceiros: getParceirosPorSubnivel(subnivel.id, associacoes, parceiros)
+          }));
+
+          const totalParceiros = parceirosDaEtapa.length + parceirosPorSubnivel.reduce((acc, item) => acc + item.parceiros.length, 0);
 
           return (
             <div key={etapa.id} className="relative mb-8">
@@ -108,7 +121,7 @@ const JornadaVisualization: React.FC<JornadaVisualizationProps> = ({
                     <div className="flex items-center gap-3">
                       {totalParceiros > 0 && (
                         <Badge variant="secondary">
-                          {totalParceiros} parceiros
+                          {totalParceiros} parceiro{totalParceiros > 1 ? 's' : ''}
                         </Badge>
                       )}
                       {subniveisDaEtapa.length > 0 && (
@@ -133,7 +146,7 @@ const JornadaVisualization: React.FC<JornadaVisualizationProps> = ({
                           <Card 
                             key={parceiro.id}
                             className="cursor-pointer hover:bg-muted transition-colors"
-                            onClick={() => onParceiroClick(parceiro)}
+                            onClick={(e) => {e.stopPropagation(); onParceiroClick(parceiro);}}
                           >
                             <CardContent className="p-4">
                               <div className="flex items-center gap-3">
@@ -154,7 +167,7 @@ const JornadaVisualization: React.FC<JornadaVisualizationProps> = ({
                                       variant={parceiro.status === 'ativo' ? 'default' : 'secondary'}
                                       className="text-xs"
                                     >
-                                      {parceiro.status}
+                                      {parceiro.status.charAt(0).toUpperCase() + parceiro.status.slice(1)}
                                     </Badge>
                                     {parceiro.performance_score > 0 && (
                                       <span className={`text-xs font-medium ${getPerformanceColor(parceiro.performance_score)}`}>
@@ -172,66 +185,62 @@ const JornadaVisualization: React.FC<JornadaVisualizationProps> = ({
                   )}
 
                   {/* Subníveis */}
-                  {subniveisDaEtapa.map((subnivel) => {
-                    const parceirosDosSubniveis = getParceirosPorSubnivel(subnivel.id);
-                    
-                    return (
-                      <div key={subnivel.id} className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 rounded-full bg-muted-foreground/40" />
-                          <h4 className="text-sm font-medium">{subnivel.nome}</h4>
-                          {parceirosDosSubniveis.length > 0 && (
-                            <Badge variant="outline" className="text-xs">
-                              {parceirosDosSubniveis.length}
-                            </Badge>
-                          )}
-                        </div>
-                        
+                  {parceirosPorSubnivel.map(({ subnivel, parceiros: parceirosDosSubniveis }) => (
+                    <div key={subnivel.id} className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-muted-foreground/40" />
+                        <h4 className="text-sm font-medium">{subnivel.nome}</h4>
                         {parceirosDosSubniveis.length > 0 && (
-                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 ml-4">
-                            {parceirosDosSubniveis.map((parceiro) => (
-                              <Card 
-                                key={parceiro.id}
-                                className="cursor-pointer hover:bg-muted transition-colors"
-                                onClick={() => onParceiroClick(parceiro)}
-                              >
-                                <CardContent className="p-4">
-                                  <div className="flex items-center gap-3">
-                                    <Avatar className="h-10 w-10 flex-shrink-0">
-                                      <AvatarImage 
-                                        src={parceiro.empresa?.logo_url} 
-                                        alt={parceiro.empresa?.nome}
-                                        className="object-contain"
-                                      />
-                                      <AvatarFallback className="text-xs">
-                                        {getInitials(parceiro.empresa?.nome)}
-                                      </AvatarFallback>
-                                    </Avatar>
-                                    <div className="flex-1 min-w-0">
-                                      <p className="font-medium truncate">{parceiro.empresa?.nome}</p>
-                                      <div className="flex items-center gap-2">
-                                        <Badge 
-                                          variant={parceiro.status === 'ativo' ? 'default' : 'secondary'}
-                                          className="text-xs"
-                                        >
-                                          {parceiro.status}
-                                        </Badge>
-                                        {parceiro.performance_score > 0 && (
-                                          <span className={`text-xs font-medium ${getPerformanceColor(parceiro.performance_score)}`}>
-                                            {parceiro.performance_score}%
-                                          </span>
-                                        )}
-                                      </div>
-                                    </div>
-                                  </div>
-                                </CardContent>
-                              </Card>
-                            ))}
-                          </div>
+                          <Badge variant="outline" className="text-xs">
+                            {parceirosDosSubniveis.length}
+                          </Badge>
                         )}
                       </div>
-                    );
-                  })}
+                      
+                      {parceirosDosSubniveis.length > 0 && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 ml-4">
+                          {parceirosDosSubniveis.map((parceiro) => (
+                            <Card 
+                              key={parceiro.id}
+                              className="cursor-pointer hover:bg-muted transition-colors"
+                              onClick={(e) => {e.stopPropagation(); onParceiroClick(parceiro);}}
+                            >
+                              <CardContent className="p-4">
+                                <div className="flex items-center gap-3">
+                                  <Avatar className="h-10 w-10 flex-shrink-0">
+                                    <AvatarImage 
+                                      src={parceiro.empresa?.logo_url} 
+                                      alt={parceiro.empresa?.nome}
+                                      className="object-contain"
+                                    />
+                                    <AvatarFallback className="text-xs">
+                                      {getInitials(parceiro.empresa?.nome)}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="font-medium truncate">{parceiro.empresa?.nome}</p>
+                                    <div className="flex items-center gap-2">
+                                      <Badge 
+                                        variant={parceiro.status === 'ativo' ? 'default' : 'secondary'}
+                                        className="text-xs"
+                                      >
+                                        {parceiro.status.charAt(0).toUpperCase() + parceiro.status.slice(1)}
+                                      </Badge>
+                                      {parceiro.performance_score > 0 && (
+                                        <span className={`text-xs font-medium ${getPerformanceColor(parceiro.performance_score)}`}>
+                                          {parceiro.performance_score}%
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
