@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -108,8 +107,16 @@ const MapaParceirosPage: React.FC = () => {
 
   const handleSalvarDetalhes = async (dados: Partial<ParceiroMapa>) => {
     if (parceiroSelecionado) {
-      await atualizarParceiro(parceiroSelecionado.id, dados);
-      setParceiroSelecionado({ ...parceiroSelecionado, ...dados });
+      // Ensure performance_score is converted to number if it exists
+      const dadosFormatados = {
+        ...dados,
+        ...(dados.performance_score !== undefined && {
+          performance_score: Number(dados.performance_score)
+        })
+      };
+      
+      await atualizarParceiro(parceiroSelecionado.id, dadosFormatados);
+      setParceiroSelecionado({ ...parceiroSelecionado, ...dadosFormatados });
     }
   };
 
