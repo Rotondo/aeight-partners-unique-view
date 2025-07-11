@@ -182,9 +182,9 @@ const ParceiroDetalhesSimplificado: React.FC<ParceiroDetalhesSimplificadoProps> 
                   return (
                     <div key={associacao.id} className="flex items-center justify-between p-2 bg-muted rounded">
                       <div>
-                        <p className="text-sm font-medium">{etapa?.nome}</p>
+                        <p className="text-sm font-medium">{etapa?.nome || "Etapa desconhecida"}</p>
                         {subnivel && (
-                          <p className="text-xs text-muted-foreground">{subnivel.nome}</p>
+                          <p className="text-xs text-muted-foreground">{subnivel?.nome || "Subnível desconhecido"}</p>
                         )}
                       </div>
                       <Button
