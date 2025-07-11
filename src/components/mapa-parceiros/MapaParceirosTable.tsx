@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Edit, Trash2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import ParceiroDetalhesSimplificado from './ParceiroDetalhesSimplificado';
 
 interface MapaParceirosTableProps {
   parceiros: ParceiroMapa[];
@@ -53,6 +54,8 @@ const MapaParceirosTable: React.FC<MapaParceirosTableProps> = ({
   const [orderDirection, setOrderDirection] = useState<OrderDirection>('asc');
   const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; parceiro: ParceiroMapa | null }>({ open: false, parceiro: null });
   const [editParceiro, setEditParceiro] = useState<ParceiroMapa | null>(null);
+  const [pendingEdits, setPendingEdits] = useState<Record<string, { etapaId: string; subnivelId: string }>>({});
+  const [showDetalhes, setShowDetalhes] = useState<ParceiroMapa | null>(null);
 
   const sortedParceiros = [...parceiros].sort((a, b) => {
     let compare = 0;
@@ -96,14 +99,32 @@ const MapaParceirosTable: React.FC<MapaParceirosTableProps> = ({
 
   // Função para atualizar etapa/subnível inline
   const handleUpdateEtapa = (parceiroId: string, etapaId: string) => {
-    // Chame aqui a função de associar etapa (exemplo: via contexto ou prop)
-    // Exemplo: onAssociarEtapa(parceiroId, etapaId)
-    // Aqui só loga para exemplo
-    console.log('Atualizar etapa', parceiroId, etapaId);
+    setPendingEdits(prev => ({
+      ...prev,
+      [parceiroId]: {
+        etapaId,
+        subnivelId: prev[parceiroId]?.subnivelId ?? associacoes.find(a => a.parceiro_id === parceiroId)?.subnivel_id || ''
+      }
+    }));
   };
   const handleUpdateSubnivel = (parceiroId: string, subnivelId: string) => {
-    // Chame aqui a função de associar subnível (exemplo: via contexto ou prop)
-    console.log('Atualizar subnível', parceiroId, subnivelId);
+    setPendingEdits(prev => ({
+      ...prev,
+      [parceiroId]: {
+        etapaId: prev[parceiroId]?.etapaId ?? associacoes.find(a => a.parceiro_id === parceiroId)?.etapa_id || '',
+        subnivelId
+      }
+    }));
+  };
+
+  const handleSalvarAlteracoes = async () => {
+    for (const parceiroId in pendingEdits) {
+      const { etapaId, subnivelId } = pendingEdits[parceiroId];
+      // Aqui você deve chamar a função real de atualização (API/contexto)
+      // Exemplo: await onAssociarEtapa(parceiroId, etapaId, subnivelId);
+      console.log('Salvar', parceiroId, etapaId, subnivelId);
+    }
+    setPendingEdits({});
   };
 
   return (
@@ -145,13 +166,14 @@ const MapaParceirosTable: React.FC<MapaParceirosTableProps> = ({
                 const nomeEmpresa = parceiro.empresa?.nome || 'Empresa sem nome';
                 const etapasParceiro = getEtapasParceiro(parceiro.id, associacoes, etapas);
                 const subniveisParceiro = getSubniveisParceiro(parceiro.id, associacoes, subniveis);
-                // Para edição inline
-                const etapaIdAtual = associacoes.find(a => a.parceiro_id === parceiro.id)?.etapa_id || '';
-                const subnivelIdAtual = associacoes.find(a => a.parceiro_id === parceiro.id)?.subnivel_id || '';
+                const etapaIdAtual = (pendingEdits[parceiro.id]?.etapaId) ?? ((associacoes.find(a => a.parceiro_id === parceiro.id)?.etapa_id) || '');
+                const subnivelIdAtual = (pendingEdits[parceiro.id]?.subnivelId) ?? ((associacoes.find(a => a.parceiro_id === parceiro.id)?.subnivel_id) || '');
+                const isEdited = !!pendingEdits[parceiro.id];
                 return (
-                  <tr key={parceiro.id} className="hover:bg-muted/30 transition-colors cursor-pointer min-h-8" onClick={() => setEditParceiro(parceiro)}>
+                  <tr key={parceiro.id} className={`hover:bg-muted/30 transition-colors cursor-pointer min-h-8 ${isEdited ? 'bg-yellow-50' : ''}`} onClick={() => setEditParceiro(parceiro)}>
                     <td className="p-1 min-w-[120px] font-medium whitespace-nowrap">
                       {nomeEmpresa}
+                      {isEdited && <span className="ml-2 text-xs text-yellow-600">(pendente)</span>}
                     </td>
                     <td className="p-1 whitespace-nowrap">
                       <Select value={etapaIdAtual || "none"} onValueChange={v => handleUpdateEtapa(parceiro.id, v === "none" ? "" : v)}>
@@ -185,7 +207,7 @@ const MapaParceirosTable: React.FC<MapaParceirosTableProps> = ({
                         size="icon"
                         className="mr-1"
                         title="Editar"
-                        onClick={e => { e.stopPropagation(); setEditParceiro(parceiro); }}>
+                        onClick={e => { e.stopPropagation(); setShowDetalhes(parceiro); }}>
                         <Edit className="h-4 w-4" />
                       </Button>
                       <Button
@@ -203,6 +225,13 @@ const MapaParceirosTable: React.FC<MapaParceirosTableProps> = ({
           </tbody>
         </table>
       </div>
+      {Object.keys(pendingEdits).length > 0 && (
+        <div className="flex justify-end mt-2">
+          <Button variant="default" onClick={handleSalvarAlteracoes}>
+            Salvar alterações ({Object.keys(pendingEdits).length})
+          </Button>
+        </div>
+      )}
       {/* Modal de edição simples */}
       <Dialog open={!!editParceiro} onOpenChange={open => !open && setEditParceiro(null)}>
         <DialogContent>
@@ -231,6 +260,22 @@ const MapaParceirosTable: React.FC<MapaParceirosTableProps> = ({
             <Button variant="outline" onClick={() => setDeleteConfirm({ open: false, parceiro: null })}>Cancelar</Button>
             <Button variant="destructive" onClick={() => { if (deleteConfirm.parceiro) onDeletarParceiro(deleteConfirm.parceiro); setDeleteConfirm({ open: false, parceiro: null }); }}>Remover</Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={!!showDetalhes} onOpenChange={open => !open && setShowDetalhes(null)}>
+        <DialogContent className="max-w-2xl">
+          {showDetalhes && (
+            <ParceiroDetalhesSimplificado
+              parceiro={showDetalhes}
+              etapas={etapas}
+              subniveis={subniveis}
+              associacoes={associacoes}
+              onClose={() => setShowDetalhes(null)}
+              onSave={async () => setShowDetalhes(null)}
+              onAssociarEtapa={async () => {}}
+              onRemoverAssociacao={async () => {}}
+            />
+          )}
         </DialogContent>
       </Dialog>
     </div>
