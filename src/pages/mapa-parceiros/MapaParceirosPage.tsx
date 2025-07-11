@@ -82,8 +82,18 @@ const MapaParceirosPage: React.FC = () => {
     setShowEmpresaSelector(true);
   };
 
-  const handleSalvarEmpresaParceiro = async (dados: { empresa_id: string; status: string; performance_score: number; observacoes?: string }) => {
-    await criarParceiro({ ...dados, status: dados.status as 'ativo' | 'inativo' | 'pendente' });
+  const handleSalvarEmpresaParceiro = async (dados: { 
+    empresa_id: string; 
+    status: string; 
+    performance_score: number; 
+    observacoes?: string 
+  }) => {
+    await criarParceiro({ 
+      empresa_id: dados.empresa_id,
+      status: dados.status as 'ativo' | 'inativo' | 'pendente',
+      performance_score: dados.performance_score,
+      observacoes: dados.observacoes
+    });
   };
 
   const handleDeletarParceiro = async (parceiro: ParceiroMapa) => {

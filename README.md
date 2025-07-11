@@ -9,16 +9,22 @@ Sistema completo para gestão de parcerias empresariais, oportunidades de negóc
 ### 🎯 Dashboard de Metas
 - **Criação e acompanhamento de metas** por quantidade ou valor
 - **Comprobatórios detalhados** com análises por status e empresa
-- **Gráficos semanais** de distribuição de resultados
-- **Exportação em PDF** dos relatórios de metas
+- **Gráficos semanais** de distribuição de resultados com ordenação interativa
+- **Exportação em PDF** dos relatórios de metas com qualidade aprimorada
 - **Filtros avançados** por período, segmento e empresa
+- **Resumos por status** com somatórias de ganhas/perdidas/outras
+- **Somatórias por empresa origem** com ranking de performance
 
 ### 🤝 Mapa de Parceiros
-- **Gestão visual de parceiros** em etapas da jornada comercial
+- **Gestão visual de parceiros** com visualização grid/lista
 - **Seleção múltipla** de empresas para inclusão como parceiros
 - **Interface responsiva** otimizada para mobile e desktop
-- **Performance tracking** com indicadores visuais
-- **Associação flexível** de parceiros a diferentes etapas
+- **Performance tracking** com indicadores visuais e score do quadrante
+- **Associação flexível** de parceiros a diferentes etapas da jornada
+- **Painel lateral detalhado** com navegação entre parceiros
+- **Badges de etapas associadas** nos cards dos parceiros
+- **Feedback visual aprimorado** para empresas já cadastradas
+- **Acessibilidade completa** com ARIA labels e navegação por teclado
 
 ### 📊 Dashboard Analítico
 - **KPIs em tempo real** de oportunidades e conversões
@@ -81,6 +87,7 @@ Sistema completo para gestão de parcerias empresariais, oportunidades de negóc
 src/
 ├── components/          # Componentes reutilizáveis
 │   ├── dashboard/      # Componentes do dashboard
+│   ├── mapa-parceiros/ # Componentes do mapa de parceiros
 │   ├── ui/            # Componentes base (shadcn)
 │   └── ...
 ├── pages/              # Páginas da aplicação
@@ -93,30 +100,35 @@ src/
 ## Últimas Atualizações (72h)
 
 ### 🔧 Melhorias no Mapa de Parceiros
-- **UX responsiva** melhorada para mobile e desktop
-- **Seleção múltipla** de parceiros implementada
-- **Performance visual** simplificada nos cards
-- **Tooltips informativos** para textos longos
-- **Animações suaves** para melhor experiência
+- **Visualização Grid/Lista** para desktop com alternância
+- **Score do Quadrante** integrado aos cards de parceiros
+- **Badges de etapas associadas** com indicação visual clara
+- **Painel lateral reduzido** com navegação próximo/anterior
+- **Feedback aprimorado** para empresas já cadastradas
+- **Acessibilidade completa** com ARIA labels e tabindex
+- **Performance otimizada** com memoização e handlers desacoplados
 
 ### 📈 Aprimoramentos nos Comprobatórios de Metas
 - **Ordenação interativa** em todas as colunas da tabela
-- **Gráfico semanal** otimizado com formatação melhorada
-- **Exportação PDF** com qualidade aprimorada
-- **Resumos por status** mais visuais e informativos
-- **Análise por empresa origem** com ranking
+- **Gráfico semanal otimizado** com tooltip personalizado
+- **Exportação PDF** com formatação melhorada
+- **Resumos por status** com somatórias detalhadas
+- **Análise por empresa origem** com ranking de performance
+- **Correções TypeScript** para maior estabilidade
 
-### 🎨 Melhorias de Interface
-- **Sistema de cores** semântico implementado
+### 🎨 Melhorias de Interface e UX
+- **Sistema de cores** semântico consistente
 - **Responsividade** aprimorada em todos os componentes
-- **Feedback visual** melhorado para ações do usuário
-- **Loading states** e skeleton screens
+- **Empty states** explicativos e onboarding textual
+- **Microcopy** clara para melhor experiência do usuário
+- **Loading states** e skeleton screens otimizados
 
 ### 🏗️ Otimizações Técnicas
 - **Performance** melhorada com memoização adequada
 - **Bundle size** otimizado com imports específicos
-- **Type safety** aprimorada em toda aplicação
+- **Type safety** aprimorada com correções TypeScript
 - **Error handling** mais robusto
+- **Código limpo** com componentes focados e reutilizáveis
 
 ## Como Executar
 
@@ -181,6 +193,23 @@ test: adiciona ou corrige testes
 - [ ] **Advanced analytics** com Machine Learning
 - [ ] **Automações** baseadas em regras de negócio
 
+## Changelog Recente
+
+### v2.1.0 - Melhorias no Mapa de Parceiros
+- ✅ Visualização Grid/Lista implementada
+- ✅ Score do Quadrante integrado
+- ✅ Badges de etapas associadas
+- ✅ Painel lateral otimizado
+- ✅ Acessibilidade aprimorada
+- ✅ Performance e UX melhoradas
+
+### v2.0.1 - Correções e Otimizações
+- 🐛 Correção de erros TypeScript
+- ⚡ Memoização de componentes pesados
+- 🎨 Melhorias na interface dos comprobatórios
+- 📊 Gráficos semanais otimizados
+- 📄 Exportação PDF aprimorada
+
 ## Suporte
 
 Para dúvidas ou suporte técnico:
@@ -191,5 +220,5 @@ Para dúvidas ou suporte técnico:
 ---
 
 **Última atualização:** ${new Date().toLocaleDateString('pt-BR')}
-**Versão:** 2.0.0
+**Versão:** 2.1.0
 **Status:** ✅ Produção
