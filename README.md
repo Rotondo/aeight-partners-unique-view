@@ -1,269 +1,195 @@
 
-# Sistema de Gestão de Oportunidades e Parcerias
+# Sistema de Gestão de Parcerias e Oportunidades
 
-Sistema completo PWA para gestão de oportunidades de negócio, análise de performance e controle de parcerias estratégicas com capacidades offline.
+## Visão Geral
+Sistema completo para gestão de parcerias empresariais, oportunidades de negócio e metas organizacionais, desenvolvido com React, TypeScript, Tailwind CSS e Supabase.
 
-## 🚀 **NOVA VERSÃO PWA** - Progressive Web App
+## Principais Funcionalidades
 
-### 📱 Capacidades Móveis e Offline
-- **Instalação nativa**: Instale como app no celular/desktop
-- **Uso offline**: Funciona sem conexão com internet
-- **Sincronização automática**: Dados sincronizam quando conectar
-- **Cache inteligente**: Performance otimizada em conexões lentas
-- **Push notifications**: Alertas importantes (preparado)
+### 🎯 Dashboard de Metas
+- **Criação e acompanhamento de metas** por quantidade ou valor
+- **Comprobatórios detalhados** com análises por status e empresa
+- **Gráficos semanais** de distribuição de resultados
+- **Exportação em PDF** dos relatórios de metas
+- **Filtros avançados** por período, segmento e empresa
 
-### 🔧 Configuração PWA
-```json
-Manifest configurado para:
-- Nome: "A&eight Partners" 
-- Tema: #4a90e2
-- Ícones otimizados para todas as telas
-- Service Worker com cache estratégico
+### 🤝 Mapa de Parceiros
+- **Gestão visual de parceiros** em etapas da jornada comercial
+- **Seleção múltipla** de empresas para inclusão como parceiros
+- **Interface responsiva** otimizada para mobile e desktop
+- **Performance tracking** com indicadores visuais
+- **Associação flexível** de parceiros a diferentes etapas
+
+### 📊 Dashboard Analítico
+- **KPIs em tempo real** de oportunidades e conversões
+- **Análises de matriz intragrupo** e parcerias externas
+- **Gráficos interativos** com Recharts
+- **Filtros dinâmicos** por período e segmentação
+- **Indicadores de qualidade** e performance de parcerias
+
+### 💼 Gestão de Oportunidades
+- **CRUD completo** de oportunidades de negócio
+- **Histórico de alterações** com auditoria
+- **Atividades associadas** com prazos e responsáveis
+- **Status tracking** (em contato, negociando, ganho, perdido)
+- **Valores e métricas** de conversão
+
+### 📚 Repositório de Materiais
+- **Upload e organização** de documentos e links
+- **Categorização** por tags e empresas
+- **Controle de acesso** baseado em perfis
+- **Versionamento** e controle de validade
+
+### 🎪 Gestão de Eventos
+- **Criação e acompanhamento** de eventos comerciais
+- **Coleta de contatos** com formulários otimizados
+- **Analytics de eventos** com métricas de engajamento
+- **Exportação de dados** de contatos coletados
+
+### 📝 Diário Empresarial
+- **CRM integrado** com histórico de ações
+- **Agenda sincronizada** com eventos externos
+- **IA para sugestões** de próximos passos
+- **Resumos automáticos** por período
+
+## Arquitetura Técnica
+
+### Frontend
+- **React 18** com TypeScript
+- **Tailwind CSS** com sistema de design consistente
+- **Shadcn/UI** para componentes base
+- **React Query** para gerenciamento de estado
+- **React Router** para navegação
+- **Recharts** para visualizações
+
+### Backend
+- **Supabase** como BaaS (Backend as a Service)
+- **PostgreSQL** com Row Level Security (RLS)
+- **Edge Functions** para lógica customizada
+- **Storage** para arquivos e documentos
+- **Auth** com múltiplos provedores
+
+### Segurança
+- **Autenticação JWT** via Supabase Auth
+- **Políticas RLS** granulares por tabela
+- **Controle de acesso** baseado em roles (admin/user)
+- **Auditoria** de alterações críticas
+
+## Estrutura do Projeto
+
+```
+src/
+├── components/          # Componentes reutilizáveis
+│   ├── dashboard/      # Componentes do dashboard
+│   ├── ui/            # Componentes base (shadcn)
+│   └── ...
+├── pages/              # Páginas da aplicação
+├── hooks/              # Custom hooks
+├── types/              # Definições de tipos TypeScript
+├── lib/                # Utilitários e configurações
+└── integrations/       # Integrações externas (Supabase)
 ```
 
-## 🏗️ **ARQUITETURA MODULAR APRIMORADA**
+## Últimas Atualizações (72h)
 
-### 📊 **Módulo de Indicadores Refatorado**
-Completamente reestruturado para máxima performance e manutenibilidade:
+### 🔧 Melhorias no Mapa de Parceiros
+- **UX responsiva** melhorada para mobile e desktop
+- **Seleção múltipla** de parceiros implementada
+- **Performance visual** simplificada nos cards
+- **Tooltips informativos** para textos longos
+- **Animações suaves** para melhor experiência
 
+### 📈 Aprimoramentos nos Comprobatórios de Metas
+- **Ordenação interativa** em todas as colunas da tabela
+- **Gráfico semanal** otimizado com formatação melhorada
+- **Exportação PDF** com qualidade aprimorada
+- **Resumos por status** mais visuais e informativos
+- **Análise por empresa origem** com ranking
+
+### 🎨 Melhorias de Interface
+- **Sistema de cores** semântico implementado
+- **Responsividade** aprimorada em todos os componentes
+- **Feedback visual** melhorado para ações do usuário
+- **Loading states** e skeleton screens
+
+### 🏗️ Otimizações Técnicas
+- **Performance** melhorada com memoização adequada
+- **Bundle size** otimizado com imports específicos
+- **Type safety** aprimorada em toda aplicação
+- **Error handling** mais robusto
+
+## Como Executar
+
+### Pré-requisitos
+- Node.js 16+
+- npm ou yarn
+- Conta no Supabase
+
+### Instalação
+```bash
+# Clone o repositório
+git clone [url-do-repositorio]
+
+# Instale as dependências
+npm install
+
+# Configure as variáveis de ambiente
+cp .env.example .env.local
+# Edite .env.local com suas chaves do Supabase
+
+# Execute em desenvolvimento
+npm run dev
 ```
-src/pages/indicadores/
-├── IndicadoresPage.tsx          # Coordenador principal (240 linhas → otimizado)
-├── types.ts                     # Interfaces TypeScript centralizadas
-├── utils.ts                     # Utilitários específicos do módulo
-└── components/
-    ├── IndicadoresFilters.tsx   # Filtros avançados
-    ├── IndicadoresCharts.tsx    # Visualizações gráficas
-    ├── IndicadoresTable.tsx     # Tabela responsiva com edição
-    └── CustomTooltip.tsx        # Tooltip personalizado
+
+### Build para Produção
+```bash
+npm run build
+npm run preview
 ```
 
-#### 🎯 Benefícios da Refatoração
-- **Performance**: Componentes pequenos e focados
-- **Manutenibilidade**: Lógica isolada por responsabilidade
-- **Reusabilidade**: Utilitários compartilháveis
-- **TypeScript**: Tipagem forte em todas as interfaces
-- **Responsividade**: Interface otimizada para mobile
+## Contribuição
 
-### 🎪 **Sistema Wishlist Aprimorado**
-Reestruturação completa com novas funcionalidades:
+### Padrões de Código
+- **TypeScript strict** habilitado
+- **ESLint + Prettier** para formatação
+- **Commits convencionais** (feat, fix, docs, etc.)
+- **Testes unitários** para componentes críticos
 
-#### 🔄 **Novo Fluxo de Reciprocidade Guiada**
-- **Seleção em duas etapas**: Primeiro seleciona clientes desejados, depois clientes para reciprocidade
-- **Preview duplo**: Visualização completa de ambas as direções antes de confirmar
-- **Validação inteligente**: Só permite conclusão após confirmar ambas as seleções
-- **Integração automática com CRM**: Registro detalhado de todas as operações
+### Estrutura de Commits
+```
+feat: adiciona nova funcionalidade
+fix: corrige bug identificado
+docs: atualiza documentação
+style: ajustes de formatação
+refactor: refatoração sem mudança de funcionalidade
+test: adiciona ou corrige testes
+```
 
-#### 🤖 **Automação CRM Integrada**
-- **Registro automático**: Cada solicitação de wishlist gera ação no CRM
-- **Conteúdo detalhado**: Lista completa de clientes, prioridades e direções
-- **Partner ID inteligente**: Sempre identifica corretamente a empresa parceira
-- **Metadata estruturada**: Informações completas para análise posterior
+## Roadmap
 
-#### 📋 Páginas Especializadas
-- **WishlistDashboard**: Overview geral e métricas
-- **EmpresasClientesPage**: Gestão de clientes
-- **WishlistItemsPage**: Solicitações de apresentação
-- **ApresentacoesPage**: Execução de networking
-- **ClientesSobrepostosPage**: Análise de sobreposição
-- **ModoApresentacaoPage**: Interface para apresentações
-- **TrocaMutuaPage**: Sistema de trocas entre parceiros
-- **QualificacaoPage**: Qualificação de oportunidades
+### 🔮 Próximas Features
+- [ ] **Dashboard personalizado** por usuário
+- [ ] **Integração com CRMs** externos (HubSpot, Salesforce)
+- [ ] **Notificações push** para eventos importantes
+- [ ] **Mobile app** nativo com React Native
+- [ ] **API pública** para integrações externas
 
-#### 🤖 **Inteligência de Negócio**
-- **Detecção automática** de clientes sobrepostos
-- **Scoring de relevância** entre parceiros
-- **Alertas inteligentes** para oportunidades
-- **Classificação automática** de empresas por porte
+### 🚀 Melhorias Planejadas
+- [ ] **Performance** com React Server Components
+- [ ] **Offline first** com service workers
+- [ ] **Multi-tenancy** para diferentes organizações
+- [ ] **Advanced analytics** com Machine Learning
+- [ ] **Automações** baseadas em regras de negócio
 
-## 🔧 **Novos Hooks Customizados**
+## Suporte
 
-### 📊 Análise de Dados
-- `useClientesSobrepostos`: Identifica clientes compartilhados
-- `useParceiroRelevance`: Calcula relevância entre parceiros
-- `usePartners`: Gestão otimizada de parceiros
-
-### 🎯 Funcionalidades
-- **Performance otimizada** com React Query
-- **Cache inteligente** de dados frequentes
-- **Validações automáticas** de regras de negócio
-- **Tratamento de erros** padronizado
-
-## 🎨 **Melhorias de Interface**
-
-### 📱 Design Responsivo
-- **Mobile-first**: Interface otimizada para celular
-- **Breakpoints inteligentes**: Adaptação automática
-- **Touch-friendly**: Botões e elementos otimizados para toque
-- **Acessibilidade**: Labels e navegação por teclado
-
-### 🎯 Componentes Inteligentes
-- **Tooltips contextuais**: Ajuda inline em tempo real
-- **Alertas dinâmicos**: Notificações baseadas em regras
-- **Filtros avançados**: Busca e segmentação poderosa
-- **Tabelas interativas**: Edição inline e exportação
-
-## 🚀 **Funcionalidades Principais Atualizadas**
-
-### 📊 Dashboard de Oportunidades
-- **PWA Ready**: Funciona offline
-- **Respostas rápidas** automatizadas
-- **Filtros avançados** com persistência
-- **Análise de valores** com drill-down interativo
-- **Performance por empresa** segmentada
-- **Tempo de ciclo** com análise estatística completa
-
-### 🏢 Gestão de Parceiros
-- **Quadrante inteligente** com scoring automático
-- **One-pagers dinâmicos** responsivos
-- **Indicadores em tempo real**
-- **Sistema de classificação** automática
-
-### 💼 Pipeline de Oportunidades
-- **Interface PWA** otimizada
-- **Atividades automatizadas**
-- **Follow-ups inteligentes**
-- **Análise de conversão** avançada
-
-### 🎯 Sistema Wishlist
-- **Networking automatizado**
-- **Detecção de sobreposições**
-- **Scoring de relevância**
-- **Apresentações estruturadas**
-
-## 🔐 **Segurança e Privacidade**
-
-### 🛡️ Proteção de Dados
-- **Modo Demo**: Mascaramento automático de dados sensíveis
-- **Utilitário demoMask**: Proteção recursiva de informações
-- **RLS completo**: Segurança em nível de linha
-- **Auditoria**: Log completo de ações
-
-### 🔒 Controle de Acesso
-- **Papéis granulares**: Admin, Manager, User
-- **Módulo Diário**: Acesso restrito a administradores
-- **Políticas específicas**: Por módulo e funcionalidade
-
-## 🔧 **Tecnologias e Performance**
-
-### ⚡ Stack Atualizada
-- **PWA**: Service Worker + Manifest
-- **React 18**: Concurrent features
-- **TypeScript**: Tipagem forte em 100%
-- **Tailwind CSS**: Design system consistente
-- **Supabase**: Backend completo com RLS
-
-### 📊 Otimizações
-- **Lazy loading**: Componentes carregados sob demanda
-- **Code splitting**: Bundles otimizados por rota
-- **Cache estratégico**: Service Worker inteligente
-- **Compressão**: Assets otimizados para mobile
-
-## 🎯 **Casos de Uso Aprimorados**
-
-### Para Gestores
-- **Dashboard PWA**: Métricas sempre disponíveis
-- **Alertas automáticos**: Oportunidades e gargalos
-- **Análise offline**: Trabalhe sem conexão
-- **Relatórios móveis**: Acesso em qualquer lugar
-
-### Para Comercial
-- **App instalável**: Acesso rápido e nativo
-- **Networking automatizado**: Detecção de oportunidades
-- **Pipeline móvel**: Gestão completa no celular
-- **Sincronização**: Dados sempre atualizados
-
-### Para Parcerias
-- **Scoring automático**: Relevância de parceiros
-- **Sobreposições**: Identifica clientes compartilhados
-- **Apresentações**: Sistema estruturado de networking
-- **Métricas avançadas**: ROI e performance detalhada
-
-## 🚀 **Roadmap Atualizado**
-
-### Q2 2025 - PWA Avançado
-- [ ] **Push Notifications**: Alertas em tempo real
-- [ ] **Background Sync**: Sincronização em segundo plano
-- [ ] **Geolocalização**: Networking baseado em localização
-- [ ] **Camera Integration**: Scan de cartões de visita
-- [ ] **Voice Commands**: Comandos de voz para CRM
-
-### Q3 2025 - IA e Automação
-- [ ] **Machine Learning**: Previsões de conversão
-- [ ] **NLP**: Análise de sentimentos em interações
-- [ ] **Automação Completa**: Workflows inteligentes
-- [ ] **Integração CRM**: Conectores externos
-- [ ] **API Pública**: Integrações de terceiros
-
-### Q4 2025 - Escala Empresarial
-- [ ] **Multi-tenancy**: Suporte a múltiplas organizações
-- [ ] **Analytics Avançado**: BI integrado
-- [ ] **Compliance**: LGPD e regulamentações
-- [ ] **Mobile App**: React Native nativo
-- [ ] **Desktop App**: Electron para desktop
-
-## 🔧 **Como Usar - PWA Edition**
-
-### 📱 Instalação
-1. **Web**: Acesse via navegador
-2. **Instalar**: Clique no ícone de instalação
-3. **Mobile**: "Adicionar à tela inicial"
-4. **Desktop**: "Instalar aplicativo"
-
-### 🚀 Recursos Offline
-- **Dashboard**: Métricas cacheadas
-- **Oportunidades**: Lista e detalhes
-- **Parceiros**: Informações básicas
-- **Sincronização**: Automática ao conectar
-
-### 🎯 Navegação Otimizada
-- **Sidebar responsiva**: Colapsa em mobile
-- **Quick access**: Ações frequentes destacadas
-- **Search global**: Busca em todos os módulos
-- **Filtros persistentes**: Mantém configurações
-
-## 📊 **Métricas de Performance PWA**
-
-### ⚡ Core Web Vitals
-- **LCP**: < 2.5s (carregamento principal)
-- **FID**: < 100ms (interatividade)
-- **CLS**: < 0.1 (estabilidade visual)
-- **PWA Score**: 90+ (Lighthouse)
-
-### 📱 Mobile Experience
-- **Touch targets**: Mínimo 44px
-- **Viewport**: Responsive em todos os dispositivos
-- **Offline**: Funcionalidades básicas disponíveis
-- **Cache**: 90% dos recursos em cache
-
-## 🤝 **Colaboração e Manutenção**
-
-### 🔧 Desenvolvimento
-- **Componentes pequenos**: Máximo 200 linhas
-- **Hooks focados**: Uma responsabilidade por hook
-- **TypeScript strict**: Tipagem obrigatória
-- **Testes preparados**: Estrutura para testing
-
-### 📚 Documentação Técnica
-- **README.sistema.md**: Arquitetura detalhada
-- **README.dados.md**: Estrutura de dados completa
-- **Comentários**: Código autodocumentado
-- **Exemplos**: Casos de uso práticos
+Para dúvidas ou suporte técnico:
+- 📧 Email: [contato@empresa.com]
+- 📱 WhatsApp: [número]
+- 🐛 Issues: [link-do-github]
 
 ---
 
-## 📞 **Suporte e Evolução**
-
-### 🚀 **Nova Era PWA**
-O sistema agora é uma aplicação web progressiva completa, oferecendo experiência nativa em qualquer dispositivo com capacidades offline robustas.
-
-### 🎯 **Arquitetura Modular**
-Refatoração completa garantiu código mais limpo, performance superior e facilidade de manutenção para evolução contínua.
-
-### 📱 **Mobile-First Experience**
-Interface completamente responsiva com foco em usabilidade móvel e acessibilidade universal.
-
----
-
-**Sistema Aeight Partners PWA** 🚀  
-*Última atualização: Janeiro 2025 - Versão PWA 2.0*
+**Última atualização:** ${new Date().toLocaleDateString('pt-BR')}
+**Versão:** 2.0.0
+**Status:** ✅ Produção

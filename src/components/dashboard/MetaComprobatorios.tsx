@@ -1,10 +1,10 @@
+
 import React, { useMemo, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { FileText, Building, TrendingUp, Download } from 'lucide-react';
-import { Progress } from '@/components/ui/progress';
+import { FileText, Building, TrendingUp, Download, ChevronUp, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { MetaProgress } from '@/types/metas';
 import jsPDF from 'jspdf';
@@ -36,6 +36,8 @@ type OrigemResumo = {
   [empresa: string]: number;
 };
 
+type SortField = 'nome_lead' | 'empresa_origem' | 'empresa_destino' | 'valor' | 'status' | 'data_indicacao';
+
 function formatValue(value: number, tipo: 'quantidade' | 'valor') {
   if (tipo === 'valor') {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -59,9 +61,8 @@ function getStatusBadge(status: string) {
 }
 
 function getWeekNumber(date: Date) {
-  // ISO week number (Monday-based)
   const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
-  const pastDaysOfYear = (date as any - firstDayOfYear as any) / 86400000;
+  const pastDaysOfYear = (date.getTime() - firstDayOfYear.getTime()) / 86400000;
   return Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
 }
 
@@ -71,8 +72,8 @@ export const MetaComprobatorios: React.FC<MetaComprobatoriosProps> = ({
   metaProgress
 }) => {
   const { meta, oportunidades, realizado } = metaProgress;
-  const [sortField, setSortField] = useState<string>('data_indicacao');
-  const [sortAsc, setSortAsc] = useState<boolean>(true);
+  const [sortField, setSortField] = useState<SortField>('data_indicacao');
+  const [sortAsc, setSortAsc] = useState<boolean>(false);
 
   // 1. Somatória de Realizado por Status
   const statusResumo: StatusResumo = useMemo(() => {
@@ -90,7 +91,7 @@ export const MetaComprobatorios: React.FC<MetaComprobatoriosProps> = ({
   const origemResumo: OrigemResumo = useMemo(() => {
     const map: OrigemResumo = {};
     oportunidades.forEach(o => {
-      const empresa = o.empresa_origem?.nome || '-';
+      const empresa = o.empresa_origem?.nome || 'Não informado';
       const valor = meta.tipo_meta === 'valor' ? (o.valor ?? 0) : 1;
       map[empresa] = (map[empresa] || 0) + valor;
     });
@@ -100,48 +101,63 @@ export const MetaComprobatorios: React.FC<MetaComprobatoriosProps> = ({
   // 3. Gráfico semanal (barra)
   const semanalData = useMemo(() => {
     if (!oportunidades.length) return [];
-    const inicio = new Date(Math.min(...oportunidades.map(o => new Date(o.data_indicacao).getTime())));
-    const fim = new Date(Math.max(...oportunidades.map(o => new Date(o.data_indicacao).getTime())));
-    const ano = inicio.getFullYear();
-    const startWeek = getWeekNumber(inicio);
-    const endWeek = getWeekNumber(fim);
-    const weeks: { week: string, valor: number }[] = [];
-    for (let w = startWeek; w <= endWeek; w++) {
-      weeks.push({ week: `Semana ${w}`, valor: 0 });
-    }
+    
+    const weekMap = new Map<string, number>();
+    
     oportunidades.forEach(o => {
-      const d = new Date(o.data_indicacao);
-      const week = getWeekNumber(d) - startWeek;
-      const idx = week >= 0 ? week : 0;
+      const date = new Date(o.data_indicacao);
+      const year = date.getFullYear();
+      const week = getWeekNumber(date);
+      const weekKey = `${year}-W${week.toString().padStart(2, '0')}`;
+      const weekLabel = `Semana ${week}/${year}`;
+      
       const valor = meta.tipo_meta === 'valor' ? (o.valor ?? 0) : 1;
-      if (weeks[idx]) weeks[idx].valor += valor;
+      weekMap.set(weekKey, (weekMap.get(weekKey) || 0) + valor);
     });
-    return weeks;
+
+    return Array.from(weekMap.entries()).map(([key, valor]) => {
+      const week = key.split('-W')[1];
+      const year = key.split('-W')[0];
+      return {
+        week: `Sem ${week}/${year}`,
+        valor: valor
+      };
+    }).sort();
   }, [oportunidades, meta.tipo_meta]);
 
   // 5. Ordenação das colunas
   const sortedOportunidades = useMemo(() => {
     const ops = [...oportunidades];
     ops.sort((a, b) => {
-      let av = a[sortField as keyof typeof a];
-      let bv = b[sortField as keyof typeof b];
-      // Para campos de valor, usa número. Para data, compara datas.
-      if (sortField === 'valor') {
-        av = a.valor ?? 0;
-        bv = b.valor ?? 0;
+      let av: any, bv: any;
+      
+      switch (sortField) {
+        case 'valor':
+          av = a.valor ?? 0;
+          bv = b.valor ?? 0;
+          break;
+        case 'data_indicacao':
+          av = new Date(a.data_indicacao).getTime();
+          bv = new Date(b.data_indicacao).getTime();
+          break;
+        case 'empresa_origem':
+          av = a.empresa_origem?.nome || '';
+          bv = b.empresa_origem?.nome || '';
+          break;
+        case 'empresa_destino':
+          av = a.empresa_destino?.nome || '';
+          bv = b.empresa_destino?.nome || '';
+          break;
+        default:
+          av = a[sortField] || '';
+          bv = b[sortField] || '';
       }
-      if (sortField === 'data_indicacao') {
-        av = new Date(a.data_indicacao).getTime();
-        bv = new Date(b.data_indicacao).getTime();
+      
+      if (typeof av === 'string' && typeof bv === 'string') {
+        av = av.toLowerCase();
+        bv = bv.toLowerCase();
       }
-      if (sortField === 'empresa_origem') {
-        av = a.empresa_origem?.nome || '';
-        bv = b.empresa_origem?.nome || '';
-      }
-      if (sortField === 'empresa_destino') {
-        av = a.empresa_destino?.nome || '';
-        bv = b.empresa_destino?.nome || '';
-      }
+      
       if (av < bv) return sortAsc ? -1 : 1;
       if (av > bv) return sortAsc ? 1 : -1;
       return 0;
@@ -151,38 +167,69 @@ export const MetaComprobatorios: React.FC<MetaComprobatoriosProps> = ({
 
   // 4. Exportar PDF da tela
   const handleExportPDF = async () => {
-    const element = document.getElementById('meta-comprobatorio-content');
-    if (!element) return;
-    const canvas = await html2canvas(element);
-    const imgData = canvas.toDataURL('image/png');
-    const pdf = new jsPDF({ orientation: 'landscape', unit: 'px', format: 'a4' });
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
-    pdf.addImage(imgData, 'PNG', 0, 0, pageWidth, pageHeight);
-    pdf.save(`Comprovatorio_${meta.nome}.pdf`);
+    try {
+      const element = document.getElementById('meta-comprobatorio-content');
+      if (!element) return;
+      
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        logging: false
+      });
+      
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'landscape',
+        unit: 'mm',
+        format: 'a4'
+      });
+      
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+      const imgX = (pdfWidth - imgWidth * ratio) / 2;
+      const imgY = 10;
+      
+      pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
+      pdf.save(`Comprobatorio_${meta.nome}_${new Date().toLocaleDateString('pt-BR')}.pdf`);
+    } catch (error) {
+      console.error('Erro ao exportar PDF:', error);
+    }
   };
 
-  const handleSort = (field: string) => {
-    if (field === sortField) setSortAsc(!sortAsc);
-    else {
+  const handleSort = (field: SortField) => {
+    if (field === sortField) {
+      setSortAsc(!sortAsc);
+    } else {
       setSortField(field);
       setSortAsc(true);
     }
   };
 
+  const getSortIcon = (field: SortField) => {
+    if (sortField !== field) return null;
+    return sortAsc ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />;
+  };
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl max-h-[80vh] overflow-y-auto" style={{ position: 'relative' }}>
+      <DialogContent className="max-w-7xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            Comprobatórios da Meta: {meta.nome}
-            <Button variant="outline" size="sm" className="ml-auto" onClick={handleExportPDF}>
-              <Download className="h-4 w-4 mr-1" /> Exportar PDF
+          <DialogTitle className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Comprobatórios da Meta: {meta.nome}
+            </div>
+            <Button variant="outline" size="sm" onClick={handleExportPDF}>
+              <Download className="h-4 w-4 mr-2" />
+              Exportar PDF
             </Button>
           </DialogTitle>
         </DialogHeader>
-        <div id="meta-comprobatorio-content" className="space-y-6">
+        
+        <div id="meta-comprobatorio-content" className="space-y-6 p-4">
           {/* Resumo da Meta */}
           <Card>
             <CardHeader>
@@ -192,10 +239,14 @@ export const MetaComprobatorios: React.FC<MetaComprobatoriosProps> = ({
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                 <div>
                   <p className="text-sm text-muted-foreground">Tipo</p>
-                  <p className="font-medium">{meta.tipo_meta}</p>
+                  <p className="font-medium capitalize">{meta.tipo_meta}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Período</p>
+                  <p className="font-medium capitalize">{meta.periodo}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Segmento</p>
@@ -209,7 +260,7 @@ export const MetaComprobatorios: React.FC<MetaComprobatoriosProps> = ({
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Realizado</p>
-                  <p className="font-medium text-primary">
+                  <p className="font-bold text-primary text-lg">
                     {formatValue(realizado, meta.tipo_meta)}
                   </p>
                 </div>
@@ -223,18 +274,24 @@ export const MetaComprobatorios: React.FC<MetaComprobatoriosProps> = ({
               <CardTitle>Realizado por Status</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <Badge variant="default">Ganho</Badge>
-                  <div className="font-bold text-green-700 mt-2">{formatValue(statusResumo.ganho, meta.tipo_meta)}</div>
+              <div className="grid grid-cols-3 gap-6">
+                <div className="text-center">
+                  <Badge variant="default" className="mb-2">Ganho</Badge>
+                  <div className="text-2xl font-bold text-green-600">
+                    {formatValue(statusResumo.ganho, meta.tipo_meta)}
+                  </div>
                 </div>
-                <div>
-                  <Badge variant="destructive">Perdido</Badge>
-                  <div className="font-bold text-red-700 mt-2">{formatValue(statusResumo.perdido, meta.tipo_meta)}</div>
+                <div className="text-center">
+                  <Badge variant="destructive" className="mb-2">Perdido</Badge>
+                  <div className="text-2xl font-bold text-red-600">
+                    {formatValue(statusResumo.perdido, meta.tipo_meta)}
+                  </div>
                 </div>
-                <div>
-                  <Badge variant="outline">Outras</Badge>
-                  <div className="font-bold text-gray-700 mt-2">{formatValue(statusResumo.outras, meta.tipo_meta)}</div>
+                <div className="text-center">
+                  <Badge variant="outline" className="mb-2">Outras</Badge>
+                  <div className="text-2xl font-bold text-gray-600">
+                    {formatValue(statusResumo.outras, meta.tipo_meta)}
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -246,11 +303,17 @@ export const MetaComprobatorios: React.FC<MetaComprobatoriosProps> = ({
               <CardTitle>Realizado por Empresa Origem</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {Object.entries(origemResumo).map(([empresa, valor]) => (
-                  <div key={empresa}>
-                    <p className="text-sm text-muted-foreground">{empresa}</p>
-                    <p className="font-medium">{formatValue(valor, meta.tipo_meta)}</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {Object.entries(origemResumo)
+                  .sort(([,a], [,b]) => b - a)
+                  .map(([empresa, valor]) => (
+                  <div key={empresa} className="p-3 border rounded-lg">
+                    <p className="text-sm text-muted-foreground truncate" title={empresa}>
+                      {empresa}
+                    </p>
+                    <p className="font-semibold text-lg">
+                      {formatValue(valor, meta.tipo_meta)}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -260,35 +323,54 @@ export const MetaComprobatorios: React.FC<MetaComprobatoriosProps> = ({
           {/* 3. Gráfico semanal */}
           <Card>
             <CardHeader>
-              <CardTitle>Distribuição Semanal ({meta.tipo_meta === 'valor' ? 'Valor' : 'Quantidade'})</CardTitle>
+              <CardTitle>
+                Distribuição Semanal ({meta.tipo_meta === 'valor' ? 'Valor' : 'Quantidade'})
+              </CardTitle>
             </CardHeader>
-            <CardContent style={{ height: 300 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={semanalData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="week" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="valor" fill="#2563eb" name={meta.tipo_meta === 'valor' ? 'Valor (R$)' : 'Quantidade'} />
-                </BarChart>
-              </ResponsiveContainer>
+            <CardContent>
+              <div className="h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={semanalData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis 
+                      dataKey="week" 
+                      angle={-45}
+                      textAnchor="end"
+                      height={60}
+                    />
+                    <YAxis />
+                    <Tooltip 
+                      formatter={[(value: number) => [
+                        meta.tipo_meta === 'valor' ? formatValue(value, 'valor') : value,
+                        meta.tipo_meta === 'valor' ? 'Valor' : 'Quantidade'
+                      ]]}
+                    />
+                    <Legend />
+                    <Bar 
+                      dataKey="valor" 
+                      fill="hsl(var(--primary))" 
+                      name={meta.tipo_meta === 'valor' ? 'Valor (R$)' : 'Quantidade'}
+                      radius={[4, 4, 0, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
             </CardContent>
           </Card>
 
           {/* Lista de Oportunidades */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
+              <CardTitle className="flex items-center gap-2">
                 <Building className="h-5 w-5" />
                 Oportunidades que Compõem a Meta ({oportunidades.length})
               </CardTitle>
             </CardHeader>
             <CardContent>
               {oportunidades.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>Nenhuma oportunidade encontrada para esta meta</p>
+                <div className="text-center py-12 text-muted-foreground">
+                  <FileText className="h-16 w-16 mx-auto mb-4 opacity-50" />
+                  <p className="text-lg mb-2">Nenhuma oportunidade encontrada</p>
                   <p className="text-sm">Verifique os critérios e período da meta</p>
                 </div>
               ) : (
@@ -296,25 +378,73 @@ export const MetaComprobatorios: React.FC<MetaComprobatoriosProps> = ({
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="cursor-pointer" onClick={() => handleSort('nome_lead')}>Lead</TableHead>
-                        <TableHead className="cursor-pointer" onClick={() => handleSort('empresa_origem')}>Empresa Origem</TableHead>
-                        <TableHead className="cursor-pointer" onClick={() => handleSort('empresa_destino')}>Empresa Destino</TableHead>
-                        <TableHead className="cursor-pointer" onClick={() => handleSort('valor')}>Valor</TableHead>
-                        <TableHead className="cursor-pointer" onClick={() => handleSort('status')}>Status</TableHead>
-                        <TableHead className="cursor-pointer" onClick={() => handleSort('data_indicacao')}>Data Indicação</TableHead>
+                        <TableHead 
+                          className="cursor-pointer hover:bg-muted/50 select-none"
+                          onClick={() => handleSort('nome_lead')}
+                        >
+                          <div className="flex items-center gap-1">
+                            Lead
+                            {getSortIcon('nome_lead')}
+                          </div>
+                        </TableHead>
+                        <TableHead 
+                          className="cursor-pointer hover:bg-muted/50 select-none"
+                          onClick={() => handleSort('empresa_origem')}
+                        >
+                          <div className="flex items-center gap-1">
+                            Empresa Origem
+                            {getSortIcon('empresa_origem')}
+                          </div>
+                        </TableHead>
+                        <TableHead 
+                          className="cursor-pointer hover:bg-muted/50 select-none"
+                          onClick={() => handleSort('empresa_destino')}
+                        >
+                          <div className="flex items-center gap-1">
+                            Empresa Destino
+                            {getSortIcon('empresa_destino')}
+                          </div>
+                        </TableHead>
+                        <TableHead 
+                          className="cursor-pointer hover:bg-muted/50 select-none"
+                          onClick={() => handleSort('valor')}
+                        >
+                          <div className="flex items-center gap-1">
+                            Valor
+                            {getSortIcon('valor')}
+                          </div>
+                        </TableHead>
+                        <TableHead 
+                          className="cursor-pointer hover:bg-muted/50 select-none"
+                          onClick={() => handleSort('status')}
+                        >
+                          <div className="flex items-center gap-1">
+                            Status
+                            {getSortIcon('status')}
+                          </div>
+                        </TableHead>
+                        <TableHead 
+                          className="cursor-pointer hover:bg-muted/50 select-none"
+                          onClick={() => handleSort('data_indicacao')}
+                        >
+                          <div className="flex items-center gap-1">
+                            Data Indicação
+                            {getSortIcon('data_indicacao')}
+                          </div>
+                        </TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {sortedOportunidades.map((oportunidade) => (
-                        <TableRow key={oportunidade.id}>
+                        <TableRow key={oportunidade.id} className="hover:bg-muted/50">
                           <TableCell className="font-medium">
                             {oportunidade.nome_lead}
                           </TableCell>
                           <TableCell>
-                            {oportunidade.empresa_origem?.nome || '-'}
+                            {oportunidade.empresa_origem?.nome || 'Não informado'}
                           </TableCell>
                           <TableCell>
-                            {oportunidade.empresa_destino?.nome || '-'}
+                            {oportunidade.empresa_destino?.nome || 'Não informado'}
                           </TableCell>
                           <TableCell>
                             {oportunidade.valor 
