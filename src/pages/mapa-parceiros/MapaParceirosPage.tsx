@@ -1,14 +1,13 @@
-
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  Plus, 
-  Search, 
-  Grid3X3, 
-  List, 
+import {
+  Plus,
+  Search,
+  Grid3X3,
+  List,
   Filter,
   Users,
   ArrowLeft,
@@ -19,14 +18,20 @@ import { useNavigate } from 'react-router-dom';
 import { useMapaParceiros } from '@/hooks/useMapaParceiros';
 import MapaParceirosSidebar from '@/components/mapa-parceiros/MapaParceirosSidebar';
 import ParceiroCard from '@/components/mapa-parceiros/ParceiroCard';
-import ParceiroDetalhesSimplificado from '@/components/mapa-parceiros/ParceiroDetalhesSimplificado';
 import EmpresaSelector from '@/components/mapa-parceiros/EmpresaSelector';
 import { ParceiroMapa } from '@/types/mapa-parceiros';
 import { DemoModeIndicator } from '@/components/privacy/DemoModeIndicator';
 import { DemoModeToggle } from '@/components/privacy/DemoModeToggle';
 import { useIsMobile } from '@/hooks/use-mobile';
+import ParceiroDetalhesSimplificado from '@/components/mapa-parceiros/ParceiroDetalhesSimplificado';
+import { calcularScoreQuadrante } from '@/utils/parceiro-quadrante-score';
 
 type OrdenacaoParceiros = 'nome' | 'performance' | 'criado_em';
+
+const VIEW_MODES = [
+  { label: 'Grid', value: 'grid', icon: <Grid3X3 className="h-4 w-4" /> },
+  { label: 'Lista', value: 'lista', icon: <List className="h-4 w-4" /> }
+];
 
 const MapaParceirosPage: React.FC = () => {
   const navigate = useNavigate();
@@ -44,48 +49,100 @@ const MapaParceirosPage: React.FC = () => {
     atualizarParceiro,
     deletarParceiro,
     associarParceiroEtapa,
-    removerAssociacao
+    removerAssociacao,
+    carregarDados
   } = useMapaParceiros();
 
+  // States
   const [expandedEtapas, setExpandedEtapas] = useState<Set<string>>(new Set());
   const [etapaSelecionada, setEtapaSelecionada] = useState<string>();
   const [parceiroSelecionado, setParceiroSelecionado] = useState<ParceiroMapa | null>(null);
   const [showDetalhes, setShowDetalhes] = useState(false);
   const [showEmpresaSelector, setShowEmpresaSelector] = useState(false);
-  const [visualizacao, setVisualizacao] = useState<'grid' | 'lista'>('grid');
+  const [viewMode, setViewMode] = useState<'grid' | 'lista'>('grid');
   const [ordenacao, setOrdenacao] = useState<OrdenacaoParceiros>('nome');
   const [ordemAsc, setOrdemAsc] = useState<boolean>(true);
   const [buscaRapida, setBuscaRapida] = useState('');
   const [statusFiltro, setStatusFiltro] = useState<string>('todos');
 
+  // Unificação lógica de filtros/ordenação, memoizada
+  const parceirosFiltrados = useMemo(() => {
+    let result = parceiros;
+    const termo = buscaRapida.trim().toLowerCase();
+    if (termo)
+      result = result.filter(p =>
+        (p.empresa?.nome || '').toLowerCase().includes(termo) ||
+        (p.empresa?.tipo || '').toLowerCase().includes(termo) ||
+        (p.empresa?.descricao || '').toLowerCase().includes(termo)
+      );
+    if (statusFiltro !== 'todos')
+      result = result.filter(p => p.status === statusFiltro);
+    if (etapaSelecionada)
+      result = result.filter(p => associacoes.some(a => a.parceiro_id === p.id && a.etapa_id === etapaSelecionada));
+    return result;
+  }, [parceiros, buscaRapida, statusFiltro, etapaSelecionada, associacoes]);
+
+  // Ordenação memoizada
+  const parceirosOrdenados = useMemo(() => {
+    return [...parceirosFiltrados].sort((a, b) => {
+      let resultado = 0;
+      switch (ordenacao) {
+        case 'nome':
+          resultado = (a.empresa?.nome || '').localeCompare(b.empresa?.nome || '');
+          break;
+        case 'performance':
+          resultado =
+            calcularScoreQuadrante(a) - calcularScoreQuadrante(b);
+          break;
+        case 'criado_em':
+          resultado = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+          break;
+      }
+      return ordemAsc ? resultado : -resultado;
+    });
+  }, [parceirosFiltrados, ordenacao, ordemAsc]);
+
+  // Parceiros por etapa
+  const getParceirosEtapa = useCallback((etapaId: string) => {
+    return parceiros.filter(p =>
+      associacoes.some(a => a.parceiro_id === p.id && a.etapa_id === etapaId)
+    );
+  }, [parceiros, associacoes]);
+
+  // Etapa info
+  const getEtapaInfo = useCallback((etapaId: string) => etapas.find(e => e.id === etapaId), [etapas]);
+
+  // Handler de expansão do sidebar
   const handleToggleEtapa = (etapaId: string) => {
-    const newExpanded = new Set(expandedEtapas);
-    if (newExpanded.has(etapaId)) {
-      newExpanded.delete(etapaId);
-    } else {
-      newExpanded.add(etapaId);
-    }
-    setExpandedEtapas(newExpanded);
+    setExpandedEtapas(prev => {
+      const newExpanded = new Set(prev);
+      newExpanded.has(etapaId) ? newExpanded.delete(etapaId) : newExpanded.add(etapaId);
+      return newExpanded;
+    });
   };
 
+  // Handler de seleção de etapa
   const handleEtapaClick = (etapaId: string) => {
     setEtapaSelecionada(etapaId === etapaSelecionada ? undefined : etapaId);
     setFiltros({ ...filtros, etapa: etapaId === etapaSelecionada ? undefined : etapaId });
   };
 
+  // Handler para abrir/fechar detalhes do parceiro
   const handleParceiroClick = (parceiro: ParceiroMapa) => {
     setParceiroSelecionado(parceiro);
     setShowDetalhes(true);
   };
 
-  const handleNovoParceiro = () => {
-    setShowEmpresaSelector(true);
-  };
+  // Novo parceiro
+  const handleNovoParceiro = () => setShowEmpresaSelector(true);
 
+  // Salvar novo parceiro
   const handleSalvarEmpresaParceiro = async (dados: { empresa_id: string; status: string; performance_score: number; observacoes?: string }) => {
     await criarParceiro({ ...dados, status: dados.status as 'ativo' | 'inativo' | 'pendente' });
+    await carregarDados();
   };
 
+  // Deletar parceiro
   const handleDeletarParceiro = async (parceiro: ParceiroMapa) => {
     if (window.confirm(`Tem certeza que deseja remover o parceiro "${parceiro.empresa?.nome}"?`)) {
       await deletarParceiro(parceiro.id);
@@ -93,53 +150,64 @@ const MapaParceirosPage: React.FC = () => {
         setShowDetalhes(false);
         setParceiroSelecionado(null);
       }
+      await carregarDados();
     }
   };
 
+  // Salvar detalhes
   const handleSalvarDetalhes = async (dados: Partial<ParceiroMapa>) => {
     if (parceiroSelecionado) {
       await atualizarParceiro(parceiroSelecionado.id, dados);
       setParceiroSelecionado({ ...parceiroSelecionado, ...dados });
+      await carregarDados();
     }
   };
 
-  const getParceirosEtapa = (etapaId: string) => {
-    const associacoesDaEtapa = associacoes.filter(a => a.etapa_id === etapaId);
-    return associacoesDaEtapa.map(a => a.parceiro).filter(Boolean) as ParceiroMapa[];
-  };
-
-  const getEtapaInfo = (etapaId: string) => {
-    return etapas.find(e => e.id === etapaId);
-  };
-
-  // --- FILTROS & ORDENAÇÃO PARA LISTAGEM ---
-  // Filtro rápido por busca
-  const parceirosFiltrados = parceiros.filter((p) => {
-    const termo = buscaRapida.trim().toLowerCase();
-    const matchNome = p.empresa?.nome?.toLowerCase().includes(termo);
-    const matchTipo = p.empresa?.tipo?.toLowerCase().includes(termo);
-    return !termo || matchNome || matchTipo;
-  }).filter((p) => {
-    if (statusFiltro === 'todos') return true;
-    return p.status === statusFiltro;
-  });
-
-  // Ordenação customizada
-  const parceirosOrdenados = [...parceirosFiltrados].sort((a, b) => {
-    let resultado = 0;
-    switch(ordenacao) {
-      case 'nome':
-        resultado = (a.empresa?.nome || '').localeCompare(b.empresa?.nome || '');
-        break;
-      case 'performance':
-        resultado = (a.performance_score ?? 0) - (b.performance_score ?? 0);
-        break;
-      case 'criado_em':
-        resultado = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-        break;
+  // Navegação entre parceiros nos detalhes
+  const handleNavegarParceiro = (sentido: 'prev' | 'next') => {
+    if (!parceiroSelecionado) return;
+    const idx = parceirosOrdenados.findIndex(p => p.id === parceiroSelecionado.id);
+    const novoIdx = sentido === 'prev' ? idx - 1 : idx + 1;
+    if (novoIdx >= 0 && novoIdx < parceirosOrdenados.length) {
+      setParceiroSelecionado(parceirosOrdenados[novoIdx]);
     }
-    return ordemAsc ? resultado : -resultado;
-  });
+  };
+
+  // Empty states e feedbacks
+  const emptyStateContent = etapaSelecionada
+    ? (
+      <div className="text-center py-10">
+        <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+        <h3 className="text-lg font-medium mb-2">Nenhum parceiro nesta etapa</h3>
+        <p className="text-muted-foreground mb-4">
+          Esta etapa ainda não possui parceiros associados.<br />Adicione parceiros ou associe-os a etapas!
+        </p>
+        <Button onClick={handleNovoParceiro}>
+          <Plus className="h-4 w-4 mr-2" />
+          Adicionar Parceiro
+        </Button>
+      </div>
+    )
+    : (
+      <div className="text-center py-10">
+        <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+        <h3 className="text-lg font-medium mb-2">Nenhum parceiro cadastrado</h3>
+        <p className="text-muted-foreground mb-4">
+          Comece adicionando seus primeiros parceiros ao mapa sequencial
+        </p>
+        <Button onClick={handleNovoParceiro}>
+          <Plus className="h-4 w-4 mr-2" />
+          Adicionar Primeiro Parceiro
+        </Button>
+      </div>
+    );
+
+  // Onboarding microcopy
+  const onboardingText = (
+    <div className="mb-4 text-sm text-muted-foreground">
+      <b>Mapa Sequencial de Parceiros:</b> Visualize e gerencie seus parceiros por etapa da jornada do e-commerce. Identifique facilmente etapas carentes ou saturadas de parceiros e potencialize sua estratégia!
+    </div>
+  );
 
   if (loading) {
     return (
@@ -153,46 +221,44 @@ const MapaParceirosPage: React.FC = () => {
   }
 
   return (
-    <div className="h-screen flex flex-col">
+    <div className="h-screen flex flex-col" aria-label="Mapa Sequencial de Parceiros">
       <DemoModeIndicator />
-      
       {/* Header */}
-      <div className="flex-shrink-0 border-b border-border bg-background">
+      <header className="flex-shrink-0 border-b border-border bg-background" role="banner">
         <div className="flex items-center justify-between p-3 sm:p-4">
           <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               size={isMobile ? "sm" : "sm"}
               onClick={() => navigate('/')}
+              aria-label="Voltar"
             >
               <ArrowLeft className="h-4 w-4 mr-1 sm:mr-2" />
               {!isMobile && "Voltar"}
             </Button>
-            
             <div className="min-w-0 flex-1">
-              <h1 className="text-lg sm:text-2xl font-bold truncate">
+              <h1 className="text-lg sm:text-2xl font-bold truncate" tabIndex={0}>
                 {isMobile ? "Mapa de Parceiros" : "Mapa Sequencial de Parceiros"}
               </h1>
               {!isMobile && (
                 <p className="text-muted-foreground text-sm">
-                  Gestão de parceiros por etapa da jornada do e-commerce
+                  Gestão visual dos parceiros por etapa da jornada do e-commerce
                 </p>
               )}
             </div>
           </div>
-
           <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
             {!isMobile && <DemoModeToggle />}
-            <Button onClick={handleNovoParceiro} size={isMobile ? "sm" : "default"}>
+            <Button onClick={handleNovoParceiro} size={isMobile ? "sm" : "default"} aria-label="Novo Parceiro">
               <Plus className="h-4 w-4 mr-1 sm:mr-2" />
               {isMobile ? "Novo" : "Novo Parceiro"}
             </Button>
           </div>
         </div>
-      </div>
+      </header>
 
-      {/* Content */}
-      <div className="flex-1 flex min-h-0">
+      {/* Main Content */}
+      <div className="flex-1 flex min-h-0" role="main">
         {/* Sidebar */}
         <MapaParceirosSidebar
           etapas={etapas}
@@ -206,159 +272,197 @@ const MapaParceirosPage: React.FC = () => {
           onToggleEtapa={handleToggleEtapa}
         />
 
-        {/* Main Content */}
+        {/* Main Body */}
         <div className="flex-1 flex flex-col min-w-0">
-          <div className="flex-1 overflow-y-auto p-2 sm:p-6">
-            {etapaSelecionada ? (
-              // Visualização de uma etapa específica (pode repetir melhorias aqui depois)
-              <div className="space-y-6">
-                {(() => {
-                  const etapa = getEtapaInfo(etapaSelecionada);
-                  const parceirosDaEtapa = getParceirosEtapa(etapaSelecionada);
-                  return (
-                    <>
-                      <div className="flex items-center gap-3">
-                        <div 
-                          className="w-4 h-4 rounded-full"
-                          style={{ backgroundColor: etapa?.cor }}
-                        />
-                        <h2 className="text-xl font-semibold">
-                          {etapa?.ordem}. {etapa?.nome}
-                        </h2>
-                        <Badge variant="secondary">
-                          {parceirosDaEtapa.length} parceiros
-                        </Badge>
-                      </div>
-                      {etapa?.descricao && (
-                        <p className="text-muted-foreground">{etapa.descricao}</p>
-                      )}
-                      {/* Listagem de parceiros pode ser melhorada similar à geral */}
-                    </>
-                  );
-                })()}
+          {onboardingText}
+          <div className="flex items-center justify-between gap-2 mb-3">
+            <div className="flex gap-2 items-center">
+              <h2 className="text-xl font-semibold whitespace-nowrap mr-2">
+                {etapaSelecionada ? getEtapaInfo(etapaSelecionada)?.nome : "Todos os Parceiros"}
+              </h2>
+              <Badge variant="secondary" className="mr-2">
+                {parceirosOrdenados.length} {etapaSelecionada ? "parceiros nesta etapa" : "parceiros totais"}
+              </Badge>
+            </div>
+            <div className="flex gap-2 items-center">
+              {/* Busca rápida */}
+              <Input
+                placeholder="Buscar parceiro..."
+                value={buscaRapida}
+                onChange={e => setBuscaRapida(e.target.value)}
+                className="max-w-[180px] sm:max-w-xs"
+                size={isMobile ? "sm" : "default"}
+                aria-label="Buscar parceiro"
+              />
+              {/* Filtro status */}
+              <select
+                value={statusFiltro}
+                onChange={e => setStatusFiltro(e.target.value)}
+                className="rounded-md border px-2 py-1 text-sm text-muted-foreground"
+                aria-label="Filtrar por status"
+              >
+                <option value="todos">Todos</option>
+                <option value="ativo">Ativo</option>
+                <option value="inativo">Inativo</option>
+                <option value="pendente">Pendente</option>
+              </select>
+              {/* Ordenação */}
+              <div className="flex items-center gap-1">
+                <select
+                  value={ordenacao}
+                  onChange={e => setOrdenacao(e.target.value as OrdenacaoParceiros)}
+                  className="rounded-md border px-2 py-1 text-sm text-muted-foreground"
+                  aria-label="Ordenar por"
+                >
+                  <option value="nome">Nome</option>
+                  <option value="performance">Performance Quadrante</option>
+                  <option value="criado_em">Data de Cadastro</option>
+                </select>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setOrdemAsc(v => !v)}
+                  aria-label="Alternar ordem"
+                >
+                  {ordemAsc ? <SortAsc className="h-4 w-4" /> : <SortDesc className="h-4 w-4" />}
+                </Button>
               </div>
-            ) : (
-              // Visualização geral de todos os parceiros
-              <div className="space-y-4">
-                {/* Controles rápidos acima da lista */}
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
-                  <div className="flex-1 flex gap-2 items-center">
-                    <h2 className="text-xl font-semibold whitespace-nowrap mr-2">
-                      Todos os Parceiros
-                    </h2>
-                    <Badge variant="secondary" className="mr-2">
-                      {parceiros.length} parceiros totais
-                    </Badge>
-                  </div>
-                  <div className="flex gap-2 flex-1 justify-end">
-                    {/* Busca rápida */}
-                    <Input
-                      placeholder="Buscar parceiro..."
-                      value={buscaRapida}
-                      onChange={e => setBuscaRapida(e.target.value)}
-                      className="max-w-[180px] sm:max-w-xs"
-                      size={isMobile ? "sm" : "default"}
-                    />
-                    {/* Filtro status */}
-                    <select
-                      value={statusFiltro}
-                      onChange={e => setStatusFiltro(e.target.value)}
-                      className="rounded-md border px-2 py-1 text-sm text-muted-foreground"
-                    >
-                      <option value="todos">Todos</option>
-                      <option value="ativo">Ativo</option>
-                      <option value="inativo">Inativo</option>
-                      <option value="pendente">Pendente</option>
-                    </select>
-                    {/* Ordenação */}
-                    <div className="flex items-center gap-1">
-                      <select
-                        value={ordenacao}
-                        onChange={e => setOrdenacao(e.target.value as OrdenacaoParceiros)}
-                        className="rounded-md border px-2 py-1 text-sm text-muted-foreground"
-                      >
-                        <option value="nome">Nome</option>
-                        <option value="performance">Performance</option>
-                        <option value="criado_em">Data de Cadastro</option>
-                      </select>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setOrdemAsc(v => !v)}
-                        aria-label="Alternar ordem"
-                      >
-                        {ordemAsc ? <SortAsc className="h-4 w-4" /> : <SortDesc className="h-4 w-4" />}
-                      </Button>
-                    </div>
-                  </div>
-                </div>
+              {/* Visualização: Grid/Lista */}
+              <Tabs value={viewMode} onValueChange={v => setViewMode(v as 'grid' | 'lista')}>
+                <TabsList>
+                  {VIEW_MODES.map(({ label, value, icon }) => (
+                    <TabsTrigger value={value} key={value} aria-label={label}>
+                      {icon}
+                      <span className="ml-1 hidden sm:inline">{label}</span>
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </Tabs>
+            </div>
+          </div>
 
-                {/* Listagem adaptativa dos parceiros */}
-                {parceirosOrdenados.length > 0 ? (
-                  <div
-                    className={`
-                      grid gap-2
-                      grid-cols-1
-                      sm:grid-cols-2
-                      md:grid-cols-3
-                      lg:grid-cols-4
-                    `}
-                  >
-                    {parceirosOrdenados.map((parceiro) => (
+          {/* Listagem adaptativa dos parceiros */}
+          <div className="flex-1 overflow-y-auto pb-2">
+            {parceirosOrdenados.length > 0 ? (
+              viewMode === 'grid' ? (
+                <div
+                  className={`
+                    grid gap-2
+                    grid-cols-1
+                    sm:grid-cols-2
+                    md:grid-cols-3
+                    lg:grid-cols-4
+                  `}
+                  aria-label="Grid de parceiros"
+                >
+                  {parceirosOrdenados.map((parceiro) => (
+                    <ParceiroCard
+                      key={parceiro.id}
+                      parceiro={parceiro}
+                      onClick={() => handleParceiroClick(parceiro)}
+                      onEdit={() => handleParceiroClick(parceiro)}
+                      onDelete={() => handleDeletarParceiro(parceiro)}
+                      compact={isMobile}
+                      showActions
+                      etapaAssociada={associacoes.filter(a => a.parceiro_id === parceiro.id).map(a => etapas.find(e => e.id === a.etapa_id)?.nome).filter(Boolean) as string[]}
+                      quadranteScore={calcularScoreQuadrante(parceiro)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <ul className="divide-y divide-border" aria-label="Lista de parceiros">
+                  {parceirosOrdenados.map((parceiro) => (
+                    <li key={parceiro.id}>
                       <ParceiroCard
-                        key={parceiro.id}
                         parceiro={parceiro}
                         onClick={() => handleParceiroClick(parceiro)}
-                        onEdit={() => handleParceiroClick(parceiro)} // pode abrir direto detalhes para edição
+                        onEdit={() => handleParceiroClick(parceiro)}
                         onDelete={() => handleDeletarParceiro(parceiro)}
-                        compact={isMobile}
-                        showActions // nova prop, para exibir menu de ações
+                        compact={false}
+                        showActions
+                        etapaAssociada={associacoes.filter(a => a.parceiro_id === parceiro.id).map(a => etapas.find(e => e.id === a.etapa_id)?.nome).filter(Boolean) as string[]}
+                        quadranteScore={calcularScoreQuadrante(parceiro)}
                       />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-12">
-                    <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <h3 className="text-lg font-medium mb-2">Nenhum parceiro cadastrado</h3>
-                    <p className="text-muted-foreground mb-4">
-                      Comece adicionando seus primeiros parceiros ao mapa sequencial
-                    </p>
-                    <Button onClick={handleNovoParceiro}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Adicionar Primeiro Parceiro
-                    </Button>
-                  </div>
-                )}
-              </div>
+                    </li>
+                  ))}
+                </ul>
+              )
+            ) : (
+              emptyStateContent
             )}
           </div>
         </div>
 
-        {/* Painel de Detalhes */}
+        {/* Painel de Detalhes - compacto */}
         {showDetalhes && parceiroSelecionado && (
-          <ParceiroDetalhesSimplificado
-            parceiro={parceiroSelecionado}
-            etapas={etapas}
-            subniveis={subniveis}
-            associacoes={associacoes}
-            onClose={() => {
-              setShowDetalhes(false);
-              setParceiroSelecionado(null);
-            }}
-            onSave={handleSalvarDetalhes}
-            onAssociarEtapa={associarParceiroEtapa}
-            onRemoverAssociacao={removerAssociacao}
-          />
+          <aside className="w-96 max-w-full bg-background border-l border-border h-full overflow-y-auto" aria-label="Detalhes do Parceiro">
+            <div className="p-4 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold">{parceiroSelecionado.empresa?.nome || 'Empresa sem nome'}</h2>
+                  <p className="text-xs text-muted-foreground capitalize">{parceiroSelecionado.empresa?.tipo}</p>
+                  <p className="text-xs text-muted-foreground">{parceiroSelecionado.empresa?.descricao}</p>
+                </div>
+                <Button variant="ghost" size="sm" onClick={() => setShowDetalhes(false)} aria-label="Fechar">
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+              </div>
+              <div>
+                <span className="font-medium mr-2">Status:</span>
+                <Badge variant="secondary">{parceiroSelecionado.status}</Badge>
+                <span className="ml-4 font-medium">Performance Quadrante:</span>
+                <span className="ml-1 font-bold text-green-600">{calcularScoreQuadrante(parceiroSelecionado)}</span>
+              </div>
+              <div>
+                <span className="font-medium">Associações:</span>
+                <ul className="list-disc pl-5">
+                  {associacoes.filter(a => a.parceiro_id === parceiroSelecionado.id).map(a => {
+                    const etapa = etapas.find(e => e.id === a.etapa_id);
+                    const subnivel = subniveis.find(s => s.id === a.subnivel_id);
+                    return (
+                      <li key={a.id}>
+                        {etapa?.nome}{subnivel ? ` > ${subnivel.nome}` : ""}
+                        <Button variant="link" size="xs" className="ml-2" onClick={() => removerAssociacao(a.id)}>
+                          Remover
+                        </Button>
+                      </li>
+                    );
+                  })}
+                  {associacoes.filter(a => a.parceiro_id === parceiroSelecionado.id).length === 0 && (
+                    <li className="text-muted-foreground">Nenhuma associação</li>
+                  )}
+                </ul>
+              </div>
+              <div>
+                <span className="font-medium">Observações:</span>
+                <p className="text-sm">{parceiroSelecionado.observacoes || <span className="text-muted-foreground">Sem observações</span>}</p>
+              </div>
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" size="sm" onClick={() => handleNavegarParceiro('prev')} aria-label="Parceiro anterior">
+                  {"<"}
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => handleNavegarParceiro('next')} aria-label="Próximo parceiro">
+                  {">"}
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => handleDeletarParceiro(parceiroSelecionado)} aria-label="Remover parceiro">
+                  Remover
+                </Button>
+                <Button variant="primary" size="sm" onClick={() => handleSalvarDetalhes({})} aria-label="Salvar alterações">
+                  Salvar
+                </Button>
+              </div>
+            </div>
+          </aside>
         )}
-      </div>
 
-      {/* Modais */}
-      <EmpresaSelector
-        isOpen={showEmpresaSelector}
-        onClose={() => setShowEmpresaSelector(false)}
-        onSave={handleSalvarEmpresaParceiro}
-      />
+        {/* Modal de empresas */}
+        <EmpresaSelector
+          isOpen={showEmpresaSelector}
+          onClose={() => setShowEmpresaSelector(false)}
+          onSave={handleSalvarEmpresaParceiro}
+        />
+      </div>
     </div>
   );
 };
