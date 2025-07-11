@@ -68,21 +68,17 @@ const MapaParceirosPage: React.FC = () => {
         />
       </div>
       <div style={{ flex: 1, padding: 24 }}>
-        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-          {parceiros.map((parceiro) => (
-            <ParceiroDetalhesSimplificado
-              key={parceiro.id}
-              parceiro={parceiro}
-              etapas={etapas}
-              subniveis={subniveis}
-              associacoes={associacoes}
-              onClose={() => {}}
-              onSave={async () => {}}
-              onAssociarEtapa={async () => {}}
-              onRemoverAssociacao={async () => {}}
-            />
-          ))}
-        </div>
+        <MapaParceirosTable
+          parceiros={parceiros}
+          associacoes={associacoes}
+          etapas={etapas}
+          subniveis={subniveis}
+          filtros={{}}
+          onParceiroClick={() => {}}
+          onDeletarParceiro={() => {}}
+          onFiltrosChange={() => {}}
+          onLimparFiltros={() => {}}
+        />
       </div>
     </div>
   );
