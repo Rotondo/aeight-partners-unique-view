@@ -1,4 +1,3 @@
-
 export interface EtapaJornada {
   id: string;
   nome: string;
@@ -65,6 +64,7 @@ export interface MapaParceirosFiltros {
 export interface MapaParceirosStats {
   totalParceiros: number;
   parceirosPorEtapa: Record<string, number>;
+  parceirosPorSubnivel: Record<string, number>; // Adicionado para correção do erro
   parceirosAtivos: number;
   parceirosInativos: number;
   performanceMedia: number;
