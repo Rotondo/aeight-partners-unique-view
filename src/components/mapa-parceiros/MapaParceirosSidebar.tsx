@@ -196,7 +196,7 @@ const MapaParceirosSidebar: React.FC<MapaParceirosSidebarProps> = ({
                           {etapa.ordem}. {etapa.nome}
                         </span>
                         {isGap ? (
-                          <Badge variant="destructive" className="text-xs">Sem parceiros</Badge>
+                          <Badge variant="destructive" className="text-xs">●</Badge>
                         ) : (
                           <Badge variant="secondary" className="text-xs">{totalParceiros}</Badge>
                         )}

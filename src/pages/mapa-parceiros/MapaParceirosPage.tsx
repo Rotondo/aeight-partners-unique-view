@@ -63,6 +63,20 @@ const MapaParceirosPage: React.FC = () => {
     return <div>Nenhum parceiro encontrado para diagnóstico.</div>;
   }
 
+  // Calcular stats reais para sidebar
+  const parceirosPorEtapa: Record<string, number> = {};
+  const parceirosPorSubnivel: Record<string, number> = {};
+  associacoes.forEach(a => {
+    if (a.etapa_id && !a.subnivel_id) {
+      parceirosPorEtapa[a.etapa_id] = (parceirosPorEtapa[a.etapa_id] || 0) + 1;
+    }
+    if (a.subnivel_id) {
+      parceirosPorSubnivel[a.subnivel_id] = (parceirosPorSubnivel[a.subnivel_id] || 0) + 1;
+      // Também conta para etapa
+      if (a.etapa_id) parceirosPorEtapa[a.etapa_id] = (parceirosPorEtapa[a.etapa_id] || 0) + 1;
+    }
+  });
+
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
       <div style={{ minWidth: 280, borderRight: '1px solid #eee' }}>
@@ -70,7 +84,14 @@ const MapaParceirosPage: React.FC = () => {
           etapas={etapas}
           subniveis={subniveis}
           filtros={filtros}
-          stats={{ totalParceiros: parceiros.length, parceirosPorEtapa: {}, parceirosAtivos: 0, parceirosInativos: 0, performanceMedia: 0, parceirosPorSubnivel: {} }}
+          stats={{
+            totalParceiros: parceiros.length,
+            parceirosPorEtapa,
+            parceirosPorSubnivel,
+            parceirosAtivos: 0,
+            parceirosInativos: 0,
+            performanceMedia: 0
+          }}
           onFiltrosChange={setFiltros}
           onEtapaClick={() => {}}
           etapaSelecionada={''}
