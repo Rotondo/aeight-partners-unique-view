@@ -91,7 +91,7 @@ const MapaParceirosPage: React.FC = () => {
     await criarParceiro({ 
       empresa_id: dados.empresa_id,
       status: dados.status as 'ativo' | 'inativo' | 'pendente',
-      performance_score: dados.performance_score,
+      performance_score: Number(dados.performance_score), // Convert to number explicitly
       observacoes: dados.observacoes
     });
   };
