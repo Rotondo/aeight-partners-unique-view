@@ -14,18 +14,10 @@ import ParceiroDetalhesSimplificado from '@/components/mapa-parceiros/ParceiroDe
 import EmpresaSelector from '@/components/mapa-parceiros/EmpresaSelector';
 import JornadaVisualization from '@/components/mapa-parceiros/JornadaVisualization';
 import MapaParceirosTable from '@/components/mapa-parceiros/MapaParceirosTable';
-import { ParceiroMapa, AssociacaoParceiroEtapa, EtapaJornada } from '@/types/mapa-parceiros';
+import { ParceiroMapa, AssociacaoParceiroEtapa, EtapaJornada, MapaParceirosFiltros } from '@/types/mapa-parceiros';
 import { DemoModeIndicator } from '@/components/privacy/DemoModeIndicator';
 import { DemoModeToggle } from '@/components/privacy/DemoModeToggle';
 import { useIsMobile } from '@/hooks/use-mobile';
-
-// Novo tipo de filtro
-type FiltrosParceiros = {
-  status?: string;
-  etapaId?: string;
-  subnivelId?: string;
-  apenasSemEtapa?: boolean;
-};
 
 const MapaParceirosPage: React.FC = () => {
   const navigate = useNavigate();
@@ -51,7 +43,8 @@ const MapaParceirosPage: React.FC = () => {
   const [showDetalhes, setShowDetalhes] = useState(false);
   const [showEmpresaSelector, setShowEmpresaSelector] = useState(false);
   const [visualizacao, setVisualizacao] = useState<'jornada' | 'grid'>('jornada');
-  const [filtrosLocal, setFiltrosLocal] = useState<FiltrosParceiros>({
+  const [filtrosLocal, setFiltrosLocal] = useState<MapaParceirosFiltros>({
+    busca: '',
     status: '',
     etapaId: '',
     subnivelId: '',
@@ -60,17 +53,19 @@ const MapaParceirosPage: React.FC = () => {
 
   // Função para limpar todos os filtros
   const handleLimparFiltros = () => {
-    setFiltrosLocal({
+    const filtrosVazios: MapaParceirosFiltros = {
+      busca: '',
       status: '',
       etapaId: '',
       subnivelId: '',
       apenasSemEtapa: false,
-    });
-    setFiltros({});
+    };
+    setFiltrosLocal(filtrosVazios);
+    setFiltros(filtrosVazios);
   };
 
   // Função para atualizar filtros simultaneamente
-  const handleAtualizarFiltros = (atualizacoes: Partial<FiltrosParceiros>) => {
+  const handleAtualizarFiltros = (atualizacoes: Partial<MapaParceirosFiltros>) => {
     const novosFiltros = { ...filtrosLocal, ...atualizacoes };
     setFiltrosLocal(novosFiltros);
     setFiltros(novosFiltros);

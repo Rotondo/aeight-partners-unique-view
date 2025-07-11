@@ -1,27 +1,19 @@
 
 import React, { useState } from 'react';
-import { ParceiroMapa, AssociacaoParceiroEtapa, EtapaJornada, SubnivelEtapa } from '@/types/mapa-parceiros';
+import { ParceiroMapa, AssociacaoParceiroEtapa, EtapaJornada, SubnivelEtapa, MapaParceirosFiltros } from '@/types/mapa-parceiros';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Edit, Trash2 } from 'lucide-react';
-
-type FiltrosParceiros = {
-  status?: string;
-  etapaId?: string;
-  subnivelId?: string;
-  apenasSemEtapa?: boolean;
-  busca?: string;
-};
 
 interface MapaParceirosTableProps {
   parceiros: ParceiroMapa[];
   associacoes: AssociacaoParceiroEtapa[];
   etapas: EtapaJornada[];
   subniveis: SubnivelEtapa[];
-  filtros: FiltrosParceiros;
+  filtros: MapaParceirosFiltros;
   onParceiroClick: (parceiro: ParceiroMapa) => void;
   onDeletarParceiro: (parceiro: ParceiroMapa) => void;
-  onFiltrosChange: (filtros: FiltrosParceiros) => void;
+  onFiltrosChange: (filtros: MapaParceirosFiltros) => void;
   onLimparFiltros: () => void;
 }
 
