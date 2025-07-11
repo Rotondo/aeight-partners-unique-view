@@ -103,7 +103,7 @@ const MapaParceirosTable: React.FC<MapaParceirosTableProps> = ({
       ...prev,
       [parceiroId]: {
         etapaId,
-        subnivelId: prev[parceiroId]?.subnivelId ?? associacoes.find(a => a.parceiro_id === parceiroId)?.subnivel_id || ''
+        subnivelId: prev[parceiroId]?.subnivelId ?? (associacoes.find(a => a.parceiro_id === parceiroId)?.subnivel_id || '')
       }
     }));
   };
@@ -111,7 +111,7 @@ const MapaParceirosTable: React.FC<MapaParceirosTableProps> = ({
     setPendingEdits(prev => ({
       ...prev,
       [parceiroId]: {
-        etapaId: prev[parceiroId]?.etapaId ?? associacoes.find(a => a.parceiro_id === parceiroId)?.etapa_id || '',
+        etapaId: prev[parceiroId]?.etapaId ?? (associacoes.find(a => a.parceiro_id === parceiroId)?.etapa_id || ''),
         subnivelId
       }
     }));
