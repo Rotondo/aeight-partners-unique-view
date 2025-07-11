@@ -244,6 +244,13 @@ const MapaParceirosPage: React.FC = () => {
     }
   };
 
+  // Checagem e logs defensivos antes do render
+  if (!etapas || !subniveis || !parceiros || !associacoes) {
+    console.error('[MapaParceirosPage] Dados essenciais undefined:', { etapas, subniveis, parceiros, associacoes });
+    return <div style={{ padding: 32, color: 'red' }}>Erro crítico: Dados essenciais não carregados. Veja o console para detalhes.</div>;
+  }
+  console.log('[MapaParceirosPage] Dados antes do render:', { etapas, subniveis, parceiros, associacoes });
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
