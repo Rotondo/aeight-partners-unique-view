@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -98,8 +97,8 @@ const MapaParceirosPage: React.FC = () => {
         ...dados,
         ...(dados.performance_score !== undefined && {
           performance_score: typeof dados.performance_score === 'string' 
-            ? parseInt(dados.performance_score.toString(), 10) || 0
-            : dados.performance_score
+            ? Number(dados.performance_score) || 0
+            : Number(dados.performance_score) || 0
         })
       };
       
@@ -107,9 +106,7 @@ const MapaParceirosPage: React.FC = () => {
       setParceiroSelecionado({ 
         ...parceiroSelecionado, 
         ...dadosFormatados,
-        performance_score: typeof dadosFormatados.performance_score === 'number' 
-          ? dadosFormatados.performance_score 
-          : parceiroSelecionado.performance_score || 0
+        performance_score: Number(dadosFormatados.performance_score) || 0
       });
     }
   };
