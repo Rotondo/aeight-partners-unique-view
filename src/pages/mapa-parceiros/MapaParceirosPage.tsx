@@ -84,15 +84,20 @@ const MapaParceirosPage: React.FC = () => {
   const handleSalvarEmpresaParceiro = async (dados: { 
     empresa_id: string; 
     status: string; 
-    performance_score: number; 
+    performance_score: number | string; 
     observacoes?: string 
   }) => {
-    await criarParceiro({ 
+    // Ensure performance_score is always a number
+    const dadosFormatados = {
       empresa_id: dados.empresa_id,
       status: dados.status as 'ativo' | 'inativo' | 'pendente',
-      performance_score: Number(dados.performance_score), // Convert to number explicitly
+      performance_score: typeof dados.performance_score === 'string' 
+        ? Number(dados.performance_score) 
+        : dados.performance_score,
       observacoes: dados.observacoes
-    });
+    };
+    
+    await criarParceiro(dadosFormatados);
   };
 
   const handleDeletarParceiro = async (parceiro: ParceiroMapa) => {
