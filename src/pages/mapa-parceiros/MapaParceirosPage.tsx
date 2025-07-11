@@ -1,5 +1,5 @@
 // @ts-nocheck
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -27,6 +27,7 @@ import ParceiroDetalhesSimplificado from '@/components/mapa-parceiros/ParceiroDe
 // import { calcularScoreQuadrante } from '@/utils/parceiro-quadrante-score'; // Comentado - ARQUIVO AUSENTE
 import Badge from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { calcularContadoresParceiros } from '@/lib/utils';
 
 type OrdenacaoParceiros = 'nome' | 'performance' | 'criado_em';
 
@@ -106,19 +107,8 @@ const MapaParceirosPage: React.FC = () => {
     return <div>Nenhum parceiro encontrado para diagnóstico.</div>;
   }
 
-  // Calcular stats reais para sidebar
-  const parceirosPorEtapa: Record<string, number> = {};
-  const parceirosPorSubnivel: Record<string, number> = {};
-  associacoes.forEach(a => {
-    if (a.etapa_id && !a.subnivel_id) {
-      parceirosPorEtapa[a.etapa_id] = (parceirosPorEtapa[a.etapa_id] || 0) + 1;
-    }
-    if (a.subnivel_id) {
-      parceirosPorSubnivel[a.subnivel_id] = (parceirosPorSubnivel[a.subnivel_id] || 0) + 1;
-      // Também conta para etapa
-      if (a.etapa_id) parceirosPorEtapa[a.etapa_id] = (parceirosPorEtapa[a.etapa_id] || 0) + 1;
-    }
-  });
+  // Calcular stats reais para sidebar - CORRIGIDO para contar parceiros únicos
+  const { parceirosPorEtapa, parceirosPorSubnivel } = calcularContadoresParceiros(associacoes);
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>

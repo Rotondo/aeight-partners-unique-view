@@ -17,18 +17,32 @@ interface JornadaVisualizationProps {
 }
 
 function getParceirosPorEtapa(etapaId: string, associacoes: AssociacaoParceiroEtapa[], parceiros: ParceiroMapa[]) {
-  const parceirosDaEtapa = associacoes
-    .filter(a => a.etapa_id === etapaId && !a.subnivel_id)
-    .map(a => parceiros.find(p => p.id === a.parceiro_id))
+  // Usar Set para garantir parceiros únicos
+  const parceirosUnicos = new Set<string>();
+  
+  associacoes
+    .filter(a => a.etapa_id === etapaId)
+    .forEach(a => parceirosUnicos.add(a.parceiro_id));
+  
+  const parceirosDaEtapa = Array.from(parceirosUnicos)
+    .map(parceiroId => parceiros.find(p => p.id === parceiroId))
     .filter(Boolean) as ParceiroMapa[];
+    
   return parceirosDaEtapa;
 }
 
 function getParceirosPorSubnivel(subnivelId: string, associacoes: AssociacaoParceiroEtapa[], parceiros: ParceiroMapa[]) {
-  const parceirosDoSubnivel = associacoes
+  // Usar Set para garantir parceiros únicos
+  const parceirosUnicos = new Set<string>();
+  
+  associacoes
     .filter(a => a.subnivel_id === subnivelId)
-    .map(a => parceiros.find(p => p.id === a.parceiro_id))
+    .forEach(a => parceirosUnicos.add(a.parceiro_id));
+  
+  const parceirosDoSubnivel = Array.from(parceirosUnicos)
+    .map(parceiroId => parceiros.find(p => p.id === parceiroId))
     .filter(Boolean) as ParceiroMapa[];
+    
   return parceirosDoSubnivel;
 }
 
@@ -111,8 +125,8 @@ const JornadaVisualization: React.FC<JornadaVisualizationProps> = ({
             };
           }).filter(item => item.subnivel.id); // Remover fallbacks se não quisermos renderizá-los
 
-          const totalParceiros = parceirosDaEtapa.length +
-                                 parceirosPorSubnivel.reduce((acc, item) => acc + (item.parceiros?.length || 0), 0);
+          // CORRIGIDO: Total de parceiros únicos na etapa (incluindo os sem subnível)
+          const totalParceiros = parceirosDaEtapa.length;
 
           return (
             <div key={etapa.id} className="relative mb-8">

@@ -9,6 +9,7 @@ import {
   MapaParceirosStats
 } from '@/types/mapa-parceiros';
 import { toast } from '@/hooks/use-toast';
+import { calcularContadoresParceiros } from '@/lib/utils';
 
 export const useMapaParceiros = () => {
   const [etapas, setEtapas] = useState<EtapaJornada[]>([]);
@@ -262,8 +263,8 @@ export const useMapaParceiros = () => {
     let parceirosFiltrados = parceiros;
     let associacoesFiltradas = associacoes;
 
-    if (filtros.etapa) {
-      associacoesFiltradas = associacoesFiltradas.filter(a => a.etapa_id === filtros.etapa);
+    if (filtros.etapaId) {
+      associacoesFiltradas = associacoesFiltradas.filter(a => a.etapa_id === filtros.etapaId);
     }
 
     if (filtros.status) {
@@ -286,16 +287,14 @@ export const useMapaParceiros = () => {
     };
   };
 
-  // Calcular estatísticas
+  // Calcular estatísticas - CORRIGIDO para contar parceiros únicos
   const calcularStats = (): MapaParceirosStats => {
     const totalParceiros = parceiros.length;
     const parceirosAtivos = parceiros.filter(p => p.status === 'ativo').length;
     const parceirosInativos = parceiros.filter(p => p.status === 'inativo').length;
     
-    const parceirosPorEtapa: Record<string, number> = {};
-    etapas.forEach(etapa => {
-      parceirosPorEtapa[etapa.id] = associacoes.filter(a => a.etapa_id === etapa.id).length;
-    });
+    // Usar função utilitária para contagem correta
+    const { parceirosPorEtapa, parceirosPorSubnivel } = calcularContadoresParceiros(associacoes);
 
     const performanceMedia = parceiros.length > 0 
       ? parceiros.reduce((acc, p) => acc + p.performance_score, 0) / parceiros.length 
@@ -304,6 +303,7 @@ export const useMapaParceiros = () => {
     return {
       totalParceiros,
       parceirosPorEtapa,
+      parceirosPorSubnivel,
       parceirosAtivos,
       parceirosInativos,
       performanceMedia
