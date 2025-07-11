@@ -56,9 +56,11 @@ export interface AssociacaoParceiroEtapa {
 }
 
 export interface MapaParceirosFiltros {
-  etapa?: string;
-  status?: string;
   busca?: string;
+  status?: string;
+  etapaId?: string;
+  subnivelId?: string;
+  apenasSemEtapa?: boolean;
 }
 
 export interface MapaParceirosStats {

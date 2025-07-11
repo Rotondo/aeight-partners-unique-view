@@ -6,15 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ChevronDown, ChevronRight, Users } from 'lucide-react';
-import { EtapaJornada, SubnivelEtapa } from '@/types/mapa-parceiros';
-
-type FiltrosParceiros = {
-  busca?: string;
-  status?: string;
-  etapaId?: string;
-  subnivelId?: string;
-  apenasSemEtapa?: boolean;
-};
+import { EtapaJornada, SubnivelEtapa, MapaParceirosFiltros } from '@/types/mapa-parceiros';
 
 interface MapaParceirosStats {
   parceirosPorEtapa: Record<string, number>;
@@ -24,9 +16,9 @@ interface MapaParceirosStats {
 interface MapaParceirosSidebarProps {
   etapas: EtapaJornada[];
   subniveis: SubnivelEtapa[];
-  filtros: FiltrosParceiros;
+  filtros: MapaParceirosFiltros;
   stats: MapaParceirosStats;
-  onFiltrosChange: (filtros: FiltrosParceiros) => void;
+  onFiltrosChange: (filtros: MapaParceirosFiltros) => void;
   onEtapaClick: (etapaId: string) => void;
   etapaSelecionada?: string;
   expandedEtapas: Set<string>;
