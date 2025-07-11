@@ -72,9 +72,7 @@ const MapaParceirosPage: React.FC = () => {
     const dadosFormatados = {
       empresa_id: dados.empresa_id,
       status: dados.status as 'ativo' | 'inativo' | 'pendente',
-      performance_score: typeof dados.performance_score === 'string' 
-        ? parseInt(dados.performance_score, 10) || 0 
-        : dados.performance_score,
+      performance_score: Number(dados.performance_score) || 0,
       observacoes: dados.observacoes
     };
     
@@ -209,6 +207,8 @@ const MapaParceirosPage: React.FC = () => {
               <TabsContent value="grid" className="p-4 sm:p-6">
                 <MapaParceirosGrid
                   parceiros={parceiros}
+                  associacoes={associacoes}
+                  etapas={etapas}
                   onParceiroClick={handleParceiroClick}
                   onDeletarParceiro={handleDeletarParceiro}
                 />
