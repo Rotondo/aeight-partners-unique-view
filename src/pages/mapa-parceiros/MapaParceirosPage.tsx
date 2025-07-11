@@ -52,17 +52,20 @@ const MapaParceirosPage: React.FC = () => {
   }
 
   return (
-    <div>
-      <ParceiroDetalhesSimplificado
-        parceiro={parceiros[0]}
-        etapas={etapas}
-        subniveis={subniveis}
-        associacoes={associacoes}
-        onClose={() => {}}
-        onSave={async () => {}}
-        onAssociarEtapa={async () => {}}
-        onRemoverAssociacao={async () => {}}
-      />
+    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+      {parceiros.map((parceiro) => (
+        <ParceiroDetalhesSimplificado
+          key={parceiro.id}
+          parceiro={parceiro}
+          etapas={etapas}
+          subniveis={subniveis}
+          associacoes={associacoes}
+          onClose={() => {}}
+          onSave={async () => {}}
+          onAssociarEtapa={async () => {}}
+          onRemoverAssociacao={async () => {}}
+        />
+      ))}
     </div>
   );
 };
