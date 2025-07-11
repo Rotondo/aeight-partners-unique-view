@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -119,7 +118,7 @@ const MapaParceirosPage: React.FC = () => {
         ...(dados.performance_score !== undefined && {
           performance_score: typeof dados.performance_score === 'string'
             ? Number(dados.performance_score)
-            : dados.performance_score
+            : dados.performance_score as number
         })
       };
       
