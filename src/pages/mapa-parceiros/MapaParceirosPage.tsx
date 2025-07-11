@@ -52,8 +52,9 @@ const MapaParceirosPage: React.FC = () => {
   const [filtros, setFiltros] = useState({} as any);
   const [etapaSelecionada, setEtapaSelecionada] = useState<string | undefined>(undefined);
   const [subnivelSelecionado, setSubnivelSelecionado] = useState<string | undefined>(undefined);
+  const [expandedEtapas, setExpandedEtapas] = useState<Set<string>>(new Set());
 
-  // Handlers para clique na sidebar
+  // Handler para clique na sidebar
   const handleEtapaClick = (etapaId: string) => {
     setEtapaSelecionada(etapaId);
     setSubnivelSelecionado(undefined);
@@ -65,6 +66,16 @@ const MapaParceirosPage: React.FC = () => {
     const subnivel = subniveis.find(s => s.id === subnivelId);
     setEtapaSelecionada(subnivel?.etapa_id);
     setFiltros((prev: any) => ({ ...prev, etapaId: subnivel?.etapa_id, subnivelId }));
+  };
+
+  // Handler para expandir/colapsar etapa
+  const handleToggleEtapa = (etapaId: string) => {
+    setExpandedEtapas(prev => {
+      const novo = new Set(prev);
+      if (novo.has(etapaId)) novo.delete(etapaId);
+      else novo.add(etapaId);
+      return novo;
+    });
   };
 
   // Handler para limpar filtros
@@ -126,8 +137,8 @@ const MapaParceirosPage: React.FC = () => {
           onFiltrosChange={setFiltros}
           onEtapaClick={handleEtapaClick}
           etapaSelecionada={etapaSelecionada}
-          expandedEtapas={new Set([etapaSelecionada].filter(Boolean) as string[])}
-          onToggleEtapa={setEtapaSelecionada}
+          expandedEtapas={expandedEtapas}
+          onToggleEtapa={handleToggleEtapa}
           onLimparFiltros={handleLimparFiltros}
           onSubnivelClick={handleSubnivelClick}
           subnivelSelecionado={subnivelSelecionado}
