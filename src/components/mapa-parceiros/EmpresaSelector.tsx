@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -154,11 +155,10 @@ const EmpresaSelector: React.FC<EmpresaSelectorProps> = ({
   const empresasSelecionadas = empresas.filter(emp => emp.selected);
 
   // Corrige seleção: clique no checkbox ou na linha, mas sem eventos duplicados
-  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>, empresaId: string) => {
-    e.stopPropagation();
+  const handleCheckboxChange = (checked: boolean, empresaId: string) => {
     setEmpresas(prev =>
       prev.map(emp =>
-        emp.id === empresaId ? { ...emp, selected: !emp.selected } : emp
+        emp.id === empresaId ? { ...emp, selected: checked } : emp
       )
     );
   };
@@ -254,8 +254,8 @@ const EmpresaSelector: React.FC<EmpresaSelectorProps> = ({
                     >
                       <Checkbox
                         checked={empresa.selected}
-                        onChange={e => handleCheckboxChange(e, empresa.id)}
-                        onClick={e => e.stopPropagation()}
+                        onCheckedChange={(checked) => handleCheckboxChange(checked as boolean, empresa.id)}
+                        onClick={(e) => e.stopPropagation()}
                         tabIndex={-1}
                         aria-label={`Selecionar empresa ${empresa.nome}`}
                       />

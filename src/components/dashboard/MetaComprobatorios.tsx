@@ -109,7 +109,6 @@ export const MetaComprobatorios: React.FC<MetaComprobatoriosProps> = ({
       const year = date.getFullYear();
       const week = getWeekNumber(date);
       const weekKey = `${year}-W${week.toString().padStart(2, '0')}`;
-      const weekLabel = `Semana ${week}/${year}`;
       
       const valor = meta.tipo_meta === 'valor' ? (o.valor ?? 0) : 1;
       weekMap.set(weekKey, (weekMap.get(weekKey) || 0) + valor);
@@ -211,6 +210,13 @@ export const MetaComprobatorios: React.FC<MetaComprobatoriosProps> = ({
   const getSortIcon = (field: SortField) => {
     if (sortField !== field) return null;
     return sortAsc ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />;
+  };
+
+  // Custom tooltip formatter function
+  const customTooltipFormatter = (value: any, name: any) => {
+    const formattedValue = meta.tipo_meta === 'valor' ? formatValue(Number(value), 'valor') : value;
+    const label = meta.tipo_meta === 'valor' ? 'Valor (R$)' : 'Quantidade';
+    return [formattedValue, label];
   };
 
   return (
@@ -340,10 +346,7 @@ export const MetaComprobatorios: React.FC<MetaComprobatoriosProps> = ({
                     />
                     <YAxis />
                     <Tooltip 
-                      formatter={[(value: number) => [
-                        meta.tipo_meta === 'valor' ? formatValue(value, 'valor') : value,
-                        meta.tipo_meta === 'valor' ? 'Valor' : 'Quantidade'
-                      ]]}
+                      formatter={customTooltipFormatter}
                     />
                     <Legend />
                     <Bar 
