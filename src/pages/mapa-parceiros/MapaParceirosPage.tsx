@@ -54,28 +54,29 @@ const MapaParceirosPage: React.FC = () => {
   const [subnivelSelecionado, setSubnivelSelecionado] = useState<string | undefined>(undefined);
   const [expandedEtapas, setExpandedEtapas] = useState<Set<string>>(new Set());
 
-  // Handler para clique na sidebar
-  const handleEtapaClick = (etapaId: string) => {
-    setEtapaSelecionada(etapaId);
-    setSubnivelSelecionado(undefined);
-    setFiltros((prev: any) => ({ ...prev, etapaId, subnivelId: undefined }));
-  };
-  const handleSubnivelClick = (subnivelId: string) => {
-    setSubnivelSelecionado(subnivelId);
-    // Descobrir etapa correspondente
-    const subnivel = subniveis.find(s => s.id === subnivelId);
-    setEtapaSelecionada(subnivel?.etapa_id);
-    setFiltros((prev: any) => ({ ...prev, etapaId: subnivel?.etapa_id, subnivelId }));
-  };
-
-  // Handler para expandir/colapsar etapa
+  // Handler para expandir/colapsar etapa (corrigido para sempre retornar novo Set)
   const handleToggleEtapa = (etapaId: string) => {
     setExpandedEtapas(prev => {
       const novo = new Set(prev);
       if (novo.has(etapaId)) novo.delete(etapaId);
       else novo.add(etapaId);
-      return novo;
+      return new Set(novo); // Garante novo Set para atualização correta
     });
+  };
+
+  // Handler para clique na etapa (garante uso de id)
+  const handleEtapaClick = (etapaId: string) => {
+    setEtapaSelecionada(etapaId);
+    setSubnivelSelecionado(undefined);
+    setFiltros((prev: any) => ({ ...prev, etapaId, subnivelId: undefined }));
+  };
+
+  // Handler para clique no subnível (garante uso de id)
+  const handleSubnivelClick = (subnivelId: string) => {
+    setSubnivelSelecionado(subnivelId);
+    const subnivel = subniveis.find(s => s.id === subnivelId);
+    setEtapaSelecionada(subnivel?.etapa_id);
+    setFiltros((prev: any) => ({ ...prev, etapaId: subnivel?.etapa_id, subnivelId }));
   };
 
   // Handler para limpar filtros
