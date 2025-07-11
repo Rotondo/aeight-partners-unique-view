@@ -90,7 +90,7 @@ const MapaParceirosPage: React.FC = () => {
     setHookFiltros(mergedFiltros); // Atualiza o hook com os filtros da sidebar
     // Não chamamos carregarDados aqui, pois o hook deve reagir a setHookFiltros
   };
-
+  
   const handleLimparFiltrosSidebar = () => {
     const resetedFilters: MapaParceirosFiltros = {
       busca: '', status: '', etapaId: '', subnivelId: '', apenasSemEtapa: false
@@ -174,14 +174,14 @@ const MapaParceirosPage: React.FC = () => {
       return newExpanded;
     });
   };
-
+  
   const handleEtapaClickSidebar = (etapaId: string) => {
-    handleAtualizarFiltrosSidebar({
-      etapaId: filtrosSidebar.etapaId === etapaId ? '' : etapaId,
+    handleAtualizarFiltrosSidebar({ 
+      etapaId: filtrosSidebar.etapaId === etapaId ? '' : etapaId, 
       subnivelId: '' // Limpa subnível ao clicar em etapa
     });
   };
-
+  
   const handleParceiroClick = (parceiro: ParceiroMapa) => {
     setParceiroSelecionado(parceiro);
     setShowDetalhes(true);
@@ -192,14 +192,14 @@ const MapaParceirosPage: React.FC = () => {
   const handleSalvarEmpresaParceiro = async (dados: { 
     empresa_id: string; 
     status: string; 
-    performance_score: number | string;
+    performance_score: number | string; 
     observacoes?: string 
   }) => {
-    await criarParceiro({
-      empresa_id: dados.empresa_id,
-      status: dados.status as 'ativo' | 'inativo' | 'pendente',
-      performance_score: Number(dados.performance_score) || 0,
-      observacoes: dados.observacoes
+    await criarParceiro({ 
+      empresa_id: dados.empresa_id, 
+      status: dados.status as 'ativo' | 'inativo' | 'pendente', 
+      performance_score: Number(dados.performance_score) || 0, 
+      observacoes: dados.observacoes 
     });
     if (carregarDados) await carregarDados();
   };
@@ -224,15 +224,15 @@ const MapaParceirosPage: React.FC = () => {
         })
       };
       await atualizarParceiro(parceiroSelecionado.id, dadosFormatados);
-      setParceiroSelecionado(prev => prev ? ({
-        ...prev,
+      setParceiroSelecionado(prev => prev ? ({ 
+        ...prev, 
         ...dadosFormatados,
         performance_score: Number(dadosFormatados.performance_score) || 0
       }) : null);
       if (carregarDados) await carregarDados();
     }
   };
-
+  
   const handleNavegarParceiro = (sentido: 'prev' | 'next') => {
     if (!parceiroSelecionado) return;
     // Usar parceirosOrdenadosParaGridLista se em grid/lista, senão parceirosFiltradosParaView
@@ -354,7 +354,7 @@ const MapaParceirosPage: React.FC = () => {
                 ))}
               </TabsList>
             </Tabs>
-
+            
             {/* Controles de busca e filtro (somente para grid/lista) */}
             {(currentViewTab === 'grid' || currentViewTab === 'lista') && (
               <div className="flex flex-wrap items-center gap-2">
@@ -411,9 +411,9 @@ const MapaParceirosPage: React.FC = () => {
               </div>
             )}
           </div>
-
+          
           {currentViewTab !== 'jornada' && currentViewTab !== 'table_legacy' && onboardingText}
-
+          
           {/* Conteúdo principal baseado na viewMode */}
           <div className="flex-1 overflow-y-auto">
             {currentViewTab === 'jornada' && (
