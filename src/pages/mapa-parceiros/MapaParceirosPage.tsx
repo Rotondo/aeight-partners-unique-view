@@ -44,22 +44,24 @@ const MapaParceirosPage: React.FC = () => {
     etapas,
     subniveis,
     parceiros,
-    associacoes,
-    expandedEtapas,
-    onToggleEtapa,
-    onParceiroClick
+    associacoes
   } = useMapaParceiros();
+
+  if (!parceiros || parceiros.length === 0) {
+    return <div>Nenhum parceiro encontrado para diagnóstico.</div>;
+  }
 
   return (
     <div>
-      <JornadaVisualization
+      <ParceiroDetalhesSimplificado
+        parceiro={parceiros[0]}
         etapas={etapas}
         subniveis={subniveis}
-        parceiros={parceiros}
         associacoes={associacoes}
-        expandedEtapas={expandedEtapas || new Set()}
-        onToggleEtapa={onToggleEtapa || (() => {})}
-        onParceiroClick={onParceiroClick || (() => {})}
+        onClose={() => {}}
+        onSave={async () => {}}
+        onAssociarEtapa={async () => {}}
+        onRemoverAssociacao={async () => {}}
       />
     </div>
   );
