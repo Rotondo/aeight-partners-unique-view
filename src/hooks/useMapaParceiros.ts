@@ -29,6 +29,7 @@ export const useMapaParceiros = () => {
       
       if (error) throw error;
       setEtapas(data || []);
+      console.log('[MapaParceiros] Etapas carregadas:', data);
     } catch (error) {
       console.error('Erro ao carregar etapas:', error);
       toast({
@@ -50,6 +51,7 @@ export const useMapaParceiros = () => {
       
       if (error) throw error;
       setSubniveis(data || []);
+      console.log('[MapaParceiros] Subníveis carregados:', data);
     } catch (error) {
       console.error('Erro ao carregar subníveis:', error);
       toast({
@@ -73,6 +75,7 @@ export const useMapaParceiros = () => {
       
       if (error) throw error;
       setParceiros((data || []) as ParceiroMapa[]);
+      console.log('[MapaParceiros] Parceiros carregados:', data);
     } catch (error) {
       console.error('Erro ao carregar parceiros:', error);
       toast({
@@ -98,6 +101,7 @@ export const useMapaParceiros = () => {
       
       if (error) throw error;
       setAssociacoes((data || []) as AssociacaoParceiroEtapa[]);
+      console.log('[MapaParceiros] Associacoes carregadas:', data);
     } catch (error) {
       console.error('Erro ao carregar associações:', error);
       toast({
@@ -316,6 +320,7 @@ export const useMapaParceiros = () => {
         carregarParceiros(),
         carregarAssociacoes()
       ]);
+      console.log('[MapaParceiros] Todos os dados carregados:', { etapas, subniveis, parceiros, associacoes });
     } finally {
       setLoading(false);
     }
