@@ -154,12 +154,12 @@ const MapaParceirosTable: React.FC<MapaParceirosTableProps> = ({
                       {nomeEmpresa}
                     </td>
                     <td className="p-1 whitespace-nowrap">
-                      <Select value={etapaIdAtual} onValueChange={v => handleUpdateEtapa(parceiro.id, v)}>
+                      <Select value={etapaIdAtual || "none"} onValueChange={v => handleUpdateEtapa(parceiro.id, v === "none" ? "" : v)}>
                         <SelectTrigger className="h-7 w-full text-xs">
                           <SelectValue placeholder={etapasParceiro[0] || 'Selecionar etapa'} />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Sem etapa</SelectItem>
+                          <SelectItem value="none">Sem etapa</SelectItem>
                           {etapas.map(etapa => (
                             <SelectItem key={etapa.id} value={etapa.id}>{etapa.ordem}. {etapa.nome}</SelectItem>
                           ))}
@@ -167,12 +167,12 @@ const MapaParceirosTable: React.FC<MapaParceirosTableProps> = ({
                       </Select>
                     </td>
                     <td className="p-1 whitespace-nowrap">
-                      <Select value={subnivelIdAtual} onValueChange={v => handleUpdateSubnivel(parceiro.id, v)}>
+                      <Select value={subnivelIdAtual || "none"} onValueChange={v => handleUpdateSubnivel(parceiro.id, v === "none" ? "" : v)}>
                         <SelectTrigger className="h-7 w-full text-xs">
                           <SelectValue placeholder={subniveisParceiro[0] || 'Selecionar subnível'} />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Sem subnível</SelectItem>
+                          <SelectItem value="none">Sem subnível</SelectItem>
                           {subniveis.map(subnivel => (
                             <SelectItem key={subnivel.id} value={subnivel.id}>{subnivel.nome}</SelectItem>
                           ))}
