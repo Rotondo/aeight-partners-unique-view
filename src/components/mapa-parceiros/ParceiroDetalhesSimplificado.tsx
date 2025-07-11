@@ -86,173 +86,136 @@ const ParceiroDetalhesSimplificado: React.FC<ParceiroDetalhesSimplificadoProps> 
   const subniveisEtapa = subniveis.filter(s => s.etapa_id === novaEtapa);
 
   return (
-    <div className="w-96 bg-background border-l border-border h-full overflow-y-auto">
-      <div className="p-6 space-y-6">
-        {/* Header */}
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-3">
-            <Avatar className="h-12 w-12">
-              <AvatarFallback>{getInitials(nomeEmpresa)}</AvatarFallback>
-            </Avatar>
-            <div>
-              <h2 className="text-lg font-semibold">{nomeEmpresa}</h2>
-              <p className="text-sm text-muted-foreground">{descricaoEmpresa}</p>
-              <p className="text-xs text-muted-foreground capitalize">{parceiro.empresa?.tipo}</p>
-            </div>
+    <div className="w-full max-w-md p-4 space-y-3 text-sm">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <Avatar className="h-8 w-8">
+            <AvatarFallback>{getInitials(nomeEmpresa)}</AvatarFallback>
+          </Avatar>
+          <div>
+            <div className="font-semibold leading-tight">{nomeEmpresa}</div>
+            <div className="text-xs text-muted-foreground">{descricaoEmpresa}</div>
+            <div className="text-[10px] text-muted-foreground capitalize">{parceiro.empresa?.tipo}</div>
           </div>
-          <Button variant="ghost" size="sm" onClick={onClose}>
-            <X className="h-4 w-4" />
-          </Button>
         </div>
-
-        {/* Performance */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Performance</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex">{renderStars(editandoParceiro.performance_score)}</div>
-              <span className="text-sm font-medium">{editandoParceiro.performance_score}%</span>
-            </div>
-            
-            <Slider
-              value={[editandoParceiro.performance_score]}
-              onValueChange={(value) => setEditandoParceiro(prev => ({ ...prev, performance_score: value[0] }))}
-              max={100}
-              step={1}
-            />
-          </CardContent>
-        </Card>
-
-        {/* Status */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Status</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Select 
-              value={editandoParceiro.status} 
-              onValueChange={(value) => setEditandoParceiro(prev => ({ ...prev, status: value as any }))}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ativo">Ativo</SelectItem>
-                <SelectItem value="inativo">Inativo</SelectItem>
-                <SelectItem value="pendente">Pendente</SelectItem>
-              </SelectContent>
-            </Select>
-          </CardContent>
-        </Card>
-
-        {/* Observações */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Observações</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Textarea
-              value={editandoParceiro.observacoes || ''}
-              onChange={(e) => setEditandoParceiro(prev => ({ ...prev, observacoes: e.target.value }))}
-              placeholder="Observações sobre o parceiro..."
-              rows={3}
-            />
-          </CardContent>
-        </Card>
-
-        {/* Etapas Associadas */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <MapPin className="h-4 w-4" />
-              Etapas da Jornada
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {/* Lista de associações */}
-            {associacoesParceiro.length > 0 ? (
-              <div className="space-y-2">
-                {associacoesParceiro.map((associacao) => {
-                  const etapa = etapas.find(e => e.id === associacao.etapa_id);
-                  const subnivel = associacao.subnivel_id ? 
-                    subniveis.find(s => s.id === associacao.subnivel_id) : null;
-                  
-                  return (
-                    <div key={associacao.id} className="flex items-center justify-between p-2 bg-muted rounded">
-                      <div>
-                        <p className="text-sm font-medium">{etapa?.nome || "Etapa desconhecida"}</p>
-                        {subnivel && (
-                          <p className="text-xs text-muted-foreground">{subnivel?.nome || "Subnível desconhecido"}</p>
-                        )}
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onRemoverAssociacao(associacao.id)}
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">Nenhuma etapa associada</p>
-            )}
-
-            {/* Adicionar nova etapa */}
-            <div className="space-y-2 pt-2 border-t">
-              <Select value={novaEtapa} onValueChange={(value) => {
-                setNovaEtapa(value);
-                setNovoSubnivel('');
-              }}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecionar etapa" />
-                </SelectTrigger>
-                <SelectContent>
-                  {etapas.map((etapa) => (
-                    <SelectItem key={etapa.id} value={etapa.id}>
-                      {etapa.ordem}. {etapa.nome}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {subniveisEtapa.length > 0 && (
-                <Select value={novoSubnivel} onValueChange={setNovoSubnivel}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecionar subnível (opcional)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {subniveisEtapa.map((subnivel) => (
-                      <SelectItem key={subnivel.id} value={subnivel.id}>
-                        {subnivel.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-
-              <Button 
-                onClick={handleAdicionarEtapa} 
-                disabled={!novaEtapa}
-                size="sm"
-                className="w-full"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Adicionar à Etapa
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Botão Salvar */}
-        <Button onClick={handleSalvar} className="w-full">
-          Salvar Alterações
+        <Button variant="ghost" size="icon" className="h-6 w-6 p-0" onClick={onClose}>
+          <X className="h-4 w-4" />
         </Button>
       </div>
+
+      {/* Performance */}
+      <div className="flex items-center gap-2">
+        <span className="w-24">Performance</span>
+        <div className="flex items-center gap-1">{renderStars(editandoParceiro.performance_score)}</div>
+        <span className="text-xs font-medium">{editandoParceiro.performance_score}%</span>
+      </div>
+      <Slider
+        value={[editandoParceiro.performance_score]}
+        onValueChange={(value) => setEditandoParceiro(prev => ({ ...prev, performance_score: value[0] }))}
+        max={100}
+        step={1}
+        className="h-4"
+      />
+
+      {/* Status */}
+      <div className="flex items-center gap-2">
+        <span className="w-24">Status</span>
+        <Select 
+          value={editandoParceiro.status} 
+          onValueChange={(value) => setEditandoParceiro(prev => ({ ...prev, status: value as any }))}
+        >
+          <SelectTrigger className="h-7 w-28 text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ativo">Ativo</SelectItem>
+            <SelectItem value="inativo">Inativo</SelectItem>
+            <SelectItem value="pendente">Pendente</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Observações */}
+      <div>
+        <span className="block mb-1">Observações</span>
+        <Textarea
+          value={editandoParceiro.observacoes || ''}
+          onChange={(e) => setEditandoParceiro(prev => ({ ...prev, observacoes: e.target.value }))}
+          placeholder="Observações sobre o parceiro..."
+          rows={2}
+          className="text-xs"
+        />
+      </div>
+
+      {/* Etapas Associadas */}
+      <div>
+        <div className="flex items-center gap-1 mb-1">
+          <MapPin className="h-3 w-3" />
+          <span className="font-medium text-xs">Etapas da Jornada</span>
+        </div>
+        {associacoesParceiro.length > 0 ? (
+          <ul className="space-y-1 mb-1">
+            {associacoesParceiro.map((associacao) => {
+              const etapa = etapas.find(e => e.id === associacao.etapa_id);
+              const subnivel = associacao.subnivel_id ? 
+                subniveis.find(s => s.id === associacao.subnivel_id) : null;
+              return (
+                <li key={associacao.id} className="flex items-center justify-between px-2 py-1 bg-muted rounded">
+                  <div>
+                    <span className="text-xs font-medium">{etapa?.nome || "Etapa desconhecida"}</span>
+                    {subnivel && (
+                      <span className="ml-2 text-[10px] text-muted-foreground">{subnivel?.nome || "Subnível desconhecido"}</span>
+                    )}
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-5 w-5 p-0"
+                    onClick={() => onRemoverAssociacao(associacao.id)}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <div className="text-xs text-muted-foreground mb-1">Nenhuma etapa associada.</div>
+        )}
+        {/* Adicionar nova etapa */}
+        <div className="flex gap-1 items-center mt-1">
+          <Select value={novaEtapa} onValueChange={setNovaEtapa}>
+            <SelectTrigger className="h-7 w-28 text-xs">
+              <SelectValue placeholder="Selecionar etapa" />
+            </SelectTrigger>
+            <SelectContent>
+              {etapas.map(etapa => (
+                <SelectItem key={etapa.id} value={etapa.id}>{etapa.nome}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={novoSubnivel} onValueChange={setNovoSubnivel} disabled={!novaEtapa}>
+            <SelectTrigger className="h-7 w-28 text-xs">
+              <SelectValue placeholder="Subnível" />
+            </SelectTrigger>
+            <SelectContent>
+              {subniveisEtapa.map(subnivel => (
+                <SelectItem key={subnivel.id} value={subnivel.id}>{subnivel.nome}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button variant="outline" size="icon" className="h-7 w-7 p-0" onClick={handleAdicionarEtapa} disabled={!novaEtapa}>
+            <Plus className="h-4 w-4" />
+            <span className="sr-only">Adicionar</span>
+          </Button>
+        </div>
+      </div>
+
+      {/* Salvar */}
+      <Button className="w-full mt-2 h-8 text-xs" onClick={handleSalvar}>
+        Salvar Alterações
+      </Button>
     </div>
   );
 };
