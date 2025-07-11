@@ -190,8 +190,9 @@ const MapaParceirosSidebar: React.FC<MapaParceirosSidebarProps> = ({
                       }}
                       className="w-full p-2 flex items-center justify-between text-left"
                     >
+                      {/* Bloco à esquerda: cor, nome, badge */}
                       <div
-                        className="flex-1 flex items-center gap-2 cursor-pointer"
+                        className="flex items-center gap-2 min-w-0 flex-1 cursor-pointer"
                         onClick={(e) => {
                           e.stopPropagation();
                           console.log('Clicou na etapa:', etapa.id, etapa.nome);
@@ -205,16 +206,15 @@ const MapaParceirosSidebar: React.FC<MapaParceirosSidebarProps> = ({
                         <span className="text-sm font-medium truncate">
                           {etapa.ordem}. {etapa.nome}
                         </span>
-                        {isGap ? (
-                          <Badge variant="destructive" className="text-xs">●</Badge>
-                        ) : (
-                          <Badge variant="secondary" className="text-xs">{totalParceiros}</Badge>
-                        )}
+                        <span className="ml-2 text-xs bg-gray-100 rounded-full px-2 py-0.5 min-w-[1.5em] text-center">
+                          {totalParceiros}
+                        </span>
                       </div>
+                      {/* Chevron sempre à direita, nunca sobreposto */}
                       {subnivelsDaEtapa.length > 0 && (
-                        isExpanded ?
-                          <ChevronDown className="h-4 w-4 text-muted-foreground" /> :
-                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                        isExpanded
+                          ? <ChevronDown className="h-4 w-4 text-muted-foreground ml-2 flex-shrink-0" />
+                          : <ChevronRight className="h-4 w-4 text-muted-foreground ml-2 flex-shrink-0" />
                       )}
                     </CollapsibleTrigger>
                     {isExpanded && (
