@@ -174,6 +174,8 @@ const MapaParceirosSidebar: React.FC<MapaParceirosSidebarProps> = ({
               const isSelecionada = etapaSelecionada === etapa.id;
               const totalParceiros = stats.parceirosPorEtapa[etapa.id] || 0;
               const isGap = totalParceiros === 0;
+              // Debug log
+              console.log('Render etapa', etapa.nome, 'id:', etapa.id, 'isExpanded:', isExpanded);
               return (
                 <Collapsible key={etapa.id} open={isExpanded}>
                   <div
@@ -182,13 +184,17 @@ const MapaParceirosSidebar: React.FC<MapaParceirosSidebarProps> = ({
                     }`}
                   >
                     <CollapsibleTrigger
-                      onClick={() => onToggleEtapa(etapa.id)}
+                      onClick={() => {
+                        console.log('Toggle expand etapa:', etapa.id, etapa.nome);
+                        onToggleEtapa(etapa.id);
+                      }}
                       className="w-full p-2 flex items-center justify-between text-left"
                     >
                       <div
                         className="flex-1 flex items-center gap-2 cursor-pointer"
                         onClick={(e) => {
                           e.stopPropagation();
+                          console.log('Clicou na etapa:', etapa.id, etapa.nome);
                           onEtapaClick(etapa.id);
                         }}
                       >
