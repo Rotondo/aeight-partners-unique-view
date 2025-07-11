@@ -44,7 +44,8 @@ const MapaParceirosPage: React.FC = () => {
     etapas,
     subniveis,
     parceiros: parceirosOriginais,
-    associacoes
+    associacoes,
+    associarParceiroEtapa
   } = useMapaParceiros();
 
   // Estado de filtros
@@ -89,6 +90,7 @@ const MapaParceirosPage: React.FC = () => {
           onDeletarParceiro={() => {}}
           onFiltrosChange={setFiltros}
           onLimparFiltros={() => setFiltros({})}
+          onAssociarEtapa={associarParceiroEtapa}
         />
       </div>
     </div>

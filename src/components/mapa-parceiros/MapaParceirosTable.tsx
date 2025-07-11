@@ -7,6 +7,7 @@ import { Edit, Trash2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import ParceiroDetalhesSimplificado from './ParceiroDetalhesSimplificado';
+import { useToast } from '@/hooks/use-toast';
 
 interface MapaParceirosTableProps {
   parceiros: ParceiroMapa[];
@@ -52,6 +53,7 @@ const MapaParceirosTable: React.FC<MapaParceirosTableProps> = ({
   onLimparFiltros,
   onAssociarEtapa
 }) => {
+  const { toast } = useToast();
   const [orderBy, setOrderBy] = useState<OrderBy>('nome');
   const [orderDirection, setOrderDirection] = useState<OrderDirection>('asc');
   const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; parceiro: ParceiroMapa | null }>({ open: false, parceiro: null });
@@ -120,15 +122,27 @@ const MapaParceirosTable: React.FC<MapaParceirosTableProps> = ({
   };
 
   const handleSalvarAlteracoes = async () => {
+    let erro = false;
     for (const parceiroId in pendingEdits) {
       const { etapaId, subnivelId } = pendingEdits[parceiroId];
       try {
         await onAssociarEtapa(parceiroId, etapaId, subnivelId || undefined);
       } catch (err) {
-        alert('Erro ao salvar alterações para o parceiro: ' + parceiroId);
+        erro = true;
+        toast({
+          title: 'Erro ao salvar',
+          description: `Erro ao salvar alterações para o parceiro: ${parceiroId}`,
+          variant: 'destructive',
+        });
       }
     }
     setPendingEdits({});
+    if (!erro) {
+      toast({
+        title: 'Alterações salvas',
+        description: 'Todas as alterações foram salvas com sucesso.',
+      });
+    }
   };
 
   return (
