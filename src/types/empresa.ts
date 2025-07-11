@@ -8,6 +8,7 @@ export interface Empresa {
   nome: string;
   tipo: EmpresaTipoString;
   descricao?: string;
+  logo_url?: string;
   status: boolean;
   created_at?: string;
 }

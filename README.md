@@ -16,14 +16,18 @@ Sistema completo para gestão de parcerias empresariais, oportunidades de negóc
 - **Somatórias por empresa origem** com ranking de performance
 
 ### 🤝 Mapa de Parceiros
-- **Gestão visual de parceiros** com visualização grid/lista
-- **Seleção múltipla** de empresas para inclusão como parceiros
-- **Interface responsiva** otimizada para mobile e desktop
+- **Visualização em Jornada** - Nova interface visual que apresenta os parceiros organizados por etapas da jornada do e-commerce
+- **Trilha Visual Interativa** - Layout em forma de trilha com etapas conectadas, permitindo navegação intuitiva
+- **Subníveis Expansíveis** - Cada etapa pode ter subníveis que se expandem ao clicar, mostrando parceiros específicos
+- **Logos dos Parceiros** - Integração com sistema de logos que aparecem nos cards, repositório e OnePager
+- **Gestão Dupla de Visualização**:
+  - **Modo Jornada**: Visualização sequencial das etapas com trilha visual
+  - **Modo Grade**: Visualização grid/lista tradicional com filtros avançados
 - **Performance tracking** com indicadores visuais e score do quadrante
-- **Associação flexível** de parceiros a diferentes etapas da jornada
+- **Associação flexível** de parceiros a diferentes etapas e subníveis
 - **Painel lateral detalhado** com navegação entre parceiros
 - **Badges de etapas associadas** nos cards dos parceiros
-- **Feedback visual aprimorado** para empresas já cadastradas
+- **Interface responsiva** otimizada para mobile e desktop
 - **Acessibilidade completa** com ARIA labels e navegação por teclado
 
 ### 📊 Dashboard Analítico
@@ -45,6 +49,7 @@ Sistema completo para gestão de parcerias empresariais, oportunidades de negóc
 - **Categorização** por tags e empresas
 - **Controle de acesso** baseado em perfis
 - **Versionamento** e controle de validade
+- **Integração com logos** dos parceiros
 
 ### 🎪 Gestão de Eventos
 - **Criação e acompanhamento** de eventos comerciais
@@ -88,6 +93,10 @@ src/
 ├── components/          # Componentes reutilizáveis
 │   ├── dashboard/      # Componentes do dashboard
 │   ├── mapa-parceiros/ # Componentes do mapa de parceiros
+│   │   ├── JornadaVisualization.tsx    # Nova visualização em jornada
+│   │   ├── MapaParceirosGrid.tsx       # Visualização em grade
+│   │   ├── ParceiroCard.tsx            # Cards dos parceiros
+│   │   └── ...
 │   ├── ui/            # Componentes base (shadcn)
 │   └── ...
 ├── pages/              # Páginas da aplicação
@@ -97,38 +106,71 @@ src/
 └── integrations/       # Integrações externas (Supabase)
 ```
 
-## Últimas Atualizações (72h)
+## Últimas Atualizações (Atual)
 
-### 🔧 Melhorias no Mapa de Parceiros
-- **Visualização Grid/Lista** para desktop com alternância
-- **Score do Quadrante** integrado aos cards de parceiros
-- **Badges de etapas associadas** com indicação visual clara
-- **Painel lateral reduzido** com navegação próximo/anterior
-- **Feedback aprimorado** para empresas já cadastradas
-- **Acessibilidade completa** com ARIA labels e tabindex
-- **Performance otimizada** com memoização e handlers desacoplados
+### 🚀 Nova Visualização em Jornada - Mapa de Parceiros
+- **Interface Visual Revolucionária**: Substituição da visualização tradicional por uma trilha visual das etapas da jornada do e-commerce
+- **Navegação Intuitiva**: Etapas conectadas por linha visual com indicadores coloridos personalizáveis
+- **Expansão de Subníveis**: Ao clicar em uma etapa, os subníveis se expandem mostrando a hierarquia completa
+- **Cards de Parceiros Otimizados**: 
+  - Suporte a logos dos parceiros com dimensionamento automático
+  - Indicadores de performance com sistema de cores
+  - Badges de status com design aprimorado
+- **Dupla Visualização**: Alternância entre modo Jornada e modo Grade via tabs
+- **Refatoração Arquitetural**: Separação em componentes focados para melhor manutenibilidade
 
-### 📈 Aprimoramentos nos Comprobatórios de Metas
-- **Ordenação interativa** em todas as colunas da tabela
-- **Gráfico semanal otimizado** com tooltip personalizado
-- **Exportação PDF** com formatação melhorada
-- **Resumos por status** com somatórias detalhadas
-- **Análise por empresa origem** com ranking de performance
-- **Correções TypeScript** para maior estabilidade
+### 🔧 Melhorias Técnicas
+- **Correção de Erros TypeScript**: Resolução definitiva dos problemas de tipagem com `performance_score`
+- **Componentes Modulares**: Separação da lógica em componentes especializados:
+  - `JornadaVisualization.tsx` - Visualização da trilha
+  - `MapaParceirosGrid.tsx` - Grade de parceiros
+  - `MapaParceirosPage.tsx` - Orquestração principal (reduzido)
+- **Performance Otimizada**: Lazy loading e memoização adequada dos componentes
+- **Responsividade Aprimorada**: Layout adaptativo para todos os tamanhos de tela
 
-### 🎨 Melhorias de Interface e UX
-- **Sistema de cores** semântico consistente
-- **Responsividade** aprimorada em todos os componentes
-- **Empty states** explicativos e onboarding textual
-- **Microcopy** clara para melhor experiência do usuário
-- **Loading states** e skeleton screens otimizados
+### 🎨 Design e UX
+- **Sistema Visual Coerente**: Cores, espaçamentos e tipografia padronizados
+- **Logos dos Parceiros**: Suporte completo a logos com fallback para iniciais
+- **Indicadores Visuais**: Sistema de cores para performance e status
+- **Navegação Fluida**: Transições suaves entre estados e componentes
+- **Empty States**: Estados vazios informativos e calls-to-action claros
 
-### 🏗️ Otimizações Técnicas
-- **Performance** melhorada com memoização adequada
-- **Bundle size** otimizado com imports específicos
-- **Type safety** aprimorada com correções TypeScript
-- **Error handling** mais robusto
-- **Código limpo** com componentes focados e reutilizáveis
+## Roadmap
+
+### 🔮 Próximas Features
+- [ ] **Dashboard personalizado** por usuário
+- [ ] **Integração com CRMs** externos (HubSpot, Salesforce)
+- [ ] **Notificações push** para eventos importantes
+- [ ] **Mobile app** nativo com React Native
+- [ ] **API pública** para integrações externas
+- [ ] **Sistema de workflows** para automação de processos
+- [ ] **Analytics avançada** da jornada de parceiros
+
+### 🚀 Melhorias Planejadas
+- [ ] **Performance** com React Server Components
+- [ ] **Offline first** com service workers
+- [ ] **Multi-tenancy** para diferentes organizações
+- [ ] **Advanced analytics** com Machine Learning
+- [ ] **Automações** baseadas em regras de negócio
+- [ ] **Relatórios customizáveis** com exportação avançada
+
+## Changelog Recente
+
+### v3.0.0 - Revolução Visual do Mapa de Parceiros
+- ✅ **Nova Visualização em Jornada**: Interface completamente redesenhada
+- ✅ **Trilha Visual Interativa**: Navegação por etapas com linha conectora
+- ✅ **Suporte a Logos**: Integração completa com sistema de logos
+- ✅ **Componentes Refatorados**: Arquitetura modular e focada
+- ✅ **Dupla Visualização**: Tabs para alternar entre Jornada e Grade
+- ✅ **Correções TypeScript**: Resolução definitiva de erros de tipagem
+- ✅ **Performance Otimizada**: Loading states e componentes otimizados
+
+### v2.1.0 - Melhorias no Mapa de Parceiros (Anterior)
+- ✅ Visualização Grid/Lista implementada
+- ✅ Score do Quadrante integrado
+- ✅ Badges de etapas associadas
+- ✅ Painel lateral otimizado
+- ✅ Acessibilidade aprimorada
 
 ## Como Executar
 
@@ -166,6 +208,7 @@ npm run preview
 - **ESLint + Prettier** para formatação
 - **Commits convencionais** (feat, fix, docs, etc.)
 - **Testes unitários** para componentes críticos
+- **Componentes focados** (máximo 300 linhas)
 
 ### Estrutura de Commits
 ```
@@ -177,39 +220,6 @@ refactor: refatoração sem mudança de funcionalidade
 test: adiciona ou corrige testes
 ```
 
-## Roadmap
-
-### 🔮 Próximas Features
-- [ ] **Dashboard personalizado** por usuário
-- [ ] **Integração com CRMs** externos (HubSpot, Salesforce)
-- [ ] **Notificações push** para eventos importantes
-- [ ] **Mobile app** nativo com React Native
-- [ ] **API pública** para integrações externas
-
-### 🚀 Melhorias Planejadas
-- [ ] **Performance** com React Server Components
-- [ ] **Offline first** com service workers
-- [ ] **Multi-tenancy** para diferentes organizações
-- [ ] **Advanced analytics** com Machine Learning
-- [ ] **Automações** baseadas em regras de negócio
-
-## Changelog Recente
-
-### v2.1.0 - Melhorias no Mapa de Parceiros
-- ✅ Visualização Grid/Lista implementada
-- ✅ Score do Quadrante integrado
-- ✅ Badges de etapas associadas
-- ✅ Painel lateral otimizado
-- ✅ Acessibilidade aprimorada
-- ✅ Performance e UX melhoradas
-
-### v2.0.1 - Correções e Otimizações
-- 🐛 Correção de erros TypeScript
-- ⚡ Memoização de componentes pesados
-- 🎨 Melhorias na interface dos comprobatórios
-- 📊 Gráficos semanais otimizados
-- 📄 Exportação PDF aprimorada
-
 ## Suporte
 
 Para dúvidas ou suporte técnico:
@@ -220,5 +230,5 @@ Para dúvidas ou suporte técnico:
 ---
 
 **Última atualização:** ${new Date().toLocaleDateString('pt-BR')}
-**Versão:** 2.1.0
-**Status:** ✅ Produção
+**Versão:** 3.0.0
+**Status:** ✅ Produção - Nova Interface Jornada
