@@ -26,7 +26,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import ParceiroDetalhesSimplificado from '@/components/mapa-parceiros/ParceiroDetalhesSimplificado';
 // import { calcularScoreQuadrante } from '@/utils/parceiro-quadrante-score'; // Comentado - ARQUIVO AUSENTE
 import Badge from '@/components/ui/badge';
-import Input from '@/components/ui/input';
+import { Input } from '@/components/ui/input';
 
 type OrdenacaoParceiros = 'nome' | 'performance' | 'criado_em';
 
