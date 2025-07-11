@@ -258,10 +258,10 @@ const MapaParceirosPage: React.FC = () => {
   }
 
   const emptyStateContent = filtrosLocal.etapaSelecionada
-    ? ( /* ... (conteúdo do empty state da branch MapadeParceiros) ... */ )
-    : ( /* ... (conteúdo do empty state da branch MapadeParceiros) ... */ );
+    ? null
+    : null;
 
-  const onboardingText = ( /* ... (conteúdo do onboarding da branch MapadeParceiros) ... */ );
+  const onboardingText = null;
 
 
   return (
