@@ -4,6 +4,8 @@ import { ParceiroMapa, AssociacaoParceiroEtapa, EtapaJornada, SubnivelEtapa, Map
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Edit, Trash2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 
 interface MapaParceirosTableProps {
   parceiros: ParceiroMapa[];
@@ -49,6 +51,8 @@ const MapaParceirosTable: React.FC<MapaParceirosTableProps> = ({
 }) => {
   const [orderBy, setOrderBy] = useState<OrderBy>('nome');
   const [orderDirection, setOrderDirection] = useState<OrderDirection>('asc');
+  const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; parceiro: ParceiroMapa | null }>({ open: false, parceiro: null });
+  const [editParceiro, setEditParceiro] = useState<ParceiroMapa | null>(null);
 
   const sortedParceiros = [...parceiros].sort((a, b) => {
     let compare = 0;
@@ -90,6 +94,18 @@ const MapaParceirosTable: React.FC<MapaParceirosTableProps> = ({
     }
   };
 
+  // Função para atualizar etapa/subnível inline
+  const handleUpdateEtapa = (parceiroId: string, etapaId: string) => {
+    // Chame aqui a função de associar etapa (exemplo: via contexto ou prop)
+    // Exemplo: onAssociarEtapa(parceiroId, etapaId)
+    // Aqui só loga para exemplo
+    console.log('Atualizar etapa', parceiroId, etapaId);
+  };
+  const handleUpdateSubnivel = (parceiroId: string, subnivelId: string) => {
+    // Chame aqui a função de associar subnível (exemplo: via contexto ou prop)
+    console.log('Atualizar subnível', parceiroId, subnivelId);
+  };
+
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
@@ -129,23 +145,39 @@ const MapaParceirosTable: React.FC<MapaParceirosTableProps> = ({
                 const nomeEmpresa = parceiro.empresa?.nome || 'Empresa sem nome';
                 const etapasParceiro = getEtapasParceiro(parceiro.id, associacoes, etapas);
                 const subniveisParceiro = getSubniveisParceiro(parceiro.id, associacoes, subniveis);
-
+                // Para edição inline
+                const etapaIdAtual = associacoes.find(a => a.parceiro_id === parceiro.id)?.etapa_id || '';
+                const subnivelIdAtual = associacoes.find(a => a.parceiro_id === parceiro.id)?.subnivel_id || '';
                 return (
-                  <tr key={parceiro.id} className="hover:bg-muted/30 transition-colors cursor-pointer min-h-8" onClick={() => onParceiroClick(parceiro)}>
+                  <tr key={parceiro.id} className="hover:bg-muted/30 transition-colors cursor-pointer min-h-8" onClick={() => setEditParceiro(parceiro)}>
                     <td className="p-1 min-w-[120px] font-medium whitespace-nowrap">
                       {nomeEmpresa}
                     </td>
                     <td className="p-1 whitespace-nowrap">
-                      {etapasParceiro.length > 0
-                        ? etapasParceiro.join(", ")
-                        : <span className="italic text-muted-foreground">Sem etapa</span>
-                      }
+                      <Select value={etapaIdAtual} onValueChange={v => handleUpdateEtapa(parceiro.id, v)}>
+                        <SelectTrigger className="h-7 w-full text-xs">
+                          <SelectValue placeholder={etapasParceiro[0] || 'Selecionar etapa'} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">Sem etapa</SelectItem>
+                          {etapas.map(etapa => (
+                            <SelectItem key={etapa.id} value={etapa.id}>{etapa.ordem}. {etapa.nome}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </td>
                     <td className="p-1 whitespace-nowrap">
-                      {subniveisParceiro.length > 0
-                        ? subniveisParceiro.join(", ")
-                        : <span className="italic text-muted-foreground">Sem subnível</span>
-                      }
+                      <Select value={subnivelIdAtual} onValueChange={v => handleUpdateSubnivel(parceiro.id, v)}>
+                        <SelectTrigger className="h-7 w-full text-xs">
+                          <SelectValue placeholder={subniveisParceiro[0] || 'Selecionar subnível'} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">Sem subnível</SelectItem>
+                          {subniveis.map(subnivel => (
+                            <SelectItem key={subnivel.id} value={subnivel.id}>{subnivel.nome}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </td>
                     <td className="p-1 text-center whitespace-nowrap">
                       <Button
@@ -153,14 +185,14 @@ const MapaParceirosTable: React.FC<MapaParceirosTableProps> = ({
                         size="icon"
                         className="mr-1"
                         title="Editar"
-                        onClick={(e) => { e.stopPropagation(); onParceiroClick(parceiro); }}>
+                        onClick={e => { e.stopPropagation(); setEditParceiro(parceiro); }}>
                         <Edit className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="icon"
                         title="Remover"
-                        onClick={(e) => { e.stopPropagation(); onDeletarParceiro(parceiro); }}>
+                        onClick={e => { e.stopPropagation(); setDeleteConfirm({ open: true, parceiro }); }}>
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     </td>
@@ -171,6 +203,36 @@ const MapaParceirosTable: React.FC<MapaParceirosTableProps> = ({
           </tbody>
         </table>
       </div>
+      {/* Modal de edição simples */}
+      <Dialog open={!!editParceiro} onOpenChange={open => !open && setEditParceiro(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Parceiro</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            <div><b>Nome:</b> {editParceiro?.empresa?.nome}</div>
+            <div><b>Status:</b> {editParceiro?.status}</div>
+            <div><b>Observações:</b> {editParceiro?.observacoes || '-'}</div>
+            {/* Adicione campos editáveis conforme necessário */}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditParceiro(null)}>Fechar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Confirmação de exclusão */}
+      <Dialog open={deleteConfirm.open} onOpenChange={open => !open && setDeleteConfirm({ open: false, parceiro: null })}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Remover Parceiro</DialogTitle>
+          </DialogHeader>
+          <div>Tem certeza que deseja remover o parceiro <b>{deleteConfirm.parceiro?.empresa?.nome}</b>?</div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteConfirm({ open: false, parceiro: null })}>Cancelar</Button>
+            <Button variant="destructive" onClick={() => { if (deleteConfirm.parceiro) onDeletarParceiro(deleteConfirm.parceiro); setDeleteConfirm({ open: false, parceiro: null }); }}>Remover</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
