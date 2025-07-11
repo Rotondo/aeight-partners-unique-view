@@ -1,3 +1,4 @@
+
 export interface EtapaJornada {
   id: string;
   nome: string;
@@ -38,6 +39,7 @@ export interface ParceiroMapa {
     nome: string;
     descricao?: string;
     tipo: string;
+    logo_url?: string;
   };
 }
 
