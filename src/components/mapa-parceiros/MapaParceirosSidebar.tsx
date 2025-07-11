@@ -147,23 +147,34 @@ const MapaParceirosSidebar: React.FC<MapaParceirosSidebarProps> = ({
 
       {/* Jornada do E-commerce */}
       <div className="p-4 pt-2 flex-1 flex flex-col">
-        <div>
-          <div className="text-sm flex items-center gap-2 font-semibold mb-2">
+        <div className="flex items-center justify-between mb-2">
+          <div className="text-sm flex items-center gap-2 font-semibold">
             <Users className="h-4 w-4" />
             Jornada do E-commerce
           </div>
-          <div>
-            {etapas.map((etapa) => {
+          <Button
+            variant={filtros.apenasGaps ? "secondary" : "ghost"}
+            size="sm"
+            className="text-xs"
+            onClick={() => onFiltrosChange({ ...filtros, apenasGaps: !filtros.apenasGaps })}
+          >
+            {filtros.apenasGaps ? "Mostrar todas" : "Só gaps"}
+          </Button>
+        </div>
+        <div>
+          {etapas
+            .filter(etapa => !filtros.apenasGaps || (stats.parceirosPorEtapa[etapa.id] || 0) === 0)
+            .map((etapa) => {
               const subnivelsDaEtapa = getSubniveisPorEtapa(etapa.id);
               const isExpanded = expandedEtapas.has(etapa.id);
               const isSelecionada = etapaSelecionada === etapa.id;
               const totalParceiros = stats.parceirosPorEtapa[etapa.id] || 0;
-
+              const isGap = totalParceiros === 0;
               return (
                 <Collapsible key={etapa.id} open={isExpanded}>
                   <div
                     className={`rounded-lg border transition-colors mb-2 ${
-                      isSelecionada ? 'bg-primary/10 border-primary' : 'hover:bg-muted/50'
+                      isSelecionada ? 'bg-primary/10 border-primary' : isGap ? 'border-destructive bg-destructive/10' : 'hover:bg-muted/50'
                     }`}
                   >
                     <CollapsibleTrigger
@@ -184,10 +195,10 @@ const MapaParceirosSidebar: React.FC<MapaParceirosSidebarProps> = ({
                         <span className="text-sm font-medium truncate">
                           {etapa.ordem}. {etapa.nome}
                         </span>
-                        {totalParceiros > 0 && (
-                          <Badge variant="secondary" className="text-xs">
-                            {totalParceiros}
-                          </Badge>
+                        {isGap ? (
+                          <Badge variant="destructive" className="text-xs">Sem parceiros</Badge>
+                        ) : (
+                          <Badge variant="secondary" className="text-xs">{totalParceiros}</Badge>
                         )}
                       </div>
                       {subnivelsDaEtapa.length > 0 && (
@@ -196,7 +207,6 @@ const MapaParceirosSidebar: React.FC<MapaParceirosSidebarProps> = ({
                           <ChevronRight className="h-4 w-4 text-muted-foreground" />
                       )}
                     </CollapsibleTrigger>
-
                     {subnivelsDaEtapa.length > 0 && (
                       <CollapsibleContent className="px-4 pb-2">
                         <div className="space-y-1">
@@ -227,7 +237,6 @@ const MapaParceirosSidebar: React.FC<MapaParceirosSidebarProps> = ({
                 </Collapsible>
               );
             })}
-          </div>
         </div>
       </div>
     </aside>

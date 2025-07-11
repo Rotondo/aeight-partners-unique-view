@@ -88,7 +88,9 @@ const JornadaVisualization: React.FC<JornadaVisualizationProps> = ({
     <div className="space-y-6">
       <div className="text-center mb-8">
         <h2 className="text-2xl font-bold mb-2">Jornada do E-commerce</h2>
-        <p className="text-muted-foreground">Visualize os parceiros em cada etapa da jornada</p>
+        <p className="text-muted-foreground max-w-2xl mx-auto">
+          Visualize rapidamente a distribuição dos parceiros em cada etapa da jornada. Identifique gaps, concentre esforços onde há menos cobertura e otimize a gestão de parcerias de forma eficiente. Utilize os filtros e a sidebar para navegar entre as etapas e realizar ações em lote.
+        </p>
       </div>
 
       <div className="relative">

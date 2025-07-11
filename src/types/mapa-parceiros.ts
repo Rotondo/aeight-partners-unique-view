@@ -61,6 +61,7 @@ export interface MapaParceirosFiltros {
   etapaId?: string;
   subnivelId?: string;
   apenasSemEtapa?: boolean;
+  apenasGaps?: boolean;
 }
 
 export interface MapaParceirosStats {

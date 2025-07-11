@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import ParceiroDetalhesSimplificado from './ParceiroDetalhesSimplificado';
 import { useToast } from '@/hooks/use-toast';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface MapaParceirosTableProps {
   parceiros: ParceiroMapa[];
@@ -60,6 +61,8 @@ const MapaParceirosTable: React.FC<MapaParceirosTableProps> = ({
   const [editParceiro, setEditParceiro] = useState<ParceiroMapa | null>(null);
   const [pendingEdits, setPendingEdits] = useState<Record<string, { etapaId: string; subnivelId: string }>>({});
   const [showDetalhes, setShowDetalhes] = useState<ParceiroMapa | null>(null);
+  const [selectedParceiros, setSelectedParceiros] = React.useState<string[]>([]);
+  const [loadingLote, setLoadingLote] = React.useState(false);
 
   const sortedParceiros = [...parceiros].sort((a, b) => {
     let compare = 0;
@@ -145,6 +148,65 @@ const MapaParceirosTable: React.FC<MapaParceirosTableProps> = ({
     }
   };
 
+  const handleSelectParceiro = (parceiroId: string, checked: boolean) => {
+    setSelectedParceiros(prev => checked ? [...prev, parceiroId] : prev.filter(id => id !== parceiroId));
+  };
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedParceiros(sortedParceiros.map(p => p.id));
+    } else {
+      setSelectedParceiros([]);
+    }
+  };
+  const handleSalvarLote = async (etapaId: string, subnivelId: string) => {
+    setLoadingLote(true);
+    let erro = false;
+    for (const parceiroId of selectedParceiros) {
+      try {
+        await onAssociarEtapa(parceiroId, etapaId, subnivelId || undefined);
+      } catch (err) {
+        erro = true;
+        toast({
+          title: 'Erro ao salvar',
+          description: `Erro ao salvar alterações para o parceiro: ${parceiroId}`,
+          variant: 'destructive',
+        });
+      }
+    }
+    setLoadingLote(false);
+    setSelectedParceiros([]);
+    if (!erro) {
+      toast({
+        title: 'Alterações em lote salvas',
+        description: 'Todos os parceiros selecionados foram atualizados.',
+      });
+    }
+  };
+
+  // Checkbox com indeterminate manual
+  const IndeterminateCheckbox = React.forwardRef<HTMLButtonElement, { checked: boolean; indeterminate: boolean; onChange: (checked: boolean) => void }>(({ checked, indeterminate, onChange }, ref) => {
+    const buttonRef = React.useRef<HTMLButtonElement>(null);
+    React.useEffect(() => {
+      if (buttonRef.current) {
+        // O input real é o primeiro filho do button
+        const input = buttonRef.current.querySelector('input[type="checkbox"]') as HTMLInputElement | null;
+        if (input) input.indeterminate = indeterminate;
+      }
+    }, [indeterminate]);
+    return (
+      <Checkbox
+        ref={el => {
+          if (typeof ref === 'function') ref(el);
+          else if (ref) (ref as React.MutableRefObject<HTMLButtonElement | null>).current = el;
+          buttonRef.current = el;
+        }}
+        checked={checked}
+        onCheckedChange={onChange}
+      />
+    );
+  });
+  IndeterminateCheckbox.displayName = 'IndeterminateCheckbox';
+
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
@@ -159,6 +221,9 @@ const MapaParceirosTable: React.FC<MapaParceirosTableProps> = ({
         <table className="min-w-full divide-y divide-border text-xs">
           <thead>
             <tr className="bg-muted">
+              <th className="p-1 text-center">
+                <IndeterminateCheckbox checked={selectedParceiros.length === sortedParceiros.length && sortedParceiros.length > 0} indeterminate={selectedParceiros.length > 0 && selectedParceiros.length < sortedParceiros.length} onChange={handleSelectAll} />
+              </th>
               <th className="p-1 font-semibold cursor-pointer text-left" onClick={() => handleSort('nome')}>
                 Nome {orderBy === 'nome' && (orderDirection === 'asc' ? '↑' : '↓')}
               </th>
@@ -174,7 +239,7 @@ const MapaParceirosTable: React.FC<MapaParceirosTableProps> = ({
           <tbody>
             {sortedParceiros.length === 0 ? (
               <tr>
-                <td colSpan={4} className="text-center py-4 text-muted-foreground text-xs">
+                <td colSpan={5} className="text-center py-4 text-muted-foreground text-xs">
                   Nenhum parceiro encontrado.<br />
                   Adicione novos parceiros ou ajuste os filtros.
                 </td>
@@ -190,6 +255,9 @@ const MapaParceirosTable: React.FC<MapaParceirosTableProps> = ({
                 const subniveisFiltrados = etapaIdAtual ? subniveis.filter(s => s.etapa_id === etapaIdAtual) : [];
                 return (
                   <tr key={parceiro.id} className={`hover:bg-muted/30 transition-colors cursor-pointer min-h-8 ${isEdited ? 'bg-yellow-50' : ''}`} onClick={() => setEditParceiro(parceiro)}>
+                    <td className="p-1 text-center">
+                      <Checkbox checked={selectedParceiros.includes(parceiro.id)} onCheckedChange={checked => handleSelectParceiro(parceiro.id, !!checked)} />
+                    </td>
                     <td className="p-1 min-w-[120px] font-medium whitespace-nowrap">
                       {nomeEmpresa}
                       {isEdited && <span className="ml-2 text-xs text-yellow-600">(pendente)</span>}
@@ -244,6 +312,33 @@ const MapaParceirosTable: React.FC<MapaParceirosTableProps> = ({
           </tbody>
         </table>
       </div>
+      {selectedParceiros.length > 0 && (
+        <div className="flex items-center gap-2 mt-2">
+          <Select onValueChange={etapaId => handleSalvarLote(etapaId, '')}>
+            <SelectTrigger className="h-8 w-48 text-xs">
+              <SelectValue placeholder="Atribuir etapa em lote" />
+            </SelectTrigger>
+            <SelectContent>
+              {etapas.map(etapa => (
+                <SelectItem key={etapa.id} value={etapa.id}>{etapa.ordem}. {etapa.nome}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select onValueChange={subnivelId => handleSalvarLote('', subnivelId)} disabled={selectedParceiros.length === 0}>
+            <SelectTrigger className="h-8 w-48 text-xs">
+              <SelectValue placeholder="Atribuir subnível em lote" />
+            </SelectTrigger>
+            <SelectContent>
+              {subniveis.map(subnivel => (
+                <SelectItem key={subnivel.id} value={subnivel.id}>{subnivel.nome}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button variant="default" onClick={() => handleSalvarLote('', '')} disabled={loadingLote}>
+            {loadingLote ? 'Salvando...' : `Salvar em lote (${selectedParceiros.length})`}
+          </Button>
+        </div>
+      )}
       {Object.keys(pendingEdits).length > 0 && (
         <div className="flex justify-end mt-2">
           <Button variant="default" onClick={handleSalvarAlteracoes}>
