@@ -42,17 +42,14 @@ const TAB_VIEWS = [
 const MapaParceirosPage: React.FC = () => {
   return (
     <div>
-      <MapaParceirosSidebar
+      <JornadaVisualization
         etapas={[]}
         subniveis={[]}
-        filtros={{}}
-        stats={{ totalParceiros: 0, parceirosPorEtapa: {}, parceirosAtivos: 0, parceirosInativos: 0, performanceMedia: 0, parceirosPorSubnivel: {} }}
-        onFiltrosChange={() => {}}
-        onEtapaClick={() => {}}
-        etapaSelecionada={''}
+        parceiros={[]}
+        associacoes={[]}
         expandedEtapas={new Set()}
         onToggleEtapa={() => {}}
-        onLimparFiltros={() => {}}
+        onParceiroClick={() => {}}
       />
     </div>
   );
