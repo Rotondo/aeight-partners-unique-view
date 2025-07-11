@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,7 +17,7 @@ import {
 } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { Check, X } from 'lucide-react';
+import { Check, X, Users } from 'lucide-react';
 
 interface Empresa {
   id: string;
@@ -35,6 +34,8 @@ interface EmpresaSelectorProps {
 
 interface EmpresaSelection extends Empresa {
   selected: boolean;
+  jaParceiro?: boolean; // NOVO: indica se já é parceiro
+  recemAdicionada?: boolean; // NOVO: destaque ao adicionar
 }
 
 const EmpresaSelector: React.FC<EmpresaSelectorProps> = ({
@@ -51,11 +52,20 @@ const EmpresaSelector: React.FC<EmpresaSelectorProps> = ({
     performance_score: 80,
     observacoes: ''
   });
+  const [adicionados, setAdicionados] = useState<string[]>([]);
+
+  // Onboarding microcopy
+  const onboardingText = (
+    <div className="mb-2 text-xs text-muted-foreground">
+      <b>Selecione empresas para adicionar como parceiros.</b> Apenas empresas que ainda não são parceiras aparecerão listadas abaixo.
+    </div>
+  );
 
   // Carrega empresas já parceiras antes das empresas disponíveis
   useEffect(() => {
     if (isOpen) {
       carregarEmpresasParceiros();
+      setAdicionados([]);
     }
     // eslint-disable-next-line
   }, [isOpen]);
@@ -76,8 +86,13 @@ const EmpresaSelector: React.FC<EmpresaSelectorProps> = ({
         .neq('tipo', 'cliente')
         .order('nome');
       if (error) throw error;
-      const empresasDisponiveis = (data || []).filter(empresa => !empresasParceiros.has(empresa.id));
-      setEmpresas(empresasDisponiveis.map(empresa => ({ ...empresa, selected: false })));
+      const empresasDisponiveis = (data || []).map(empresa => ({
+        ...empresa,
+        selected: false,
+        jaParceiro: empresasParceiros.has(empresa.id),
+        recemAdicionada: false
+      }));
+      setEmpresas(empresasDisponiveis.filter(e => !e.jaParceiro));
     } catch (error) {
       toast({
         title: "Erro",
@@ -103,6 +118,7 @@ const EmpresaSelector: React.FC<EmpresaSelectorProps> = ({
     }
   };
 
+  // Adiciona parceiros, destaca os recém-adicionados
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const empresasSelecionadas = empresas.filter(emp => emp.selected);
@@ -124,18 +140,28 @@ const EmpresaSelector: React.FC<EmpresaSelectorProps> = ({
           observacoes: formData.observacoes
         });
       }
+      setAdicionados(empresasSelecionadas.map(e => e.id));
       toast({
         title: "Sucesso",
         description: `${empresasSelecionadas.length} parceiros adicionados com sucesso.`,
       });
-      onClose();
+      setEmpresas(prev =>
+        prev.map(emp =>
+          empresasSelecionadas.some(e => e.id === emp.id)
+            ? { ...emp, selected: false, recemAdicionada: true }
+            : { ...emp, selected: false }
+        )
+      );
       setFormData({
         status: 'ativo',
         performance_score: 80,
         observacoes: ''
       });
-      setEmpresas(prev => prev.map(emp => ({ ...emp, selected: false })));
       setSearchTerm('');
+      setTimeout(() => {
+        onClose();
+        setAdicionados([]);
+      }, 1500);
     } catch (error) {
       toast({
         title: "Erro",
@@ -147,6 +173,7 @@ const EmpresaSelector: React.FC<EmpresaSelectorProps> = ({
     }
   };
 
+  // Filtro + status visual
   const empresasFiltradas = empresas.filter(empresa =>
     empresa.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
     empresa.tipo.toLowerCase().includes(searchTerm.toLowerCase())
@@ -155,10 +182,11 @@ const EmpresaSelector: React.FC<EmpresaSelectorProps> = ({
   const empresasSelecionadas = empresas.filter(emp => emp.selected);
 
   // Corrige seleção: clique no checkbox ou na linha, mas sem eventos duplicados
-  const handleCheckboxChange = (checked: boolean, empresaId: string) => {
+  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>, empresaId: string) => {
+    e.stopPropagation();
     setEmpresas(prev =>
       prev.map(emp =>
-        emp.id === empresaId ? { ...emp, selected: checked } : emp
+        emp.id === empresaId ? { ...emp, selected: !emp.selected } : emp
       )
     );
   };
@@ -187,8 +215,8 @@ const EmpresaSelector: React.FC<EmpresaSelectorProps> = ({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px] max-h-[80vh]">
+    <Dialog open={isOpen} onOpenChange={onClose} aria-label="Adicionar Empresas como Parceiros">
+      <DialogContent className="sm:max-w-[600px] max-h-[80vh]" role="dialog">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             Adicionar Empresas como Parceiros
@@ -199,6 +227,7 @@ const EmpresaSelector: React.FC<EmpresaSelectorProps> = ({
             )}
           </DialogTitle>
         </DialogHeader>
+        {onboardingText}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Busca e Controles */}
@@ -211,6 +240,7 @@ const EmpresaSelector: React.FC<EmpresaSelectorProps> = ({
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Digite o nome ou tipo da empresa..."
                 className="mt-1"
+                aria-label="Buscar empresa"
               />
             </div>
             <div className="flex gap-2">
@@ -220,6 +250,7 @@ const EmpresaSelector: React.FC<EmpresaSelectorProps> = ({
                 size="sm"
                 onClick={toggleTodos}
                 className="flex-1"
+                aria-label={empresasFiltradas.some(emp => !emp.selected) ? 'Selecionar todas' : 'Desmarcar todas'}
               >
                 <Check className="h-4 w-4 mr-2" />
                 {empresasFiltradas.some(emp => !emp.selected) ? 'Selecionar Todas' : 'Desmarcar Todas'}
@@ -230,6 +261,7 @@ const EmpresaSelector: React.FC<EmpresaSelectorProps> = ({
                 size="sm"
                 onClick={limparSelecao}
                 disabled={empresasSelecionadas.length === 0}
+                aria-label="Limpar seleção"
               >
                 <X className="h-4 w-4 mr-2" />
                 Limpar
@@ -240,13 +272,15 @@ const EmpresaSelector: React.FC<EmpresaSelectorProps> = ({
           {/* Lista de Empresas */}
           <div>
             <Label>Empresas Disponíveis ({empresasFiltradas.length})</Label>
-            <ScrollArea className="h-64 mt-2 border rounded-md p-2">
+            <ScrollArea className="h-64 mt-2 border rounded-md p-2" aria-label="Lista de empresas">
               {empresasFiltradas.length > 0 ? (
                 <div className="space-y-2">
                   {empresasFiltradas.map((empresa) => (
                     <div
                       key={empresa.id}
-                      className="flex items-center space-x-3 p-2 rounded-md hover:bg-muted cursor-pointer"
+                      className={`flex items-center space-x-3 p-2 rounded-md hover:bg-muted cursor-pointer border-l-4 ${
+                        empresa.recemAdicionada ? "border-green-400 bg-green-50" : "border-transparent"
+                      }`}
                       onClick={() => handleRowClick(empresa.id)}
                       tabIndex={0}
                       role="checkbox"
@@ -254,8 +288,8 @@ const EmpresaSelector: React.FC<EmpresaSelectorProps> = ({
                     >
                       <Checkbox
                         checked={empresa.selected}
-                        onCheckedChange={(checked) => handleCheckboxChange(checked as boolean, empresa.id)}
-                        onClick={(e) => e.stopPropagation()}
+                        onChange={e => handleCheckboxChange(e, empresa.id)}
+                        onClick={e => e.stopPropagation()}
                         tabIndex={-1}
                         aria-label={`Selecionar empresa ${empresa.nome}`}
                       />
@@ -265,12 +299,23 @@ const EmpresaSelector: React.FC<EmpresaSelectorProps> = ({
                           {empresa.tipo} {empresa.descricao && `• ${empresa.descricao}`}
                         </div>
                       </div>
+                      {empresa.recemAdicionada && (
+                        <Badge variant="success" className="text-[10px] px-2 py-0.5">Adicionada</Badge>
+                      )}
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  {searchTerm ? 'Nenhuma empresa encontrada' : 'Todas as empresas já são parceiros'}
+                <div className="text-center py-8 text-muted-foreground flex flex-col items-center">
+                  <Users className="h-8 w-8 mb-2" />
+                  <span>
+                    {searchTerm
+                      ? 'Nenhuma empresa encontrada'
+                      : 'Todas as empresas já estão cadastradas como parceiros.'}
+                  </span>
+                  <span className="mt-2 text-xs">
+                    Para cadastrar novas, adicione empresas no sistema.
+                  </span>
                 </div>
               )}
             </ScrollArea>
@@ -305,6 +350,7 @@ const EmpresaSelector: React.FC<EmpresaSelectorProps> = ({
               max={100}
               step={5}
               className="mt-2"
+              aria-label="Performance inicial"
             />
             <div className="flex justify-between text-xs text-muted-foreground mt-1">
               <span>0%</span>
@@ -325,6 +371,7 @@ const EmpresaSelector: React.FC<EmpresaSelectorProps> = ({
               onChange={(e) => setFormData(prev => ({ ...prev, observacoes: e.target.value }))}
               placeholder="Observações sobre o parceiro..."
               rows={3}
+              aria-label="Observações"
             />
           </div>
 
@@ -334,12 +381,14 @@ const EmpresaSelector: React.FC<EmpresaSelectorProps> = ({
               variant="outline"
               onClick={onClose}
               disabled={loading}
+              aria-label="Cancelar"
             >
               Cancelar
             </Button>
             <Button
               type="submit"
               disabled={loading || empresasSelecionadas.length === 0}
+              aria-label="Adicionar parceiros"
             >
               {loading
                 ? 'Adicionando...'
