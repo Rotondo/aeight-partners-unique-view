@@ -52,20 +52,38 @@ const MapaParceirosPage: React.FC = () => {
   }
 
   return (
-    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-      {parceiros.map((parceiro) => (
-        <ParceiroDetalhesSimplificado
-          key={parceiro.id}
-          parceiro={parceiro}
+    <div style={{ display: 'flex', minHeight: '100vh' }}>
+      <div style={{ minWidth: 280, borderRight: '1px solid #eee' }}>
+        <MapaParceirosSidebar
           etapas={etapas}
           subniveis={subniveis}
-          associacoes={associacoes}
-          onClose={() => {}}
-          onSave={async () => {}}
-          onAssociarEtapa={async () => {}}
-          onRemoverAssociacao={async () => {}}
+          filtros={{}}
+          stats={{ totalParceiros: parceiros.length, parceirosPorEtapa: {}, parceirosAtivos: 0, parceirosInativos: 0, performanceMedia: 0, parceirosPorSubnivel: {} }}
+          onFiltrosChange={() => {}}
+          onEtapaClick={() => {}}
+          etapaSelecionada={''}
+          expandedEtapas={new Set()}
+          onToggleEtapa={() => {}}
+          onLimparFiltros={() => {}}
         />
-      ))}
+      </div>
+      <div style={{ flex: 1, padding: 24 }}>
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          {parceiros.map((parceiro) => (
+            <ParceiroDetalhesSimplificado
+              key={parceiro.id}
+              parceiro={parceiro}
+              etapas={etapas}
+              subniveis={subniveis}
+              associacoes={associacoes}
+              onClose={() => {}}
+              onSave={async () => {}}
+              onAssociarEtapa={async () => {}}
+              onRemoverAssociacao={async () => {}}
+            />
+          ))}
+        </div>
+      </div>
     </div>
   );
 };
