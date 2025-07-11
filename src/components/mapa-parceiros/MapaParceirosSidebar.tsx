@@ -5,18 +5,33 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ChevronDown, ChevronRight, Search, Users } from 'lucide-react';
-import { EtapaJornada, SubnivelEtapa, MapaParceirosFiltros, MapaParceirosStats } from '@/types/mapa-parceiros';
+import { EtapaJornada, SubnivelEtapa } from '@/types/mapa-parceiros';
+
+// Novo tipo de filtros para maior flexibilidade
+type FiltrosParceiros = {
+  busca?: string;
+  status?: string;
+  etapaId?: string;
+  subnivelId?: string;
+  apenasSemEtapa?: boolean;
+};
+
+interface MapaParceirosStats {
+  parceirosPorEtapa: Record<string, number>;
+  parceirosPorSubnivel: Record<string, number>;
+}
 
 interface MapaParceirosSidebarProps {
   etapas: EtapaJornada[];
   subniveis: SubnivelEtapa[];
-  filtros: MapaParceirosFiltros;
+  filtros: FiltrosParceiros;
   stats: MapaParceirosStats;
-  onFiltrosChange: (filtros: MapaParceirosFiltros) => void;
+  onFiltrosChange: (filtros: FiltrosParceiros) => void;
   onEtapaClick: (etapaId: string) => void;
   etapaSelecionada?: string;
   expandedEtapas: Set<string>;
   onToggleEtapa: (etapaId: string) => void;
+  onLimparFiltros?: () => void;
 }
 
 const MapaParceirosSidebar: React.FC<MapaParceirosSidebarProps> = ({
@@ -28,22 +43,36 @@ const MapaParceirosSidebar: React.FC<MapaParceirosSidebarProps> = ({
   onEtapaClick,
   etapaSelecionada,
   expandedEtapas,
-  onToggleEtapa
+  onToggleEtapa,
+  onLimparFiltros
 }) => {
+  // Handlers para filtros
   const handleBuscaChange = (valor: string) => {
     onFiltrosChange({ ...filtros, busca: valor });
   };
 
   const handleStatusChange = (status: string) => {
-    onFiltrosChange({ ...filtros, status: status === 'todos' ? undefined : status });
+    onFiltrosChange({ ...filtros, status: status === 'todos' ? '' : status });
   };
 
-  const handleEtapaChange = (etapa: string) => {
-    onFiltrosChange({ ...filtros, etapa: etapa === 'todas' ? undefined : etapa });
+  const handleEtapaChange = (etapaId: string) => {
+    onFiltrosChange({ ...filtros, etapaId: etapaId === 'todas' ? '' : etapaId });
   };
 
-  const limparFiltros = () => {
-    onFiltrosChange({});
+  const handleSubnivelChange = (subnivelId: string) => {
+    onFiltrosChange({ ...filtros, subnivelId: subnivelId === 'todos' ? '' : subnivelId });
+  };
+
+  const handleCheckboxChange = (checked: boolean) => {
+    onFiltrosChange({ ...filtros, apenasSemEtapa: checked });
+  };
+
+  const limparFiltrosInterno = () => {
+    if (onLimparFiltros) {
+      onLimparFiltros();
+    } else {
+      onFiltrosChange({});
+    }
   };
 
   const getSubniveisPorEtapa = (etapaId: string) => {
@@ -52,7 +81,7 @@ const MapaParceirosSidebar: React.FC<MapaParceirosSidebarProps> = ({
 
   return (
     <aside className="w-80 bg-background border-r border-border h-full overflow-y-auto flex flex-col">
-      {/* Filtros minimalistas no topo, à direita */}
+      {/* Filtros no topo */}
       <div className="p-4 pb-2 flex flex-col gap-3 border-b border-border">
         <div className="flex flex-col gap-2">
           <div className="flex gap-2">
@@ -61,7 +90,12 @@ const MapaParceirosSidebar: React.FC<MapaParceirosSidebarProps> = ({
               value={filtros.busca || ''}
               onChange={(e) => handleBuscaChange(e.target.value)}
               className="pl-8 rounded-md h-9 bg-muted border w-full"
-              style={{ backgroundImage: `url('data:image/svg+xml;utf8,<svg fill="gray" height="16" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"><path d="M21.71 20.29l-3.388-3.388A8.962 8.962 0 0019 11a9 9 0 10-9 9 8.962 8.962 0 005.902-1.678l3.388 3.388a1 1 0 001.414-1.414zM4 11a7 7 0 1114 0 7 7 0 01-14 0z"></path></svg>')`, backgroundRepeat: 'no-repeat', backgroundPosition: '8px center' }}
+              // Ícone de busca embutido (opcional, pode ajustar visual)
+              style={{
+                backgroundImage: `url('data:image/svg+xml;utf8,<svg fill="gray" height="16" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"><path d="M21.71 20.29l-3.388-3.388A9.953 9.953 0 0 0 19 11c0-5.523-4.477-10-10-10S-1 5.477-1 11s4.477 10 10 10a9.953 9.953 0 0 0 5.902-1.678l3.388 3.388a1 1 0 0 0 1.415-1.415z"/></svg>')`,
+                backgroundRepeat: 'no-repeat',
+                backgroundPosition: '8px center',
+              }}
             />
             <Select value={filtros.status || 'todos'} onValueChange={handleStatusChange}>
               <SelectTrigger className="rounded-md h-9 bg-muted border min-w-[100px]">
@@ -74,7 +108,7 @@ const MapaParceirosSidebar: React.FC<MapaParceirosSidebarProps> = ({
                 <SelectItem value="pendente">Pendente</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={filtros.etapa || 'todas'} onValueChange={handleEtapaChange}>
+            <Select value={filtros.etapaId || 'todas'} onValueChange={handleEtapaChange}>
               <SelectTrigger className="rounded-md h-9 bg-muted border min-w-[100px]">
                 <SelectValue placeholder="Etapa" />
               </SelectTrigger>
@@ -87,11 +121,37 @@ const MapaParceirosSidebar: React.FC<MapaParceirosSidebarProps> = ({
                 ))}
               </SelectContent>
             </Select>
+            <Select value={filtros.subnivelId || 'todos'} onValueChange={handleSubnivelChange}>
+              <SelectTrigger className="rounded-md h-9 bg-muted border min-w-[100px]">
+                <SelectValue placeholder="Subnível" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Subnível</SelectItem>
+                {subniveis.map((subnivel) => (
+                  <SelectItem key={subnivel.id} value={subnivel.id}>
+                    {subnivel.nome}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {/* Checkbox: apenas parceiros SEM etapa atribuída */}
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="apenasSemEtapa"
+              checked={!!filtros.apenasSemEtapa}
+              onChange={(e) => handleCheckboxChange(e.target.checked)}
+              className="w-4 h-4 accent-primary"
+            />
+            <label htmlFor="apenasSemEtapa" className="text-xs text-muted-foreground">
+              Apenas parceiros sem etapa da jornada atribuída
+            </label>
           </div>
           <Button
             variant="ghost"
             size="sm"
-            onClick={limparFiltros}
+            onClick={limparFiltrosInterno}
             className="w-full text-xs"
           >
             Limpar Filtros
@@ -99,7 +159,7 @@ const MapaParceirosSidebar: React.FC<MapaParceirosSidebarProps> = ({
         </div>
       </div>
 
-      {/* Jornada do E-commerce sempre ancorada no topo do sidebar */}
+      {/* Jornada do E-commerce */}
       <div className="p-4 pt-2 flex-1 flex flex-col">
         <div>
           <div className="text-sm flex items-center gap-2 font-semibold mb-2">
@@ -154,15 +214,26 @@ const MapaParceirosSidebar: React.FC<MapaParceirosSidebarProps> = ({
                     {subnivelsDaEtapa.length > 0 && (
                       <CollapsibleContent className="px-4 pb-2">
                         <div className="space-y-1">
-                          {subnivelsDaEtapa.map((subnivel) => (
-                            <div
-                              key={subnivel.id}
-                              className="flex items-center gap-2 py-1 px-2 rounded text-xs text-muted-foreground hover:bg-muted/30 cursor-pointer"
-                            >
-                              <div className="w-2 h-2 rounded-full bg-muted-foreground/40" />
-                              <span className="truncate">{subnivel.nome}</span>
-                            </div>
-                          ))}
+                          {subnivelsDaEtapa.map((subnivel) => {
+                            const parceirosSubnivel = stats.parceirosPorSubnivel[subnivel.id] || 0;
+                            return (
+                              <div
+                                key={subnivel.id}
+                                className={`flex items-center gap-2 py-1 px-2 rounded text-xs hover:bg-muted/30 cursor-pointer ${
+                                  filtros.subnivelId === subnivel.id ? 'bg-primary/10 text-primary' : 'text-muted-foreground'
+                                }`}
+                                onClick={() => handleSubnivelChange(subnivel.id)}
+                              >
+                                <div className="w-2 h-2 rounded-full bg-muted-foreground/40" />
+                                <span className="truncate">{subnivel.nome}</span>
+                                {parceirosSubnivel > 0 && (
+                                  <Badge variant="outline" className="text-[10px]">
+                                    {parceirosSubnivel}
+                                  </Badge>
+                                )}
+                              </div>
+                            );
+                          })}
                         </div>
                       </CollapsibleContent>
                     )}
