@@ -236,11 +236,9 @@ const MapaParceirosSidebar: React.FC<MapaParceirosSidebarProps> = ({
                                 >
                                   <div className="w-2 h-2 rounded-full bg-muted-foreground/40" />
                                   <span className="truncate">{subnivel.nome}</span>
-                                  {parceirosSubnivel > 0 && (
-                                    <Badge variant="outline" className="text-[10px]">
-                                      {parceirosSubnivel}
-                                    </Badge>
-                                  )}
+                                  <Badge variant="outline" className="text-[10px]">
+                                    {parceirosSubnivel}
+                                  </Badge>
                                 </div>
                               );
                             })

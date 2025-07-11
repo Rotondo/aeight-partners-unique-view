@@ -239,9 +239,12 @@ const MapaParceirosTable: React.FC<MapaParceirosTableProps> = ({
           <tbody>
             {sortedParceiros.length === 0 ? (
               <tr>
-                <td colSpan={5} className="text-center py-4 text-muted-foreground text-xs">
-                  Nenhum parceiro encontrado.<br />
-                  Adicione novos parceiros ou ajuste os filtros.
+                <td colSpan={5} className="text-center py-8 text-muted-foreground text-base">
+                  <div className="flex flex-col items-center gap-2">
+                    <span role="img" aria-label="Sem parceiros" style={{fontSize: '2rem'}}>🤝</span>
+                    <div>Nenhum parceiro associado a esta etapa ou subnível.</div>
+                    <div className="text-xs text-muted-foreground">Associe parceiros para visualizar aqui ou navegue entre as etapas na barra lateral.</div>
+                  </div>
                 </td>
               </tr>
             ) : (
@@ -346,23 +349,6 @@ const MapaParceirosTable: React.FC<MapaParceirosTableProps> = ({
           </Button>
         </div>
       )}
-      {/* Modal de edição simples */}
-      <Dialog open={!!editParceiro} onOpenChange={open => !open && setEditParceiro(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Editar Parceiro</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-2">
-            <div><b>Nome:</b> {editParceiro?.empresa?.nome}</div>
-            <div><b>Status:</b> {editParceiro?.status}</div>
-            <div><b>Observações:</b> {editParceiro?.observacoes || '-'}</div>
-            {/* Adicione campos editáveis conforme necessário */}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditParceiro(null)}>Fechar</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
       {/* Confirmação de exclusão */}
       <Dialog open={deleteConfirm.open} onOpenChange={open => !open && setDeleteConfirm({ open: false, parceiro: null })}>
         <DialogContent>
