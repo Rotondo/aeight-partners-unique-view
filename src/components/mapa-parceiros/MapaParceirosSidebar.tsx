@@ -211,30 +211,34 @@ const MapaParceirosSidebar: React.FC<MapaParceirosSidebarProps> = ({
                           <ChevronRight className="h-4 w-4 text-muted-foreground" />
                       )}
                     </CollapsibleTrigger>
-                    {subnivelsDaEtapa.length > 0 && (
+                    {isExpanded && (
                       <CollapsibleContent className="px-4 pb-2">
                         <div className="space-y-1">
-                          {subnivelsDaEtapa.map((subnivel) => {
-                            const parceirosSubnivel = stats.parceirosPorSubnivel[subnivel.id] || 0;
-                            const isSubnivelSelecionado = subnivel.id === filtros.subnivelId || subnivel.id === (typeof subnivelSelecionado === 'string' && subnivelSelecionado);
-                            return (
-                              <div
-                                key={subnivel.id}
-                                className={`flex items-center gap-2 py-1 px-2 rounded text-xs hover:bg-muted/30 cursor-pointer ${
-                                  isSubnivelSelecionado ? 'bg-primary/10 text-primary' : 'text-muted-foreground'
-                                }`}
-                                onClick={() => onSubnivelClick && onSubnivelClick(subnivel.id)}
-                              >
-                                <div className="w-2 h-2 rounded-full bg-muted-foreground/40" />
-                                <span className="truncate">{subnivel.nome}</span>
-                                {parceirosSubnivel > 0 && (
-                                  <Badge variant="outline" className="text-[10px]">
-                                    {parceirosSubnivel}
-                                  </Badge>
-                                )}
-                              </div>
-                            );
-                          })}
+                          {subnivelsDaEtapa.length === 0 ? (
+                            <div className="text-xs text-muted-foreground italic">Sem subníveis cadastrados</div>
+                          ) : (
+                            subnivelsDaEtapa.map((subnivel) => {
+                              const parceirosSubnivel = stats.parceirosPorSubnivel[subnivel.id] || 0;
+                              const isSubnivelSelecionado = subnivel.id === filtros.subnivelId || subnivel.id === (typeof subnivelSelecionado === 'string' && subnivelSelecionado);
+                              return (
+                                <div
+                                  key={subnivel.id}
+                                  className={`flex items-center gap-2 py-1 px-2 rounded text-xs hover:bg-muted/30 cursor-pointer ${
+                                    isSubnivelSelecionado ? 'bg-primary/10 text-primary' : 'text-muted-foreground'
+                                  }`}
+                                  onClick={() => onSubnivelClick && onSubnivelClick(subnivel.id)}
+                                >
+                                  <div className="w-2 h-2 rounded-full bg-muted-foreground/40" />
+                                  <span className="truncate">{subnivel.nome}</span>
+                                  {parceirosSubnivel > 0 && (
+                                    <Badge variant="outline" className="text-[10px]">
+                                      {parceirosSubnivel}
+                                    </Badge>
+                                  )}
+                                </div>
+                              );
+                            })
+                          )}
                         </div>
                       </CollapsibleContent>
                     )}
