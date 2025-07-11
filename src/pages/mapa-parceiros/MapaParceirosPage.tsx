@@ -119,7 +119,11 @@ const MapaParceirosPage: React.FC = () => {
       };
       
       await atualizarParceiro(parceiroSelecionado.id, dadosFormatados);
-      setParceiroSelecionado({ ...parceiroSelecionado, ...dadosFormatados });
+      setParceiroSelecionado({ 
+        ...parceiroSelecionado, 
+        ...dadosFormatados,
+        performance_score: Number(dadosFormatados.performance_score || 0)
+      });
     }
   };
 
