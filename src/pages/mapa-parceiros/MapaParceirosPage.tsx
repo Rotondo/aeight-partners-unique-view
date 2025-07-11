@@ -4,41 +4,40 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Plus,
-  // Search, // Comentado se não usado diretamente ou para simplificar
-  Grid3X3,
-  List,
-  // Filter, // Comentado se não usado diretamente ou para simplificar
-  Users,
+  Grid3X3, // Usado em VIEW_MODES e TabsTrigger
+  List,    // Usado em VIEW_MODES e TabsTrigger
+  Users,   // Usado em emptyStateContent
   ArrowLeft,
-  Route, // Mantido da branch 'main' para a visualização de Jornada
-  // SortAsc, // Será importado de lucide-react se necessário
-  // SortDesc // Será importado de lucide-react se necessário
+  Route,   // Usado em TabsTrigger
+  SortAsc, // Usado em Button de ordenação
+  SortDesc // Usado em Button de ordenação
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useMapaParceiros } from '@/hooks/useMapaParceiros';
 import MapaParceirosSidebar from '@/components/mapa-parceiros/MapaParceirosSidebar';
-import ParceiroCard from '@/components/mapa-parceiros/ParceiroCard'; // Priorizando ParceiroCard
+// import ParceiroCard from '@/components/mapa-parceiros/ParceiroCard'; // Comentado por enquanto, main usa DetalhesSimplificado para cards
 import EmpresaSelector from '@/components/mapa-parceiros/EmpresaSelector';
-import JornadaVisualization from '@/components/mapa-parceiros/JornadaVisualization'; // Mantido
-import MapaParceirosTable from '@/components/mapa-parceiros/MapaParceirosTable';     // Mantido
+import JornadaVisualization from '@/components/mapa-parceiros/JornadaVisualization';
+import MapaParceirosTable from '@/components/mapa-parceiros/MapaParceirosTable';
 import { ParceiroMapa, AssociacaoParceiroEtapa, EtapaJornada, MapaParceirosFiltros } from '@/types/mapa-parceiros';
 import { DemoModeIndicator } from '@/components/privacy/DemoModeIndicator';
 import { DemoModeToggle } from '@/components/privacy/DemoModeToggle';
 import { useIsMobile } from '@/hooks/use-mobile';
-import ParceiroDetalhesSimplificado from '@/components/mapa-parceiros/ParceiroDetalhesSimplificado'; // Mantido
+import ParceiroDetalhesSimplificado from '@/components/mapa-parceiros/ParceiroDetalhesSimplificado';
 // import { calcularScoreQuadrante } from '@/utils/parceiro-quadrante-score'; // Comentado - ARQUIVO AUSENTE
-
-// Ícones para ordenação (se forem usados, descomentar e importar)
-// import { SortAsc, SortDesc } from 'lucide-react';
-import { Input } from '@/components/ui/input'; // Adicionado para busca rápida
-import { Badge } from '@/components/ui/badge'; // Adicionado para badges
+import Badge from '@/components/ui/badge';
+import Input from '@/components/ui/input';
 
 type OrdenacaoParceiros = 'nome' | 'performance' | 'criado_em';
 
-const VIEW_MODES = [
+// VIEW_MODES combinados - Adicionando Jornada
+const TAB_VIEWS = [
+  { label: 'Jornada', value: 'jornada', icon: <Route className="h-4 w-4" /> },
   { label: 'Grid', value: 'grid', icon: <Grid3X3 className="h-4 w-4" /> },
-  { label: 'Lista', value: 'lista', icon: <List className="h-4 w-4" /> }
+  { label: 'Lista', value: 'lista', icon: <List className="h-4 w-4" /> },
+  // { label: 'Tabela Legada', value: 'table_legacy', icon: <List className="h-4 w-4" /> }, // Opcional
 ];
+
 
 const MapaParceirosPage: React.FC = () => {
   const navigate = useNavigate();
@@ -49,140 +48,139 @@ const MapaParceirosPage: React.FC = () => {
     parceiros,
     associacoes,
     loading,
-    // filtros, // Será usado filtrosLocal da branch 'main' e sincronizado com setFiltros do hook
     stats,
-    setFiltros, // do hook useMapaParceiros
+    setFiltros: setHookFiltros, // Renomeado para clareza, vem do Hook e espera MapaParceirosFiltros
     criarParceiro,
     atualizarParceiro,
     deletarParceiro,
     associarParceiroEtapa,
     removerAssociacao,
-    carregarDados // da branch MapadeParceiros
+    carregarDados
   } = useMapaParceiros();
 
-  // States da branch MapadeParceiros (priorizados e adaptados)
+  // Estados para a Sidebar e visualização de Jornada/Tabela (da antiga 'fix/mapa-parceiros-filtros-inconsistentes')
+  const [filtrosSidebar, setFiltrosSidebar] = useState<MapaParceirosFiltros>({
+    busca: '',
+    status: '', // Usar string vazia para 'todos'
+    etapaId: '',
+    subnivelId: '',
+    apenasSemEtapa: false,
+  });
+
+  // Estados para Grid/Lista (da 'main')
+  const [viewModeGridLista, setViewModeGridLista] = useState<'grid' | 'lista'>('grid');
+  const [ordenacao, setOrdenacao] = useState<OrdenacaoParceiros>('nome');
+  const [ordemAsc, setOrdemAsc] = useState<boolean>(true);
+  const [buscaRapida, setBuscaRapida] = useState('');
+  const [statusFiltro, setStatusFiltro] = useState<string>('todos'); // 'todos', 'ativo', 'inativo', 'pendente'
+  const [etapaSelecionadaHeader, setEtapaSelecionadaHeader] = useState<string | undefined>(undefined); // Para filtro no header do grid/lista
+
+  // Estado unificado para a aba de visualização principal
+  const [currentViewTab, setCurrentViewTab] = useState<'jornada' | 'grid' | 'lista' | 'table_legacy'>('jornada');
+
   const [expandedEtapas, setExpandedEtapas] = useState<Set<string>>(new Set());
   const [parceiroSelecionado, setParceiroSelecionado] = useState<ParceiroMapa | null>(null);
   const [showDetalhes, setShowDetalhes] = useState(false);
   const [showEmpresaSelector, setShowEmpresaSelector] = useState(false);
 
-  // View mode e ordenação da branch MapadeParceiros
-  const [viewMode, setViewMode] = useState<'jornada' | 'grid' | 'lista'>('jornada'); // Adicionado 'jornada'
-  const [ordenacao, setOrdenacao] = useState<OrdenacaoParceiros>('nome');
-  const [ordemAsc, setOrdemAsc] = useState<boolean>(true);
+  // Handler para atualizar filtros da Sidebar e notificar o hook
+  const handleAtualizarFiltrosSidebar = (novosFiltrosSidebar: Partial<MapaParceirosFiltros>) => {
+    const mergedFiltros = { ...filtrosSidebar, ...novosFiltrosSidebar };
+    setFiltrosSidebar(mergedFiltros);
+    setHookFiltros(mergedFiltros); // Atualiza o hook com os filtros da sidebar
+    // Não chamamos carregarDados aqui, pois o hook deve reagir a setHookFiltros
+  };
 
-  // Filtros locais (combinação das duas branches)
-  const [filtrosLocal, setFiltrosLocal] = useState<MapaParceirosFiltros & { etapaSelecionada?: string }>({
-    busca: '', // Da branch 'main' (filtrosLocal.busca) e MapadeParceiros (buscaRapida)
-    status: 'todos', // Da branch MapadeParceiros (statusFiltro), adaptado para MapaParceirosFiltros
-    etapaId: '',
-    subnivelId: '',
-    apenasSemEtapa: false,
-    etapaSelecionada: undefined, // Da branch MapadeParceiros
-  });
-
-  // Função para limpar todos os filtros (adaptada)
-  const handleLimparFiltros = () => {
-    const filtrosVazios: MapaParceirosFiltros & { etapaSelecionada?: string } = {
-      busca: '',
-      status: 'todos',
-      etapaId: '',
-      subnivelId: '',
-      apenasSemEtapa: false,
-      etapaSelecionada: undefined,
+  const handleLimparFiltrosSidebar = () => {
+    const resetedFilters: MapaParceirosFiltros = {
+      busca: '', status: '', etapaId: '', subnivelId: '', apenasSemEtapa: false
     };
-    setFiltrosLocal(filtrosVazios);
-    setFiltros(filtrosVazios); // Sincroniza com o hook
-    if (carregarDados) carregarDados(filtrosVazios); // Recarrega dados se necessário
+    setFiltrosSidebar(resetedFilters);
+    setHookFiltros(resetedFilters);
   };
 
-  // Função para atualizar filtros (adaptada)
-  const handleAtualizarFiltros = (atualizacoes: Partial<MapaParceirosFiltros & { etapaSelecionada?: string }>) => {
-    const novosFiltros = { ...filtrosLocal, ...atualizacoes };
-    setFiltrosLocal(novosFiltros);
-    setFiltros(novosFiltros); // Sincroniza com o hook
-    if (carregarDados) carregarDados(novosFiltros); // Recarrega dados
-  };
+  // Memo para parceiros filtrados (baseado na view atual)
+  const parceirosFiltradosParaView = useMemo(() => {
+    let result = [...parceiros];
 
-  const handleBuscaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    handleAtualizarFiltros({ busca: e.target.value });
-  };
-
-  const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    handleAtualizarFiltros({ status: e.target.value === 'todos' ? undefined : e.target.value });
-  };
-
-
-  // Unificação lógica de filtros/ordenação, memoizada
-  const parceirosFiltrados = useMemo(() => {
-    let result = [...parceiros]; // Começa com todos os parceiros do hook
-    const termoBusca = filtrosLocal.busca?.trim().toLowerCase();
-
-    if (termoBusca) {
-      result = result.filter(p =>
-        (p.empresa?.nome || '').toLowerCase().includes(termoBusca) ||
-        (p.empresa?.tipo || '').toLowerCase().includes(termoBusca) ||
-        (p.empresa?.descricao || '').toLowerCase().includes(termoBusca)
-      );
-    }
-    if (filtrosLocal.status && filtrosLocal.status !== 'todos') {
-      result = result.filter(p => p.status === filtrosLocal.status);
-    }
-    if (filtrosLocal.etapaId) { // Filtro de etapa da sidebar (Jornada ou Grade)
-        result = result.filter(p => associacoes.some(a => a.parceiro_id === p.id && a.etapa_id === filtrosLocal.etapaId));
-    }
-    if (filtrosLocal.subnivelId) { // Filtro de subnível da sidebar (Jornada ou Grade)
-        result = result.filter(p => associacoes.some(a => a.parceiro_id === p.id && a.subnivel_id === filtrosLocal.subnivelId));
-    }
-    if (filtrosLocal.apenasSemEtapa) {
+    if (currentViewTab === 'jornada' || currentViewTab === 'table_legacy') {
+      // Aplicar filtros da Sidebar (filtrosSidebar)
+      if (filtrosSidebar.busca) {
+        const termo = filtrosSidebar.busca.toLowerCase();
+        result = result.filter(p => (p.empresa?.nome || '').toLowerCase().includes(termo));
+      }
+      if (filtrosSidebar.status) {
+        result = result.filter(p => p.status === filtrosSidebar.status);
+      }
+      if (filtrosSidebar.etapaId) {
+        result = result.filter(p => associacoes.some(a => a.parceiro_id === p.id && a.etapa_id === filtrosSidebar.etapaId));
+      }
+      if (filtrosSidebar.subnivelId) {
+        result = result.filter(p => associacoes.some(a => a.parceiro_id === p.id && a.subnivel_id === filtrosSidebar.subnivelId));
+      }
+      if (filtrosSidebar.apenasSemEtapa) {
         result = result.filter(p => !associacoes.some(a => a.parceiro_id === p.id && (a.etapa_id || a.subnivel_id)));
+      }
+    } else { // Grid ou Lista
+      // Aplicar filtros do Header (buscaRapida, statusFiltro, etapaSelecionadaHeader)
+      const termo = buscaRapida.trim().toLowerCase();
+      if (termo) {
+        result = result.filter(p =>
+          (p.empresa?.nome || '').toLowerCase().includes(termo) ||
+          (p.empresa?.tipo || '').toLowerCase().includes(termo) ||
+          (p.empresa?.descricao || '').toLowerCase().includes(termo)
+        );
+      }
+      if (statusFiltro !== 'todos') {
+        result = result.filter(p => p.status === statusFiltro);
+      }
+      if (etapaSelecionadaHeader) {
+        result = result.filter(p => associacoes.some(a => a.parceiro_id === p.id && a.etapa_id === etapaSelecionadaHeader));
+      }
     }
-    // Filtro de etapaSelecionada (do header da visualização de Grid/Lista da branch MapadeParceiros)
-    if (filtrosLocal.etapaSelecionada) {
-         result = result.filter(p => associacoes.some(a => a.parceiro_id === p.id && a.etapa_id === filtrosLocal.etapaSelecionada));
-    }
-
     return result;
-  }, [parceiros, associacoes, filtrosLocal]);
+  }, [parceiros, associacoes, currentViewTab, filtrosSidebar, buscaRapida, statusFiltro, etapaSelecionadaHeader]);
 
-  // Ordenação memoizada
-  const parceirosOrdenados = useMemo(() => {
-    return [...parceirosFiltrados].sort((a, b) => {
-      let resultado = 0;
+  // Ordenação para Grid/Lista
+  const parceirosOrdenadosParaGridLista = useMemo(() => {
+    // Só ordenar se a view for grid ou lista
+    if (currentViewTab !== 'grid' && currentViewTab !== 'lista') return parceirosFiltradosParaView;
+
+    return [...parceirosFiltradosParaView].sort((a, b) => {
+      let comparacao = 0;
       switch (ordenacao) {
         case 'nome':
-          resultado = (a.empresa?.nome || '').localeCompare(b.empresa?.nome || '');
+          comparacao = (a.empresa?.nome || '').localeCompare(b.empresa?.nome || '');
           break;
         case 'performance':
-          // resultado = calcularScoreQuadrante(a) - calcularScoreQuadrante(b); // Comentado
-          resultado = (a.performance_score || 0) - (b.performance_score || 0); // Usando performance_score direto
+          // comparacao = calcularScoreQuadrante(a) - calcularScoreQuadrante(b); // Comentado
+          comparacao = (a.performance_score || 0) - (b.performance_score || 0);
           break;
         case 'criado_em':
-          resultado = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+          comparacao = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
           break;
       }
-      return ordemAsc ? resultado : -resultado;
+      return ordemAsc ? comparacao : -comparacao;
     });
-  }, [parceirosFiltrados, ordenacao, ordemAsc]);
+  }, [parceirosFiltradosParaView, ordenacao, ordemAsc, currentViewTab]);
+
 
   const getEtapaInfo = useCallback((etapaId: string) => etapas.find(e => e.id === etapaId), [etapas]);
 
-  const handleToggleEtapaSidebar = (etapaId: string) => { // Renomeado para evitar conflito
-    const newExpanded = new Set(expandedEtapas);
-    if (newExpanded.has(etapaId)) {
-      newExpanded.delete(etapaId);
-    } else {
-      newExpanded.add(etapaId);
-    }
-    setExpandedEtapas(newExpanded);
+  const handleToggleEtapaExpansao = (etapaId: string) => { // Para expandir/colapsar na Jornada ou Sidebar
+    setExpandedEtapas(prev => {
+      const newExpanded = new Set(prev);
+      newExpanded.has(etapaId) ? newExpanded.delete(etapaId) : newExpanded.add(etapaId);
+      return newExpanded;
+    });
   };
 
-  // Handler de seleção de etapa (para o filtro principal, usado no header do grid/lista)
-  const handleEtapaHeaderClick = (etapaId: string) => {
-    const novaEtapaSelecionada = etapaId === filtrosLocal.etapaSelecionada ? undefined : etapaId;
-    handleAtualizarFiltros({ etapaSelecionada: novaEtapaSelecionada, etapaId: undefined, subnivelId: undefined }); // Limpa outros filtros de etapa/subnível
+  const handleEtapaClickSidebar = (etapaId: string) => {
+    handleAtualizarFiltrosSidebar({
+      etapaId: filtrosSidebar.etapaId === etapaId ? '' : etapaId,
+      subnivelId: '' // Limpa subnível ao clicar em etapa
+    });
   };
-
 
   const handleParceiroClick = (parceiro: ParceiroMapa) => {
     setParceiroSelecionado(parceiro);
@@ -194,17 +192,16 @@ const MapaParceirosPage: React.FC = () => {
   const handleSalvarEmpresaParceiro = async (dados: { 
     empresa_id: string; 
     status: string; 
-    performance_score: number | string; // Aceita string ou number
+    performance_score: number | string;
     observacoes?: string 
   }) => {
-    const dadosFormatados = {
+    await criarParceiro({
       empresa_id: dados.empresa_id,
       status: dados.status as 'ativo' | 'inativo' | 'pendente',
-      performance_score: Number(dados.performance_score) || 0, // Garante que seja number
+      performance_score: Number(dados.performance_score) || 0,
       observacoes: dados.observacoes
-    };
-    await criarParceiro(dadosFormatados);
-    if (carregarDados) await carregarDados(filtrosLocal); // Recarrega dados
+    });
+    if (carregarDados) await carregarDados();
   };
 
   const handleDeletarParceiro = async (parceiro: ParceiroMapa) => {
@@ -214,7 +211,7 @@ const MapaParceirosPage: React.FC = () => {
         setShowDetalhes(false);
         setParceiroSelecionado(null);
       }
-      if (carregarDados) await carregarDados(filtrosLocal); // Recarrega dados
+      if (carregarDados) await carregarDados();
     }
   };
 
@@ -227,24 +224,25 @@ const MapaParceirosPage: React.FC = () => {
         })
       };
       await atualizarParceiro(parceiroSelecionado.id, dadosFormatados);
-      setParceiroSelecionado(prev => prev ? {
+      setParceiroSelecionado(prev => prev ? ({
         ...prev,
         ...dadosFormatados,
         performance_score: Number(dadosFormatados.performance_score) || 0
-      } : null);
-      if (carregarDados) await carregarDados(filtrosLocal); // Recarrega dados
+      }) : null);
+      if (carregarDados) await carregarDados();
     }
   };
 
   const handleNavegarParceiro = (sentido: 'prev' | 'next') => {
     if (!parceiroSelecionado) return;
-    const idx = parceirosOrdenados.findIndex(p => p.id === parceiroSelecionado.id);
+    // Usar parceirosOrdenadosParaGridLista se em grid/lista, senão parceirosFiltradosParaView
+    const listaAtual = (currentViewTab === 'grid' || currentViewTab === 'lista') ? parceirosOrdenadosParaGridLista : parceirosFiltradosParaView;
+    const idx = listaAtual.findIndex(p => p.id === parceiroSelecionado.id);
     const novoIdx = sentido === 'prev' ? idx - 1 : idx + 1;
-    if (novoIdx >= 0 && novoIdx < parceirosOrdenados.length) {
-      setParceiroSelecionado(parceirosOrdenados[novoIdx]);
+    if (novoIdx >= 0 && novoIdx < listaAtual.length) {
+      setParceiroSelecionado(listaAtual[novoIdx]);
     }
   };
-
 
   if (loading) {
     return (
@@ -257,12 +255,40 @@ const MapaParceirosPage: React.FC = () => {
     );
   }
 
-  const emptyStateContent = filtrosLocal.etapaSelecionada
-    ? null
-    : null;
+  // Conteúdo do empty state e onboarding da branch 'main'
+  const emptyStateContent = etapaSelecionadaHeader
+    ? (
+      <div className="text-center py-10">
+        <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+        <h3 className="text-lg font-medium mb-2">Nenhum parceiro nesta etapa</h3>
+        <p className="text-muted-foreground mb-4">
+          Esta etapa ainda não possui parceiros associados.<br />Adicione parceiros ou associe-os a etapas!
+        </p>
+        <Button onClick={handleNovoParceiro}>
+          <Plus className="h-4 w-4 mr-2" />
+          Adicionar Parceiro
+        </Button>
+      </div>
+    )
+    : (
+      <div className="text-center py-10">
+        <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+        <h3 className="text-lg font-medium mb-2">Nenhum parceiro cadastrado</h3>
+        <p className="text-muted-foreground mb-4">
+          Comece adicionando seus primeiros parceiros ao mapa sequencial
+        </p>
+        <Button onClick={handleNovoParceiro}>
+          <Plus className="h-4 w-4 mr-2" />
+          Adicionar Primeiro Parceiro
+        </Button>
+      </div>
+    );
 
-  const onboardingText = null;
-
+  const onboardingText = (
+    <div className="mb-4 text-sm text-muted-foreground">
+      <b>Mapa Sequencial de Parceiros:</b> Visualize e gerencie seus parceiros por etapa da jornada do e-commerce. Identifique facilmente etapas carentes ou saturadas de parceiros e potencialize sua estratégia!
+    </div>
+  );
 
   return (
     <div className="h-screen flex flex-col" aria-label="Mapa Sequencial de Parceiros">
@@ -305,145 +331,159 @@ const MapaParceirosPage: React.FC = () => {
           <MapaParceirosSidebar
             etapas={etapas}
             subniveis={subniveis}
-            filtros={filtrosLocal} // Passa filtrosLocal unificado
+            filtros={filtrosSidebar}
             stats={stats}
-            onFiltrosChange={handleAtualizarFiltros} // Usa a função unificada
-            onEtapaClick={(etapaId) => handleAtualizarFiltros({ etapaId: filtrosLocal.etapaId === etapaId ? undefined : etapaId, subnivelId: undefined, etapaSelecionada: undefined })}
-            etapaSelecionada={filtrosLocal.etapaId} // Para destacar na sidebar
+            onFiltrosChange={handleAtualizarFiltrosSidebar}
+            onEtapaClick={handleEtapaClickSidebar} // Para filtro da sidebar
+            etapaSelecionada={filtrosSidebar.etapaId}
             expandedEtapas={expandedEtapas}
-            onToggleEtapa={handleToggleEtapaSidebar}
-            onLimparFiltros={handleLimparFiltros}
+            onToggleEtapa={handleToggleEtapaExpansao} // Para expandir/colapsar na sidebar
+            onLimparFiltros={handleLimparFiltrosSidebar}
           />
         )}
 
-        <div className="flex-1 flex flex-col min-w-0 p-4 space-y-4">
-            {/* Header da área de conteúdo com Tabs de visualização */}
-            <div className="flex items-center justify-between">
-                <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'jornada' | 'grid' | 'lista')}>
-                    <TabsList>
-                        <TabsTrigger value="jornada" className="flex items-center gap-2">
-                            <Route className="h-4 w-4" /> {!isMobile && "Jornada"}
-                        </TabsTrigger>
-                        <TabsTrigger value="grid" className="flex items-center gap-2">
-                            <Grid3X3 className="h-4 w-4" /> {!isMobile && "Grid"}
-                        </TabsTrigger>
-                        <TabsTrigger value="lista" className="flex items-center gap-2">
-                            <List className="h-4 w-4" /> {!isMobile && "Lista"}
-                        </TabsTrigger>
-                    </TabsList>
-                </Tabs>
-                {/* Controles de busca e filtro (somente para grid/lista) */}
-                {(viewMode === 'grid' || viewMode === 'lista') && (
-                    <div className="flex gap-2 items-center">
-                        <Input
-                            placeholder="Buscar parceiro..."
-                            value={filtrosLocal.busca}
-                            onChange={handleBuscaChange}
-                            className="max-w-[180px] sm:max-w-xs"
-                            aria-label="Buscar parceiro"
-                        />
-                        <select
-                            value={filtrosLocal.status || 'todos'}
-                            onChange={handleStatusChange}
-                            className="rounded-md border px-2 py-1 text-sm text-muted-foreground bg-background h-10"
-                            aria-label="Filtrar por status"
-                        >
-                            <option value="todos">Status (Todos)</option>
-                            <option value="ativo">Ativo</option>
-                            <option value="inativo">Inativo</option>
-                            <option value="pendente">Pendente</option>
-                        </select>
-                        {/* Ordenação pode ser adicionada aqui se necessário para grid/lista */}
-                    </div>
-                )}
-            </div>
+        <div className="flex-1 flex flex-col min-w-0 p-4">
+          {/* Header da área de conteúdo com Tabs de visualização */}
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+            <Tabs value={currentViewTab} onValueChange={(v) => setCurrentViewTab(v as any)}>
+              <TabsList>
+                {TAB_VIEWS.map(view => (
+                  <TabsTrigger key={view.value} value={view.value} className="flex items-center gap-2">
+                    {view.icon} {!isMobile && view.label}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
 
-            {/* Conteúdo principal baseado na viewMode */}
-            <div className="flex-1 overflow-y-auto">
-                {viewMode === 'jornada' && (
-                    <JornadaVisualization
+            {/* Controles de busca e filtro (somente para grid/lista) */}
+            {(currentViewTab === 'grid' || currentViewTab === 'lista') && (
+              <div className="flex flex-wrap items-center gap-2">
+                <Input
+                  placeholder="Buscar parceiro..."
+                  value={buscaRapida}
+                  onChange={e => setBuscaRapida(e.target.value)}
+                  className="h-9 max-w-[150px] sm:max-w-xs"
+                  aria-label="Buscar parceiro"
+                />
+                <select
+                  value={statusFiltro}
+                  onChange={e => setStatusFiltro(e.target.value)}
+                  className="h-9 rounded-md border px-2 py-1 text-sm text-muted-foreground bg-background"
+                  aria-label="Filtrar por status"
+                >
+                  <option value="todos">Status (Todos)</option>
+                  <option value="ativo">Ativo</option>
+                  <option value="inativo">Inativo</option>
+                  <option value="pendente">Pendente</option>
+                </select>
+                <select
+                  value={etapaSelecionadaHeader || ''}
+                  onChange={e => setEtapaSelecionadaHeader(e.target.value || undefined)}
+                  className="h-9 rounded-md border px-2 py-1 text-sm text-muted-foreground bg-background"
+                  aria-label="Filtrar por Etapa"
+                >
+                  <option value="">Etapa (Todas)</option>
+                  {etapas.map(etapa => (
+                    <option key={etapa.id} value={etapa.id}>{etapa.nome}</option>
+                  ))}
+                </select>
+                <div className="flex items-center gap-1">
+                  <select
+                    value={ordenacao}
+                    onChange={e => setOrdenacao(e.target.value as OrdenacaoParceiros)}
+                    className="h-9 rounded-md border px-2 py-1 text-sm text-muted-foreground bg-background"
+                    aria-label="Ordenar por"
+                  >
+                    <option value="nome">Nome</option>
+                    <option value="performance">Performance</option>
+                    <option value="criado_em">Data Cadastro</option>
+                  </select>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setOrdemAsc(v => !v)}
+                    aria-label="Alternar ordem"
+                  >
+                    {ordemAsc ? <SortAsc className="h-4 w-4" /> : <SortDesc className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {currentViewTab !== 'jornada' && currentViewTab !== 'table_legacy' && onboardingText}
+
+          {/* Conteúdo principal baseado na viewMode */}
+          <div className="flex-1 overflow-y-auto">
+            {currentViewTab === 'jornada' && (
+              <JornadaVisualization
+                etapas={etapas}
+                subniveis={subniveis}
+                parceiros={parceirosFiltradosParaView}
+                associacoes={associacoes}
+                expandedEtapas={expandedEtapas}
+                onToggleEtapa={handleToggleEtapaExpansao} // Para expandir/colapsar na jornada
+                onParceiroClick={handleParceiroClick}
+              />
+            )}
+            {(currentViewTab === 'grid' || currentViewTab === 'lista') && (
+              parceirosOrdenadosParaGridLista.length > 0 ? (
+                currentViewTab === 'grid' ? (
+                  <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                    {parceirosOrdenadosParaGridLista.map((parceiro) => (
+                       <ParceiroDetalhesSimplificado // Usando ParceiroDetalhesSimplificado como na main para os cards
+                        key={parceiro.id}
+                        parceiro={parceiro}
                         etapas={etapas}
                         subniveis={subniveis}
-                        parceiros={parceirosFiltrados} // Usa parceiros já filtrados pelos filtros globais
                         associacoes={associacoes}
-                        expandedEtapas={expandedEtapas}
-                        onToggleEtapa={handleToggleEtapaSidebar}
-                        onParceiroClick={handleParceiroClick}
-                    />
-                )}
-                {(viewMode === 'grid' || viewMode === 'lista') && (
-                    <>
-                        {/* Seletor de Etapa para Grid/Lista */}
-                        <div className="mb-4">
-                            <label htmlFor="etapa-selector-header" className="text-sm font-medium mr-2">Filtrar por Etapa Principal:</label>
-                            <select
-                                id="etapa-selector-header"
-                                value={filtrosLocal.etapaSelecionada || ''}
-                                onChange={(e) => handleEtapaHeaderClick(e.target.value || '')}
-                                className="rounded-md border px-2 py-1 text-sm text-muted-foreground bg-background h-10"
-                            >
-                                <option value="">Todas as Etapas</option>
-                                {etapas.map(etapa => (
-                                    <option key={etapa.id} value={etapa.id}>{etapa.nome}</option>
-                                ))}
-                            </select>
-                        </div>
-
-                        {parceirosOrdenados.length > 0 ? (
-                            viewMode === 'grid' ? (
-                                <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-                                    {parceirosOrdenados.map((parceiro) => (
-                                        <ParceiroCard
-                                            key={parceiro.id}
-                                            parceiro={parceiro}
-                                            onClick={() => handleParceiroClick(parceiro)}
-                                            // onDelete={() => handleDeletarParceiro(parceiro)} // Ações podem estar no detalhe
-                                            // quadranteScore={calcularScoreQuadrante(parceiro)} // Comentado
-                                        />
-                                    ))}
-                                </div>
-                            ) : ( // viewMode === 'lista'
-                                <div className="space-y-2">
-                                    {parceirosOrdenados.map((parceiro) => (
-                                         <ParceiroCard
-                                            key={parceiro.id}
-                                            parceiro={parceiro}
-                                            onClick={() => handleParceiroClick(parceiro)}
-                                            isListItemStyle // Adicionar prop para estilo de lista se necessário
-                                            // quadranteScore={calcularScoreQuadrante(parceiro)} // Comentado
-                                        />
-                                    ))}
-                                </div>
-                            )
-                        ) : (
-                             <div className="text-center py-10">
-                                <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                                <h3 className="text-lg font-medium mb-2">Nenhum parceiro encontrado</h3>
-                                <p className="text-muted-foreground mb-4">
-                                  Ajuste os filtros ou adicione novos parceiros.
-                                </p>
-                                <Button onClick={handleNovoParceiro}>
-                                  <Plus className="h-4 w-4 mr-2" />
-                                  Adicionar Parceiro
-                                </Button>
-                              </div>
-                        )}
-                    </>
-                )}
-                 {viewMode === 'table_legacy' && ( // Mantendo a tabela antiga se necessário, mas oculta por padrão
-                     <MapaParceirosTable
-                        parceiros={parceirosFiltrados}
-                        associacoes={associacoes}
+                        onClose={() => {setShowDetalhes(false); setParceiroSelecionado(null);}}
+                        onSave={handleSalvarDetalhes}
+                        onAssociarEtapa={associarParceiroEtapa}
+                        onRemoverAssociacao={removerAssociacao}
+                        isCardMode // Adicionar uma prop para estilizar como card
+                        onClick={() => handleParceiroClick(parceiro)}
+                      />
+                    ))}
+                  </div>
+                ) : ( // viewMode === 'lista'
+                  <div className="space-y-2">
+                    {parceirosOrdenadosParaGridLista.map((parceiro) => (
+                       <ParceiroDetalhesSimplificado // Usando ParceiroDetalhesSimplificado
+                        key={parceiro.id}
+                        parceiro={parceiro}
                         etapas={etapas}
                         subniveis={subniveis}
-                        onParceiroClick={handleParceiroClick}
-                        onDeletarParceiro={handleDeletarParceiro}
-                        filtros={filtrosLocal}
-                        onFiltrosChange={handleAtualizarFiltros}
-                        onLimparFiltros={handleLimparFiltros}
-                    />
-                 )}
-            </div>
+                        associacoes={associacoes}
+                        onClose={() => {setShowDetalhes(false); setParceiroSelecionado(null);}}
+                        onSave={handleSalvarDetalhes}
+                        onAssociarEtapa={associarParceiroEtapa}
+                        onRemoverAssociacao={removerAssociacao}
+                        isListItemMode // Adicionar uma prop para estilizar como item de lista
+                        onClick={() => handleParceiroClick(parceiro)}
+                      />
+                    ))}
+                  </div>
+                )
+              ) : (
+                emptyStateContent
+              )
+            )}
+            {currentViewTab === 'table_legacy' && (
+              <MapaParceirosTable
+                parceiros={parceirosFiltradosParaView}
+                associacoes={associacoes}
+                etapas={etapas}
+                subniveis={subniveis}
+                onParceiroClick={handleParceiroClick}
+                onDeletarParceiro={handleDeletarParceiro}
+                filtros={filtrosSidebar} // Tabela usa filtros da sidebar
+                onFiltrosChange={handleAtualizarFiltrosSidebar}
+                onLimparFiltros={handleLimparFiltrosSidebar}
+              />
+            )}
+          </div>
         </div>
 
         {showDetalhes && parceiroSelecionado && (
@@ -458,8 +498,8 @@ const MapaParceirosPage: React.FC = () => {
             }}
             onSave={handleSalvarDetalhes}
             onAssociarEtapa={associarParceiroEtapa}
-            onRemoverAssociacao={async (assocId) => { await removerAssociacao(assocId); if(carregarDados) carregarDados(filtrosLocal);}}
-            onNavigate={handleNavegarParceiro} // Para os botões < > nos detalhes
+            onRemoverAssociacao={async (assocId) => { await removerAssociacao(assocId); if (carregarDados) await carregarDados();}}
+            onNavigate={handleNavegarParceiro}
           />
         )}
 
