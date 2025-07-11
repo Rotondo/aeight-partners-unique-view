@@ -363,7 +363,7 @@ const MapaParceirosTable: React.FC<MapaParceirosTableProps> = ({
         </DialogContent>
       </Dialog>
       <Dialog open={!!showDetalhes} onOpenChange={open => !open && setShowDetalhes(null)}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-md w-full sm:w-[420px]">
           {showDetalhes && (
             <ParceiroDetalhesSimplificado
               parceiro={showDetalhes}
