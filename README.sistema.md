@@ -447,3 +447,28 @@ modules/[nome-modulo]/
 - Utilize o modo offline para registrar dados em campo
 - Admins podem gerenciar etapas, subníveis, categorias e políticas
 - Consulte os READMEs para exemplos de queries e integrações
+
+---
+
+## FAQ e Dúvidas Frequentes
+
+### Como garantir que alterações feitas offline serão sincronizadas?
+- O sistema utiliza PWA com cache inteligente. Alterações feitas offline são marcadas e sincronizadas automaticamente ao reconectar.
+
+### Como saber se tenho permissão para editar um dado?
+- As policies RLS do Supabase garantem que apenas usuários autenticados e autorizados possam editar. Se não conseguir editar, verifique seu papel (admin/user) e se está logado.
+
+### Como auditar alterações?
+- Todas as alterações críticas são registradas na tabela de auditoria (`audit_log_pwa`), incluindo usuário, device e status de sync.
+
+### Como integrar um novo módulo ao sistema?
+- Siga o padrão modular descrito nos READMEs: crie diretórios, hooks, componentes e serviços com suporte a cache e sync. Consulte exemplos de integração no README.dados.md.
+
+### O que fazer se aparecer erro de permissão (RLS)?
+- Verifique se está autenticado, se seu usuário tem o papel correto e se as policies da tabela permitem a operação. Consulte o README.dados.md para exemplos de policies.
+
+### Como restaurar dados ou fazer backup?
+- Use as ferramentas do Supabase para exportar dados e backups automáticos. Consulte a documentação oficial para procedimentos detalhados.
+
+### Onde encontrar exemplos de queries e integrações?
+- Veja a seção de exemplos de integração no final do README.dados.md.

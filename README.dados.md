@@ -963,3 +963,67 @@ USING (auth.uid() IS NOT NULL);
 - Admins podem gerenciar etapas, subníveis e categorias.
 - Utilize o repositório para centralizar materiais e links úteis.
 - Consulte este arquivo antes de criar novas integrações ou alterar a modelagem.
+
+---
+
+## Diagrama ER (Entidade-Relacionamento)
+
+```mermaid
+erDiagram
+  PARCEIROS_MAPA ||--o{ ASSOCIACOES_PARCEIRO_ETAPA : "tem"
+  ETAPAS_JORNADA ||--o{ ASSOCIACOES_PARCEIRO_ETAPA : "tem"
+  SUBNIVEIS_ETAPA ||--o{ ASSOCIACOES_PARCEIRO_ETAPA : "tem"
+  ETAPAS_JORNADA ||--o{ SUBNIVEIS_ETAPA : "tem"
+  EMPRESAS ||--o{ PARCEIROS_MAPA : "tem"
+  EMPRESAS ||--o{ INDICADORES_PARCEIRO : "tem"
+  EMPRESAS ||--o{ OPORTUNIDADES : "origem/destino"
+  OPORTUNIDADES ||--o{ ATIVIDADES_OPORTUNIDADE : "tem"
+  EMPRESAS ||--o{ WISHLIST_ITEMS : "interessada/desejada/proprietaria"
+  EMPRESAS ||--o{ CLIENTES_SOBREPOSTOS : "parceiro_a/b/cliente_sobreposto"
+  INDICADORES_PARCEIRO ||--o{ PARCEIRO_RELEVANCIA : "origem/destino"
+```
+
+> **Leitura:** Cada linha representa uma relação entre tabelas. Ex: 'PARCEIROS_MAPA tem ASSOCIACOES_PARCEIRO_ETAPA' significa que um parceiro pode ter várias associações de etapa/subnível. Os nomes das tabelas estão em maiúsculo para facilitar a visualização. Consulte as tabelas detalhadas acima para os campos de cada entidade.
+
+---
+
+## Exemplos de Integração com Supabase (JS/TS)
+
+### Buscar parceiros
+```ts
+import { supabase } from '@/integrations/supabase/client';
+
+const { data, error } = await supabase
+  .from('parceiros_mapa')
+  .select('*')
+  .eq('status', 'ativo');
+```
+
+### Associar parceiro a etapa/subnível
+```ts
+const { error } = await supabase
+  .from('associacoes_parceiro_etapa')
+  .upsert([
+    { parceiro_id, etapa_id, subnivel_id }
+  ]);
+```
+
+### Buscar etapas e subníveis
+```ts
+const etapas = await supabase.from('etapas_jornada').select('*').eq('ativo', true);
+const subniveis = await supabase.from('subniveis_etapa').select('*').eq('ativo', true);
+```
+
+### Buscar oportunidades de uma empresa
+```ts
+const { data } = await supabase
+  .from('oportunidades')
+  .select('*')
+  .or(`empresa_origem_id.eq.${empresaId},empresa_destino_id.eq.${empresaId}`);
+```
+
+### Exemplo de uso com policies (usuário autenticado)
+```ts
+// O supabase client já envia o JWT do usuário logado automaticamente
+// Policies RLS garantem que só dados permitidos serão retornados
+```
