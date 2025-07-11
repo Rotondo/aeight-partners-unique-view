@@ -18,6 +18,7 @@ interface MapaParceirosTableProps {
   onDeletarParceiro: (parceiro: ParceiroMapa) => void;
   onFiltrosChange: (filtros: MapaParceirosFiltros) => void;
   onLimparFiltros: () => void;
+  onAssociarEtapa: (parceiroId: string, etapaId: string, subnivelId?: string) => Promise<any>;
 }
 
 type OrderBy = 'nome' | 'status' | 'etapa' | 'subnivel';
@@ -48,7 +49,8 @@ const MapaParceirosTable: React.FC<MapaParceirosTableProps> = ({
   onParceiroClick,
   onDeletarParceiro,
   onFiltrosChange,
-  onLimparFiltros
+  onLimparFiltros,
+  onAssociarEtapa
 }) => {
   const [orderBy, setOrderBy] = useState<OrderBy>('nome');
   const [orderDirection, setOrderDirection] = useState<OrderDirection>('asc');
@@ -120,9 +122,11 @@ const MapaParceirosTable: React.FC<MapaParceirosTableProps> = ({
   const handleSalvarAlteracoes = async () => {
     for (const parceiroId in pendingEdits) {
       const { etapaId, subnivelId } = pendingEdits[parceiroId];
-      // Aqui você deve chamar a função real de atualização (API/contexto)
-      // Exemplo: await onAssociarEtapa(parceiroId, etapaId, subnivelId);
-      console.log('Salvar', parceiroId, etapaId, subnivelId);
+      try {
+        await onAssociarEtapa(parceiroId, etapaId, subnivelId || undefined);
+      } catch (err) {
+        alert('Erro ao salvar alterações para o parceiro: ' + parceiroId);
+      }
     }
     setPendingEdits({});
   };
