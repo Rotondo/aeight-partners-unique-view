@@ -1,8 +1,9 @@
+
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import { ChevronDown, ChevronRight, Star } from 'lucide-react';
 import { EtapaJornada, SubnivelEtapa, ParceiroMapa, AssociacaoParceiroEtapa } from '@/types/mapa-parceiros';
 
 interface JornadaVisualizationProps {
@@ -15,7 +16,6 @@ interface JornadaVisualizationProps {
   onParceiroClick: (parceiro: ParceiroMapa) => void;
 }
 
-// Utilitário para buscar parceiros associados a uma etapa específica e a seus subníveis
 function getParceirosPorEtapa(etapaId: string, associacoes: AssociacaoParceiroEtapa[], parceiros: ParceiroMapa[]) {
   const parceirosDaEtapa = associacoes
     .filter(a => a.etapa_id === etapaId && !a.subnivel_id)
@@ -48,6 +48,29 @@ const getPerformanceColor = (score: number) => {
   return "text-red-600";
 };
 
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case 'ativo':
+      return 'bg-green-500 text-white';
+    case 'inativo':
+      return 'bg-red-500 text-white';
+    case 'pendente':
+      return 'bg-yellow-500 text-white';
+    default:
+      return 'bg-gray-300 text-gray-800';
+  }
+};
+
+const renderStars = (score: number) => {
+  const stars = Math.round(score / 20);
+  return Array.from({ length: 5 }, (_, i) => (
+    <Star
+      key={i}
+      className={`h-3 w-3 ${i < stars ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}`}
+    />
+  ));
+};
+
 const JornadaVisualization: React.FC<JornadaVisualizationProps> = ({
   etapas,
   subniveis,
@@ -63,41 +86,31 @@ const JornadaVisualization: React.FC<JornadaVisualizationProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Título da jornada */}
       <div className="text-center mb-8">
         <h2 className="text-2xl font-bold mb-2">Jornada do E-commerce</h2>
         <p className="text-muted-foreground">Visualize os parceiros em cada etapa da jornada</p>
       </div>
 
-      {/* Trilha visual das etapas */}
       <div className="relative">
-        {/* Linha conectora */}
         <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-border hidden md:block" />
         
         {etapas.map((etapa) => {
           const isExpanded = expandedEtapas.has(etapa.id);
           const subniveisDaEtapa = getSubniveisPorEtapa(etapa.id);
-
-          // Parceiros diretamente na etapa
           const parceirosDaEtapa = getParceirosPorEtapa(etapa.id, associacoes, parceiros);
-
-          // Parceiros em cada subnível da etapa
           const parceirosPorSubnivel = subniveisDaEtapa.map(subnivel => ({
             subnivel,
             parceiros: getParceirosPorSubnivel(subnivel.id, associacoes, parceiros)
           }));
-
           const totalParceiros = parceirosDaEtapa.length + parceirosPorSubnivel.reduce((acc, item) => acc + item.parceiros.length, 0);
 
           return (
             <div key={etapa.id} className="relative mb-8">
-              {/* Indicador da etapa na linha */}
               <div 
                 className="absolute left-6 w-4 h-4 rounded-full border-4 border-background z-10 hidden md:block"
-                style={{ backgroundColor: etapa.cor }}
+                style={{ backgroundColor: etapa.cor || '#3B82F6' }}
               />
 
-              {/* Card da etapa */}
               <Card className="ml-0 md:ml-16 cursor-pointer hover:shadow-md transition-shadow">
                 <CardContent 
                   className="p-6"
@@ -107,7 +120,7 @@ const JornadaVisualization: React.FC<JornadaVisualizationProps> = ({
                     <div className="flex items-center gap-4">
                       <div 
                         className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm"
-                        style={{ backgroundColor: etapa.cor }}
+                        style={{ backgroundColor: etapa.cor || '#3B82F6' }}
                       >
                         {etapa.ordem}
                       </div>
@@ -134,10 +147,8 @@ const JornadaVisualization: React.FC<JornadaVisualizationProps> = ({
                 </CardContent>
               </Card>
 
-              {/* Subníveis expandidos */}
               {isExpanded && (
                 <div className="ml-4 md:ml-20 mt-4 space-y-4">
-                  {/* Parceiros diretos da etapa (sem subnível) */}
                   {parceirosDaEtapa.length > 0 && (
                     <div className="space-y-2">
                       <h4 className="text-sm font-medium text-muted-foreground">Parceiros da etapa</h4>
@@ -162,19 +173,19 @@ const JornadaVisualization: React.FC<JornadaVisualizationProps> = ({
                                 </Avatar>
                                 <div className="flex-1 min-w-0">
                                   <p className="font-medium truncate">{parceiro.empresa?.nome}</p>
-                                  <div className="flex items-center gap-2">
-                                    <Badge 
-                                      variant={parceiro.status === 'ativo' ? 'default' : 'secondary'}
-                                      className="text-xs"
-                                    >
+                                  <div className="flex items-center gap-2 mt-1">
+                                    <Badge className={`text-xs px-2 py-1 ${getStatusColor(parceiro.status)}`}>
                                       {parceiro.status.charAt(0).toUpperCase() + parceiro.status.slice(1)}
                                     </Badge>
-                                    {parceiro.performance_score > 0 && (
-                                      <span className={`text-xs font-medium ${getPerformanceColor(parceiro.performance_score)}`}>
+                                  </div>
+                                  {parceiro.performance_score > 0 && (
+                                    <div className="flex items-center gap-1 mt-1">
+                                      {renderStars(parceiro.performance_score)}
+                                      <span className={`text-xs font-medium ml-1 ${getPerformanceColor(parceiro.performance_score)}`}>
                                         {parceiro.performance_score}%
                                       </span>
-                                    )}
-                                  </div>
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             </CardContent>
@@ -184,7 +195,6 @@ const JornadaVisualization: React.FC<JornadaVisualizationProps> = ({
                     </div>
                   )}
 
-                  {/* Subníveis */}
                   {parceirosPorSubnivel.map(({ subnivel, parceiros: parceirosDosSubniveis }) => (
                     <div key={subnivel.id} className="space-y-2">
                       <div className="flex items-center gap-2">
@@ -219,19 +229,19 @@ const JornadaVisualization: React.FC<JornadaVisualizationProps> = ({
                                   </Avatar>
                                   <div className="flex-1 min-w-0">
                                     <p className="font-medium truncate">{parceiro.empresa?.nome}</p>
-                                    <div className="flex items-center gap-2">
-                                      <Badge 
-                                        variant={parceiro.status === 'ativo' ? 'default' : 'secondary'}
-                                        className="text-xs"
-                                      >
+                                    <div className="flex items-center gap-2 mt-1">
+                                      <Badge className={`text-xs px-2 py-1 ${getStatusColor(parceiro.status)}`}>
                                         {parceiro.status.charAt(0).toUpperCase() + parceiro.status.slice(1)}
                                       </Badge>
-                                      {parceiro.performance_score > 0 && (
-                                        <span className={`text-xs font-medium ${getPerformanceColor(parceiro.performance_score)}`}>
+                                    </div>
+                                    {parceiro.performance_score > 0 && (
+                                      <div className="flex items-center gap-1 mt-1">
+                                        {renderStars(parceiro.performance_score)}
+                                        <span className={`text-xs font-medium ml-1 ${getPerformanceColor(parceiro.performance_score)}`}>
                                           {parceiro.performance_score}%
                                         </span>
-                                      )}
-                                    </div>
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
                               </CardContent>

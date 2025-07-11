@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { ParceiroMapa, AssociacaoParceiroEtapa, EtapaJornada, SubnivelEtapa } from '@/types/mapa-parceiros';
 import { Button } from '@/components/ui/button';
@@ -54,11 +55,9 @@ const MapaParceirosTable: React.FC<MapaParceirosTableProps> = ({
   onFiltrosChange,
   onLimparFiltros
 }) => {
-  // Ordenação
   const [orderBy, setOrderBy] = useState<OrderBy>('nome');
   const [orderDirection, setOrderDirection] = useState<OrderDirection>('asc');
 
-  // Ordena os parceiros conforme coluna e direção
   const sortedParceiros = [...parceiros].sort((a, b) => {
     let compare = 0;
     if (orderBy === 'nome') {
@@ -86,6 +85,19 @@ const MapaParceirosTable: React.FC<MapaParceirosTableProps> = ({
     }
   };
 
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'ativo':
+        return 'bg-green-500 text-white';
+      case 'inativo':
+        return 'bg-red-500 text-white';
+      case 'pendente':
+        return 'bg-yellow-500 text-white';
+      default:
+        return 'bg-gray-300 text-gray-800';
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -100,25 +112,26 @@ const MapaParceirosTable: React.FC<MapaParceirosTableProps> = ({
         <table className="min-w-full divide-y divide-border text-sm">
           <thead>
             <tr className="bg-muted">
-              <th className="p-2 font-semibold cursor-pointer" onClick={() => handleSort('nome')}>
+              <th className="p-2 font-semibold cursor-pointer text-left" onClick={() => handleSort('nome')}>
                 Nome {orderBy === 'nome' && (orderDirection === 'asc' ? '↑' : '↓')}
               </th>
-              <th className="p-2 font-semibold cursor-pointer" onClick={() => handleSort('status')}>
+              <th className="p-2 font-semibold cursor-pointer text-left" onClick={() => handleSort('status')}>
                 Status {orderBy === 'status' && (orderDirection === 'asc' ? '↑' : '↓')}
               </th>
-              <th className="p-2 font-semibold cursor-pointer" onClick={() => handleSort('etapa')}>
+              <th className="p-2 font-semibold cursor-pointer text-left" onClick={() => handleSort('etapa')}>
                 Etapa da Jornada {orderBy === 'etapa' && (orderDirection === 'asc' ? '↑' : '↓')}
               </th>
-              <th className="p-2 font-semibold cursor-pointer" onClick={() => handleSort('subnivel')}>
+              <th className="p-2 font-semibold cursor-pointer text-left" onClick={() => handleSort('subnivel')}>
                 Subnível {orderBy === 'subnivel' && (orderDirection === 'asc' ? '↑' : '↓')}
               </th>
+              <th className="p-2 font-semibold text-center">Performance</th>
               <th className="p-2 font-semibold text-center">Ações</th>
             </tr>
           </thead>
           <tbody>
             {sortedParceiros.length === 0 ? (
               <tr>
-                <td colSpan={5} className="text-center py-6 text-muted-foreground">
+                <td colSpan={6} className="text-center py-6 text-muted-foreground">
                   Nenhum parceiro encontrado.<br />
                   Adicione novos parceiros ou ajuste os filtros.
                 </td>
@@ -135,14 +148,7 @@ const MapaParceirosTable: React.FC<MapaParceirosTableProps> = ({
                       {nomeEmpresa}
                     </td>
                     <td className="p-2">
-                      <Badge
-                        className={`text-xs px-2 py-1 ${
-                          parceiro.status === 'ativo' ? 'bg-green-500 text-white'
-                          : parceiro.status === 'inativo' ? 'bg-red-500 text-white'
-                          : parceiro.status === 'pendente' ? 'bg-yellow-500 text-white'
-                          : 'bg-gray-300 text-gray-800'
-                        }`}
-                      >
+                      <Badge className={`text-xs px-2 py-1 ${getStatusColor(parceiro.status)}`}>
                         {parceiro.status.charAt(0).toUpperCase() + parceiro.status.slice(1)}
                       </Badge>
                     </td>
@@ -165,6 +171,13 @@ const MapaParceirosTable: React.FC<MapaParceirosTableProps> = ({
                           ))
                         : <span className="italic text-muted-foreground text-xs">Sem subnível</span>
                       }
+                    </td>
+                    <td className="p-2 text-center">
+                      {parceiro.performance_score > 0 && (
+                        <Badge variant="outline" className="text-xs">
+                          {parceiro.performance_score}%
+                        </Badge>
+                      )}
                     </td>
                     <td className="p-2 text-center">
                       <Button

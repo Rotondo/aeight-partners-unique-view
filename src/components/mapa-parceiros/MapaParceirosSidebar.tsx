@@ -1,13 +1,13 @@
+
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ChevronDown, ChevronRight, Search, Users } from 'lucide-react';
+import { ChevronDown, ChevronRight, Users } from 'lucide-react';
 import { EtapaJornada, SubnivelEtapa } from '@/types/mapa-parceiros';
 
-// Novo tipo de filtros para maior flexibilidade
 type FiltrosParceiros = {
   busca?: string;
   status?: string;
@@ -46,7 +46,6 @@ const MapaParceirosSidebar: React.FC<MapaParceirosSidebarProps> = ({
   onToggleEtapa,
   onLimparFiltros
 }) => {
-  // Handlers para filtros
   const handleBuscaChange = (valor: string) => {
     onFiltrosChange({ ...filtros, busca: valor });
   };
@@ -89,13 +88,7 @@ const MapaParceirosSidebar: React.FC<MapaParceirosSidebarProps> = ({
               placeholder="Buscar parceiros..."
               value={filtros.busca || ''}
               onChange={(e) => handleBuscaChange(e.target.value)}
-              className="pl-8 rounded-md h-9 bg-muted border w-full"
-              // Ícone de busca embutido (opcional, pode ajustar visual)
-              style={{
-                backgroundImage: `url('data:image/svg+xml;utf8,<svg fill="gray" height="16" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"><path d="M21.71 20.29l-3.388-3.388A9.953 9.953 0 0 0 19 11c0-5.523-4.477-10-10-10S-1 5.477-1 11s4.477 10 10 10a9.953 9.953 0 0 0 5.902-1.678l3.388 3.388a1 1 0 0 0 1.415-1.415z"/></svg>')`,
-                backgroundRepeat: 'no-repeat',
-                backgroundPosition: '8px center',
-              }}
+              className="rounded-md h-9 bg-muted border w-full"
             />
             <Select value={filtros.status || 'todos'} onValueChange={handleStatusChange}>
               <SelectTrigger className="rounded-md h-9 bg-muted border min-w-[100px]">
@@ -108,8 +101,10 @@ const MapaParceirosSidebar: React.FC<MapaParceirosSidebarProps> = ({
                 <SelectItem value="pendente">Pendente</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+          <div className="flex gap-2">
             <Select value={filtros.etapaId || 'todas'} onValueChange={handleEtapaChange}>
-              <SelectTrigger className="rounded-md h-9 bg-muted border min-w-[100px]">
+              <SelectTrigger className="rounded-md h-9 bg-muted border flex-1">
                 <SelectValue placeholder="Etapa" />
               </SelectTrigger>
               <SelectContent>
@@ -122,7 +117,7 @@ const MapaParceirosSidebar: React.FC<MapaParceirosSidebarProps> = ({
               </SelectContent>
             </Select>
             <Select value={filtros.subnivelId || 'todos'} onValueChange={handleSubnivelChange}>
-              <SelectTrigger className="rounded-md h-9 bg-muted border min-w-[100px]">
+              <SelectTrigger className="rounded-md h-9 bg-muted border flex-1">
                 <SelectValue placeholder="Subnível" />
               </SelectTrigger>
               <SelectContent>
@@ -135,7 +130,6 @@ const MapaParceirosSidebar: React.FC<MapaParceirosSidebarProps> = ({
               </SelectContent>
             </Select>
           </div>
-          {/* Checkbox: apenas parceiros SEM etapa atribuída */}
           <div className="flex items-center gap-2">
             <input
               type="checkbox"
@@ -193,7 +187,7 @@ const MapaParceirosSidebar: React.FC<MapaParceirosSidebarProps> = ({
                       >
                         <div
                           className="w-3 h-3 rounded-full flex-shrink-0"
-                          style={{ backgroundColor: etapa.cor }}
+                          style={{ backgroundColor: etapa.cor || '#3B82F6' }}
                         />
                         <span className="text-sm font-medium truncate">
                           {etapa.ordem}. {etapa.nome}
