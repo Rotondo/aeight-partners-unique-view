@@ -43,9 +43,20 @@ const MapaParceirosPage: React.FC = () => {
   const {
     etapas,
     subniveis,
-    parceiros,
+    parceiros: parceirosOriginais,
     associacoes
   } = useMapaParceiros();
+
+  // Estado de filtros
+  const [filtros, setFiltros] = useState({} as any);
+
+  // Filtragem de parceiros conforme apenasSemEtapa
+  let parceiros = parceirosOriginais;
+  if (filtros.apenasSemEtapa) {
+    parceiros = parceirosOriginais.filter(p =>
+      !associacoes.some(a => a.parceiro_id === p.id && (a.etapa_id || a.subnivel_id))
+    );
+  }
 
   if (!parceiros || parceiros.length === 0) {
     return <div>Nenhum parceiro encontrado para diagnóstico.</div>;
@@ -57,14 +68,14 @@ const MapaParceirosPage: React.FC = () => {
         <MapaParceirosSidebar
           etapas={etapas}
           subniveis={subniveis}
-          filtros={{}}
+          filtros={filtros}
           stats={{ totalParceiros: parceiros.length, parceirosPorEtapa: {}, parceirosAtivos: 0, parceirosInativos: 0, performanceMedia: 0, parceirosPorSubnivel: {} }}
-          onFiltrosChange={() => {}}
+          onFiltrosChange={setFiltros}
           onEtapaClick={() => {}}
           etapaSelecionada={''}
           expandedEtapas={new Set()}
           onToggleEtapa={() => {}}
-          onLimparFiltros={() => {}}
+          onLimparFiltros={() => setFiltros({})}
         />
       </div>
       <div style={{ flex: 1, padding: 24 }}>
@@ -73,11 +84,11 @@ const MapaParceirosPage: React.FC = () => {
           associacoes={associacoes}
           etapas={etapas}
           subniveis={subniveis}
-          filtros={{}}
+          filtros={filtros}
           onParceiroClick={() => {}}
           onDeletarParceiro={() => {}}
-          onFiltrosChange={() => {}}
-          onLimparFiltros={() => {}}
+          onFiltrosChange={setFiltros}
+          onLimparFiltros={() => setFiltros({})}
         />
       </div>
     </div>
