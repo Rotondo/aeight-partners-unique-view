@@ -103,10 +103,6 @@ const MapaParceirosPage: React.FC = () => {
     );
   }
 
-  if (!parceiros || parceiros.length === 0) {
-    return <div>Nenhum parceiro encontrado para diagnóstico.</div>;
-  }
-
   // Calcular stats reais para sidebar - CORRIGIDO para contar parceiros únicos
   const { parceirosPorEtapa, parceirosPorSubnivel } = calcularContadoresParceiros(associacoes);
 
