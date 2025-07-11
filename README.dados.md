@@ -857,3 +857,109 @@ WHERE o.created_at > now() - INTERVAL '90 days';
 ---
 
 > **Banco de Dados PWA Aeight Partners** - Estrutura robusta, cache inteligente e sincronização automática preparada para experiência offline completa com performance otimizada.
+
+---
+
+## 1.1. Estrutura das Tabelas Principais (Parceiros, Jornada, Associações)
+
+### **parceiros_mapa**
+| Coluna            | Tipo         | Nulo | Default           | Descrição                  |
+|-------------------|--------------|------|-------------------|----------------------------|
+| id                | uuid (PK)    | NÃO  | gen_random_uuid() | Identificador do parceiro  |
+| empresa_id        | uuid (FK)    | NÃO  |                   | Empresa associada          |
+| status            | text         | NÃO  | 'ativo'           | Status do parceiro         |
+| performance_score | integer      | SIM  | 0                 | Score de performance       |
+| observacoes       | text         | SIM  |                   | Observações                |
+| created_at        | timestamptz  | NÃO  | now()             | Data de criação            |
+| updated_at        | timestamptz  | NÃO  | now()             | Data de atualização        |
+
+### **etapas_jornada**
+| Coluna    | Tipo         | Nulo | Default           | Descrição           |
+|-----------|--------------|------|-------------------|---------------------|
+| id        | uuid (PK)    | NÃO  | gen_random_uuid() | Identificador       |
+| nome      | text         | NÃO  |                   | Nome da etapa       |
+| ordem     | integer      | NÃO  |                   | Ordem na jornada    |
+| cor       | text         | SIM  | '#3B82F6'         | Cor associada       |
+| icone     | text         | SIM  |                   | Ícone               |
+| ativo     | boolean      | NÃO  | true              | Ativo?              |
+| created_at| timestamptz  | NÃO  | now()             | Data de criação     |
+| updated_at| timestamptz  | NÃO  | now()             | Data de atualização |
+
+### **subniveis_etapa**
+| Coluna     | Tipo         | Nulo | Default           | Descrição                |
+|------------|--------------|------|-------------------|--------------------------|
+| id         | uuid (PK)    | NÃO  | gen_random_uuid() | Identificador            |
+| etapa_id   | uuid (FK)    | NÃO  |                   | Etapa associada          |
+| nome       | text         | NÃO  |                   | Nome do subnível         |
+| ordem      | integer      | NÃO  |                   | Ordem no subnível        |
+| ativo      | boolean      | NÃO  | true              | Ativo?                   |
+| created_at | timestamptz  | NÃO  | now()             | Data de criação          |
+| updated_at | timestamptz  | NÃO  | now()             | Data de atualização      |
+
+### **associacoes_parceiro_etapa**
+| Coluna         | Tipo         | Nulo | Default           | Descrição                        |
+|----------------|--------------|------|-------------------|----------------------------------|
+| id             | uuid (PK)    | NÃO  | gen_random_uuid() | Identificador da associação      |
+| parceiro_id    | uuid (FK)    | NÃO  |                   | Parceiro associado               |
+| etapa_id       | uuid (FK)    | NÃO  |                   | Etapa da jornada                 |
+| subnivel_id    | uuid (FK)    | SIM  |                   | Subnível da etapa (opcional)     |
+| data_associacao| timestamptz  | NÃO  | now()             | Data da associação               |
+| ativo          | boolean      | NÃO  | true              | Associação ativa?                |
+| created_at     | timestamptz  | NÃO  | now()             | Data de criação                  |
+
+#### Exemplo de query para associar parceiro a etapa/subnível:
+```sql
+insert into associacoes_parceiro_etapa (parceiro_id, etapa_id, subnivel_id)
+values ('<parceiro_id>', '<etapa_id>', '<subnivel_id>')
+on conflict (parceiro_id) do update
+set etapa_id = excluded.etapa_id,
+    subnivel_id = excluded.subnivel_id,
+    data_associacao = now(),
+    ativo = true;
+```
+
+#### Observações:
+- As FKs garantem integridade entre parceiros, etapas e subníveis.
+- Triggers automáticas atualizam `updated_at`.
+- Policies RLS garantem que apenas usuários autenticados possam gerenciar e visualizar dados.
+
+---
+
+## 1.2. Policies, Enums e Funções Customizadas
+
+### **Policies (RLS) Exemplo**
+```sql
+-- Usuários autenticados podem gerenciar associações
+CREATE POLICY "Usuários autenticados podem gerenciar associações"
+ON associacoes_parceiro_etapa FOR ALL
+TO authenticated
+USING (auth.uid() IS NOT NULL);
+```
+
+### **Enums**
+- company_type: intragrupo, parceiro, cliente
+- user_role: admin, user, manager
+- status_acao_crm_enum: pendente, em_andamento, concluida, cancelada
+- opportunity_status: em_contato, negociando, ganho, perdido, etc.
+
+### **Funções Customizadas**
+- `is_admin()`, `user_belongs_to_empresa()`, `can_access_oportunidade()`
+- Usadas em policies para controle de acesso granular.
+
+---
+
+## 1.3. Triggers e Auditoria
+
+- Triggers automáticas para atualizar `updated_at` em updates das principais tabelas.
+- Webhook Albato para eventos de oportunidades (insert/update).
+- Tabela de auditoria `audit_log_pwa` para rastreabilidade de alterações, com contexto de usuário, device e sync status.
+
+---
+
+## 1.4. Dicas de Uso e Manutenção
+
+- Sempre salve alterações em lote para evitar inconsistências.
+- Use os filtros e índices para refinar visualizações e análises.
+- Admins podem gerenciar etapas, subníveis e categorias.
+- Utilize o repositório para centralizar materiais e links úteis.
+- Consulte este arquivo antes de criar novas integrações ou alterar a modelagem.

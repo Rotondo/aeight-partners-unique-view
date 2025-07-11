@@ -389,3 +389,61 @@ modules/[nome-modulo]/
 ---
 
 > **Arquitetura PWA Aeight Partners** - Sistema modular, performático e preparado para o futuro mobile-first do relacionamento empresarial.
+
+---
+
+## 🏢 **Fluxos de Negócio Detalhados e Integração com Banco**
+
+### **Mapa de Parceiros**
+- Visualização e edição inline de etapa/subnível (persistência em lote via Supabase)
+- Filtros avançados (por etapa, subnível, status, empresa)
+- Card detalhado com edição completa do parceiro
+- Associação flexível a etapas/subníveis, com histórico de alterações
+- Policies Supabase garantem que apenas usuários autenticados possam editar
+- Triggers automáticas para atualização de timestamps
+
+#### Exemplo de fluxo:
+1. Usuário seleciona nova etapa/subnível na tabela
+2. Alteração é marcada localmente (linha destacada)
+3. Ao clicar em "Salvar alterações", todas as mudanças são persistidas via função associarParceiroEtapa
+4. Toast de feedback visual (sucesso/erro)
+5. Estado local é limpo e dados recarregados
+
+### **Oportunidades**
+- Pipeline visual, histórico de mudanças, atividades vinculadas
+- Metas por período, empresa, segmento
+- Policies garantem que apenas envolvidos possam editar
+- Triggers para auditoria e integração com Albato
+
+### **Diário Executivo**
+- Agenda de eventos, ações de CRM, sugestões de IA, resumos automáticos
+- Upload de arquivos (áudio, vídeo, texto) com controle de progresso
+- Sincronização PWA: alterações offline são marcadas e sincronizadas ao reconectar
+
+### **Indicadores**
+- Dashboards com KPIs, funis, ranking, análises de performance
+- Cálculo automático de scores e classificação de empresas
+- Views e funções SQL otimizadas para performance
+
+### **Wishlist**
+- Gestão de interesses, apresentações, clientes sobrepostos
+- Algoritmo proprietário de detecção de sobreposição e scoring de relevância
+- Policies garantem acesso apenas a empresas envolvidas
+
+---
+
+## 🔐 **Segurança, Auditoria e Políticas**
+- Policies RLS detalhadas para cada módulo (ver README.dados.md)
+- Funções customizadas para RBAC e multi-tenancy
+- Auditoria completa de alterações críticas (tabela audit_log_pwa)
+- Máscara de dados sensíveis em modo demo
+- Triggers para atualização automática de relevância e classificação
+
+---
+
+## ⚡ **Dicas de Uso e Boas Práticas**
+- Use filtros e dashboards para insights rápidos
+- Prefira salvar alterações em lote para performance e consistência
+- Utilize o modo offline para registrar dados em campo
+- Admins podem gerenciar etapas, subníveis, categorias e políticas
+- Consulte os READMEs para exemplos de queries e integrações

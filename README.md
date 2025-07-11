@@ -220,12 +220,19 @@ refactor: refatoração sem mudança de funcionalidade
 test: adiciona ou corrige testes
 ```
 
-## Suporte
 
-Para dúvidas ou suporte técnico:
-- 📧 Email: [contato@empresa.com]
-- 📱 WhatsApp: [número]
-- 🐛 Issues: [link-do-github]
+
+---
+
+## 🔍 Observações Avançadas e Dicas de Uso
+
+- **PWA e Offline:** O sistema é Progressive Web App, com cache inteligente, sincronização automática e suporte a uso offline. Alterações feitas offline são sincronizadas ao reconectar.
+- **Segurança:** Policies RLS do Supabase garantem que apenas usuários autenticados possam acessar e editar dados sensíveis. Funções customizadas controlam RBAC e multi-tenancy.
+- **Auditoria:** Todas as alterações críticas são auditadas em tabela dedicada, com contexto de usuário, device e status de sincronização.
+- **Triggers e Integrações:** Triggers automáticas atualizam timestamps e integram com webhooks externos (ex: Albato para oportunidades).
+- **Enums e Tipos:** Diversos enums para status, tipos de empresa, ações, etc., garantem integridade e validação tanto no backend quanto no frontend.
+- **Dicas de manutenção:** Sempre consulte os READMEs antes de alterar a modelagem ou criar novas integrações. Prefira salvar alterações em lote para performance e consistência.
+- **Feedback visual:** O sistema utiliza toasts e estados visuais para informar sucesso ou erro em operações críticas.
 
 ---
 
