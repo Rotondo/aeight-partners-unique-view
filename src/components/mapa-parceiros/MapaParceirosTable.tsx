@@ -169,6 +169,7 @@ const MapaParceirosTable: React.FC<MapaParceirosTableProps> = ({
                 const etapaIdAtual = (pendingEdits[parceiro.id]?.etapaId) ?? ((associacoes.find(a => a.parceiro_id === parceiro.id)?.etapa_id) || '');
                 const subnivelIdAtual = (pendingEdits[parceiro.id]?.subnivelId) ?? ((associacoes.find(a => a.parceiro_id === parceiro.id)?.subnivel_id) || '');
                 const isEdited = !!pendingEdits[parceiro.id];
+                const subniveisFiltrados = etapaIdAtual ? subniveis.filter(s => s.etapa_id === etapaIdAtual) : [];
                 return (
                   <tr key={parceiro.id} className={`hover:bg-muted/30 transition-colors cursor-pointer min-h-8 ${isEdited ? 'bg-yellow-50' : ''}`} onClick={() => setEditParceiro(parceiro)}>
                     <td className="p-1 min-w-[120px] font-medium whitespace-nowrap">
@@ -189,13 +190,13 @@ const MapaParceirosTable: React.FC<MapaParceirosTableProps> = ({
                       </Select>
                     </td>
                     <td className="p-1 whitespace-nowrap">
-                      <Select value={subnivelIdAtual || "none"} onValueChange={v => handleUpdateSubnivel(parceiro.id, v === "none" ? "" : v)}>
+                      <Select value={subnivelIdAtual || "none"} onValueChange={v => handleUpdateSubnivel(parceiro.id, v === "none" ? "" : v)} disabled={!etapaIdAtual}>
                         <SelectTrigger className="h-7 w-full text-xs">
                           <SelectValue placeholder={subniveisParceiro[0] || 'Selecionar subnível'} />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="none">Sem subnível</SelectItem>
-                          {subniveis.map(subnivel => (
+                          {subniveisFiltrados.map(subnivel => (
                             <SelectItem key={subnivel.id} value={subnivel.id}>{subnivel.nome}</SelectItem>
                           ))}
                         </SelectContent>
