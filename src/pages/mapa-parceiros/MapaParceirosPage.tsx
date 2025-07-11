@@ -87,7 +87,6 @@ const MapaParceirosPage: React.FC = () => {
     performance_score: number | string; 
     observacoes?: string 
   }) => {
-    // Ensure performance_score is always a number
     const dadosFormatados = {
       empresa_id: dados.empresa_id,
       status: dados.status as 'ativo' | 'inativo' | 'pendente',
@@ -110,7 +109,6 @@ const MapaParceirosPage: React.FC = () => {
 
   const handleSalvarDetalhes = async (dados: Partial<ParceiroMapa>) => {
     if (parceiroSelecionado) {
-      // Ensure performance_score is converted to number if it exists
       const dadosFormatados = {
         ...dados,
         ...(dados.performance_score !== undefined && {
@@ -122,7 +120,7 @@ const MapaParceirosPage: React.FC = () => {
       setParceiroSelecionado({ 
         ...parceiroSelecionado, 
         ...dadosFormatados,
-        performance_score: Number(dadosFormatados.performance_score || 0)
+        performance_score: Number(dadosFormatados.performance_score || parceiroSelecionado.performance_score || 0)
       });
     }
   };
