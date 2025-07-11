@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
@@ -13,11 +13,19 @@ import MapaParceirosSidebar from '@/components/mapa-parceiros/MapaParceirosSideb
 import ParceiroDetalhesSimplificado from '@/components/mapa-parceiros/ParceiroDetalhesSimplificado';
 import EmpresaSelector from '@/components/mapa-parceiros/EmpresaSelector';
 import JornadaVisualization from '@/components/mapa-parceiros/JornadaVisualization';
-import MapaParceirosGrid from '@/components/mapa-parceiros/MapaParceirosGrid';
-import { ParceiroMapa } from '@/types/mapa-parceiros';
+import MapaParceirosTable from '@/components/mapa-parceiros/MapaParceirosTable';
+import { ParceiroMapa, AssociacaoParceiroEtapa, EtapaJornada } from '@/types/mapa-parceiros';
 import { DemoModeIndicator } from '@/components/privacy/DemoModeIndicator';
 import { DemoModeToggle } from '@/components/privacy/DemoModeToggle';
 import { useIsMobile } from '@/hooks/use-mobile';
+
+// Novo tipo de filtro
+type FiltrosParceiros = {
+  status?: string;
+  etapaId?: string;
+  subnivelId?: string;
+  apenasSemEtapa?: boolean;
+};
 
 const MapaParceirosPage: React.FC = () => {
   const navigate = useNavigate();
@@ -43,6 +51,30 @@ const MapaParceirosPage: React.FC = () => {
   const [showDetalhes, setShowDetalhes] = useState(false);
   const [showEmpresaSelector, setShowEmpresaSelector] = useState(false);
   const [visualizacao, setVisualizacao] = useState<'jornada' | 'grid'>('jornada');
+  const [filtrosLocal, setFiltrosLocal] = useState<FiltrosParceiros>({
+    status: '',
+    etapaId: '',
+    subnivelId: '',
+    apenasSemEtapa: false,
+  });
+
+  // Função para limpar todos os filtros
+  const handleLimparFiltros = () => {
+    setFiltrosLocal({
+      status: '',
+      etapaId: '',
+      subnivelId: '',
+      apenasSemEtapa: false,
+    });
+    setFiltros({});
+  };
+
+  // Função para atualizar filtros simultaneamente
+  const handleAtualizarFiltros = (atualizacoes: Partial<FiltrosParceiros>) => {
+    const novosFiltros = { ...filtrosLocal, ...atualizacoes };
+    setFiltrosLocal(novosFiltros);
+    setFiltros(novosFiltros);
+  };
 
   const handleToggleEtapa = (etapaId: string) => {
     const newExpanded = new Set(expandedEtapas);
@@ -109,6 +141,30 @@ const MapaParceirosPage: React.FC = () => {
     }
   };
 
+  // Aplica filtros à lista de parceiros
+  const parceirosFiltrados = useMemo(() => {
+    let resultado = [...parceiros];
+
+    // Filtrar status
+    if (filtrosLocal.status) {
+      resultado = resultado.filter(p => p.status === filtrosLocal.status);
+    }
+    // Filtrar etapa
+    if (filtrosLocal.etapaId) {
+      resultado = resultado.filter(p => associacoes.some(a => a.parceiro_id === p.id && a.etapa_id === filtrosLocal.etapaId));
+    }
+    // Filtrar subnível
+    if (filtrosLocal.subnivelId) {
+      resultado = resultado.filter(p => associacoes.some(a => a.parceiro_id === p.id && a.subnivel_id === filtrosLocal.subnivelId));
+    }
+    // Filtro de parceiros sem etapa da jornada atribuída
+    if (filtrosLocal.apenasSemEtapa) {
+      resultado = resultado.filter(p => !associacoes.some(a => a.parceiro_id === p.id));
+    }
+
+    return resultado;
+  }, [parceiros, associacoes, filtrosLocal]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -165,13 +221,14 @@ const MapaParceirosPage: React.FC = () => {
           <MapaParceirosSidebar
             etapas={etapas}
             subniveis={subniveis}
-            filtros={filtros}
+            filtros={filtrosLocal}
             stats={stats}
-            onFiltrosChange={setFiltros}
-            onEtapaClick={() => {}} // Not used in journey view
-            etapaSelecionada={undefined}
+            onFiltrosChange={handleAtualizarFiltros}
+            onEtapaClick={() => {}}
+            etapaSelecionada={filtrosLocal.etapaId}
             expandedEtapas={expandedEtapas}
             onToggleEtapa={handleToggleEtapa}
+            onLimparFiltros={handleLimparFiltros}
           />
         )}
 
@@ -196,7 +253,7 @@ const MapaParceirosPage: React.FC = () => {
                 <JornadaVisualization
                   etapas={etapas}
                   subniveis={subniveis}
-                  parceiros={parceiros}
+                  parceiros={parceirosFiltrados}
                   associacoes={associacoes}
                   expandedEtapas={expandedEtapas}
                   onToggleEtapa={handleToggleEtapa}
@@ -205,12 +262,16 @@ const MapaParceirosPage: React.FC = () => {
               </TabsContent>
 
               <TabsContent value="grid" className="p-4 sm:p-6">
-                <MapaParceirosGrid
-                  parceiros={parceiros}
+                <MapaParceirosTable
+                  parceiros={parceirosFiltrados}
                   associacoes={associacoes}
                   etapas={etapas}
+                  subniveis={subniveis}
                   onParceiroClick={handleParceiroClick}
                   onDeletarParceiro={handleDeletarParceiro}
+                  filtros={filtrosLocal}
+                  onFiltrosChange={handleAtualizarFiltros}
+                  onLimparFiltros={handleLimparFiltros}
                 />
               </TabsContent>
             </Tabs>
