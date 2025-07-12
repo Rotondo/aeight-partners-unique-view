@@ -174,27 +174,19 @@ const MapaParceirosSidebar: React.FC<MapaParceirosSidebarProps> = ({
               const isSelecionada = etapaSelecionada === etapa.id;
               const totalParceiros = stats.parceirosPorEtapa[etapa.id] || 0;
               const isGap = totalParceiros === 0;
-              // Debug log
-              console.log('Render etapa', etapa.nome, 'id:', etapa.id, 'isExpanded:', isExpanded);
+
               return (
-                <Collapsible key={etapa.id} open={isExpanded}>
+                <div key={etapa.id} className="mb-2">
                   <div
-                    className={`rounded-lg border transition-colors mb-2 ${
+                    className={`rounded-lg border transition-colors ${
                       isSelecionada ? 'bg-primary/10 border-primary' : isGap ? 'border-destructive bg-destructive/10' : 'hover:bg-muted/50'
                     }`}
                   >
-                    <CollapsibleTrigger
-                      onClick={() => {
-                        console.log('Toggle expand etapa:', etapa.id, etapa.nome);
-                        onToggleEtapa(etapa.id);
-                      }}
-                      className="w-full p-2 flex items-center justify-between text-left"
-                    >
+                    <div className="w-full p-2 flex items-center justify-between text-left">
                       {/* Bloco à esquerda: cor, nome, badge */}
                       <div
                         className="flex items-center gap-2 min-w-0 flex-1 cursor-pointer"
-                        onClick={(e) => {
-                          e.stopPropagation();
+                        onClick={() => {
                           console.log('Clicou na etapa:', etapa.id, etapa.nome);
                           onEtapaClick(etapa.id);
                         }}
@@ -212,13 +204,22 @@ const MapaParceirosSidebar: React.FC<MapaParceirosSidebarProps> = ({
                       </div>
                       {/* Chevron sempre à direita, nunca sobreposto */}
                       {subnivelsDaEtapa.length > 0 && (
-                        isExpanded
-                          ? <ChevronDown className="h-4 w-4 text-muted-foreground ml-2 flex-shrink-0" />
-                          : <ChevronRight className="h-4 w-4 text-muted-foreground ml-2 flex-shrink-0" />
+                        <button
+                          className="p-1 hover:bg-muted/50 rounded flex-shrink-0"
+                          onClick={() => {
+                            console.log('Toggle expand etapa:', etapa.id, etapa.nome);
+                            onToggleEtapa(etapa.id);
+                          }}
+                        >
+                          {isExpanded
+                            ? <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                            : <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                          }
+                        </button>
                       )}
-                    </CollapsibleTrigger>
+                    </div>
                     {isExpanded && (
-                      <CollapsibleContent className="px-4 pb-2">
+                      <div className="px-4 pb-2">
                         <div className="space-y-1">
                           {subnivelsDaEtapa.length === 0 ? (
                             <div className="text-xs text-muted-foreground italic">Sem subníveis cadastrados</div>
@@ -244,10 +245,10 @@ const MapaParceirosSidebar: React.FC<MapaParceirosSidebarProps> = ({
                             })
                           )}
                         </div>
-                      </CollapsibleContent>
+                      </div>
                     )}
                   </div>
-                </Collapsible>
+                </div>
               );
             })}
         </div>
