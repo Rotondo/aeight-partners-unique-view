@@ -1,3 +1,4 @@
+
 import { Suspense, lazy } from 'react';
 import { Toaster } from '@/components/ui/toaster';
 import { Toaster as Sonner } from '@/components/ui/sonner';
@@ -20,12 +21,15 @@ const CategoriasPage = lazy(() => import('@/pages/categorias/CategoriasPage'));
 const ContatosPage = lazy(() => import('@/pages/contatos/ContatosPage'));
 const ClientesPage = lazy(() => import('@/pages/wishlist/ClientesSobrepostosPage'));
 const IndicadoresPage = lazy(() => import('@/pages/indicadores/IndicadoresPage'));
-const OnePagersPage = lazy(() => import('@/pages/onepager/OnePagerPage'));
+const OnePagersPage = lazy(() => import('@/pages/onepager'));
 const RepositorioPage = lazy(() => import('@/pages/repositorio/RepositorioPage'));
 const WishlistPage = lazy(() => import('@/pages/wishlist/WishlistPage'));
 const EventosPage = lazy(() => import('@/pages/eventos/EventosPage'));
 const MetasOportunidadesPage = lazy(() => import('@/pages/indicadores/IndicadoresPage'));
 const OportunidadesPage = lazy(() => import('@/pages/oportunidades/index'));
+const OportunidadesDashboardPage = lazy(() => import('@/pages/oportunidades-dashboard'));
+const QuadrantePage = lazy(() => import('@/pages/quadrante'));
+const DiarioPage = lazy(() => import('@/pages/diario'));
 const MapaParceiroAdminPage = lazy(() => import('@/pages/admin/MapaParceiroAdminPage'));
 
 const queryClient = new QueryClient();
@@ -101,7 +105,7 @@ function App() {
                     </Suspense>
                   } />
 
-                  <Route path="/wishlist" element={
+                  <Route path="/wishlist/*" element={
                     <Suspense fallback={<LoadingScreen />}>
                       <WishlistPage />
                     </Suspense>
@@ -123,6 +127,26 @@ function App() {
                     <Suspense fallback={<LoadingScreen />}>
                       <OportunidadesPage />
                     </Suspense>
+                  } />
+
+                  <Route path="/oportunidades-dashboard" element={
+                    <Suspense fallback={<LoadingScreen />}>
+                      <OportunidadesDashboardPage />
+                    </Suspense>
+                  } />
+
+                  <Route path="/quadrante" element={
+                    <Suspense fallback={<LoadingScreen />}>
+                      <QuadrantePage />
+                    </Suspense>
+                  } />
+
+                  <Route path="/diario" element={
+                    <PrivateRoute>
+                      <Suspense fallback={<LoadingScreen />}>
+                        <DiarioPage />
+                      </Suspense>
+                    </PrivateRoute>
                   } />
                   
                   <Route path="/admin" element={

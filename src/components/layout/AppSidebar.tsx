@@ -1,172 +1,145 @@
-import React from "react"
+
+import * as React from "react"
+import { NavLink, useLocation } from "react-router-dom"
+import {
+  Home,
+  Users,
+  Building2,
+  Tags,
+  Contact,
+  TrendingUp,
+  FileText,
+  Archive,
+  Heart,
+  Calendar,
+  Target,
+  BarChart3,
+  Compass,
+  BookOpen,
+  Settings
+} from "lucide-react"
+
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
-  SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar"
+import { Logo } from "./Logo"
 import { useAuth } from "@/hooks/useAuth"
-import { Link } from "react-router-dom"
-import { 
-  Home, 
-  Users, 
-  ContactIcon, 
-  BookOpen, 
-  BarChart2, 
-  Activity, 
-  Building2, 
-  Settings,
-  PanelLeft,
-  Archive,
-  FolderOpen
-} from 'lucide-react';
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const { user } = useAuth();
-  
-  const navigationItems = [
-    {
-      title: "Dashboard",
-      url: "/",
-      icon: Home,
-      description: "Visão geral do sistema",
-      adminOnly: false
-    },
-    {
-      title: "Oportunidades",
-      url: "/oportunidades",
-      icon: Users,
-      description: "Gestão de oportunidades",
-      adminOnly: false
-    },
-    {
-      title: "Dashboard de Oportunidades",
-      url: "/oportunidades-dashboard",
-      icon: BarChart2,
-      description: "Dashboards e métricas",
-      adminOnly: false
-    },
-    {
-      title: "Indicadores",
-      url: "/indicadores",
-      icon: Activity,
-      description: "Indicadores de performance",
-      adminOnly: false
-    },
-    {
-      title: "Empresas",
-      url: "/empresas",
-      icon: Building2,
-      description: "Gestão de empresas",
-      adminOnly: false
-    },
-    {
-      title: "One Pager",
-      url: "/onepager",
-      icon: PanelLeft,
-      description: "Documentos one pager",
-      adminOnly: false
-    },
-    {
-      title: "Quadrante",
-      url: "/quadrante",
-      icon: Archive,
-      description: "Análise por quadrantes",
-      adminOnly: false
-    },
-    {
-      title: "Repositório",
-      url: "/repositorio",
-      icon: FolderOpen,
-      description: "Repositório de materiais",
-      adminOnly: false
-    },
-    {
-      title: "Mapa de Parceiros",
-      url: "/mapa-parceiros",
-      icon: Users,
-      description: "Mapa sequencial de parceiros",
-      adminOnly: false
-    },
-    {
-      title: "Diário",
-      url: "/diario",
-      icon: BookOpen,
-      description: "Gestão de atividades diárias",
-      adminOnly: true
-    },
-    {
-      title: "Wishlist",
-      url: "/wishlist",
-      icon: Users,
-      description: "Lista de desejos e clientes",
-      adminOnly: false
-    },
-    {
-      title: "Eventos",
-      url: "/eventos",
-      icon: ContactIcon,
-      description: "Gestão de eventos e contatos",
-      adminOnly: true
-    },
-    {
-      title: "Admin",
-      url: "/admin",
-      icon: Settings,
-      description: "Administração do sistema",
-      adminOnly: true
-    },
-  ];
+const mainItems = [
+  { title: "Dashboard", url: "/", icon: Home },
+  { title: "Mapa Parceiros", url: "/mapa-parceiros", icon: Compass },
+  { title: "Empresas", url: "/empresas", icon: Building2 },
+  { title: "Categorias", url: "/categorias", icon: Tags },
+  { title: "Contatos", url: "/contatos", icon: Contact },
+  { title: "Indicadores", url: "/indicadores", icon: TrendingUp },
+  { title: "One Pagers", url: "/one-pagers", icon: FileText },
+  { title: "Repositório", url: "/repositorio", icon: Archive },
+  { title: "Wishlist", url: "/wishlist", icon: Heart },
+  { title: "Eventos", url: "/eventos", icon: Calendar },
+  { title: "Oportunidades", url: "/oportunidades", icon: Target },
+]
+
+const dashboardItems = [
+  { title: "Dashboard Oportunidades", url: "/oportunidades-dashboard", icon: BarChart3 },
+  { title: "Quadrante", url: "/quadrante", icon: Target },
+]
+
+const adminItems = [
+  { title: "Diário", url: "/diario", icon: BookOpen },
+  { title: "Admin", url: "/admin", icon: Settings },
+]
+
+export function AppSidebar() {
+  const { user } = useAuth()
+  const { collapsed } = useSidebar()
+  const location = useLocation()
+  const currentPath = location.pathname
+
+  const isActive = (path: string) => {
+    if (path === "/") {
+      return currentPath === "/"
+    }
+    return currentPath.startsWith(path)
+  }
+
+  const getNavCls = (path: string) => {
+    const active = isActive(path)
+    return active 
+      ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium" 
+      : "hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+  }
 
   return (
-    <Sidebar {...props}>
-      <SidebarHeader>
-        <div className="p-4">
-          <Link to="/" className="flex items-center space-x-2">
-            <span className="font-bold text-xl">A<span className="text-blue-500">&</span>eight</span>
-          </Link>
-        </div>
-      </SidebarHeader>
-      
+    <Sidebar className={collapsed ? "w-14" : "w-60"} collapsible>
       <SidebarContent>
+        <div className="p-4">
+          <Logo collapsed={collapsed} />
+        </div>
+
         <SidebarGroup>
-          <SidebarGroupLabel>Navegação</SidebarGroupLabel>
+          <SidebarGroupLabel>Principal</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navigationItems.map((item) => {
-                if (item.adminOnly && user?.papel !== 'admin') {
-                  return null;
-                }
-
-                return (
-                  <SidebarMenuItem key={item.url}>
-                    <SidebarMenuButton asChild>
-                      <Link to={item.url}>
-                        <item.icon className="mr-2 h-4 w-4" />
-                        <span>{item.title}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
+              {mainItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild>
+                    <NavLink to={item.url} className={getNavCls(item.url)}>
+                      <item.icon className="mr-2 h-4 w-4" />
+                      {!collapsed && <span>{item.title}</span>}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Dashboards</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {dashboardItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild>
+                    <NavLink to={item.url} className={getNavCls(item.url)}>
+                      <item.icon className="mr-2 h-4 w-4" />
+                      {!collapsed && <span>{item.title}</span>}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {user?.papel === 'admin' && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Admin</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {adminItems.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild>
+                      <NavLink to={item.url} className={getNavCls(item.url)}>
+                        <item.icon className="mr-2 h-4 w-4" />
+                        {!collapsed && <span>{item.title}</span>}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
-      
-      <SidebarFooter>
-        <div className="p-4">
-          <p className="text-xs text-gray-500">
-            Desenvolvido por Thiago Rotondo
-          </p>
-        </div>
-      </SidebarFooter>
     </Sidebar>
   )
 }
