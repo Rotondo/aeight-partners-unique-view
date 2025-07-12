@@ -4,13 +4,13 @@ import { ContatosList } from '@/components/admin/ContatosList';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const ContatosPage: React.FC = () => {
-  console.log('ContatosPage: Renderizando página de contatos');
+  console.log('ContatosPage: Renderizando página de contatos - versão limpa');
   
   return (
     <div className="container mx-auto p-6">
       <Card>
         <CardHeader>
-          <CardTitle>Contatos</CardTitle>
+          <CardTitle>Gestão de Contatos</CardTitle>
         </CardHeader>
         <CardContent>
           <ContatosList />

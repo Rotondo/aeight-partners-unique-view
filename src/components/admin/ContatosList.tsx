@@ -32,7 +32,7 @@ interface Contato {
 }
 
 export const ContatosList: React.FC = () => {
-  console.log('Admin ContatosList: Componente carregado');
+  console.log('Admin ContatosList: Componente carregado - versão limpa');
   
   const [contatos, setContatos] = useState<Contato[]>([]);
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
@@ -48,12 +48,13 @@ export const ContatosList: React.FC = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    console.log('Admin ContatosList: useEffect executado');
+    console.log('Admin ContatosList: useEffect executado - versão limpa');
     fetchContatos();
     fetchEmpresas();
   }, []);
 
   const fetchContatos = async () => {
+    console.log('Admin ContatosList: Buscando contatos...');
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -65,6 +66,7 @@ export const ContatosList: React.FC = () => {
         .order("nome");
 
       if (error) throw error;
+      console.log('Admin ContatosList: Contatos carregados:', data?.length || 0);
       setContatos(data as Contato[]);
     } catch (error) {
       console.error("Erro ao buscar contatos:", error);
@@ -79,6 +81,7 @@ export const ContatosList: React.FC = () => {
   };
 
   const fetchEmpresas = async () => {
+    console.log('Admin ContatosList: Buscando empresas...');
     try {
       const { data, error } = await supabase
         .from("empresas")
@@ -92,6 +95,7 @@ export const ContatosList: React.FC = () => {
         tipo: item.tipo as TipoEmpresa
       }));
       
+      console.log('Admin ContatosList: Empresas carregadas:', typedData.length);
       setEmpresas(typedData);
     } catch (error) {
       console.error("Erro ao buscar empresas:", error);
@@ -232,12 +236,12 @@ export const ContatosList: React.FC = () => {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold">Contatos</h2>
+        <h2 className="text-xl font-semibold">Contatos Administrativos</h2>
         <Button onClick={() => setIsAddingContato(true)}>Novo Contato</Button>
       </div>
 
       {loading ? (
-        <div className="text-center p-4">Carregando...</div>
+        <div className="text-center p-4">Carregando contatos...</div>
       ) : (
         <Table>
           <TableHeader>
@@ -280,7 +284,6 @@ export const ContatosList: React.FC = () => {
         </Table>
       )}
 
-      {/* Dialog para adicionar contato */}
       <Dialog open={isAddingContato} onOpenChange={setIsAddingContato}>
         <DialogContent>
           <DialogHeader>
@@ -346,7 +349,6 @@ export const ContatosList: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog para editar contato */}
       <Dialog open={!!isEditingContato} onOpenChange={(open) => {
         if (!open) {
           resetForm();
