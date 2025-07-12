@@ -1,474 +1,280 @@
 
-# Aeight Partners - Arquitetura PWA e Sistema Modular
+# Sistema A&eight Partners - Documentação Técnica
 
-Sistema completo PWA de gestão desenvolvido com arquitetura moderna e modular, incluindo capacidades offline e o inovador **Módulo Diário Executivo**.
+## 📋 Visão Geral do Sistema
 
-## 📐 **Nova Arquitetura PWA**
+O **A&eight Partners Unique View** é uma plataforma integrada de gestão de parcerias empresariais, desenvolvida especificamente para o Grupo A&eight. O sistema oferece uma solução completa para gerenciamento de relacionamentos, oportunidades de negócio e análise estratégica de parcerias.
 
-### 🚀 Progressive Web App Stack
-- **Frontend**: React 18 + TypeScript + Vite + PWA
-- **PWA Features**: Service Worker + Web App Manifest + Offline Support
-- **UI Framework**: Tailwind CSS + Shadcn/ui + Mobile-First
-- **Backend**: Supabase (PostgreSQL + Auth + Storage + Edge Functions)
-- **Estado**: Context API + Hooks customizados + React Query
-- **Roteamento**: React Router v6 + Lazy Loading
-- **Build**: Vite + PWA Plugin + TypeScript
+## 🏗️ Arquitetura do Sistema
 
-### 🎯 **Princípios Arquiteturais PWA**
-- **Offline-First**: Funcionalidade essencial sem conexão
-- **Modularidade**: Cada funcionalidade em módulo independente
-- **Responsividade Mobile**: Interface otimizada para todos os dispositivos
-- **Performance**: Core Web Vitals otimizados
-- **Responsabilidade única**: Componentes focados e reutilizáveis
-- **Tipagem forte**: TypeScript em 100% do código
-- **Segurança**: RLS, validações e auditoria completa
+### Frontend
+- **Framework**: React 18 com TypeScript
+- **Styling**: Tailwind CSS + Shadcn/ui
+- **Estado**: TanStack React Query para cache e sincronização
+- **Roteamento**: React Router Dom v6
+- **Build Tool**: Vite para desenvolvimento e build otimizado
 
-## 📱 **Implementação PWA**
+### Backend
+- **BaaS**: Supabase (PostgreSQL + Auth + Storage + Edge Functions)
+- **Banco de Dados**: PostgreSQL com Row Level Security (RLS)
+- **Autenticação**: Supabase Auth com JWT
+- **Storage**: Supabase Storage para arquivos
 
-### 🔧 **Service Worker Estratégico**
-```javascript
-// public/service-worker.js
-const CACHE_NAME = 'aeight-pwa-cache-v1';
-const urlsToCache = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/favicon.svg'
-];
+### Componentes UI
+- **Design System**: Shadcn/ui baseado em Radix UI
+- **Gráficos**: Recharts para visualizações de dados
+- **Ícones**: Lucide React
+- **Animações**: CSS Transitions + Tailwind
 
-// Estratégias de cache:
-// - Cache First: Assets estáticos
-// - Network First: Dados dinâmicos
-// - Stale While Revalidate: Balance performance/freshness
+## 📊 Estrutura de Dados Principal
+
+### Tabelas Core
+```sql
+-- Usuários e empresas
+usuarios (id, nome, email, papel, empresa_id, ativo)
+empresas (id, nome, tipo, descricao, status)
+contatos (id, nome, email, telefone, empresa_id)
+
+-- Oportunidades e atividades
+oportunidades (id, nome_lead, valor, status, empresa_origem_id, empresa_destino_id)
+atividades_oportunidade (id, titulo, descricao, data_prevista, concluida)
+
+-- Mapa de parceiros
+etapas_jornada (id, nome, descricao, ordem, cor, ativo)
+subniveis_etapa (id, etapa_id, nome, ordem, ativo)
+parceiros_mapa (id, empresa_id, status, performance_score)
+associacoes_parceiro_etapa (id, parceiro_id, etapa_id, subnivel_id)
+
+-- Wishlist e relacionamentos
+wishlist_items (id, empresa_proprietaria_id, empresa_desejada_id, status)
+empresa_clientes (id, empresa_proprietaria_id, empresa_cliente_id)
 ```
 
-### 📋 **Web App Manifest**
-```json
-{
-  "name": "A&eight Partners",
-  "short_name": "A&eight",
-  "start_url": ".",
-  "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#4a90e2",
-  "description": "Plataforma Unificada de Parcerias A&eight"
+### Políticas de Segurança (RLS)
+- **Isolamento por empresa**: Usuários só acessam dados de sua empresa
+- **Controle administrativo**: Admins têm acesso global
+- **Auditoria**: Logs automáticos de alterações críticas
+
+## 🔄 Funcionalidades Principais
+
+### 1. Dashboard e Analytics
+- **Métricas em tempo real**: Oportunidades, conversões, valores
+- **Gráficos interativos**: Recharts com filtros dinâmicos
+- **Exportação**: PDF e Excel para relatórios
+- **Análise temporal**: Comparações por período
+
+### 2. Gestão de Oportunidades
+- **Fluxo completo**: Da indicação ao fechamento
+- **Pipeline visual**: Kanban board com drag & drop
+- **Atividades**: Tasks e follow-ups organizados
+- **Histórico**: Auditoria completa de mudanças
+
+### 3. Mapa de Parceiros
+- **Jornada estruturada**: 12 etapas + subníveis
+- **Visualização interativa**: Grid, lista e jornada
+- **Associações**: Vinculação parceiro-etapa
+- **Gaps analysis**: Identificação de lacunas
+
+### 4. Módulo Administrativo do Mapa
+- **CRUD completo**: Criar, editar, excluir etapas/subníveis
+- **Reordenação**: Drag & drop ou botões up/down
+- **Status toggle**: Ativar/desativar elementos
+- **Validação**: Integridade referencial mantida
+- **Interface responsiva**: Desktop e mobile
+
+### 5. Wishlist e Matching
+- **Demandas estruturadas**: Sistema de solicitações
+- **Algoritmo de matching**: Conexão automática
+- **Apresentações**: Workflow de introduções
+- **Feedback loop**: Acompanhamento de resultados
+
+### 6. Repositório de Materiais
+- **Upload seguro**: Supabase Storage
+- **Categorização**: Tags e filtros avançados
+- **Controle de acesso**: Por empresa e categoria
+- **Versionamento**: Histórico de uploads
+
+## 🛡️ Segurança e Compliance
+
+### Autenticação
+```typescript
+// Fluxo de autenticação
+const { data, error } = await supabase.auth.signInWithPassword({
+  email: user.email,
+  password: user.password
+});
+```
+
+### Row Level Security
+```sql
+-- Exemplo de política RLS
+CREATE POLICY "Users can view their company data" 
+ON oportunidades FOR SELECT 
+USING (
+  empresa_origem_id IN (
+    SELECT empresa_id FROM usuarios WHERE id = auth.uid()
+  )
+);
+```
+
+### Validação de Dados
+- **Frontend**: Zod schemas para validação
+- **Backend**: Constraints e triggers PostgreSQL
+- **Sanitização**: Input sanitization automática
+
+## 📱 Responsividade e UX
+
+### Breakpoints Tailwind
+- **sm**: 640px+ (mobile landscape)
+- **md**: 768px+ (tablet)  
+- **lg**: 1024px+ (desktop)
+- **xl**: 1280px+ (large desktop)
+
+### Componentes Adaptativos
+```typescript
+// Exemplo de componente responsivo
+const MapaParceirosSidebar = () => {
+  const isMobile = useIsMobile();
+  
+  return (
+    <aside className={`${isMobile ? 'w-full' : 'w-80'} overflow-y-auto`}>
+      {/* Conteúdo adaptativo */}
+    </aside>
+  );
+};
+```
+
+## 🔧 Padrões de Desenvolvimento
+
+### Estrutura de Arquivos
+```
+src/
+├── components/          # Componentes reutilizáveis
+│   ├── ui/             # Componentes base (shadcn)
+│   ├── admin/          # Módulos administrativos
+│   └── [feature]/      # Componentes por funcionalidade
+├── hooks/              # Custom hooks
+├── pages/              # Páginas/rotas
+├── types/              # Definições TypeScript
+├── lib/                # Utilitários e configurações
+└── integrations/       # Integrações externas
+```
+
+### Convenções de Código
+- **Naming**: camelCase para JS, kebab-case para CSS
+- **Components**: PascalCase, arquivos .tsx
+- **Hooks**: Prefixo "use", lógica reutilizável
+- **Types**: Interfaces descritivas, sufixo adequado
+
+### Performance
+- **Lazy Loading**: Componentes carregados sob demanda
+- **Memoization**: React.memo para componentes pesados
+- **Query Optimization**: TanStack Query com cache inteligente
+- **Bundle Splitting**: Vite code splitting automático
+
+## 🚀 Deploy e Infraestrutura
+
+### Supabase Configuration
+```typescript
+// Client configuration
+export const supabase = createClient(
+  'https://amuadbftctnmckncgeua.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+);
+```
+
+### Environment Variables
+- **VITE_SUPABASE_URL**: URL do projeto Supabase
+- **VITE_SUPABASE_ANON_KEY**: Chave pública
+- **Database URL**: Para migrations e seed
+
+### CI/CD Pipeline
+1. **Build**: Vite build otimizado
+2. **Tests**: Unit tests com Vitest
+3. **Deploy**: Vercel/Netlify automático
+4. **Database**: Migrations automáticas via Supabase CLI
+
+## 📊 Monitoramento e Logs
+
+### Métricas de Performance
+- **Core Web Vitals**: LCP, FID, CLS
+- **Bundle Size**: Análise com Vite Bundle Analyzer
+- **Query Performance**: React Query DevTools
+
+### Error Tracking
+```typescript
+// Error boundary customizado
+class ErrorBoundary extends Component {
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error('Application Error:', error, errorInfo);
+    // Enviar para serviço de monitoramento
+  }
 }
 ```
 
-### ⚡ **Otimizações de Performance**
-- **Core Web Vitals**: LCP < 2.5s, FID < 100ms, CLS < 0.1
-- **Bundle Splitting**: Lazy loading por rotas
-- **Tree Shaking**: Apenas código usado
-- **Asset Optimization**: Compressão automática
-- **Critical CSS**: Inlined para first paint
+## 🔄 Atualizações e Manutenção
 
-## 🏢 **Módulos do Sistema Refatorados**
+### Versionamento
+- **Semantic Versioning**: MAJOR.MINOR.PATCH
+- **Git Flow**: Feature branches + pull requests
+- **Database**: Migrations versionadas com Supabase
 
-### 📊 **MÓDULO INDICADORES** (Refatorado Completamente)
+### Backup e Recovery
+- **Database**: Backup automático diário (Supabase)
+- **Storage**: Replicação automática de arquivos
+- **Point-in-time recovery**: 7 dias de histórico
 
-#### 📁 Nova Estrutura Modular
-```
-src/pages/indicadores/
-├── IndicadoresPage.tsx              # Coordenador principal (240→150 linhas)
-├── types.ts                         # Interfaces TypeScript centralizadas
-├── utils.ts                         # Utilitários específicos do módulo
-└── components/
-    ├── IndicadoresFilters.tsx       # Filtros avançados
-    ├── IndicadoresCharts.tsx        # Visualizações gráficas  
-    ├── IndicadoresTable.tsx         # Tabela responsiva com edição
-    └── CustomTooltip.tsx            # Tooltip personalizado
-```
+### Monitoramento de Saúde
+- **Health Checks**: Endpoints de status
+- **Alertas**: Notificações para falhas críticas
+- **Métricas**: Dashboard de performance interna
 
-#### 🔄 **Fluxo de Dados Otimizado**
+## 📚 Documentação de APIs
+
+### Supabase Client Methods
 ```typescript
-// Antes: Lógica monolítica em um arquivo
-// Depois: Arquitetura modular
-IndicadoresPage → [Filters, Charts, Table] → Types/Utils → Supabase
+// Exemplos de queries otimizadas
+const { data: oportunidades } = await supabase
+  .from('oportunidades')
+  .select(`
+    *,
+    empresa_origem:empresas!empresa_origem_id(nome),
+    empresa_destino:empresas!empresa_destino_id(nome)
+  `)
+  .eq('status', 'ativa')
+  .order('created_at', { ascending: false });
 ```
 
-#### 🎯 **Benefícios da Refatoração**
-- **Performance**: 60% menos re-renders
-- **Manutenibilidade**: Componentes < 150 linhas
-- **Reusabilidade**: Utils compartilháveis
-- **TypeScript**: Zero any types
-- **Testabilidade**: Componentes isolados
-
-### 🎪 **MÓDULO WISHLIST** (Arquitetura Especializada)
-
-#### 📁 Estrutura Completamente Reestruturada
-```
-src/pages/wishlist/
-├── WishlistPage.tsx                 # Router principal
-├── WishlistDashboard.tsx            # Overview e métricas
-├── EmpresasClientesPage.tsx         # Gestão de clientes
-├── WishlistItemsPage.tsx            # Solicitações
-├── ApresentacoesPage.tsx            # Execução networking
-├── ClientesSobrepostosPage.tsx      # Análise sobreposição
-├── ModoApresentacaoPage.tsx         # Interface apresentações
-├── TrocaMutuaPage.tsx               # Sistema de trocas
-└── QualificacaoPage.tsx             # Qualificação oportunidades
-```
-
-#### 🔄 **Fluxos Especializados**
-
-**1. Detecção de Sobreposições**
+### Custom Hooks Pattern
 ```typescript
-useClientesSobrepostos → Análise automática → Alertas inteligentes
-```
-
-**2. Scoring de Relevância**  
-```typescript
-useParceiroRelevance → Algoritmo proprietário → Rankings automáticos
-```
-
-**3. Classificação de Empresas**
-```typescript
-companyClassification → Regras de negócio → Categorização automática
-```
-
-### 🏢 **Módulo de Parceiros (Otimizado)**
-
-#### 📁 Estrutura Responsiva
-```
-src/components/partners/
-├── PartnersView.tsx        # Vista principal PWA
-├── PartnerCard.tsx         # Card mobile-optimized
-├── PartnerForm.tsx         # Formulário responsivo
-├── PartnerIndicators.tsx   # Quadrante touch-friendly
-└── PartnerOnePager.tsx     # One-pager mobile-first
-```
-
-### 📋 **MÓDULO DIÁRIO EXECUTIVO** (Admin-Only)
-
-#### 📁 Estrutura Mantida com Melhorias PWA
-```
-src/components/diario/
-├── DiarioTabs.tsx              # Navegação otimizada mobile
-├── Agenda/
-│   ├── AgendaView.tsx          # Vista PWA otimizada
-│   ├── DiarioCalendar.tsx      # Calendário touch-friendly
-│   └── AgendaEventList.tsx     # Lista responsiva
-├── Crm/
-│   ├── CrmRegister.tsx         # Interface mobile-first
-│   ├── CrmFormAudio.tsx        # Gravação nativa móvel
-│   ├── CrmFormVideo.tsx        # Captura otimizada
-│   └── CrmFormText.tsx         # Editor responsivo
-└── IA/
-    ├── IaAgentInbox.tsx        # Inbox mobile-optimized
-    └── IaApproveField.tsx      # Aprovação touch-friendly
-```
-
-## 🔧 **Hooks Customizados Especializados**
-
-### 📊 **Análise de Negócio**
-```typescript
-// src/hooks/useClientesSobrepostos.ts
-// Detecção inteligente de clientes compartilhados
-export const useClientesSobrepostos = () => {
-  // Algoritmo proprietário de detecção
-  // Performance otimizada com React Query
-  // Cache inteligente de resultados
-};
-
-// src/hooks/useParceiroRelevance.ts  
-// Scoring automático de relevância entre parceiros
-export const useParceiroRelevance = () => {
-  // Cálculo de score baseado em múltiplos fatores
-  // Atualização em tempo real
-  // Persistência de rankings
+// Hook reutilizável para dados
+export const useMapaParceiros = () => {
+  const queryClient = useQueryClient();
+  
+  const { data: etapas, isLoading } = useQuery({
+    queryKey: ['etapas-jornada'],
+    queryFn: () => fetchEtapas(),
+    staleTime: 5 * 60 * 1000, // 5 min cache
+  });
+  
+  return { etapas, isLoading, refetch: () => queryClient.invalidateQueries() };
 };
 ```
 
-### 🎯 **Gestão de Estado PWA**
-```typescript
-// src/hooks/usePartners.ts
-// Gestão otimizada de parceiros com cache offline
-export const usePartners = () => {
-  // Sync automático online/offline
-  // Cache estratégico para PWA
-  // Optimistic updates
-};
-```
+## 🎯 Roadmap Técnico
 
-## 🎨 **Sistema de Design PWA**
+### Próximas Implementações
+- **Real-time**: WebSockets para colaboração
+- **Offline-first**: Service Workers + IndexedDB
+- **Mobile App**: React Native ou Capacitor
+- **AI/ML**: Integração com OpenAI para insights
 
-### 📱 **Mobile-First Components**
-- **Touch Targets**: Mínimo 44px para acessibilidade
-- **Responsive Breakpoints**: sm/md/lg/xl otimizados
-- **Gesture Support**: Swipe, pinch, pan preparados
-- **Safe Areas**: Compatibilidade com notch/home indicator
-
-### 🎯 **Componentes Especializados**
-```typescript
-// CustomTooltip - Tooltips responsivos
-interface CustomTooltipProps {
-  active?: boolean;
-  payload?: any[];
-  // Otimizado para touch e desktop
-}
-
-// IndicadoresFilters - Filtros móveis
-interface IndicadoresFilttersProps {
-  // Interface unificada mobile/desktop
-  // Persistência de estado
-  // Acessibilidade completa
-}
-```
-
-## 🔐 **Segurança PWA e Privacidade**
-
-### 🛡️ **Sistema de Mascaramento**
-```typescript
-// src/utils/demoMask.ts
-// Proteção recursiva de dados sensíveis
-export function maskSensitiveData(data: any): any {
-  // Máscara inteligente preservando funcionalidade
-  // Nunca mascara IDs críticos
-  // Processamento recursivo de estruturas complexas
-}
-
-// Hook para aplicação automática
-export function useDemoMask<T = any>(data: T): T {
-  const { isDemoMode } = usePrivacy();
-  return isDemoMode ? maskSensitiveData(data) : data;
-}
-```
-
-### 🔒 **Controle de Acesso Granular**
-- **RLS Policies**: Segurança em nível de linha
-- **Context-based Auth**: Autorização por contexto
-- **Audit Trail**: Log completo de ações
-- **Data Encryption**: Dados sensíveis criptografados
-
-## 🚀 **Performance e Otimização PWA**
-
-### ⚡ **Core Web Vitals Optimized**
-```typescript
-// Métricas de Performance
-const PERFORMANCE_TARGETS = {
-  LCP: '< 2.5s',    // Largest Contentful Paint
-  FID: '< 100ms',   // First Input Delay  
-  CLS: '< 0.1',     // Cumulative Layout Shift
-  PWA_SCORE: '90+'  // Lighthouse PWA Score
-};
-```
-
-### 📊 **Estratégias de Cache**
-```javascript
-// Service Worker Cache Strategies
-const CACHE_STRATEGIES = {
-  'static-assets': 'CacheFirst',      // CSS, JS, Images
-  'api-data': 'NetworkFirst',         // Dynamic data
-  'user-data': 'StaleWhileRevalidate' // Balance speed/freshness
-};
-```
-
-### 🔄 **Otimizações de Bundle**
-- **Code Splitting**: Por rota e funcionalidade
-- **Tree Shaking**: Eliminação de código não usado
-- **Dynamic Imports**: Carregamento sob demanda
-- **Bundle Analysis**: Monitoramento contínuo
-
-## 🎯 **Utilidades de Negócio**
-
-### 🏢 **Classificação de Empresas**
-```typescript
-// src/utils/companyClassification.ts
-// Algoritmo proprietário de classificação
-export const classifyCompany = (empresa: Empresa) => {
-  // Regras de negócio específicas
-  // Classificação automática por porte
-  // Scoring multifatorial
-};
-```
-
-### 📊 **Análise de Sobreposições**
-```typescript
-// Detecção inteligente de clientes compartilhados
-export const detectClientOverlap = (parceiro1, parceiro2) => {
-  // Algoritmo de matching avançado
-  // Score de sobreposição
-  // Sugestões de ação
-};
-```
-
-## 🔧 **DevOps e Deploy PWA**
-
-### 📱 **PWA Deployment Pipeline**
-```yaml
-Build → PWA Validation → Lighthouse Audit → Deploy → Cache Invalidation
-  ↓         ↓              ↓               ↓          ↓
-Vite    Manifest Check   Performance    Vercel    Service Worker
-```
-
-### 📊 **Monitoramento PWA**
-- **Lighthouse CI**: Auditorias automáticas
-- **Real User Monitoring**: Métricas reais
-- **Performance Budget**: Limites de performance
-- **Error Tracking**: Monitoramento de falhas
-
-## 📈 **Escalabilidade PWA**
-
-### 🔄 **Horizontal Scaling**
-- **Microservices Ready**: Módulos independentes
-- **API-First**: Todas as funcionalidades via API
-- **CDN Optimized**: Assets distribuídos globalmente
-- **Edge Computing**: Processamento próximo ao usuário
-
-### ⬆️ **Vertical Scaling**
-- **Database Optimization**: Queries otimizadas
-- **Memory Management**: Garbage collection eficiente
-- **CPU Optimization**: Algoritmos otimizados
-- **Storage Efficiency**: Compressão inteligente
-
-## 🎯 **Roadmap Técnico PWA**
-
-### 🔜 **Q2 2025 - PWA Avançado**
-- **Push Notifications**: Sistema completo de notificações
-- **Background Sync**: Sincronização em segundo plano
-- **Web Share API**: Compartilhamento nativo
-- **Payment Request API**: Pagamentos integrados
-
-### 🧪 **Q3 2025 - Tecnologias Emergentes**
-- **WebAssembly**: Performance crítica
-- **Web Workers**: Processamento paralelo
-- **IndexedDB**: Storage offline robusto
-- **WebRTC**: Comunicação P2P
-
-### 🚀 **Q4 2025 - Ecosystem Expansion**
-- **Desktop PWA**: Instalação desktop nativa
-- **Mobile Deep Linking**: Integração mobile profunda
-- **Cross-Platform Sync**: Sincronização multiplataforma
-- **Enterprise Features**: Funcionalidades corporativas
-
-## 📋 **Diretrizes de Desenvolvimento PWA**
-
-### 🎯 **Padrões de Componentização**
-1. **Componente = Responsabilidade única**
-2. **Máximo 150 linhas** por componente
-3. **Hooks personalizados** para lógica complexa
-4. **TypeScript strict mode** obrigatório
-5. **Mobile-first** sempre
-6. **Acessibilidade** em todos os componentes
-
-### 📱 **Estrutura PWA Padrão**
-```typescript
-modules/[nome-modulo]/
-├── components/         # Componentes React responsivos
-├── hooks/             # Hooks com cache PWA
-├── types/             # Tipos TypeScript específicos
-├── utils/             # Utilitários com offline support
-├── services/          # Serviços com sync automático
-└── index.ts           # Exports otimizados
-```
-
-### 🔧 **Como Adicionar Módulo PWA**
-1. **Estrutura**: Criar diretórios padrão
-2. **Hooks**: Implementar com React Query + Cache
-3. **Componentes**: Mobile-first e acessíveis
-4. **Serviços**: Sync online/offline
-5. **Testes**: Cobertura PWA completa
-6. **Documentação**: README atualizado
+### Otimizações Planejadas
+- **Performance**: Virtualização de listas grandes
+- **SEO**: Meta tags dinâmicas
+- **Accessibility**: WCAG 2.1 AA compliance
+- **Security**: Implementação de CSP headers
 
 ---
 
-## 📊 **Métricas de Sucesso PWA**
-
-### ⚡ **Performance Metrics**
-- **Time to Interactive**: < 3s em 3G
-- **Bundle Size**: < 250KB inicial
-- **Cache Hit Rate**: > 90%
-- **Offline Functionality**: 80% das features
-
-### 📱 **User Experience Metrics**
-- **Install Rate**: Meta 25% dos usuários
-- **Retention Rate**: Meta 60% após 30 dias
-- **Engagement**: 40% mais tempo de uso
-- **Mobile Conversion**: 30% melhoria
-
----
-
-> **Arquitetura PWA Aeight Partners** - Sistema modular, performático e preparado para o futuro mobile-first do relacionamento empresarial.
-
----
-
-## 🏢 **Fluxos de Negócio Detalhados e Integração com Banco**
-
-### **Mapa de Parceiros**
-- Visualização e edição inline de etapa/subnível (persistência em lote via Supabase)
-- Filtros avançados (por etapa, subnível, status, empresa)
-- Card detalhado com edição completa do parceiro
-- Associação flexível a etapas/subníveis, com histórico de alterações
-- Policies Supabase garantem que apenas usuários autenticados possam editar
-- Triggers automáticas para atualização de timestamps
-
-#### Exemplo de fluxo:
-1. Usuário seleciona nova etapa/subnível na tabela
-2. Alteração é marcada localmente (linha destacada)
-3. Ao clicar em "Salvar alterações", todas as mudanças são persistidas via função associarParceiroEtapa
-4. Toast de feedback visual (sucesso/erro)
-5. Estado local é limpo e dados recarregados
-
-### **Oportunidades**
-- Pipeline visual, histórico de mudanças, atividades vinculadas
-- Metas por período, empresa, segmento
-- Policies garantem que apenas envolvidos possam editar
-- Triggers para auditoria e integração com Albato
-
-### **Diário Executivo**
-- Agenda de eventos, ações de CRM, sugestões de IA, resumos automáticos
-- Upload de arquivos (áudio, vídeo, texto) com controle de progresso
-- Sincronização PWA: alterações offline são marcadas e sincronizadas ao reconectar
-
-### **Indicadores**
-- Dashboards com KPIs, funis, ranking, análises de performance
-- Cálculo automático de scores e classificação de empresas
-- Views e funções SQL otimizadas para performance
-
-### **Wishlist**
-- Gestão de interesses, apresentações, clientes sobrepostos
-- Algoritmo proprietário de detecção de sobreposição e scoring de relevância
-- Policies garantem acesso apenas a empresas envolvidas
-
----
-
-## 🔐 **Segurança, Auditoria e Políticas**
-- Policies RLS detalhadas para cada módulo (ver README.dados.md)
-- Funções customizadas para RBAC e multi-tenancy
-- Auditoria completa de alterações críticas (tabela audit_log_pwa)
-- Máscara de dados sensíveis em modo demo
-- Triggers para atualização automática de relevância e classificação
-
----
-
-## ⚡ **Dicas de Uso e Boas Práticas**
-- Use filtros e dashboards para insights rápidos
-- Prefira salvar alterações em lote para performance e consistência
-- Utilize o modo offline para registrar dados em campo
-- Admins podem gerenciar etapas, subníveis, categorias e políticas
-- Consulte os READMEs para exemplos de queries e integrações
-
----
-
-## FAQ e Dúvidas Frequentes
-
-### Como garantir que alterações feitas offline serão sincronizadas?
-- O sistema utiliza PWA com cache inteligente. Alterações feitas offline são marcadas e sincronizadas automaticamente ao reconectar.
-
-### Como saber se tenho permissão para editar um dado?
-- As policies RLS do Supabase garantem que apenas usuários autenticados e autorizados possam editar. Se não conseguir editar, verifique seu papel (admin/user) e se está logado.
-
-### Como auditar alterações?
-- Todas as alterações críticas são registradas na tabela de auditoria (`audit_log_pwa`), incluindo usuário, device e status de sync.
-
-### Como integrar um novo módulo ao sistema?
-- Siga o padrão modular descrito nos READMEs: crie diretórios, hooks, componentes e serviços com suporte a cache e sync. Consulte exemplos de integração no README.dados.md.
-
-### O que fazer se aparecer erro de permissão (RLS)?
-- Verifique se está autenticado, se seu usuário tem o papel correto e se as policies da tabela permitem a operação. Consulte o README.dados.md para exemplos de policies.
-
-### Como restaurar dados ou fazer backup?
-- Use as ferramentas do Supabase para exportar dados e backups automáticos. Consulte a documentação oficial para procedimentos detalhados.
-
-### Onde encontrar exemplos de queries e integrações?
-- Veja a seção de exemplos de integração no final do README.dados.md.
+*Documentação técnica atualizada - Versão 2.0 | Sistema A&eight Partners*
