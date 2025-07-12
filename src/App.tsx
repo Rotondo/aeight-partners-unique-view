@@ -1,3 +1,4 @@
+
 import { Suspense, lazy } from 'react';
 import { Toaster } from '@/components/ui/toaster';
 import { Toaster as Sonner } from '@/components/ui/sonner';
@@ -6,24 +7,23 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { PrivacyProvider } from '@/contexts/PrivacyContext';
 import MainLayout from '@/components/layout/MainLayout';
-import PrivateRoute from '@/components/auth/PrivateRoute';
+import { PrivateRoute } from '@/components/auth/PrivateRoute';
 import LoadingScreen from '@/components/ui/LoadingScreen';
-import Index from '@/pages';
-const LoginPage = lazy(() => import('@/pages/login'));
+const Index = lazy(() => import('@/pages/Index'));
+const LoginPage = lazy(() => import('@/pages/auth/LoginPage'));
 const AdminPage = lazy(() => import('@/components/admin/AdminPage'));
 const MapaParceirosPage = lazy(() => import('@/pages/mapa-parceiros/MapaParceirosPage'));
 const EmpresasPage = lazy(() => import('@/pages/empresas/EmpresasPage'));
-const EmpresaPage = lazy(() => import('@/pages/empresas/EmpresaPage'));
-const CategoriasPage = lazy(() => import('@/pages/categorias/CategoriasPage'));
-const ContatosPage = lazy(() => import('@/pages/contatos/ContatosPage'));
-const ClientesPage = lazy(() => import('@/pages/clientes/ClientesPage'));
+const CategoriasPage = lazy(() => import('@/pages/repositorio/CategoriasList'));
+const ContatosPage = lazy(() => import('@/components/eventos/ContatosList'));
+const ClientesPage = lazy(() => import('@/pages/wishlist/ClientesSobrepostosPage'));
 const IndicadoresPage = lazy(() => import('@/pages/indicadores/IndicadoresPage'));
-const OnePagersPage = lazy(() => import('@/pages/one-pagers/OnePagersPage'));
+const OnePagersPage = lazy(() => import('@/pages/onepager/OnePagerPage'));
 const RepositorioPage = lazy(() => import('@/pages/repositorio/RepositorioPage'));
 const WishlistPage = lazy(() => import('@/pages/wishlist/WishlistPage'));
 const EventosPage = lazy(() => import('@/pages/eventos/EventosPage'));
-const MetasOportunidadesPage = lazy(() => import('@/pages/metas-oportunidades/MetasOportunidadesPage'));
-const OportunidadesPage = lazy(() => import('@/pages/oportunidades/OportunidadesPage'));
+const MetasOportunidadesPage = lazy(() => import('@/pages/indicadores/IndicadoresPage'));
+const OportunidadesPage = lazy(() => import('@/pages/oportunidades/index'));
 const MapaParceiroAdminPage = lazy(() => import('@/pages/admin/MapaParceiroAdminPage'));
 
 const queryClient = new QueryClient();
@@ -59,12 +59,6 @@ function App() {
                 <Route path="/empresas" element={
                   <Suspense fallback={<LoadingScreen />}>
                     <EmpresasPage />
-                  </Suspense>
-                } />
-
-                <Route path="/empresas/:id" element={
-                  <Suspense fallback={<LoadingScreen />}>
-                    <EmpresaPage />
                   </Suspense>
                 } />
 
