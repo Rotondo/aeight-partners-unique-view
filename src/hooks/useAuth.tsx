@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+
+import { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface User {
@@ -30,7 +31,7 @@ const AuthContext = createContext<AuthContextType>({
   refreshUser: async () => {},
 });
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
