@@ -25,9 +25,11 @@ try {
     root = createRoot(rootElement);
   }
 
-  // Temporariamente sem StrictMode para debug
+  // Render with StrictMode to help catch issues
   root.render(
-    <App />
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>
   );
 
   console.log("[Main] Aplicação renderizada com sucesso");

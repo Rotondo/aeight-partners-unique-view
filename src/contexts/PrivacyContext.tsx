@@ -14,25 +14,32 @@ interface PrivacyProviderProps {
 }
 
 export const PrivacyProvider: React.FC<PrivacyProviderProps> = ({ children }) => {
+  // Initialize state with a safe default
   const [isDemoMode, setIsDemoMode] = useState<boolean>(() => {
+    // Check if we're in browser environment
+    if (typeof window === 'undefined') {
+      return false;
+    }
+    
     // Verificação segura do localStorage
     try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        const saved = localStorage.getItem('aeight-demo-mode');
-        return saved ? JSON.parse(saved) : false;
-      }
+      const saved = localStorage.getItem('aeight-demo-mode');
+      return saved ? JSON.parse(saved) : false;
     } catch (error) {
       console.warn('[PrivacyContext] Erro ao acessar localStorage:', error);
+      return false;
     }
-    return false;
   });
 
   // Salvar no localStorage quando mudar
   useEffect(() => {
+    // Check if we're in browser environment
+    if (typeof window === 'undefined') {
+      return;
+    }
+    
     try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        localStorage.setItem('aeight-demo-mode', JSON.stringify(isDemoMode));
-      }
+      localStorage.setItem('aeight-demo-mode', JSON.stringify(isDemoMode));
     } catch (error) {
       console.warn('[PrivacyContext] Erro ao salvar no localStorage:', error);
     }
