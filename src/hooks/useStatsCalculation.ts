@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import type { Oportunidade } from "@/types";
 import { supabase } from "@/lib/supabase";
 
@@ -45,6 +45,13 @@ const initialDashboardStats: DashboardStats = {
  * Hook para cálculos de estatísticas usando processamento local
  */
 export const useStatsCalculation = (oportunidades: Oportunidade[]): DashboardStats => {
+  console.log('[useStatsCalculation] Starting hook execution', {
+    reactAvailable: !!React,
+    useStateAvailable: !!useState,
+    useEffectAvailable: !!useEffect,
+    inputLength: oportunidades?.length || 0
+  });
+
   const [stats, setStats] = useState<DashboardStats>(initialDashboardStats);
 
   useEffect(() => {

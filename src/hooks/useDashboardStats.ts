@@ -1,5 +1,5 @@
 
-import { useMemo } from "react";
+import React, { useMemo } from "react";
 import { Oportunidade } from "@/types";
 import { useStatsCalculation } from "./useStatsCalculation";
 
@@ -23,6 +23,12 @@ export interface DashboardStats {
 }
 
 export function useDashboardStats(oportunidadesFiltradas?: Oportunidade[] | null): DashboardStats {
+  console.log('[useDashboardStats] Starting hook execution', {
+    reactAvailable: !!React,
+    useMemoAvailable: !!useMemo,
+    inputData: oportunidadesFiltradas
+  });
+
   const oportunidades = useMemo(() => {
     // CORREÇÃO: Garantir array válido e loggar para debug
     const validArray = Array.isArray(oportunidadesFiltradas) ? oportunidadesFiltradas : [];
