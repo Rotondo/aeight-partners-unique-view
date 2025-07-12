@@ -9,13 +9,14 @@ import { PrivacyProvider } from '@/contexts/PrivacyContext';
 import MainLayout from '@/components/layout/MainLayout';
 import { PrivateRoute } from '@/components/auth/PrivateRoute';
 import LoadingScreen from '@/components/ui/LoadingScreen';
+
 const Index = lazy(() => import('@/pages/Index'));
 const LoginPage = lazy(() => import('@/pages/auth/LoginPage'));
 const AdminPage = lazy(() => import('@/components/admin/AdminPage'));
 const MapaParceirosPage = lazy(() => import('@/pages/mapa-parceiros/MapaParceirosPage'));
 const EmpresasPage = lazy(() => import('@/pages/empresas/EmpresasPage'));
 const CategoriasPage = lazy(() => import('@/pages/repositorio/CategoriasList'));
-const ContatosPage = lazy(() => import('@/components/eventos/ContatosList'));
+const ContatosPage = lazy(() => import('@/pages/contatos/ContatosPage'));
 const ClientesPage = lazy(() => import('@/pages/wishlist/ClientesSobrepostosPage'));
 const IndicadoresPage = lazy(() => import('@/pages/indicadores/IndicadoresPage'));
 const OnePagersPage = lazy(() => import('@/pages/onepager/OnePagerPage'));
