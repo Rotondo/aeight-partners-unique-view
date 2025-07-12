@@ -32,6 +32,8 @@ interface Contato {
 }
 
 export const ContatosList: React.FC = () => {
+  console.log('Admin ContatosList: Componente carregado');
+  
   const [contatos, setContatos] = useState<Contato[]>([]);
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,6 +48,7 @@ export const ContatosList: React.FC = () => {
   const { toast } = useToast();
 
   useEffect(() => {
+    console.log('Admin ContatosList: useEffect executado');
     fetchContatos();
     fetchEmpresas();
   }, []);
@@ -84,7 +87,6 @@ export const ContatosList: React.FC = () => {
 
       if (error) throw error;
       
-      // Convert the raw data to match the Empresa type
       const typedData: Empresa[] = data.map(item => ({
         ...item,
         tipo: item.tipo as TipoEmpresa
