@@ -9,6 +9,7 @@ import { PrivacyProvider } from '@/contexts/PrivacyContext';
 import MainLayout from '@/components/layout/MainLayout';
 import { PrivateRoute } from '@/components/auth/PrivateRoute';
 import LoadingScreen from '@/components/ui/LoadingScreen';
+import React from 'react';
 
 const Index = lazy(() => import('@/pages/Index'));
 const LoginPage = lazy(() => import('@/pages/auth/LoginPage'));
