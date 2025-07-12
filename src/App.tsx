@@ -15,7 +15,7 @@ const LoginPage = lazy(() => import('@/pages/auth/LoginPage'));
 const AdminPage = lazy(() => import('@/components/admin/AdminPage'));
 const MapaParceirosPage = lazy(() => import('@/pages/mapa-parceiros/MapaParceirosPage'));
 const EmpresasPage = lazy(() => import('@/pages/empresas/EmpresasPage'));
-const CategoriasPage = lazy(() => import('@/pages/repositorio/CategoriasList'));
+const CategoriasPage = lazy(() => import('@/pages/categorias/CategoriasPage'));
 const ContatosPage = lazy(() => import('@/pages/contatos/ContatosPage'));
 const ClientesPage = lazy(() => import('@/pages/wishlist/ClientesSobrepostosPage'));
 const IndicadoresPage = lazy(() => import('@/pages/indicadores/IndicadoresPage'));
