@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from "react";
+import * as React from "react";
 import { Button } from "@/components/ui/button";
 
 interface LoadingScreenProps {
@@ -7,10 +7,20 @@ interface LoadingScreenProps {
 }
 
 const LoadingScreen: React.FC<LoadingScreenProps> = ({ timeout = 15000 }) => {
-  const [showRecovery, setShowRecovery] = useState(false);
-  const [loadingTime, setLoadingTime] = useState(0);
+  // Add safety check for React initialization
+  if (!React || typeof React.useState !== 'function') {
+    console.error('[LoadingScreen] React is not properly initialized');
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
-  useEffect(() => {
+  const [showRecovery, setShowRecovery] = React.useState(false);
+  const [loadingTime, setLoadingTime] = React.useState(0);
+
+  React.useEffect(() => {
     const startTime = Date.now();
     
     // Atualizar tempo de carregamento
