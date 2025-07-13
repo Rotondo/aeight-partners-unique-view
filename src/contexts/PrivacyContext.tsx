@@ -1,5 +1,6 @@
 
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import * as React from 'react';
+import { createContext, useContext, ReactNode } from 'react';
 
 interface PrivacyContextType {
   isDemoMode: boolean;
@@ -14,6 +15,12 @@ interface PrivacyProviderProps {
 }
 
 export const PrivacyProvider: React.FC<PrivacyProviderProps> = ({ children }) => {
+  // Add safety check for React
+  if (!React || typeof React.useState !== 'function') {
+    console.error('[PrivacyProvider] React is not properly initialized');
+    return <div>Loading...</div>;
+  }
+
   // Initialize state with a safe default
   const [isDemoMode, setIsDemoMode] = React.useState<boolean>(() => {
     // Check if we're in browser environment
