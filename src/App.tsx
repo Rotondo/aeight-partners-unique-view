@@ -1,4 +1,3 @@
-
 import * as React from 'react';
 import { Suspense, lazy } from 'react';
 import { Toaster } from '@/components/ui/toaster';
@@ -35,8 +34,8 @@ const MapaParceiroAdminPage = lazy(() => import('@/pages/admin/MapaParceiroAdmin
 const queryClient = new QueryClient();
 
 function App() {
-  // Add safety check for React
-  if (!React || typeof React.useState !== 'function') {
+  // Comprehensive safety check for React initialization
+  if (!React || !React.useState || !React.Suspense || typeof React.lazy !== 'function') {
     console.error('[App] React is not properly initialized')
     return <div>Loading...</div>
   }

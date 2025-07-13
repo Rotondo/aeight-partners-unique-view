@@ -15,13 +15,13 @@ interface PrivacyProviderProps {
 }
 
 export const PrivacyProvider: React.FC<PrivacyProviderProps> = ({ children }) => {
-  // Add safety check for React
-  if (!React || typeof React.useState !== 'function') {
-    console.error('[PrivacyProvider] React is not properly initialized');
+  // Comprehensive safety check for React hooks
+  if (!React || !React.useState || !React.useEffect || !React.useCallback || !React.useMemo) {
+    console.error('[PrivacyProvider] React hooks are not properly initialized');
     return <div>Loading...</div>;
   }
 
-  // Initialize state with a safe default
+  // Initialize state with a safe default using React.useState consistently
   const [isDemoMode, setIsDemoMode] = React.useState<boolean>(() => {
     // Check if we're in browser environment
     if (typeof window === 'undefined') {

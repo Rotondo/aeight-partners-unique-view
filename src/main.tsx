@@ -4,9 +4,21 @@ import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 
-// Detectar e corrigir problemas com React
+// Comprehensive React initialization check
 try {
   console.log("[Main] React version:", React.version);
+  console.log("[Main] React hooks check:", {
+    useState: typeof React.useState,
+    useEffect: typeof React.useEffect,
+    Suspense: typeof React.Suspense,
+    lazy: typeof React.lazy
+  });
+
+  // Verify React is properly initialized
+  if (!React || !React.version || !React.useState || !React.useEffect) {
+    throw new Error("React is not properly initialized - missing core functions");
+  }
+
   console.log("[Main] Inicializando aplicação...");
 
   const rootElement = document.getElementById("root");
@@ -42,8 +54,8 @@ try {
     rootElement.innerHTML = `
       <div style="display: flex; align-items: center; justify-content: center; min-height: 100vh; font-family: system-ui;">
         <div style="text-align: center; padding: 2rem;">
-          <h1 style="color: #dc2626; margin-bottom: 1rem;">Erro na Inicialização</h1>
-          <p style="margin-bottom: 1rem;">Ocorreu um erro ao inicializar a aplicação.</p>
+          <h1 style="color: #dc2626; margin-bottom: 1rem;">Erro na Inicialização do React</h1>
+          <p style="margin-bottom: 1rem;">Ocorreu um erro ao inicializar o React. Isso pode ser um problema de carregamento do bundle.</p>
           <button onclick="window.location.reload()" style="padding: 0.5rem 1rem; background: #3b82f6; color: white; border: none; border-radius: 0.375rem; cursor: pointer;">
             Recarregar Página
           </button>
