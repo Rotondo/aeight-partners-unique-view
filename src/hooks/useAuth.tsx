@@ -1,6 +1,13 @@
 
-import React, { createContext, useContext, useEffect, useState } from "react";
+import * as React from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+
+// Ensure React is properly initialized before using hooks
+if (!React || typeof React.useState !== 'function') {
+  console.error('[useAuth] React is not properly initialized');
+  throw new Error('React is not properly initialized - hooks are not available');
+}
 
 interface User {
   id: string;
@@ -32,10 +39,16 @@ const AuthContext = createContext<AuthContextType>({
 });
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-  const [retryCount, setRetryCount] = useState<number>(0);
+  // Verify React is available before using hooks
+  if (!React || !React.useState) {
+    console.error('[AuthProvider] React hooks are not available');
+    return <div>Loading...</div>;
+  }
+
+  const [user, setUser] = React.useState<User | null>(null);
+  const [loading, setLoading] = React.useState<boolean>(true);
+  const [error, setError] = React.useState<string | null>(null);
+  const [retryCount, setRetryCount] = React.useState<number>(0);
 
   const isDevelopment = process.env.NODE_ENV === 'development';
 
@@ -71,7 +84,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .eq("email", email)
         .maybeSingle();
       
-      // Convert PromiseLike to Promise for withTimeout compatibility
       const result = await withTimeout(Promise.resolve(query), AUTH_TIMEOUT);
       const { data, error: dbError } = result;
       
@@ -98,10 +110,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (err) {
       console.error(`[Auth] Erro na fetchUserFromDB (tentativa ${attempt}):`, err);
       
-      // Retry automático para falhas de rede
       if (attempt < MAX_RETRIES && (err instanceof Error && err.message.includes('Timeout'))) {
         logAuth('retrying_fetchUserFromDB', { attempt: attempt + 1 });
-        await new Promise(resolve => setTimeout(resolve, 1000 * attempt)); // Backoff
+        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
         return fetchUserFromDB(email, attempt + 1);
       }
       
@@ -110,7 +121,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Atualiza o usuário logado com melhor controle de loading
   const refreshUser = async () => {
     logAuth('refreshUser_start');
     setError(null);
@@ -129,7 +139,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       const dbUser = await fetchUserFromDB(authData.user.email);
       setUser(dbUser);
-      setRetryCount(0); // Reset retry count on success
+      setRetryCount(0);
       
     } catch (err) {
       console.error('[Auth] Erro em refreshUser:', err);
@@ -140,15 +150,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Inicialização com melhor controle de loading
-  useEffect(() => {
+  React.useEffect(() => {
     let mounted = true;
     
     const initAuth = async () => {
       logAuth('auth_initialization_start');
       
       try {
-        // Verificar se há sessão válida primeiro
         const { data: { session } } = await withTimeout(
           supabase.auth.getSession(),
           AUTH_TIMEOUT
@@ -176,7 +184,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     initAuth();
 
-    // Configurar listener de mudanças de auth
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (!mounted) return;
@@ -184,7 +191,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         logAuth('auth_state_change', { event });
         
         if (session?.user) {
-          // Defer database call to avoid blocking
           setTimeout(async () => {
             if (mounted) {
               const dbUser = await fetchUserFromDB(session.user.email);
@@ -208,7 +214,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const login = async (email: string, senha: string): Promise<boolean> => {
-    // Input validation
     if (!email || !senha) {
       setError("Email e senha são obrigatórios.");
       return false;
@@ -237,7 +242,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw authError;
       }
 
-      // Busca dados da tabela usuarios
       const dbUser = await fetchUserFromDB(email);
       
       if (!dbUser) {
