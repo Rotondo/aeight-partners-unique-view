@@ -5,6 +5,7 @@ import { Toaster as Sonner } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { ReactSafetyProvider } from '@/components/ui/ReactSafetyProvider';
 import { PrivacyProvider } from '@/contexts/PrivacyContext';
 import { AuthProvider } from '@/hooks/useAuth';
 import MainLayout from '@/components/layout/MainLayout';
@@ -41,10 +42,11 @@ function App() {
   }
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <PrivacyProvider>
-          <TooltipProvider>
+    <ReactSafetyProvider>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <PrivacyProvider>
+            <TooltipProvider>
             <Toaster />
             <Sonner />
             <BrowserRouter>
@@ -172,10 +174,11 @@ function App() {
                 </Route>
               </Routes>
             </BrowserRouter>
-          </TooltipProvider>
-        </PrivacyProvider>
-      </AuthProvider>
-    </QueryClientProvider>
+            </TooltipProvider>
+          </PrivacyProvider>
+        </AuthProvider>
+      </QueryClientProvider>
+    </ReactSafetyProvider>
   );
 }
 

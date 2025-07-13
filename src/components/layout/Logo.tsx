@@ -1,5 +1,11 @@
 
-import React from "react";
+import * as React from "react";
+
+// Ensure React is properly initialized
+if (!React || typeof React.useState !== 'function') {
+  console.error('[Logo] React is not properly initialized');
+  throw new Error('React is not properly initialized - hooks are not available');
+}
 
 interface LogoProps {
   className?: string;

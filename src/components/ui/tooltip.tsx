@@ -4,6 +4,12 @@ import * as TooltipPrimitive from "@radix-ui/react-tooltip"
 
 import { cn } from "@/lib/utils"
 
+// Ensure React is properly initialized
+if (!React || typeof React.useState !== 'function') {
+  console.error('[Tooltip] React is not properly initialized');
+  throw new Error('React is not properly initialized - hooks are not available');
+}
+
 const TooltipProvider = TooltipPrimitive.Provider
 
 const Tooltip = TooltipPrimitive.Root

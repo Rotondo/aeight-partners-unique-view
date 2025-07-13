@@ -1,6 +1,12 @@
 
-import React from 'react';
+import * as React from 'react';
 import { useAuth } from '@/hooks/useAuth';
+
+// Ensure React is properly initialized
+if (!React || typeof React.useState !== 'function') {
+  console.error('[Header] React is not properly initialized');
+  throw new Error('React is not properly initialized - hooks are not available');
+}
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { DemoModeToggle } from '@/components/privacy/DemoModeToggle';

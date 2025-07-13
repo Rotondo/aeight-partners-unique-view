@@ -1,23 +1,26 @@
 
-import React from 'react';
+import * as React from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 
-// Comprehensive React initialization check
-try {
-  console.log("[Main] React version:", React.version);
-  console.log("[Main] React hooks check:", {
+// Enhanced React initialization check
+const initializeApp = async () => {
+  console.log("[Main] Starting React initialization check...");
+  
+  // Enhanced React validation
+  if (!React || !React.version || !React.useState || !React.useEffect || !React.useRef) {
+    throw new Error("React is not properly initialized - missing core functions");
+  }
+
+  console.log("[Main] React is properly initialized:", {
+    version: React.version,
     useState: typeof React.useState,
     useEffect: typeof React.useEffect,
+    useRef: typeof React.useRef,
     Suspense: typeof React.Suspense,
     lazy: typeof React.lazy
   });
-
-  // Verify React is properly initialized
-  if (!React || !React.version || !React.useState || !React.useEffect) {
-    throw new Error("React is not properly initialized - missing core functions");
-  }
 
   console.log("[Main] Inicializando aplicação...");
 
@@ -45,7 +48,10 @@ try {
   );
 
   console.log("[Main] Aplicação renderizada com sucesso");
-} catch (error) {
+};
+
+// Execute initialization
+initializeApp().catch((error) => {
   console.error("[Main] Erro crítico na inicialização:", error);
   
   // Fallback de emergência
@@ -67,4 +73,4 @@ try {
       </div>
     `;
   }
-}
+});

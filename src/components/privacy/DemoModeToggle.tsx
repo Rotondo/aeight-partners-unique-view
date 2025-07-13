@@ -1,6 +1,12 @@
 
-import React from 'react';
+import * as React from 'react';
 import { Button } from '@/components/ui/button';
+
+// Ensure React is properly initialized
+if (!React || typeof React.useState !== 'function') {
+  console.error('[DemoModeToggle] React is not properly initialized');
+  throw new Error('React is not properly initialized - hooks are not available');
+}
 import { Eye, EyeOff } from 'lucide-react';
 import { usePrivacy } from '@/contexts/PrivacyContext';
 

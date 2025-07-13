@@ -1,6 +1,12 @@
 
 import * as React from "react"
 import { NavLink, useLocation } from "react-router-dom"
+
+// Ensure React is properly initialized
+if (!React || typeof React.useState !== 'function') {
+  console.error('[AppSidebar] React is not properly initialized');
+  throw new Error('React is not properly initialized - hooks are not available');
+}
 import {
   Home,
   Users,
