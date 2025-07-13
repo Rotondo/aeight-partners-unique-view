@@ -1,4 +1,5 @@
 
+
 import * as React from "react"
 
 import type {
@@ -159,6 +160,16 @@ function toast({ ...props }: Toast) {
 function useToast() {
   // Add safety check for React hooks
   try {
+    if (!React || typeof React.useState !== 'function') {
+      console.error('[useToast] React is not properly initialized')
+      // Return safe fallback
+      return {
+        toasts: [],
+        toast,
+        dismiss: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId }),
+      }
+    }
+    
     const [state, setState] = React.useState<State>(memoryState)
 
     React.useEffect(() => {
@@ -188,3 +199,4 @@ function useToast() {
 }
 
 export { useToast, toast }
+

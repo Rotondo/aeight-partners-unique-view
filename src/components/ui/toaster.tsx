@@ -1,4 +1,6 @@
 
+
+import * as React from "react"
 import { useToast } from "@/hooks/use-toast"
 import {
   Toast,
@@ -8,11 +10,15 @@ import {
   ToastTitle,
   ToastViewport,
 } from "@/components/ui/toast"
-import React from "react"
 
 export function Toaster() {
   // Add error boundary protection
   try {
+    if (!React || typeof React.useState !== 'function') {
+      console.error('[Toaster] React is not properly initialized')
+      return <div style={{ display: 'none' }} />
+    }
+
     const { toasts } = useToast()
 
     return (
@@ -47,3 +53,4 @@ export function Toaster() {
     return <div style={{ display: 'none' }} />
   }
 }
+
