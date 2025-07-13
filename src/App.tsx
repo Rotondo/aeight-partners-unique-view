@@ -1,4 +1,5 @@
 
+import * as React from 'react';
 import { Suspense, lazy } from 'react';
 import { Toaster } from '@/components/ui/toaster';
 import { Toaster as Sonner } from '@/components/ui/sonner';
@@ -10,7 +11,6 @@ import { AuthProvider } from '@/hooks/useAuth';
 import MainLayout from '@/components/layout/MainLayout';
 import { PrivateRoute } from '@/components/auth/PrivateRoute';
 import LoadingScreen from '@/components/ui/LoadingScreen';
-import React from 'react';
 
 const Index = lazy(() => import('@/pages/Index'));
 const LoginPage = lazy(() => import('@/pages/auth/LoginPage'));
@@ -35,6 +35,12 @@ const MapaParceiroAdminPage = lazy(() => import('@/pages/admin/MapaParceiroAdmin
 const queryClient = new QueryClient();
 
 function App() {
+  // Add safety check for React
+  if (!React || typeof React.useState !== 'function') {
+    console.error('[App] React is not properly initialized')
+    return <div>Loading...</div>
+  }
+
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
