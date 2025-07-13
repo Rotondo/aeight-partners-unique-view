@@ -15,7 +15,7 @@ interface PrivacyProviderProps {
 
 export const PrivacyProvider: React.FC<PrivacyProviderProps> = ({ children }) => {
   // Initialize state with a safe default
-  const [isDemoMode, setIsDemoMode] = useState<boolean>(() => {
+  const [isDemoMode, setIsDemoMode] = React.useState<boolean>(() => {
     // Check if we're in browser environment
     if (typeof window === 'undefined') {
       return false;
@@ -32,7 +32,7 @@ export const PrivacyProvider: React.FC<PrivacyProviderProps> = ({ children }) =>
   });
 
   // Salvar no localStorage quando mudar
-  useEffect(() => {
+  React.useEffect(() => {
     // Check if we're in browser environment
     if (typeof window === 'undefined') {
       return;
@@ -45,19 +45,19 @@ export const PrivacyProvider: React.FC<PrivacyProviderProps> = ({ children }) =>
     }
   }, [isDemoMode]);
 
-  const toggleDemoMode = () => {
+  const toggleDemoMode = React.useCallback(() => {
     setIsDemoMode(prev => !prev);
-  };
+  }, []);
 
-  const setDemoMode = (enabled: boolean) => {
+  const setDemoMode = React.useCallback((enabled: boolean) => {
     setIsDemoMode(enabled);
-  };
+  }, []);
 
-  const value: PrivacyContextType = {
+  const value: PrivacyContextType = React.useMemo(() => ({
     isDemoMode,
     toggleDemoMode,
     setDemoMode
-  };
+  }), [isDemoMode, toggleDemoMode, setDemoMode]);
 
   return (
     <PrivacyContext.Provider value={value}>
