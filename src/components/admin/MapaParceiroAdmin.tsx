@@ -1,18 +1,20 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
+import { Dialog, DialogTrigger } from '@/components/ui/dialog';
 import { Plus, Edit, Trash2, ArrowUp, ArrowDown, Eye, EyeOff } from 'lucide-react';
 import { useMapaParceiros } from '@/hooks/useMapaParceiros';
 import { EtapaJornada, SubnivelEtapa } from '@/types/mapa-parceiros';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import EtapaForm from './MapaParceiroAdmin/EtapaForm';
+import SubnivelForm from './MapaParceiroAdmin/SubnivelForm';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const MapaParceiroAdmin: React.FC = () => {
   const { etapas, subniveis, carregarDados } = useMapaParceiros();
@@ -20,7 +22,6 @@ const MapaParceiroAdmin: React.FC = () => {
   const [isCreatingSubnivel, setIsCreatingSubnivel] = useState(false);
   const [editingEtapa, setEditingEtapa] = useState<EtapaJornada | null>(null);
   const [editingSubnivel, setEditingSubnivel] = useState<SubnivelEtapa | null>(null);
-  const [selectedEtapaForSubnivel, setSelectedEtapaForSubnivel] = useState<string>('');
 
   // Form states
   const [etapaForm, setEtapaForm] = useState({
@@ -39,195 +40,6 @@ const MapaParceiroAdmin: React.FC = () => {
     ativo: true,
     etapa_id: ''
   });
-
-  const resetEtapaForm = () => {
-    setEtapaForm({
-      nome: '',
-      descricao: '',
-      cor: '#3B82F6',
-      icone: '',
-      ordem: etapas.length + 1,
-      ativo: true
-    });
-  };
-
-  const resetSubnivelForm = () => {
-    setSubnivelForm({
-      nome: '',
-      descricao: '',
-      ordem: 1,
-      ativo: true,
-      etapa_id: selectedEtapaForSubnivel
-    });
-  };
-
-  const handleCreateEtapa = async () => {
-    try {
-      const { error } = await supabase
-        .from('etapas_jornada')
-        .insert([etapaForm]);
-
-      if (error) throw error;
-
-      toast({
-        title: "Sucesso",
-        description: "Etapa criada com sucesso.",
-      });
-
-      resetEtapaForm();
-      setIsCreatingEtapa(false);
-      carregarDados();
-    } catch (error) {
-      console.error('Erro ao criar etapa:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível criar a etapa.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleUpdateEtapa = async () => {
-    if (!editingEtapa) return;
-
-    try {
-      const { error } = await supabase
-        .from('etapas_jornada')
-        .update(etapaForm)
-        .eq('id', editingEtapa.id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Sucesso",
-        description: "Etapa atualizada com sucesso.",
-      });
-
-      setEditingEtapa(null);
-      resetEtapaForm();
-      carregarDados();
-    } catch (error) {
-      console.error('Erro ao atualizar etapa:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível atualizar a etapa.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleDeleteEtapa = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir esta etapa? Esta ação não pode ser desfeita.')) {
-      return;
-    }
-
-    try {
-      const { error } = await supabase
-        .from('etapas_jornada')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Sucesso",
-        description: "Etapa excluída com sucesso.",
-      });
-
-      carregarDados();
-    } catch (error) {
-      console.error('Erro ao excluir etapa:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível excluir a etapa.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleCreateSubnivel = async () => {
-    try {
-      const { error } = await supabase
-        .from('subniveis_etapa')
-        .insert([subnivelForm]);
-
-      if (error) throw error;
-
-      toast({
-        title: "Sucesso",
-        description: "Subnível criado com sucesso.",
-      });
-
-      resetSubnivelForm();
-      setIsCreatingSubnivel(false);
-      carregarDados();
-    } catch (error) {
-      console.error('Erro ao criar subnível:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível criar o subnível.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleUpdateSubnivel = async () => {
-    if (!editingSubnivel) return;
-
-    try {
-      const { error } = await supabase
-        .from('subniveis_etapa')
-        .update(subnivelForm)
-        .eq('id', editingSubnivel.id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Sucesso",
-        description: "Subnível atualizado com sucesso.",
-      });
-
-      setEditingSubnivel(null);
-      resetSubnivelForm();
-      carregarDados();
-    } catch (error) {
-      console.error('Erro ao atualizar subnível:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível atualizar o subnível.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleDeleteSubnivel = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir este subnível? Esta ação não pode ser desfeita.')) {
-      return;
-    }
-
-    try {
-      const { error } = await supabase
-        .from('subniveis_etapa')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Sucesso",
-        description: "Subnível excluído com sucesso.",
-      });
-
-      carregarDados();
-    } catch (error) {
-      console.error('Erro ao excluir subnível:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível excluir o subnível.",
-        variant: "destructive",
-      });
-    }
-  };
 
   const handleToggleEtapaStatus = async (etapa: EtapaJornada) => {
     try {
@@ -339,6 +151,64 @@ const MapaParceiroAdmin: React.FC = () => {
     }
   };
 
+  const handleDeleteEtapa = async (id: string) => {
+    if (!confirm('Tem certeza que deseja excluir esta etapa? Esta ação não pode ser desfeita.')) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('etapas_jornada')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: "Etapa excluída com sucesso.",
+      });
+
+      carregarDados();
+    } catch (error) {
+      console.error('Erro ao excluir etapa:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível excluir a etapa.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteSubnivel = async (id: string) => {
+    if (!confirm('Tem certeza que deseja excluir este subnível? Esta ação não pode ser desfeita.')) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('subniveis_etapa')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: "Subnível excluído com sucesso.",
+      });
+
+      carregarDados();
+    } catch (error) {
+      console.error('Erro ao excluir subnível:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível excluir o subnível.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const openEditEtapa = (etapa: EtapaJornada) => {
     setEditingEtapa(etapa);
     setEtapaForm({
@@ -362,6 +232,137 @@ const MapaParceiroAdmin: React.FC = () => {
     });
   };
 
+  const resetEtapaForm = () => {
+    setEtapaForm({
+      nome: '',
+      descricao: '',
+      cor: '#3B82F6',
+      icone: '',
+      ordem: etapas.length + 1,
+      ativo: true
+    });
+  };
+
+  const resetSubnivelForm = () => {
+    setSubnivelForm({
+      nome: '',
+      descricao: '',
+      ordem: 1,
+      ativo: true,
+      etapa_id: ''
+    });
+  };
+
+  const handleCreateEtapa = async () => {
+    try {
+      const { error } = await supabase
+        .from('etapas_jornada')
+        .insert([etapaForm]);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: "Etapa criada com sucesso.",
+      });
+
+      resetEtapaForm();
+      setIsCreatingEtapa(false);
+      carregarDados();
+    } catch (error) {
+      console.error('Erro ao criar etapa:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível criar a etapa.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleUpdateEtapa = async () => {
+    if (!editingEtapa) return;
+
+    try {
+      const { error } = await supabase
+        .from('etapas_jornada')
+        .update(etapaForm)
+        .eq('id', editingEtapa.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: "Etapa atualizada com sucesso.",
+      });
+
+      setEditingEtapa(null);
+      resetEtapaForm();
+      carregarDados();
+    } catch (error) {
+      console.error('Erro ao atualizar etapa:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível atualizar a etapa.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCreateSubnivel = async () => {
+    try {
+      const { error } = await supabase
+        .from('subniveis_etapa')
+        .insert([subnivelForm]);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: "Subnível criado com sucesso.",
+      });
+
+      resetSubnivelForm();
+      setIsCreatingSubnivel(false);
+      carregarDados();
+    } catch (error) {
+      console.error('Erro ao criar subnível:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível criar o subnível.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleUpdateSubnivel = async () => {
+    if (!editingSubnivel) return;
+
+    try {
+      const { error } = await supabase
+        .from('subniveis_etapa')
+        .update(subnivelForm)
+        .eq('id', editingSubnivel.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: "Subnível atualizado com sucesso.",
+      });
+
+      setEditingSubnivel(null);
+      resetSubnivelForm();
+      carregarDados();
+    } catch (error) {
+      console.error('Erro ao atualizar subnível:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível atualizar o subnível.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const getSubniveisPorEtapa = (etapaId: string) => {
     return subniveis.filter(s => s.etapa_id === etapaId).sort((a, b) => a.ordem - b.ordem);
   };
@@ -381,65 +382,6 @@ const MapaParceiroAdmin: React.FC = () => {
                 Nova Etapa
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md">
-              <DialogHeader>
-                <DialogTitle>Criar Nova Etapa</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="nome">Nome *</Label>
-                  <Input
-                    id="nome"
-                    value={etapaForm.nome}
-                    onChange={(e) => setEtapaForm({...etapaForm, nome: e.target.value})}
-                    placeholder="Nome da etapa"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="descricao">Descrição</Label>
-                  <Textarea
-                    id="descricao"
-                    value={etapaForm.descricao}
-                    onChange={(e) => setEtapaForm({...etapaForm, descricao: e.target.value})}
-                    placeholder="Descrição da etapa"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="cor">Cor</Label>
-                  <Input
-                    id="cor"
-                    type="color"
-                    value={etapaForm.cor}
-                    onChange={(e) => setEtapaForm({...etapaForm, cor: e.target.value})}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="ordem">Ordem</Label>
-                  <Input
-                    id="ordem"
-                    type="number"
-                    value={etapaForm.ordem}
-                    onChange={(e) => setEtapaForm({...etapaForm, ordem: parseInt(e.target.value)})}
-                  />
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="ativo"
-                    checked={etapaForm.ativo}
-                    onCheckedChange={(checked) => setEtapaForm({...etapaForm, ativo: checked})}
-                  />
-                  <Label htmlFor="ativo">Ativo</Label>
-                </div>
-                <div className="flex gap-2">
-                  <Button onClick={handleCreateEtapa} disabled={!etapaForm.nome}>
-                    Criar Etapa
-                  </Button>
-                  <Button variant="outline" onClick={() => setIsCreatingEtapa(false)}>
-                    Cancelar
-                  </Button>
-                </div>
-              </div>
-            </DialogContent>
           </Dialog>
 
           <Dialog open={isCreatingSubnivel} onOpenChange={setIsCreatingSubnivel}>
@@ -449,76 +391,54 @@ const MapaParceiroAdmin: React.FC = () => {
                 Novo Subnível
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md">
-              <DialogHeader>
-                <DialogTitle>Criar Novo Subnível</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="etapa">Etapa *</Label>
-                  <select
-                    className="w-full p-2 border rounded-md"
-                    value={subnivelForm.etapa_id}
-                    onChange={(e) => setSubnivelForm({...subnivelForm, etapa_id: e.target.value})}
-                  >
-                    <option value="">Selecione uma etapa</option>
-                    {etapas.map(etapa => (
-                      <option key={etapa.id} value={etapa.id}>
-                        {etapa.ordem}. {etapa.nome}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <Label htmlFor="nome-subnivel">Nome *</Label>
-                  <Input
-                    id="nome-subnivel"
-                    value={subnivelForm.nome}
-                    onChange={(e) => setSubnivelForm({...subnivelForm, nome: e.target.value})}
-                    placeholder="Nome do subnível"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="descricao-subnivel">Descrição</Label>
-                  <Textarea
-                    id="descricao-subnivel"
-                    value={subnivelForm.descricao}
-                    onChange={(e) => setSubnivelForm({...subnivelForm, descricao: e.target.value})}
-                    placeholder="Descrição do subnível"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="ordem-subnivel">Ordem</Label>
-                  <Input
-                    id="ordem-subnivel"
-                    type="number"
-                    value={subnivelForm.ordem}
-                    onChange={(e) => setSubnivelForm({...subnivelForm, ordem: parseInt(e.target.value)})}
-                  />
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="ativo-subnivel"
-                    checked={subnivelForm.ativo}
-                    onCheckedChange={(checked) => setSubnivelForm({...subnivelForm, ativo: checked})}
-                  />
-                  <Label htmlFor="ativo-subnivel">Ativo</Label>
-                </div>
-                <div className="flex gap-2">
-                  <Button onClick={handleCreateSubnivel} disabled={!subnivelForm.nome || !subnivelForm.etapa_id}>
-                    Criar Subnível
-                  </Button>
-                  <Button variant="outline" onClick={() => setIsCreatingSubnivel(false)}>
-                    Cancelar
-                  </Button>
-                </div>
-              </div>
-            </DialogContent>
           </Dialog>
         </div>
       </div>
 
-      {/* Etapas */}
+      {/* Forms */}
+      <EtapaForm
+        isOpen={isCreatingEtapa}
+        onClose={() => setIsCreatingEtapa(false)}
+        onSubmit={handleCreateEtapa}
+        formData={etapaForm}
+        setFormData={setEtapaForm}
+        isEditing={false}
+        title="Criar Nova Etapa"
+      />
+
+      <EtapaForm
+        isOpen={!!editingEtapa}
+        onClose={() => setEditingEtapa(null)}
+        onSubmit={handleUpdateEtapa}
+        formData={etapaForm}
+        setFormData={setEtapaForm}
+        isEditing={true}
+        title="Editar Etapa"
+      />
+
+      <SubnivelForm
+        isOpen={isCreatingSubnivel}
+        onClose={() => setIsCreatingSubnivel(false)}
+        onSubmit={handleCreateSubnivel}
+        formData={subnivelForm}
+        setFormData={setSubnivelForm}
+        etapas={etapas}
+        isEditing={false}
+        title="Criar Novo Subnível"
+      />
+
+      <SubnivelForm
+        isOpen={!!editingSubnivel}
+        onClose={() => setEditingSubnivel(null)}
+        onSubmit={handleUpdateSubnivel}
+        formData={subnivelForm}
+        setFormData={setSubnivelForm}
+        etapas={etapas}
+        isEditing={true}
+        title="Editar Subnível"
+      />
+
+      {/* Etapas List - simplified version */}
       <div className="space-y-4">
         {etapas.sort((a, b) => a.ordem - b.ordem).map((etapa) => (
           <Card key={etapa.id} className={`${!etapa.ativo ? 'opacity-60' : ''}`}>
@@ -584,7 +504,6 @@ const MapaParceiroAdmin: React.FC = () => {
               </div>
             </CardHeader>
 
-            {/* Subníveis */}
             <CardContent>
               <div className="space-y-2">
                 <h4 className="font-medium text-sm text-muted-foreground">Subníveis</h4>
@@ -650,138 +569,6 @@ const MapaParceiroAdmin: React.FC = () => {
           </Card>
         ))}
       </div>
-
-      {/* Dialog para editar etapa */}
-      <Dialog open={!!editingEtapa} onOpenChange={(open) => !open && setEditingEtapa(null)}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Editar Etapa</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="edit-nome">Nome *</Label>
-              <Input
-                id="edit-nome"
-                value={etapaForm.nome}
-                onChange={(e) => setEtapaForm({...etapaForm, nome: e.target.value})}
-                placeholder="Nome da etapa"
-              />
-            </div>
-            <div>
-              <Label htmlFor="edit-descricao">Descrição</Label>
-              <Textarea
-                id="edit-descricao"
-                value={etapaForm.descricao}
-                onChange={(e) => setEtapaForm({...etapaForm, descricao: e.target.value})}
-                placeholder="Descrição da etapa"
-              />
-            </div>
-            <div>
-              <Label htmlFor="edit-cor">Cor</Label>
-              <Input
-                id="edit-cor"
-                type="color"
-                value={etapaForm.cor}
-                onChange={(e) => setEtapaForm({...etapaForm, cor: e.target.value})}
-              />
-            </div>
-            <div>
-              <Label htmlFor="edit-ordem">Ordem</Label>
-              <Input
-                id="edit-ordem"
-                type="number"
-                value={etapaForm.ordem}
-                onChange={(e) => setEtapaForm({...etapaForm, ordem: parseInt(e.target.value)})}
-              />
-            </div>
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="edit-ativo"
-                checked={etapaForm.ativo}
-                onCheckedChange={(checked) => setEtapaForm({...etapaForm, ativo: checked})}
-              />
-              <Label htmlFor="edit-ativo">Ativo</Label>
-            </div>
-            <div className="flex gap-2">
-              <Button onClick={handleUpdateEtapa} disabled={!etapaForm.nome}>
-                Salvar Alterações
-              </Button>
-              <Button variant="outline" onClick={() => setEditingEtapa(null)}>
-                Cancelar
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Dialog para editar subnível */}
-      <Dialog open={!!editingSubnivel} onOpenChange={(open) => !open && setEditingSubnivel(null)}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Editar Subnível</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="edit-etapa">Etapa *</Label>
-              <select
-                className="w-full p-2 border rounded-md"
-                value={subnivelForm.etapa_id}
-                onChange={(e) => setSubnivelForm({...subnivelForm, etapa_id: e.target.value})}
-              >
-                <option value="">Selecione uma etapa</option>
-                {etapas.map(etapa => (
-                  <option key={etapa.id} value={etapa.id}>
-                    {etapa.ordem}. {etapa.nome}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <Label htmlFor="edit-nome-subnivel">Nome *</Label>
-              <Input
-                id="edit-nome-subnivel"
-                value={subnivelForm.nome}
-                onChange={(e) => setSubnivelForm({...subnivelForm, nome: e.target.value})}
-                placeholder="Nome do subnível"
-              />
-            </div>
-            <div>
-              <Label htmlFor="edit-descricao-subnivel">Descrição</Label>
-              <Textarea
-                id="edit-descricao-subnivel"
-                value={subnivelForm.descricao}
-                onChange={(e) => setSubnivelForm({...subnivelForm, descricao: e.target.value})}
-                placeholder="Descrição do subnível"
-              />
-            </div>
-            <div>
-              <Label htmlFor="edit-ordem-subnivel">Ordem</Label>
-              <Input
-                id="edit-ordem-subnivel"
-                type="number"
-                value={subnivelForm.ordem}
-                onChange={(e) => setSubnivelForm({...subnivelForm, ordem: parseInt(e.target.value)})}
-              />
-            </div>
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="edit-ativo-subnivel"
-                checked={subnivelForm.ativo}
-                onCheckedChange={(checked) => setSubnivelForm({...subnivelForm, ativo: checked})}
-              />
-              <Label htmlFor="edit-ativo-subnivel">Ativo</Label>
-            </div>
-            <div className="flex gap-2">
-              <Button onClick={handleUpdateSubnivel} disabled={!subnivelForm.nome || !subnivelForm.etapa_id}>
-                Salvar Alterações
-              </Button>
-              <Button variant="outline" onClick={() => setEditingSubnivel(null)}>
-                Cancelar
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
