@@ -46,7 +46,8 @@ const MapaParceirosPage: React.FC = () => {
     subniveis,
     parceiros: parceirosOriginais,
     associacoes,
-    associarParceiroEtapa
+    associarParceiroEtapa,
+    refetch: refetchMapaParceiros
   } = useMapaParceiros();
 
   // Estado de filtros
@@ -106,6 +107,18 @@ const MapaParceirosPage: React.FC = () => {
   // Calcular stats reais para sidebar - CORRIGIDO para contar parceiros únicos
   const { parceirosPorEtapa, parceirosPorSubnivel } = calcularContadoresParceiros(associacoes);
 
+  // Estado para modal de inclusão de parceiros
+  const [modalEmpresaOpen, setModalEmpresaOpen] = useState(false);
+  // Função de inclusão (dummy, pode ser adaptada para atualizar o mapa após inclusão)
+  const handleIncluirParceiro = async (dados: any) => {
+    // Aqui pode ser chamada a função de inclusão real, se necessário
+    // Exemplo: await associarParceiroEtapa(dados.empresa_id, ...)
+    setModalEmpresaOpen(false);
+    if (typeof refetchMapaParceiros === 'function') {
+      await refetchMapaParceiros();
+    }
+  };
+
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
       <div style={{ minWidth: 280, borderRight: '1px solid #eee' }}>
@@ -132,6 +145,12 @@ const MapaParceirosPage: React.FC = () => {
         />
       </div>
       <div style={{ flex: 1, padding: 24 }}>
+        {/* Botão para abrir modal de inclusão de parceiros */}
+        <div className="flex justify-end mb-4">
+          <Button variant="default" onClick={() => setModalEmpresaOpen(true)}>
+            Adicionar Parceiro ao Mapa
+          </Button>
+        </div>
         <MapaParceirosTable
           parceiros={parceiros}
           associacoes={associacoes}
@@ -144,6 +163,8 @@ const MapaParceirosPage: React.FC = () => {
           onLimparFiltros={() => setFiltros({})}
           onAssociarEtapa={associarParceiroEtapa}
         />
+        {/* Modal de inclusão de parceiros */}
+        <EmpresaSelector isOpen={modalEmpresaOpen} onClose={() => setModalEmpresaOpen(false)} onSave={handleIncluirParceiro} />
       </div>
     </div>
   );
