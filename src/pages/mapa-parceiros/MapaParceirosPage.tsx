@@ -47,6 +47,7 @@ const MapaParceirosPage: React.FC = () => {
     parceiros: parceirosOriginais,
     associacoes,
     associarParceiroEtapa,
+    criarParceiro,
     refetch: refetchMapaParceiros
   } = useMapaParceiros();
 
@@ -111,8 +112,13 @@ const MapaParceirosPage: React.FC = () => {
   const [modalEmpresaOpen, setModalEmpresaOpen] = useState(false);
   // Função de inclusão (dummy, pode ser adaptada para atualizar o mapa após inclusão)
   const handleIncluirParceiro = async (dados: any) => {
-    // Aqui pode ser chamada a função de inclusão real, se necessário
-    // Exemplo: await associarParceiroEtapa(dados.empresa_id, ...)
+    // Chama a função de inclusão real no banco
+    await criarParceiro({
+      empresa_id: dados.empresa_id,
+      status: dados.status || 'ativo',
+      performance_score: dados.performance_score || 80,
+      observacoes: dados.observacoes || ''
+    });
     setModalEmpresaOpen(false);
     if (typeof refetchMapaParceiros === 'function') {
       await refetchMapaParceiros();
