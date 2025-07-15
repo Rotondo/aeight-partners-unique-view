@@ -232,16 +232,28 @@ const EmpresaSelector: React.FC<EmpresaSelectorProps> = ({
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Busca e Controles */}
           <div className="space-y-3">
-            <div>
-              <Label htmlFor="search">Buscar Empresas</Label>
-              <Input
-                id="search"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Digite o nome ou tipo da empresa..."
-                className="mt-1"
-                aria-label="Buscar empresa"
-              />
+            <div className="flex items-end gap-2">
+              <div className="flex-1">
+                <Label htmlFor="search">Buscar Empresas</Label>
+                <Input
+                  id="search"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Digite o nome ou tipo da empresa..."
+                  className="mt-1"
+                  aria-label="Buscar empresa"
+                />
+              </div>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={carregarEmpresas}
+                disabled={loading}
+                aria-label="Recarregar empresas"
+              >
+                {loading ? 'Recarregando...' : 'Recarregar'}
+              </Button>
             </div>
             <div className="flex gap-2">
               <Button
