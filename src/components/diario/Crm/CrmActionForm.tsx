@@ -46,7 +46,19 @@ export const CrmActionForm: React.FC<CrmActionFormProps> = ({ onSuccess }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.description || !formData.communication_method || !formData.content) return;
+    // NOVO: Validação de campos obrigatórios
+    if (!formData.description || !formData.description.trim()) {
+      alert('A descrição é obrigatória.');
+      return;
+    }
+    if (!formData.communication_method) {
+      alert('O método de comunicação é obrigatório.');
+      return;
+    }
+    if (!formData.content || !formData.content.trim()) {
+      alert('O conteúdo é obrigatório.');
+      return;
+    }
 
     setLoading(true);
     try {

@@ -41,11 +41,53 @@ const MaterialUpload: React.FC<MaterialUploadProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+    // NOVO: Validação de campos obrigatórios
+    if (!formData.nome || !formData.nome.trim()) {
+      toast({
+        title: 'Erro',
+        description: 'O nome do material é obrigatório.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (!formData.empresa_id) {
+      toast({
+        title: 'Erro',
+        description: 'Selecione a empresa.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (!formData.categoria_id) {
+      toast({
+        title: 'Erro',
+        description: 'Selecione a categoria.',
+        variant: 'destructive',
+      });
+      return;
+    }
     if (!formData.arquivo || !user) {
       toast({
         title: 'Erro',
         description: 'Por favor, selecione um arquivo e verifique se está logado.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    // NOVO: Validação de tipo e tamanho de arquivo
+    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png'];
+    if (!allowedTypes.includes(formData.arquivo.type)) {
+      toast({
+        title: 'Erro',
+        description: 'Tipo de arquivo não permitido. Apenas PDF, JPG ou PNG.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (formData.arquivo.size > 10 * 1024 * 1024) {
+      toast({
+        title: 'Erro',
+        description: 'O arquivo deve ter no máximo 10MB.',
         variant: 'destructive',
       });
       return;

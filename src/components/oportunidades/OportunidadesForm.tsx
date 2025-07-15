@@ -23,6 +23,8 @@ import {
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { PrivateData } from '@/components/privacy/PrivateData';
+import { usePrivacy } from '@/contexts/PrivacyContext';
 
 // Textarea custom para campos longos
 const Textarea: React.FC<React.TextareaHTMLAttributes<HTMLTextAreaElement>> = (
@@ -100,6 +102,7 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({
     useOportunidades();
   const { toast } = useToast();
   const isEditing = !!oportunidadeId;
+  const { isDemoMode } = usePrivacy();
 
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [empresasElegiveis, setEmpresasElegiveis] = useState<Empresa[]>([]);
@@ -261,7 +264,6 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({
     ) {
       errors.motivo_perda = "Motivo da perda é obrigatório";
     }
-    // Validação de usuário_recebe_id (quando preenchido)
     if (
       formData.usuario_recebe_id &&
       formData.usuario_recebe_id !== "none" &&
@@ -269,12 +271,17 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({
     ) {
       errors.usuario_recebe_id = "Executivo responsável inválido.";
     }
-    // Validação de contato_id (quando preenchido)
     if (
       formData.contato_id &&
       !isValidUUID(formData.contato_id)
     ) {
       errors.contato_id = "Contato inválido.";
+    }
+    // NOVO: Validação de valor
+    if (formData.valor !== undefined && formData.valor !== null) {
+      if (isNaN(Number(formData.valor)) || Number(formData.valor) <= 0) {
+        errors.valor = "O valor deve ser maior que zero.";
+      }
     }
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
@@ -339,13 +346,17 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({
           <Label htmlFor="nome_lead">
             Nome da Oportunidade <span className="text-red-500">*</span>
           </Label>
-          <Input
-            id="nome_lead"
-            value={formData.nome_lead || ""}
-            onChange={(e) => handleChange("nome_lead", e.target.value)}
-            required
-            className={cn(formErrors.nome_lead && "border-red-500")}
-          />
+          {isDemoMode ? (
+            <PrivateData type="name">{formData.nome_lead || ""}</PrivateData>
+          ) : (
+            <Input
+              id="nome_lead"
+              value={formData.nome_lead || ""}
+              onChange={(e) => handleChange("nome_lead", e.target.value)}
+              required
+              className={cn(formErrors.nome_lead && "border-red-500")}
+            />
+          )}
           {formErrors.nome_lead && (
             <p className="text-sm text-red-500">{formErrors.nome_lead}</p>
           )}
@@ -355,30 +366,36 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({
           <Label htmlFor="empresa_origem_id">
             Origem <span className="text-red-500">*</span>
           </Label>
-          <Select
-            value={formData.empresa_origem_id || "none"}
-            onValueChange={(value) =>
-              handleChange(
-                "empresa_origem_id",
-                value === "none" ? undefined : value
-              )
-            }
-          >
-            <SelectTrigger
-              id="empresa_origem_id"
-              className={cn(formErrors.empresa_origem_id && "border-red-500")}
+          {isDemoMode ? (
+            <PrivateData type="company">
+              {empresasElegiveis.find(e => e.id === formData.empresa_origem_id)?.nome || "-"}
+            </PrivateData>
+          ) : (
+            <Select
+              value={formData.empresa_origem_id || "none"}
+              onValueChange={(value) =>
+                handleChange(
+                  "empresa_origem_id",
+                  value === "none" ? undefined : value
+                )
+              }
             >
-              <SelectValue placeholder="Selecione a empresa de origem" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">Nenhuma</SelectItem>
-              {empresasElegiveis.map((empresa) => (
-                <SelectItem key={empresa.id} value={empresa.id}>
-                  {empresa.nome}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+              <SelectTrigger
+                id="empresa_origem_id"
+                className={cn(formErrors.empresa_origem_id && "border-red-500")}
+              >
+                <SelectValue placeholder="Selecione a empresa de origem" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Nenhuma</SelectItem>
+                {empresasElegiveis.map((empresa) => (
+                  <SelectItem key={empresa.id} value={empresa.id}>
+                    {empresa.nome}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
           {formErrors.empresa_origem_id && (
             <p className="text-sm text-red-500">
               {formErrors.empresa_origem_id}
@@ -390,30 +407,36 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({
           <Label htmlFor="empresa_destino_id">
             Destino <span className="text-red-500">*</span>
           </Label>
-          <Select
-            value={formData.empresa_destino_id || "none"}
-            onValueChange={(value) =>
-              handleChange(
-                "empresa_destino_id",
-                value === "none" ? undefined : value
-              )
-            }
-          >
-            <SelectTrigger
-              id="empresa_destino_id"
-              className={cn(formErrors.empresa_destino_id && "border-red-500")}
+          {isDemoMode ? (
+            <PrivateData type="company">
+              {empresasElegiveis.find(e => e.id === formData.empresa_destino_id)?.nome || "-"}
+            </PrivateData>
+          ) : (
+            <Select
+              value={formData.empresa_destino_id || "none"}
+              onValueChange={(value) =>
+                handleChange(
+                  "empresa_destino_id",
+                  value === "none" ? undefined : value
+                )
+              }
             >
-              <SelectValue placeholder="Selecione a empresa de destino" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">Nenhuma</SelectItem>
-              {empresasElegiveis.map((empresa) => (
-                <SelectItem key={empresa.id} value={empresa.id}>
-                  {empresa.nome}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+              <SelectTrigger
+                id="empresa_destino_id"
+                className={cn(formErrors.empresa_destino_id && "border-red-500")}
+              >
+                <SelectValue placeholder="Selecione a empresa de destino" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Nenhuma</SelectItem>
+                {empresasElegiveis.map((empresa) => (
+                  <SelectItem key={empresa.id} value={empresa.id}>
+                    {empresa.nome}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
           {formErrors.empresa_destino_id && (
             <p className="text-sm text-red-500">
               {formErrors.empresa_destino_id}
@@ -532,18 +555,26 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({
         {/* Valor (opcional) */}
         <div className="space-y-2">
           <Label htmlFor="valor">Valor (R$)</Label>
-          <Input
-            id="valor"
-            type="number"
-            value={formData.valor ?? ""}
-            onChange={(e) =>
-              handleChange(
-                "valor",
-                e.target.value ? parseFloat(e.target.value) : undefined
-              )
-            }
-            min={0}
-          />
+          {isDemoMode ? (
+            <PrivateData type="value">{formData.valor ?? ""}</PrivateData>
+          ) : (
+            <Input
+              id="valor"
+              type="number"
+              value={formData.valor ?? ""}
+              onChange={(e) =>
+                handleChange(
+                  "valor",
+                  e.target.value ? parseFloat(e.target.value) : undefined
+                )
+              }
+              min={0}
+              className={cn(formErrors.valor && "border-red-500")}
+            />
+          )}
+          {formErrors.valor && (
+            <p className="text-sm text-red-500">{formErrors.valor}</p>
+          )}
         </div>
         {/* Data de fechamento (opcional) */}
         <div className="space-y-2">
@@ -592,7 +623,11 @@ export const OportunidadesForm: React.FC<OportunidadesFormProps> = ({
             value={formData.observacoes || ""}
             onChange={(e) => handleChange("observacoes", e.target.value)}
             rows={3}
+            className={cn(formErrors.observacoes && "border-red-500")}
           />
+          {formErrors.observacoes && (
+            <p className="text-sm text-red-500">{formErrors.observacoes}</p>
+          )}
         </div>
         {/* Motivo da perda (obrigatório se perdido) */}
         {formData.status === "perdido" && (

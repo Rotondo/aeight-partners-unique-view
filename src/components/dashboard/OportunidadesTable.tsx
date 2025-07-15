@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Edit, Check, X as Cancel } from "lucide-react";
 import { Oportunidade, StatusOportunidade } from "@/types";
+import { PrivateData } from '@/components/privacy/PrivateData';
+import { usePrivacy } from '@/contexts/PrivacyContext';
 
 interface OportunidadesTableProps {
   listaOrdenada: Oportunidade[];
@@ -27,6 +29,7 @@ export const OportunidadesTable: React.FC<OportunidadesTableProps> = ({
   handleCancelEdit,
   ordenarLista,
 }) => {
+  const { isDemoMode } = usePrivacy();
   function formatDate(dateString?: string) {
     if (!dateString) return "-";
     const date = new Date(dateString);
@@ -56,8 +59,16 @@ export const OportunidadesTable: React.FC<OportunidadesTableProps> = ({
             <tbody>
               {listaOrdenada.map((op, idx) => (
                 <tr key={op.id + idx}>
-                  <td className="border p-1">{op.empresa_origem?.nome || "-"}</td>
-                  <td className="border p-1">{op.empresa_destino?.nome || "-"}</td>
+                  <td className="border p-1">
+                    <PrivateData type="company">
+                      {op.empresa_origem?.nome || "-"}
+                    </PrivateData>
+                  </td>
+                  <td className="border p-1">
+                    <PrivateData type="company">
+                      {op.empresa_destino?.nome || "-"}
+                    </PrivateData>
+                  </td>
                   <td className="border p-1">
                     {editRowId === op.id ? (
                       <Select
@@ -95,7 +106,9 @@ export const OportunidadesTable: React.FC<OportunidadesTableProps> = ({
                           })
                         }
                       />
-                    ) : (op.valor ?? "-")}
+                    ) : (
+                      <PrivateData type="value">{op.valor ?? "-"}</PrivateData>
+                    )}
                   </td>
                   <td className="border p-1">
                     {editRowId === op.id ? (
@@ -109,7 +122,9 @@ export const OportunidadesTable: React.FC<OportunidadesTableProps> = ({
                         }
                         className="w-[110px]"
                       />
-                    ) : (op.nome_lead ?? "-")}
+                    ) : (
+                      <PrivateData type="name">{op.nome_lead ?? "-"}</PrivateData>
+                    )}
                   </td>
                   <td className="border p-1">{op.tipo_relacao}</td>
                   <td className="border p-1">{formatDate(op.data_indicacao)}</td>

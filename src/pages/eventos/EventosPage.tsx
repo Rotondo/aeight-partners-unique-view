@@ -16,7 +16,7 @@ const EventosPage: React.FC = () => {
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
-            Você precisa estar logado para acessar o módulo de Eventos.
+            <strong>Acesso negado.</strong> Você não tem permissão para acessar este recurso. Em caso de dúvida, contate o administrador.
           </AlertDescription>
         </Alert>
       </div>

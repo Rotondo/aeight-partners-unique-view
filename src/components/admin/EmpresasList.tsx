@@ -270,6 +270,8 @@ export const EmpresasList: React.FC = () => {
                       variant="destructive"
                       size="sm"
                       onClick={() => handleDeleteEmpresa(empresa.id)}
+                      title="Remover empresa"
+                      aria-label="Remover empresa"
                     >
                       Excluir
                     </Button>

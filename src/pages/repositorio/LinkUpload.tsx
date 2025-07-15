@@ -40,23 +40,53 @@ const LinkUpload: React.FC<LinkUploadProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!user) {
+    // NOVO: Validação de campos obrigatórios
+    if (!formData.nome || !formData.nome.trim()) {
       toast({
         title: 'Erro',
-        description: 'Você precisa estar logado para adicionar links.',
+        description: 'O nome do link é obrigatório.',
         variant: 'destructive',
       });
       return;
     }
-
-    // Validar URL
-    try {
-      new URL(formData.url);
-    } catch {
+    if (!formData.url || !formData.url.trim()) {
+      toast({
+        title: 'Erro',
+        description: 'A URL é obrigatória.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    // NOVO: Validação de URL
+    const urlRegex = /^(https?:\/\/)?([\w\-]+\.)+[\w\-]+(\/[\w\-._~:/?#[\]@!$&'()*+,;=]*)?$/;
+    if (!urlRegex.test(formData.url)) {
       toast({
         title: 'Erro',
         description: 'Por favor, insira uma URL válida.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (!formData.empresa_id) {
+      toast({
+        title: 'Erro',
+        description: 'Selecione a empresa.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (!formData.categoria_id) {
+      toast({
+        title: 'Erro',
+        description: 'Selecione a categoria.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (!user) {
+      toast({
+        title: 'Erro',
+        description: 'Você precisa estar logado para adicionar links.',
         variant: 'destructive',
       });
       return;

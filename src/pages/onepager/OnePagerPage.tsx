@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/useAuth';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { PrivateData } from '@/components/privacy/PrivateData';
+import { Button } from '@/components/ui/button';
 
 const OnePagerPage: React.FC = () => {
   const { user } = useAuth();

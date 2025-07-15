@@ -12,6 +12,7 @@ import MateriaisList from './MateriaisList';
 import MaterialUpload from './MaterialUpload';
 import LinksList from './LinksList';
 import LinkUpload from './LinkUpload';
+import { Button } from '@/components/ui/button';
 
 const RepositorioPage: React.FC = () => {
   const { user } = useAuth();

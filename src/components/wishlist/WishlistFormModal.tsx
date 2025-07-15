@@ -166,6 +166,24 @@ const WishlistFormModal: React.FC<WishlistFormModalProps> = ({
     e.preventDefault();
     setFormError(null);
     setModalLoading(true);
+    // NOVO: Validação de prioridade
+    if (prioridade < 1 || prioridade > 5) {
+      setFormError("A prioridade deve ser entre 1 e 5.");
+      setModalLoading(false);
+      return;
+    }
+    // NOVO: Validação de motivo
+    if (!motivo || !motivo.trim()) {
+      setFormError("O motivo é obrigatório.");
+      setModalLoading(false);
+      return;
+    }
+    // NOVO: Validação de observações
+    if (!observacoes || !observacoes.trim()) {
+      setFormError("As observações são obrigatórias.");
+      setModalLoading(false);
+      return;
+    }
 
     if (!empresaInteressada || !empresaDesejada || !empresaProprietaria) {
       setFormError("Preencha todos os campos obrigatórios.");

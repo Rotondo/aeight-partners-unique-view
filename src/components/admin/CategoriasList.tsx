@@ -202,7 +202,7 @@ export const CategoriasList: React.FC = () => {
                         description="Tem certeza que deseja excluir esta categoria? Esta ação não pode ser desfeita."
                         onConfirm={() => handleDelete(categoria.id)}
                       >
-                        <Button variant="destructive" size="icon">
+                        <Button variant="destructive" size="icon" title="Remover categoria" aria-label="Remover categoria">
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </ConfirmDialog>

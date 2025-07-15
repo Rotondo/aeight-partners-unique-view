@@ -30,7 +30,7 @@ export const DiarioProvider: React.FC<DiarioProviderProps> = ({ children }) => {
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
-            Acesso negado. Apenas administradores podem acessar o módulo Diário.
+            <strong>Acesso negado.</strong> Você não tem permissão para acessar este recurso. Em caso de dúvida, contate o administrador.
           </AlertDescription>
         </Alert>
       </div>

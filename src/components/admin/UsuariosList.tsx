@@ -105,6 +105,34 @@ export const UsuariosList: React.FC<UsuariosListProps> = ({ empresaId }) => {
 
   const handleSave = async () => {
     if (!selectedUser) return;
+    // NOVO: Validação de e-mail
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email || !emailRegex.test(email)) {
+      toast({
+        title: "Erro",
+        description: "E-mail inválido.",
+        variant: "destructive",
+      });
+      return;
+    }
+    // NOVO: Validação de nome
+    if (!nome || !nome.trim()) {
+      toast({
+        title: "Erro",
+        description: "O nome é obrigatório.",
+        variant: "destructive",
+      });
+      return;
+    }
+    // NOVO: Validação de papel
+    if (!papel || !["admin", "user"].includes(papel)) {
+      toast({
+        title: "Erro",
+        description: "Papel inválido.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     try {
       const { error } = await supabase
