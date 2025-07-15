@@ -54,6 +54,9 @@ const EmpresaSelector: React.FC<EmpresaSelectorProps> = ({
     observacoes: ''
   });
   const [adicionados, setAdicionados] = useState<string[]>([]);
+  // Novo estado para modal de inclusão manual
+  const [showIncluirModal, setShowIncluirModal] = useState(false);
+  const [selecionadosParaIncluir, setSelecionadosParaIncluir] = useState<string[]>([]);
 
   // Onboarding microcopy
   const onboardingText = (
@@ -173,6 +176,61 @@ const EmpresaSelector: React.FC<EmpresaSelectorProps> = ({
     }
   };
 
+  // Função para associar todos os parceiros ao mapa
+  const associarTodosParceiros = async () => {
+    setLoading(true);
+    try {
+      // Busca todas as empresas do tipo parceiro (independente do status)
+      const { data, error } = await supabase
+        .from('empresas')
+        .select('id')
+        .neq('tipo', 'cliente');
+      if (error) throw error;
+      // Filtra apenas as que ainda não estão no mapa
+      const idsNaoAssociados = (data || [])
+        .map(e => e.id)
+        .filter(id => !empresasParceiros.has(id));
+      if (idsNaoAssociados.length === 0) {
+        toast({ title: 'Nenhum novo parceiro para associar.' });
+        setLoading(false);
+        return;
+      }
+      // Associa todos de uma vez
+      for (const id of idsNaoAssociados) {
+        await onSave({ empresa_id: id, status: 'ativo', performance_score: 80 });
+      }
+      toast({
+        title: 'Sucesso',
+        description: `${idsNaoAssociados.length} parceiros associados ao mapa.`
+      });
+      // Recarrega lista
+      await carregarEmpresasParceiros();
+      await carregarEmpresas();
+    } catch (err) {
+      toast({ title: 'Erro ao associar parceiros', description: String(err), variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Função para incluir selecionados no mapa
+  const incluirSelecionadosNoMapa = async () => {
+    setLoading(true);
+    try {
+      for (const id of selecionadosParaIncluir) {
+        await onSave({ empresa_id: id, status: 'ativo', performance_score: 80 });
+      }
+      toast({ title: 'Parceiros incluídos no mapa com sucesso.' });
+      setSelecionadosParaIncluir([]);
+      setShowIncluirModal(false);
+      carregarEmpresasParceiros();
+    } catch (error) {
+      toast({ title: 'Erro ao incluir parceiros.', variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Filtro + status visual
   const empresasFiltradas = empresas.filter(empresa =>
     empresa.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -180,6 +238,10 @@ const EmpresaSelector: React.FC<EmpresaSelectorProps> = ({
   );
 
   const empresasSelecionadas = empresas.filter(emp => emp.selected);
+
+  // Lista de parceiros não associados
+  const parceirosNaoAssociados = empresas.filter(e => !e.jaParceiro);
+  const parceirosJaAssociados = empresas.filter(e => e.jaParceiro);
 
   // Corrige seleção: clique no checkbox ou na linha, mas sem eventos duplicados
   const handleCheckboxChange = (checked: boolean, empresaId: string) => {
@@ -226,7 +288,58 @@ const EmpresaSelector: React.FC<EmpresaSelectorProps> = ({
             )}
           </DialogTitle>
         </DialogHeader>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold">Adicionar Empresas como Parceiros</h2>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={associarTodosParceiros}
+            disabled={loading}
+            aria-label="Associar todos os parceiros ao mapa"
+          >
+            Associar todos
+          </Button>
+        </div>
         {onboardingText}
+
+        {/* NOVA SEÇÃO: Resumo e botão de inclusão manual */}
+        <div className="mb-2 flex flex-wrap gap-2 items-center">
+          <span className="text-xs text-muted-foreground">Parceiros já no mapa: <b>{parceirosJaAssociados.length}</b></span>
+          {parceirosNaoAssociados.length > 0 && (
+            <Button size="sm" variant="outline" onClick={() => setShowIncluirModal(true)}>
+              Ver/Selecionar para incluir no mapa ({parceirosNaoAssociados.length})
+            </Button>
+          )}
+        </div>
+        {/* Modal de inclusão manual */}
+        {showIncluirModal && (
+          <Dialog open={showIncluirModal} onOpenChange={setShowIncluirModal}>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Selecionar parceiros para incluir no mapa</DialogTitle>
+              </DialogHeader>
+              <div className="max-h-64 overflow-y-auto space-y-2">
+                {parceirosNaoAssociados.map((e) => (
+                  <div key={e.id} className="flex items-center gap-2">
+                    <Checkbox
+                      checked={selecionadosParaIncluir.includes(e.id)}
+                      onCheckedChange={() => setSelecionadosParaIncluir(sel => sel.includes(e.id) ? sel.filter(id => id !== e.id) : [...sel, e.id])}
+                    />
+                    <span className="text-sm">{e.nome}</span>
+                  </div>
+                ))}
+                {parceirosNaoAssociados.length === 0 && <span className="text-xs">Todos os parceiros já estão no mapa.</span>}
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowIncluirModal(false)} disabled={loading}>Cancelar</Button>
+                <Button onClick={incluirSelecionadosNoMapa} disabled={selecionadosParaIncluir.length === 0 || loading}>
+                  Incluir selecionados
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Busca e Controles */}
