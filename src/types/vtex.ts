@@ -5,8 +5,8 @@ export interface VtexFeedbackCampoCustomizado {
   tipo: 'texto' | 'email' | 'telefone' | 'selecao' | 'texto_longo' | 'data' | 'boolean';
   obrigatorio: boolean;
   label: string;
-  descricao?: string;
-  opcoes?: string[];
+  descricao?: string | null;
+  opcoes?: string[] | null;
   ordem: number;
   ativo: boolean;
   created_at: string;
@@ -25,7 +25,7 @@ export interface VtexFeedbackOportunidade {
   conseguiu_contato: boolean;
   contexto_breve: string;
   campos_customizados: Record<string, any>;
-  usuario_responsavel_id?: string;
+  usuario_responsavel_id?: string | null;
   status: 'rascunho' | 'enviado';
   created_at: string;
   updated_at: string;

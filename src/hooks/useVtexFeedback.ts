@@ -21,7 +21,16 @@ export const useVtexFeedback = () => {
         .order('ordem');
 
       if (error) throw error;
-      setCamposCustomizados(data || []);
+      
+      // Converter dados do Supabase para o tipo correto
+      const camposConvertidos: VtexFeedbackCampoCustomizado[] = (data || []).map(campo => ({
+        ...campo,
+        tipo: campo.tipo as VtexFeedbackCampoCustomizado['tipo'],
+        opcoes: campo.opcoes ? (Array.isArray(campo.opcoes) ? campo.opcoes : []) : null,
+        descricao: campo.descricao || null
+      }));
+      
+      setCamposCustomizados(camposConvertidos);
     } catch (error) {
       console.error('Erro ao carregar campos customizados:', error);
       toast({
@@ -47,7 +56,18 @@ export const useVtexFeedback = () => {
       const { data, error } = await query;
 
       if (error) throw error;
-      setFeedbacks(data || []);
+      
+      // Converter dados do Supabase para o tipo correto
+      const feedbacksConvertidos: VtexFeedbackOportunidade[] = (data || []).map(feedback => ({
+        ...feedback,
+        status: feedback.status as 'rascunho' | 'enviado',
+        campos_customizados: feedback.campos_customizados ? 
+          (typeof feedback.campos_customizados === 'object' ? feedback.campos_customizados as Record<string, any> : {}) 
+          : {},
+        usuario_responsavel_id: feedback.usuario_responsavel_id || null
+      }));
+      
+      setFeedbacks(feedbacksConvertidos);
     } catch (error) {
       console.error('Erro ao carregar feedbacks:', error);
       toast({

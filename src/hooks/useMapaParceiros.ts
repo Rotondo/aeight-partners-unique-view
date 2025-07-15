@@ -5,7 +5,7 @@ import { useMapaParceirosFilters } from './useMapaParceiros/useMapaParceirosFilt
 
 export const useMapaParceiros = () => {
   const dataHooks = useMapaParceirosData();
-  const actionsHooks = useMapaParceirosActions();
+  const actionsHooks = useMapaParceirosActions(dataHooks.parceiros, dataHooks.refreshParceiros);
   const filtersHooks = useMapaParceirosFilters();
 
   return {
