@@ -14,25 +14,29 @@ const AdminPage: React.FC = () => {
       title: 'Usuários',
       description: 'Gerencie usuários do sistema',
       icon: Users,
-      value: 'usuarios'
+      value: 'usuarios',
+      action: () => navigate('/admin/usuarios')
     },
     {
       title: 'Empresas',
       description: 'Gerencie empresas cadastradas',
       icon: Building2,
-      value: 'empresas'
+      value: 'empresas',
+      action: () => navigate('/admin/empresas')
     },
     {
       title: 'Categorias',
       description: 'Gerencie categorias de negócio',
       icon: Tag,
-      value: 'categorias'
+      value: 'categorias',
+      action: () => navigate('/admin/categorias')
     },
     {
       title: 'OnePagers',
       description: 'Gerencie OnePagers dos parceiros',
       icon: FileText,
-      value: 'onepagers'
+      value: 'onepagers',
+      action: () => navigate('/admin/onepagers')
     },
     {
       title: 'Mapa de Parceiros',
@@ -53,7 +57,11 @@ const AdminPage: React.FC = () => {
         {adminCards.map((card) => {
           const Icon = card.icon;
           return (
-            <Card key={card.value || 'mapa'} className="cursor-pointer hover:shadow-lg transition-shadow">
+            <Card
+              key={card.value || 'mapa'}
+              className={`cursor-pointer hover:shadow-lg transition-shadow ${card.action ? '' : 'pointer-events-none'}`}
+              onClick={card.action && card.value !== undefined ? card.action : undefined}
+            >
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
                   {card.title}
@@ -64,7 +72,7 @@ const AdminPage: React.FC = () => {
                 <p className="text-xs text-muted-foreground mb-3">
                   {card.description}
                 </p>
-                {card.action ? (
+                {card.value === undefined && card.action ? (
                   <Button onClick={card.action} size="sm" className="w-full">
                     Acessar
                   </Button>
