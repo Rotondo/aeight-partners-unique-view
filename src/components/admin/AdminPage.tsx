@@ -22,21 +22,21 @@ const AdminPage: React.FC = () => {
       description: 'Gerencie empresas cadastradas',
       icon: Building2,
       value: 'empresas',
-      action: () => navigate('/admin/empresas')
+      action: () => navigate('/empresas')
     },
     {
       title: 'Categorias',
       description: 'Gerencie categorias de negócio',
       icon: Tag,
       value: 'categorias',
-      action: () => navigate('/admin/categorias')
+      action: () => navigate('/categorias')
     },
     {
       title: 'OnePagers',
       description: 'Gerencie OnePagers dos parceiros',
       icon: FileText,
       value: 'onepagers',
-      action: () => navigate('/admin/onepagers')
+      action: () => navigate('/onepager')
     },
     {
       title: 'Mapa de Parceiros',
