@@ -5,7 +5,7 @@ import { VtexFeedbackList } from './VtexFeedbackList';
 import { VtexFeedbackForm } from './VtexFeedbackForm';
 import { VtexFeedbackHistory } from './VtexFeedbackHistory';
 import { Button } from '@/components/ui/button';
-import { Plus, Settings, BarChart3 } from 'lucide-react';
+import { Plus, Settings, BarChart3, RefreshCw } from 'lucide-react';
 import { Oportunidade } from '@/types';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -15,18 +15,30 @@ export const VtexFeedbackTab: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [activeView, setActiveView] = useState<'list' | 'form' | 'history'>('list');
+  const [isLoadingOportunidades, setIsLoadingOportunidades] = useState(false);
   
   const { fetchOportunidadesVtex, loading, fetchFeedbacks } = useVtexFeedback();
   const { user } = useAuth();
 
   useEffect(() => {
-    loadOportunidades();
-    fetchFeedbacks();
-  }, []);
+    if (user) {
+      loadOportunidades();
+      fetchFeedbacks();
+    }
+  }, [user]);
 
   const loadOportunidades = async () => {
-    const oportunidades = await fetchOportunidadesVtex();
-    setOportunidadesVtex(oportunidades);
+    setIsLoadingOportunidades(true);
+    try {
+      console.log('Iniciando carregamento de oportunidades VTEX...');
+      const oportunidades = await fetchOportunidadesVtex();
+      console.log('Oportunidades carregadas:', oportunidades.length);
+      setOportunidadesVtex(oportunidades);
+    } catch (error) {
+      console.error('Erro ao carregar oportunidades:', error);
+    } finally {
+      setIsLoadingOportunidades(false);
+    }
   };
 
   const handleDarFeedback = (oportunidade: Oportunidade) => {
@@ -50,7 +62,12 @@ export const VtexFeedbackTab: React.FC = () => {
     handleVoltar();
   };
 
-  if (loading) {
+  const handleRefresh = () => {
+    loadOportunidades();
+    fetchFeedbacks();
+  };
+
+  if (loading || isLoadingOportunidades) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
@@ -76,6 +93,15 @@ export const VtexFeedbackTab: React.FC = () => {
           <div className="flex gap-2">
             <Button
               variant="outline"
+              onClick={handleRefresh}
+              className="flex items-center gap-2"
+              disabled={isLoadingOportunidades}
+            >
+              <RefreshCw className={`h-4 w-4 ${isLoadingOportunidades ? 'animate-spin' : ''}`} />
+              Atualizar
+            </Button>
+            <Button
+              variant="outline"
               onClick={() => setActiveView('history')}
               className="flex items-center gap-2"
             >
@@ -94,6 +120,17 @@ export const VtexFeedbackTab: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Debug Info - Remove in production */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <p className="text-sm text-yellow-800">
+            Debug: {oportunidadesVtex.length} oportunidades VTEX encontradas | 
+            Usuário: {user?.nome || 'N/A'} | 
+            Loading: {loading ? 'Sim' : 'Não'}
+          </p>
+        </div>
+      )}
 
       {/* Content */}
       {activeView === 'list' && (

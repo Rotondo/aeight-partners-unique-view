@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
@@ -28,7 +27,10 @@ export const useVtexFeedback = () => {
         tipo: campo.tipo as VtexFeedbackCampoCustomizado['tipo'],
         opcoes: campo.opcoes ? 
           (Array.isArray(campo.opcoes) ? 
-            campo.opcoes.filter((item): item is string => typeof item === 'string') : 
+            campo.opcoes
+              .filter((item): item is string | number | boolean => item !== null && item !== undefined)
+              .map(item => String(item))
+              .filter((item): item is string => typeof item === 'string') : 
             null
           ) : null,
         descricao: campo.descricao || null
@@ -82,9 +84,12 @@ export const useVtexFeedback = () => {
     }
   };
 
-  // Buscar oportunidades VTEX
+  // Buscar oportunidades VTEX - Melhorar a query para ser mais robusta
   const fetchOportunidadesVtex = async (): Promise<Oportunidade[]> => {
     try {
+      setLoading(true);
+      console.log('Iniciando busca por oportunidades VTEX...');
+
       const { data, error } = await supabase
         .from('oportunidades')
         .select(`
@@ -94,12 +99,53 @@ export const useVtexFeedback = () => {
           usuario_envio:usuarios!usuario_envio_id(*),
           usuario_recebe:usuarios!usuario_recebe_id(*)
         `)
-        .or('empresa_origem.nome.ilike.%VTEX%,empresa_destino.nome.ilike.%VTEX%')
-        .neq('status', 'perdido')
-        .neq('status', 'ganho')
+        .or(
+          'empresa_origem.nome.ilike.%vtex%,empresa_destino.nome.ilike.%vtex%,empresa_origem.nome.ilike.%VTEX%,empresa_destino.nome.ilike.%VTEX%'
+        )
+        .not('status', 'eq', 'perdido')
+        .not('status', 'eq', 'ganho')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro na query Supabase:', error);
+        throw error;
+      }
+
+      console.log('Dados retornados da query:', data?.length || 0, 'oportunidades');
+      
+      // Se não encontrou com a query específica, vamos tentar uma busca mais ampla
+      if (!data || data.length === 0) {
+        console.log('Nenhuma oportunidade VTEX encontrada na primeira query, tentando busca mais ampla...');
+        
+        const { data: allData, error: allError } = await supabase
+          .from('oportunidades')
+          .select(`
+            *,
+            empresa_origem:empresas!empresa_origem_id(*),
+            empresa_destino:empresas!empresa_destino_id(*),
+            usuario_envio:usuarios!usuario_envio_id(*),
+            usuario_recebe:usuarios!usuario_recebe_id(*)
+          `)
+          .not('status', 'eq', 'perdido')
+          .not('status', 'eq', 'ganho')
+          .order('created_at', { ascending: false });
+
+        if (allError) {
+          console.error('Erro na segunda query:', allError);
+          throw allError;
+        }
+
+        // Filtrar localmente por VTEX
+        const vtexOportunidades = (allData || []).filter(op => {
+          const origemNome = op.empresa_origem?.nome?.toLowerCase() || '';
+          const destinoNome = op.empresa_destino?.nome?.toLowerCase() || '';
+          return origemNome.includes('vtex') || destinoNome.includes('vtex');
+        });
+
+        console.log('Oportunidades VTEX encontradas na busca ampla:', vtexOportunidades.length);
+        return vtexOportunidades || [];
+      }
+
       return data || [];
     } catch (error) {
       console.error('Erro ao buscar oportunidades VTEX:', error);
@@ -109,10 +155,11 @@ export const useVtexFeedback = () => {
         variant: "destructive"
       });
       return [];
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Salvar feedback
   const salvarFeedback = async (
     oportunidadeId: string,
     formData: VtexFeedbackFormData,
@@ -160,7 +207,6 @@ export const useVtexFeedback = () => {
     }
   };
 
-  // Atualizar feedback
   const atualizarFeedback = async (
     feedbackId: string,
     formData: VtexFeedbackFormData,
@@ -207,7 +253,6 @@ export const useVtexFeedback = () => {
     }
   };
 
-  // Verificar se oportunidade tem feedback pendente
   const temFeedbackPendente = (oportunidadeId: string, dataUltimoFeedback?: string) => {
     if (!dataUltimoFeedback) return true;
     
@@ -218,7 +263,6 @@ export const useVtexFeedback = () => {
     return diferencaDias >= 7; // Feedback semanal
   };
 
-  // Obter último feedback da oportunidade
   const getUltimoFeedback = (oportunidadeId: string): VtexFeedbackOportunidade | null => {
     const feedbacksOportunidade = feedbacks.filter(f => f.oportunidade_id === oportunidadeId);
     return feedbacksOportunidade.length > 0 ? feedbacksOportunidade[0] : null;
