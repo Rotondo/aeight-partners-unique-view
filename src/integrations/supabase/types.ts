@@ -1239,6 +1239,117 @@ export type Database = {
           },
         ]
       }
+      vtex_feedback_campos_customizados: {
+        Row: {
+          ativo: boolean
+          created_at: string | null
+          descricao: string | null
+          id: string
+          label: string
+          nome: string
+          obrigatorio: boolean
+          opcoes: Json | null
+          ordem: number
+          tipo: string
+          updated_at: string | null
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string | null
+          descricao?: string | null
+          id?: string
+          label: string
+          nome: string
+          obrigatorio?: boolean
+          opcoes?: Json | null
+          ordem?: number
+          tipo: string
+          updated_at?: string | null
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string | null
+          descricao?: string | null
+          id?: string
+          label?: string
+          nome?: string
+          obrigatorio?: boolean
+          opcoes?: Json | null
+          ordem?: number
+          tipo?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      vtex_feedback_oportunidades: {
+        Row: {
+          campos_customizados: Json | null
+          conseguiu_contato: boolean
+          contexto_breve: string
+          created_at: string | null
+          data_feedback: string
+          email_lead: string
+          empresa_lead: string
+          id: string
+          nome_lead: string
+          oportunidade_id: string
+          sobrenome_lead: string
+          status: string
+          telefone_lead: string
+          updated_at: string | null
+          usuario_responsavel_id: string | null
+        }
+        Insert: {
+          campos_customizados?: Json | null
+          conseguiu_contato: boolean
+          contexto_breve: string
+          created_at?: string | null
+          data_feedback?: string
+          email_lead: string
+          empresa_lead: string
+          id?: string
+          nome_lead: string
+          oportunidade_id: string
+          sobrenome_lead: string
+          status?: string
+          telefone_lead: string
+          updated_at?: string | null
+          usuario_responsavel_id?: string | null
+        }
+        Update: {
+          campos_customizados?: Json | null
+          conseguiu_contato?: boolean
+          contexto_breve?: string
+          created_at?: string | null
+          data_feedback?: string
+          email_lead?: string
+          empresa_lead?: string
+          id?: string
+          nome_lead?: string
+          oportunidade_id?: string
+          sobrenome_lead?: string
+          status?: string
+          telefone_lead?: string
+          updated_at?: string | null
+          usuario_responsavel_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vtex_feedback_oportunidades_oportunidade_id_fkey"
+            columns: ["oportunidade_id"]
+            isOneToOne: false
+            referencedRelation: "oportunidades"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vtex_feedback_oportunidades_usuario_responsavel_id_fkey"
+            columns: ["usuario_responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       wishlist_apresentacoes: {
         Row: {
           converteu_oportunidade: boolean | null

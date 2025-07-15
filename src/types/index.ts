@@ -11,3 +11,4 @@ export * from './onepager';
 export * from './wishlist';
 export * from './dashboard';
 export * from './metas';
+export * from './vtex';

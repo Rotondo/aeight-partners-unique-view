@@ -5,6 +5,7 @@ import { OportunidadesList } from "@/components/oportunidades/OportunidadesList"
 import { OportunidadesFilter } from "@/components/oportunidades/OportunidadesFilter";
 import { OportunidadesForm } from "@/components/oportunidades/OportunidadesForm";
 import { OportunidadesStats } from "@/components/oportunidades/OportunidadesStats";
+import { VtexFeedbackTab } from "@/components/oportunidades/VtexFeedbackTab";
 import { DemoModeIndicator } from "@/components/privacy/DemoModeIndicator";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
@@ -14,7 +15,7 @@ import { Oportunidade } from "@/types";
 
 /**
  * Página principal de gestão de oportunidades.
- * Mantém todos os fluxos: listagem, filtro, estatísticas e cadastro/edição de oportunidades.
+ * Mantém todos os fluxos: listagem, filtro, estatísticas, cadastro/edição de oportunidades e feedback VTEX.
  * NÃO MODIFIQUE este fluxo sem aprovação, pois está validado e funcional.
  */
 export const OportunidadesPage: React.FC = () => {
@@ -74,6 +75,7 @@ export const OportunidadesPage: React.FC = () => {
             <TabsList className="mb-4 w-full sm:w-auto">
               <TabsTrigger value="lista" className="flex-1 sm:flex-none">Lista</TabsTrigger>
               <TabsTrigger value="estatisticas" className="flex-1 sm:flex-none">Estatísticas</TabsTrigger>
+              <TabsTrigger value="vtex-feedback" className="flex-1 sm:flex-none">Feedback VTEX</TabsTrigger>
             </TabsList>
             <TabsContent value="lista">
               <div className="space-y-4">
@@ -86,6 +88,11 @@ export const OportunidadesPage: React.FC = () => {
             <TabsContent value="estatisticas">
               <div className="w-full overflow-hidden">
                 <OportunidadesStats />
+              </div>
+            </TabsContent>
+            <TabsContent value="vtex-feedback">
+              <div className="w-full overflow-hidden">
+                <VtexFeedbackTab />
               </div>
             </TabsContent>
           </Tabs>
