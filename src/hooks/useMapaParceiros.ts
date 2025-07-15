@@ -5,8 +5,8 @@ import { useMapaParceirosFilters } from './useMapaParceiros/useMapaParceirosFilt
 
 export const useMapaParceiros = () => {
   const dataHooks = useMapaParceirosData();
-  const actionsHooks = useMapaParceirosActions(dataHooks.parceiros, dataHooks.refreshParceiros);
-  const filtersHooks = useMapaParceirosFilters();
+  const actionsHooks = useMapaParceirosActions(dataHooks.parceiros, dataHooks.fetchParceiros);
+  const filtersHooks = useMapaParceirosFilters(dataHooks.etapas, dataHooks.subniveis, dataHooks.parceiros, dataHooks.associacoes);
 
   return {
     ...dataHooks,

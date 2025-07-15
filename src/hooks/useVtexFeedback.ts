@@ -26,7 +26,11 @@ export const useVtexFeedback = () => {
       const camposConvertidos: VtexFeedbackCampoCustomizado[] = (data || []).map(campo => ({
         ...campo,
         tipo: campo.tipo as VtexFeedbackCampoCustomizado['tipo'],
-        opcoes: campo.opcoes ? (Array.isArray(campo.opcoes) ? campo.opcoes : []) : null,
+        opcoes: campo.opcoes ? 
+          (Array.isArray(campo.opcoes) ? 
+            campo.opcoes.filter((item): item is string => typeof item === 'string') : 
+            null
+          ) : null,
         descricao: campo.descricao || null
       }));
       
