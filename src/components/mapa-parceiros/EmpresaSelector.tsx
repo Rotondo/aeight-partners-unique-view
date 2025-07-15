@@ -82,8 +82,7 @@ const EmpresaSelector: React.FC<EmpresaSelectorProps> = ({
     try {
       const { data, error } = await supabase
         .from('empresas')
-        .select('id, nome, descricao, tipo')
-        .eq('status', true)
+        .select('id, nome, descricao, tipo, status')
         .neq('tipo', 'cliente')
         .order('nome');
       if (error) throw error;
@@ -93,7 +92,7 @@ const EmpresaSelector: React.FC<EmpresaSelectorProps> = ({
         jaParceiro: empresasParceiros.has(empresa.id),
         recemAdicionada: false
       }));
-      setEmpresas(empresasDisponiveis.filter(e => !e.jaParceiro));
+      setEmpresas(empresasDisponiveis); // Não filtra mais por !jaParceiro nem por status
     } catch (error) {
       toast({
         title: "Erro",
