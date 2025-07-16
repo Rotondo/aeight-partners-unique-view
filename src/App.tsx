@@ -47,12 +47,36 @@ const QuadrantePage = lazy(() => import('@/pages/quadrante'));
 const DiarioPage = lazy(() => import('@/pages/diario'));
 const MapaParceiroAdminPage = lazy(() => import('@/pages/admin/MapaParceiroAdminPage'));
 
-const queryClient = new QueryClient();
+// React-safe wrapper component
+const ReactSafeApp: React.FC = () => {
+  const [isReactReady, setIsReactReady] = useState(false);
+  const [queryClient, setQueryClient] = useState<QueryClient | null>(null);
 
-function App() {
-  // Additional runtime safety check
-  if (!React || !useState || !Suspense || typeof lazy !== 'function') {
-    console.error('[App] React hooks not available at runtime');
+  React.useEffect(() => {
+    // Comprehensive React validation
+    const checkReactReady = () => {
+      const reactReady = React && 
+        React.useState && 
+        React.useEffect && 
+        React.Suspense && 
+        React.lazy &&
+        typeof React.useState === 'function' &&
+        typeof React.useEffect === 'function';
+      
+      if (reactReady) {
+        console.log('[ReactSafeApp] React is fully initialized, creating QueryClient');
+        setQueryClient(new QueryClient());
+        setIsReactReady(true);
+      } else {
+        console.log('[ReactSafeApp] React not ready, retrying...');
+        setTimeout(checkReactReady, 100);
+      }
+    };
+
+    checkReactReady();
+  }, []);
+
+  if (!isReactReady || !queryClient) {
     return (
       <div style={{ 
         display: 'flex', 
@@ -64,25 +88,17 @@ function App() {
         padding: '2rem'
       }}>
         <div>
-          <h1 style={{ color: '#dc2626', marginBottom: '1rem' }}>React Initialization Error</h1>
-          <p style={{ marginBottom: '1rem' }}>React hooks are not available. Please reload the page.</p>
-          <button 
-            onClick={() => window.location.reload()}
-            style={{
-              padding: '0.5rem 1rem',
-              background: '#3b82f6',
-              color: 'white',
-              border: 'none',
-              borderRadius: '0.375rem',
-              cursor: 'pointer'
-            }}
-          >
-            Reload Page
-          </button>
+          <h1 style={{ color: '#3b82f6', marginBottom: '1rem' }}>Loading React...</h1>
+          <p>Please wait while the application initializes.</p>
         </div>
       </div>
     );
   }
+
+  return <AppContent queryClient={queryClient} />;
+};
+
+const AppContent: React.FC<{ queryClient: QueryClient }> = ({ queryClient }) => {
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -221,6 +237,45 @@ function App() {
         </AuthProvider>
       </QueryClientProvider>
   );
+}
+
+// Main App component that ensures React is ready
+function App() {
+  // Additional runtime safety check
+  if (!React || !useState || !Suspense || typeof lazy !== 'function') {
+    console.error('[App] React hooks not available at runtime');
+    return (
+      <div style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        minHeight: '100vh',
+        fontFamily: 'system-ui',
+        textAlign: 'center',
+        padding: '2rem'
+      }}>
+        <div>
+          <h1 style={{ color: '#dc2626', marginBottom: '1rem' }}>React Initialization Error</h1>
+          <p style={{ marginBottom: '1rem' }}>React hooks are not available. Please reload the page.</p>
+          <button 
+            onClick={() => window.location.reload()}
+            style={{
+              padding: '0.5rem 1rem',
+              background: '#3b82f6',
+              color: 'white',
+              border: 'none',
+              borderRadius: '0.375rem',
+              cursor: 'pointer'
+            }}
+          >
+            Reload Page
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return <ReactSafeApp />;
 }
 
 export default App;
