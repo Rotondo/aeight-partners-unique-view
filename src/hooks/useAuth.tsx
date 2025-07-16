@@ -3,10 +3,28 @@ import * as React from "react";
 import { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
-// Ensure React is properly initialized before using hooks
-if (!React || typeof React.useState !== 'function') {
-  console.error('[useAuth] React is not properly initialized');
-  throw new Error('React is not properly initialized - hooks are not available');
+// Enhanced React validation with retry mechanism
+const validateReact = () => {
+  if (!React || !React.useState || !React.useEffect || !React.useContext || !createContext || !useState || !useEffect || !useContext) {
+    console.error('[useAuth] React hooks are not available:', {
+      React: !!React,
+      'React.useState': !!React?.useState,
+      'React.useEffect': !!React?.useEffect,
+      'React.useContext': !!React?.useContext,
+      createContext: !!createContext,
+      useState: !!useState,
+      useEffect: !!useEffect,
+      useContext: !!useContext
+    });
+    return false;
+  }
+  return true;
+};
+
+// Validate React is properly initialized
+if (!validateReact()) {
+  console.error('[useAuth] React is not properly initialized - hooks are not available');
+  // Don't throw error, let the component handle it gracefully
 }
 
 interface User {
@@ -39,10 +57,38 @@ const AuthContext = createContext<AuthContextType>({
 });
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Verify React is available before using hooks
-  if (!React || !React.useState) {
-    console.error('[AuthProvider] React hooks are not available');
-    return <div>Loading...</div>;
+  // Enhanced React validation before using any hooks
+  if (!validateReact()) {
+    console.error('[AuthProvider] React hooks are not available - providing fallback');
+    return (
+      <div style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        minHeight: '100vh',
+        fontFamily: 'system-ui',
+        textAlign: 'center',
+        padding: '2rem'
+      }}>
+        <div>
+          <h2 style={{ color: '#dc2626', marginBottom: '1rem' }}>React Loading Error</h2>
+          <p style={{ marginBottom: '1rem' }}>React is not properly initialized. Please wait or reload the page.</p>
+          <button 
+            onClick={() => window.location.reload()}
+            style={{
+              padding: '0.5rem 1rem',
+              background: '#3b82f6',
+              color: 'white',
+              border: 'none',
+              borderRadius: '0.375rem',
+              cursor: 'pointer'
+            }}
+          >
+            Reload Page
+          </button>
+        </div>
+      </div>
+    );
   }
 
   const [user, setUser] = React.useState<User | null>(null);
