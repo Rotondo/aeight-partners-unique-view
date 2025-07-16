@@ -3,6 +3,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import QuadranteChart from "@/components/quadrante/QuadranteChart";
 import QuadranteForm from "@/components/quadrante/QuadranteForm";
+import ParceirosPendentes from "@/components/quadrante/ParceirosPendentes";
+import QuadranteStats from "@/components/quadrante/QuadranteStats";
 import { Empresa, IndicadoresParceiro, QuadrantPoint, TamanhoEmpresa } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
@@ -55,7 +57,8 @@ const QuadrantePage: React.FC = () => {
   const [quadrantPoints, setQuadrantPoints] = useState<QuadrantPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedParceiro, setSelectedParceiro] = useState<IndicadoresParceiro | null>(null);
-  const [activeTab, setActiveTab] = useState<"edit" | "new">("edit");
+  const [activeTab, setActiveTab] = useState<"edit" | "new" | "pendentes">("edit");
+  const [empresaParaAvaliar, setEmpresaParaAvaliar] = useState<Empresa | null>(null);
 
   // Carrega empresas (apenas parceiros) e indicadores do supabase
   const fetchData = async () => {
@@ -107,6 +110,13 @@ const QuadrantePage: React.FC = () => {
     setActiveTab("edit");
   };
 
+  // Handler para avaliar parceiro pendente
+  const handleAvaliarParceiro = (empresa: Empresa) => {
+    setEmpresaParaAvaliar(empresa);
+    setSelectedParceiro(null);
+    setActiveTab("new");
+  };
+
   // Salva indicador (edição/criação) e atualiza quadrante em tempo real
   const handleSaveIndicador = async (indicador: Partial<IndicadoresParceiro>) => {
     try {
@@ -143,6 +153,7 @@ const QuadrantePage: React.FC = () => {
         description: "Indicadores do parceiro salvos com sucesso!",
       });
       setSelectedParceiro(null);
+      setEmpresaParaAvaliar(null);
       setActiveTab("edit");
     } catch (error) {
       console.error("Error saving indicators:", error);
@@ -154,11 +165,22 @@ const QuadrantePage: React.FC = () => {
     }
   };
 
+  // Calcular estatísticas
+  const totalParceiros = empresas.filter(e => e.tipo === "parceiro").length;
+  const parceirosAvaliados = indicadores.length;
+  const empresasComIndicadores = indicadores.map(i => i.empresa_id);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-bold">Quadrante de Parceiros</h1>
       </div>
+      
+      {/* Estatísticas */}
+      <QuadranteStats 
+        totalParceiros={totalParceiros}
+        parceirosAvaliados={parceirosAvaliados}
+      />
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Área do Gráfico - 2/3 da largura no desktop */}
         <Card className="md:col-span-2">
@@ -190,9 +212,10 @@ const QuadrantePage: React.FC = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs value={activeTab} onValueChange={v => setActiveTab(v as "edit" | "new")}>
-              <TabsList className="grid w-full grid-cols-2">
+            <Tabs value={activeTab} onValueChange={v => setActiveTab(v as "edit" | "new" | "pendentes")}>
+              <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="edit">Editar</TabsTrigger>
+                <TabsTrigger value="pendentes">Pendentes</TabsTrigger>
                 {user?.papel === "admin" && (
                   <TabsTrigger value="new">Novo</TabsTrigger>
                 )}
@@ -206,6 +229,13 @@ const QuadrantePage: React.FC = () => {
                   empresas={empresas}
                 />
               </TabsContent>
+              <TabsContent value="pendentes" className="mt-4">
+                <ParceirosPendentes
+                  empresas={empresas}
+                  empresasComIndicadores={empresasComIndicadores}
+                  onAvaliarParceiro={handleAvaliarParceiro}
+                />
+              </TabsContent>
               {user?.papel === "admin" && (
                 <TabsContent value="new" className="mt-4">
                   <QuadranteForm
@@ -213,6 +243,7 @@ const QuadrantePage: React.FC = () => {
                     onSave={handleSaveIndicador}
                     readOnly={false}
                     empresas={empresas}
+                    empresaPreSelecionada={empresaParaAvaliar}
                   />
                 </TabsContent>
               )}

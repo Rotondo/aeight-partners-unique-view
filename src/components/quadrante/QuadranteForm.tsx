@@ -43,6 +43,7 @@ interface QuadranteFormProps {
   readOnly?: boolean;
   onParceiroSelect?: (empresa_id: string) => void;
   empresas: Empresa[];
+  empresaPreSelecionada?: Empresa | null;
 }
 
 const QuadranteForm: React.FC<QuadranteFormProps> = ({
@@ -51,6 +52,7 @@ const QuadranteForm: React.FC<QuadranteFormProps> = ({
   readOnly = false,
   onParceiroSelect,
   empresas,
+  empresaPreSelecionada,
 }) => {
   const { toast } = useToast();
   const [loading, setLoading] = React.useState(false);
@@ -63,7 +65,7 @@ const QuadranteForm: React.FC<QuadranteFormProps> = ({
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      empresa_id: indicador?.empresa_id || "",
+      empresa_id: indicador?.empresa_id || empresaPreSelecionada?.id || "",
       potencial_leads: indicador?.potencial_leads ?? 2.5,
       potencial_investimento: indicador?.potencial_investimento ?? 2.5,
       engajamento: indicador?.engajamento ?? 2.5,
@@ -73,7 +75,7 @@ const QuadranteForm: React.FC<QuadranteFormProps> = ({
     },
   });
 
-  // Atualiza form ao trocar de indicador
+  // Atualiza form ao trocar de indicador ou empresa pré-selecionada
   useEffect(() => {
     if (indicador) {
       form.reset({
@@ -87,7 +89,7 @@ const QuadranteForm: React.FC<QuadranteFormProps> = ({
       });
     } else {
       form.reset({
-        empresa_id: "",
+        empresa_id: empresaPreSelecionada?.id || "",
         potencial_leads: 2.5,
         potencial_investimento: 2.5,
         engajamento: 2.5,
@@ -97,7 +99,7 @@ const QuadranteForm: React.FC<QuadranteFormProps> = ({
       });
     }
     // eslint-disable-next-line
-  }, [indicador]);
+  }, [indicador, empresaPreSelecionada]);
 
   const handleSubmit = async (values: FormValues) => {
     setLoading(true);
