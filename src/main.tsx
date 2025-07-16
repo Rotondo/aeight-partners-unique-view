@@ -8,9 +8,17 @@ import './index.css';
 const initializeApp = async () => {
   console.log("[Main] Starting React initialization check...");
   
+  // Wait for React to be fully loaded
+  let attempts = 0;
+  while ((!React || !React.version || !React.useState || !React.useEffect || !React.useRef) && attempts < 10) {
+    console.log(`[Main] React not ready, attempt ${attempts + 1}/10`);
+    await new Promise(resolve => setTimeout(resolve, 100));
+    attempts++;
+  }
+  
   // Enhanced React validation
   if (!React || !React.version || !React.useState || !React.useEffect || !React.useRef) {
-    throw new Error("React is not properly initialized - missing core functions");
+    throw new Error("React is not properly initialized - missing core functions after retries");
   }
 
   console.log("[Main] React is properly initialized:", {

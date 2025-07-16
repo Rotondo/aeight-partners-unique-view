@@ -1,16 +1,31 @@
 import * as React from 'react';
-import { Suspense, lazy } from 'react';
+import { Suspense, lazy, useState } from 'react';
 import { Toaster } from '@/components/ui/toaster';
 import { Toaster as Sonner } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { ReactSafetyProvider } from '@/components/ui/ReactSafetyProvider';
 import { PrivacyProvider } from '@/contexts/PrivacyContext';
 import { AuthProvider } from '@/hooks/useAuth';
 import MainLayout from '@/components/layout/MainLayout';
 import { PrivateRoute } from '@/components/auth/PrivateRoute';
 import LoadingScreen from '@/components/ui/LoadingScreen';
+
+// Comprehensive React validation before any component usage
+if (!React || !React.useState || !React.useEffect || !React.Suspense || typeof React.lazy !== 'function') {
+  console.error('[App] React is not properly initialized:', {
+    React: !!React,
+    useState: !!React?.useState,
+    useEffect: !!React?.useEffect,
+    Suspense: !!React?.Suspense,
+    lazy: typeof React?.lazy
+  });
+  
+  // Emergency fallback - reload the page
+  if (typeof window !== 'undefined') {
+    window.location.reload();
+  }
+}
 
 const Index = lazy(() => import('@/pages/Index'));
 const LoginPage = lazy(() => import('@/pages/auth/LoginPage'));
@@ -35,15 +50,42 @@ const MapaParceiroAdminPage = lazy(() => import('@/pages/admin/MapaParceiroAdmin
 const queryClient = new QueryClient();
 
 function App() {
-  // Comprehensive safety check for React initialization
-  if (!React || !React.useState || !React.Suspense || typeof React.lazy !== 'function') {
-    console.error('[App] React is not properly initialized')
-    return <div>Loading...</div>
+  // Additional runtime safety check
+  if (!React || !useState || !Suspense || typeof lazy !== 'function') {
+    console.error('[App] React hooks not available at runtime');
+    return (
+      <div style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        minHeight: '100vh',
+        fontFamily: 'system-ui',
+        textAlign: 'center',
+        padding: '2rem'
+      }}>
+        <div>
+          <h1 style={{ color: '#dc2626', marginBottom: '1rem' }}>React Initialization Error</h1>
+          <p style={{ marginBottom: '1rem' }}>React hooks are not available. Please reload the page.</p>
+          <button 
+            onClick={() => window.location.reload()}
+            style={{
+              padding: '0.5rem 1rem',
+              background: '#3b82f6',
+              color: 'white',
+              border: 'none',
+              borderRadius: '0.375rem',
+              cursor: 'pointer'
+            }}
+          >
+            Reload Page
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <ReactSafetyProvider>
-      <QueryClientProvider client={queryClient}>
+    <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <PrivacyProvider>
             <TooltipProvider>
@@ -178,7 +220,6 @@ function App() {
           </PrivacyProvider>
         </AuthProvider>
       </QueryClientProvider>
-    </ReactSafetyProvider>
   );
 }
 
