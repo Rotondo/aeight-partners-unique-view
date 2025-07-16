@@ -56,8 +56,9 @@ const AuthContext = createContext<AuthContextType>({
   refreshUser: async () => {},
 });
 
+// AuthProvider component with comprehensive React validation
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Enhanced React validation before using any hooks
+  // Must validate React before ANY hook usage
   if (!validateReact()) {
     console.error('[AuthProvider] React hooks are not available - providing fallback');
     return (
@@ -91,10 +92,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
   }
 
-  const [user, setUser] = React.useState<User | null>(null);
-  const [loading, setLoading] = React.useState<boolean>(true);
-  const [error, setError] = React.useState<string | null>(null);
-  const [retryCount, setRetryCount] = React.useState<number>(0);
+  // Only use hooks if React is properly initialized
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState<number>(0);
 
   const isDevelopment = process.env.NODE_ENV === 'development';
 
@@ -196,7 +198,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     let mounted = true;
     
     const initAuth = async () => {
