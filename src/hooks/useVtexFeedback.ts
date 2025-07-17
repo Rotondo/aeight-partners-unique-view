@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
@@ -22,6 +21,7 @@ export const useVtexFeedback = () => {
 
       if (error) throw error;
       
+      // Converter dados do Supabase para o tipo correto
       const camposConvertidos: VtexFeedbackCampoCustomizado[] = (data || []).map(campo => ({
         ...campo,
         tipo: campo.tipo as VtexFeedbackCampoCustomizado['tipo'],
@@ -63,6 +63,7 @@ export const useVtexFeedback = () => {
 
       if (error) throw error;
       
+      // Converter dados do Supabase para o tipo correto
       const feedbacksConvertidos: VtexFeedbackOportunidade[] = (data || []).map(feedback => ({
         ...feedback,
         status: feedback.status as 'rascunho' | 'enviado',
@@ -83,14 +84,13 @@ export const useVtexFeedback = () => {
     }
   };
 
-  // Buscar oportunidades VTEX - Query corrigida e simplificada
+  // Buscar oportunidades VTEX - Melhorar a query para ser mais robusta
   const fetchOportunidadesVtex = async (): Promise<Oportunidade[]> => {
     try {
       setLoading(true);
       console.log('Iniciando busca por oportunidades VTEX...');
 
-      // Buscar todas as oportunidades ativas primeiro
-      const { data: oportunidades, error } = await supabase
+      const { data, error } = await supabase
         .from('oportunidades')
         .select(`
           *,
@@ -99,6 +99,9 @@ export const useVtexFeedback = () => {
           usuario_envio:usuarios!usuario_envio_id(*),
           usuario_recebe:usuarios!usuario_recebe_id(*)
         `)
+        .or(
+          'empresa_origem.nome.ilike.%vtex%,empresa_destino.nome.ilike.%vtex%,empresa_origem.nome.ilike.%VTEX%,empresa_destino.nome.ilike.%VTEX%'
+        )
         .not('status', 'eq', 'perdido')
         .not('status', 'eq', 'ganho')
         .order('created_at', { ascending: false });
@@ -108,24 +111,42 @@ export const useVtexFeedback = () => {
         throw error;
       }
 
-      console.log('Total de oportunidades encontradas:', oportunidades?.length || 0);
-
-      // Filtrar oportunidades VTEX localmente para evitar problemas de query
-      const vtexOportunidades = (oportunidades || []).filter(op => {
-        const origemNome = op.empresa_origem?.nome?.toLowerCase() || '';
-        const destinoNome = op.empresa_destino?.nome?.toLowerCase() || '';
-        const isVtex = origemNome.includes('vtex') || destinoNome.includes('vtex');
-        
-        if (isVtex) {
-          console.log('Oportunidade VTEX encontrada:', op.nome_lead, '|', origemNome, '->', destinoNome);
-        }
-        
-        return isVtex;
-      });
-
-      console.log('Oportunidades VTEX filtradas:', vtexOportunidades.length);
-      return vtexOportunidades;
+      console.log('Dados retornados da query:', data?.length || 0, 'oportunidades');
       
+      // Se não encontrou com a query específica, vamos tentar uma busca mais ampla
+      if (!data || data.length === 0) {
+        console.log('Nenhuma oportunidade VTEX encontrada na primeira query, tentando busca mais ampla...');
+        
+        const { data: allData, error: allError } = await supabase
+          .from('oportunidades')
+          .select(`
+            *,
+            empresa_origem:empresas!empresa_origem_id(*),
+            empresa_destino:empresas!empresa_destino_id(*),
+            usuario_envio:usuarios!usuario_envio_id(*),
+            usuario_recebe:usuarios!usuario_recebe_id(*)
+          `)
+          .not('status', 'eq', 'perdido')
+          .not('status', 'eq', 'ganho')
+          .order('created_at', { ascending: false });
+
+        if (allError) {
+          console.error('Erro na segunda query:', allError);
+          throw allError;
+        }
+
+        // Filtrar localmente por VTEX
+        const vtexOportunidades = (allData || []).filter(op => {
+          const origemNome = op.empresa_origem?.nome?.toLowerCase() || '';
+          const destinoNome = op.empresa_destino?.nome?.toLowerCase() || '';
+          return origemNome.includes('vtex') || destinoNome.includes('vtex');
+        });
+
+        console.log('Oportunidades VTEX encontradas na busca ampla:', vtexOportunidades.length);
+        return vtexOportunidades || [];
+      }
+
+      return data || [];
     } catch (error) {
       console.error('Erro ao buscar oportunidades VTEX:', error);
       toast({
@@ -232,7 +253,6 @@ export const useVtexFeedback = () => {
     }
   };
 
-  // Lógica para verificar se feedback semanal está pendente
   const temFeedbackPendente = (oportunidadeId: string, dataUltimoFeedback?: string) => {
     if (!dataUltimoFeedback) return true;
     
@@ -240,42 +260,12 @@ export const useVtexFeedback = () => {
     const agora = new Date();
     const diferencaDias = Math.floor((agora.getTime() - ultimoFeedback.getTime()) / (1000 * 60 * 60 * 24));
     
-    return diferencaDias >= 7; // Feedback semanal obrigatório
+    return diferencaDias >= 7; // Feedback semanal
   };
 
-  // Obter último feedback de uma oportunidade
   const getUltimoFeedback = (oportunidadeId: string): VtexFeedbackOportunidade | null => {
     const feedbacksOportunidade = feedbacks.filter(f => f.oportunidade_id === oportunidadeId);
     return feedbacksOportunidade.length > 0 ? feedbacksOportunidade[0] : null;
-  };
-
-  // Verificar status do feedback (novo)
-  const getStatusFeedback = (oportunidadeId: string) => {
-    const ultimoFeedback = getUltimoFeedback(oportunidadeId);
-    
-    if (!ultimoFeedback) {
-      return 'nunca_enviado';
-    }
-    
-    const isPendente = temFeedbackPendente(oportunidadeId, ultimoFeedback.data_feedback);
-    return isPendente ? 'atrasado' : 'em_dia';
-  };
-
-  // Estatísticas de controle (novo)
-  const getEstatisticasFeedback = (oportunidades: Oportunidade[]) => {
-    const stats = {
-      total: oportunidades.length,
-      nunca_enviado: 0,
-      em_dia: 0,
-      atrasado: 0
-    };
-
-    oportunidades.forEach(op => {
-      const status = getStatusFeedback(op.id);
-      stats[status as keyof typeof stats]++;
-    });
-
-    return stats;
   };
 
   useEffect(() => {
@@ -292,8 +282,6 @@ export const useVtexFeedback = () => {
     salvarFeedback,
     atualizarFeedback,
     temFeedbackPendente,
-    getUltimoFeedback,
-    getStatusFeedback,
-    getEstatisticasFeedback
+    getUltimoFeedback
   };
 };
