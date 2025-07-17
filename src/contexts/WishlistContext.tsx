@@ -1,3 +1,4 @@
+
 import React, {
   createContext,
   useContext,
@@ -70,12 +71,15 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const initializationRef = useRef(false);
 
-  // Usar o hook de dados
+  console.log(`${CONSOLE_PREFIX} Provider inicializando`);
+
+  // Usar o hook de dados com fallback seguro
+  const dataHook = useWishlistData();
   const {
-    empresasClientes,
-    wishlistItems,
-    apresentacoes,
-    stats,
+    empresasClientes = [],
+    wishlistItems = [],
+    apresentacoes = [],
+    stats = null,
     setEmpresasClientes,
     setWishlistItems,
     setApresentacoes,
@@ -84,9 +88,15 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     fetchWishlistItems: fetchWishlistItemsData,
     fetchApresentacoes: fetchApresentacoesData,
     fetchStats: fetchStatsData,
-  } = useWishlistData();
+  } = dataHook || {};
 
-  // Usar o hook de mutations
+  // Usar o hook de mutations com fallback seguro
+  const mutationsHook = useWishlistMutations(
+    fetchEmpresasClientesData || (() => Promise.resolve()),
+    fetchWishlistItemsData || (() => Promise.resolve()),
+    fetchApresentacoesData || (() => Promise.resolve())
+  );
+
   const {
     addEmpresaCliente,
     updateEmpresaCliente,
@@ -98,13 +108,9 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     updateApresentacao,
     convertToOportunidade,
     solicitarApresentacao,
-  } = useWishlistMutations(
-    fetchEmpresasClientesData,
-    fetchWishlistItemsData,
-    fetchApresentacoesData
-  );
+  } = mutationsHook || {};
 
-  // Função de inicialização dos dados
+  // Função de inicialização dos dados com debounce
   const initializeData = useCallback(async () => {
     if (initializationRef.current) {
       console.log(`${CONSOLE_PREFIX} Inicialização já em andamento, pulando...`);
@@ -117,28 +123,36 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     setError(null);
 
     try {
-      // Carregar empresas clientes primeiro (dados principais)
-      console.log(`${CONSOLE_PREFIX} Carregando empresas clientes...`);
-      await fetchEmpresasClientesData();
+      // Carregar dados com fallbacks seguros
+      if (fetchEmpresasClientesData) {
+        console.log(`${CONSOLE_PREFIX} Carregando empresas clientes...`);
+        await fetchEmpresasClientesData();
+      }
 
-      // Carregar demais dados em paralelo
-      console.log(`${CONSOLE_PREFIX} Carregando dados complementares...`);
-      await Promise.all([
-        fetchWishlistItemsData(),
-        fetchApresentacoesData(),
-        fetchStatsData(),
-      ]);
+      // Carregar demais dados de forma não-bloqueante
+      const promises = [];
+      if (fetchWishlistItemsData) promises.push(fetchWishlistItemsData().catch(err => console.warn('Erro ao carregar wishlist items:', err)));
+      if (fetchApresentacoesData) promises.push(fetchApresentacoesData().catch(err => console.warn('Erro ao carregar apresentações:', err)));
+      if (fetchStatsData) promises.push(fetchStatsData().catch(err => console.warn('Erro ao carregar stats:', err)));
 
-      console.log(`${CONSOLE_PREFIX} Todos os dados carregados com sucesso`);
+      await Promise.allSettled(promises);
+
+      console.log(`${CONSOLE_PREFIX} Dados carregados com sucesso`);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Erro desconhecido";
       console.error(`${CONSOLE_PREFIX} Erro no carregamento inicial:`, err);
       setError(errorMessage);
-      toast({
-        title: "Erro",
-        description: "Não foi possível carregar os dados da wishlist",
-        variant: "destructive",
-      });
+      
+      // Toast não-bloqueante
+      try {
+        toast({
+          title: "Aviso",
+          description: "Alguns dados da wishlist podem não estar disponíveis",
+          variant: "destructive",
+        });
+      } catch (toastError) {
+        console.warn('Erro ao mostrar toast:', toastError);
+      }
     } finally {
       setLoading(false);
       initializationRef.current = false;
@@ -147,8 +161,12 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
 
   // Carregar dados quando o componente montar
   useEffect(() => {
-    initializeData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Delay para garantir que outros contexts sejam inicializados
+    const timer = setTimeout(() => {
+      initializeData();
+    }, 100);
+
+    return () => clearTimeout(timer);
   }, []); // Apenas na montagem inicial
 
   // Função para recarregar todos os dados
@@ -158,86 +176,71 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     setError(null);
 
     try {
-      await Promise.all([
-        fetchEmpresasClientesData(),
-        fetchWishlistItemsData(),
-        fetchApresentacoesData(),
-        fetchStatsData(),
-      ]);
+      const promises = [];
+      if (fetchEmpresasClientesData) promises.push(fetchEmpresasClientesData());
+      if (fetchWishlistItemsData) promises.push(fetchWishlistItemsData());
+      if (fetchApresentacoesData) promises.push(fetchApresentacoesData());
+      if (fetchStatsData) promises.push(fetchStatsData());
+
+      await Promise.allSettled(promises);
       console.log(`${CONSOLE_PREFIX} Dados atualizados com sucesso`);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Erro desconhecido";
       console.error(`${CONSOLE_PREFIX} Erro na atualização:`, err);
       setError(errorMessage);
-      toast({
-        title: "Erro",
-        description: "Não foi possível atualizar os dados",
-        variant: "destructive",
-      });
     } finally {
       setLoading(false);
     }
   }, [fetchEmpresasClientesData, fetchWishlistItemsData, fetchApresentacoesData, fetchStatsData]);
 
-  // Funções de busca individuais, todas memorizadas!
+  // Funções de busca individuais com fallbacks seguros
   const fetchWishlistItems = useCallback(async () => {
+    if (!fetchWishlistItemsData) return;
     setLoading(true);
     try {
       await fetchWishlistItemsData();
     } catch (err) {
       console.error(`${CONSOLE_PREFIX} Erro ao buscar wishlist items:`, err);
-      throw err;
     } finally {
       setLoading(false);
     }
   }, [fetchWishlistItemsData]);
 
   const fetchEmpresasClientes = useCallback(async () => {
+    if (!fetchEmpresasClientesData) return;
     setLoading(true);
     try {
       await fetchEmpresasClientesData();
     } catch (err) {
       console.error(`${CONSOLE_PREFIX} Erro ao buscar empresas clientes:`, err);
-      throw err;
     } finally {
       setLoading(false);
     }
   }, [fetchEmpresasClientesData]);
 
   const fetchApresentacoes = useCallback(async () => {
+    if (!fetchApresentacoesData) return;
     setLoading(true);
     try {
       await fetchApresentacoesData();
     } catch (err) {
       console.error(`${CONSOLE_PREFIX} Erro ao buscar apresentações:`, err);
-      throw err;
     } finally {
       setLoading(false);
     }
   }, [fetchApresentacoesData]);
 
   const fetchStats = useCallback(async () => {
+    if (!fetchStatsData) return;
     setLoading(true);
     try {
       await fetchStatsData();
     } catch (err) {
       console.error(`${CONSOLE_PREFIX} Erro ao buscar estatísticas:`, err);
-      throw err;
     } finally {
       setLoading(false);
     }
   }, [fetchStatsData]);
-
-  // Logs de diagnóstico
-  useEffect(() => {
-    console.log(`${CONSOLE_PREFIX} Estado atual:`, {
-      empresasClientes: empresasClientes?.length || 0,
-      wishlistItems: wishlistItems?.length || 0,
-      apresentacoes: apresentacoes?.length || 0,
-      loading,
-      error,
-    });
-  }, [empresasClientes, wishlistItems, apresentacoes, loading, error]);
 
   const value: WishlistContextType = {
     // Estado
@@ -267,6 +270,14 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     convertToOportunidade,
     solicitarApresentacao,
   };
+
+  console.log(`${CONSOLE_PREFIX} Estado atual:`, {
+    empresasClientes: empresasClientes?.length || 0,
+    wishlistItems: wishlistItems?.length || 0,
+    apresentacoes: apresentacoes?.length || 0,
+    loading,
+    error,
+  });
 
   return (
     <WishlistContext.Provider value={value}>
