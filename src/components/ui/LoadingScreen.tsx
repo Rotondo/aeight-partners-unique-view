@@ -7,7 +7,7 @@ interface LoadingScreenProps {
 }
 
 const LoadingScreen: React.FC<LoadingScreenProps> = ({ 
-  timeout = 15000,
+  timeout = 30000,
   message = "Carregando..." 
 }) => {
   const [showTimeoutMessage, setShowTimeoutMessage] = React.useState(false);
