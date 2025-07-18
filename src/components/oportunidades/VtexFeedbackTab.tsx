@@ -5,19 +5,23 @@ import { VtexFeedbackList } from './VtexFeedbackList';
 import { VtexFeedbackForm } from './VtexFeedbackForm';
 import { VtexFeedbackHistory } from './VtexFeedbackHistory';
 import { Button } from '@/components/ui/button';
-import { Plus, Settings, BarChart3, RefreshCw } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Plus, Settings, BarChart3, RefreshCw, AlertTriangle } from 'lucide-react';
 import { Oportunidade } from '@/types';
 import { useAuth } from '@/hooks/useAuth';
 
 export const VtexFeedbackTab: React.FC = () => {
   const [oportunidadesVtex, setOportunidadesVtex] = useState<Oportunidade[]>([]);
   const [selectedOportunidade, setSelectedOportunidade] = useState<Oportunidade | null>(null);
-  const [showForm, setShowForm] = useState(false);
-  const [showHistory, setShowHistory] = useState(false);
   const [activeView, setActiveView] = useState<'list' | 'form' | 'history'>('list');
   const [isLoadingOportunidades, setIsLoadingOportunidades] = useState(false);
+  const [debugInfo, setDebugInfo] = useState<{
+    totalOportunidades: number;
+    vtexOportunidades: number;
+    totalFeedbacks: number;
+  }>({ totalOportunidades: 0, vtexOportunidades: 0, totalFeedbacks: 0 });
   
-  const { fetchOportunidadesVtex, loading, fetchFeedbacks } = useVtexFeedback();
+  const { fetchOportunidadesVtex, loading, fetchFeedbacks, feedbacks, getEstatisticasFeedback } = useVtexFeedback();
   const { user } = useAuth();
 
   useEffect(() => {
@@ -34,12 +38,26 @@ export const VtexFeedbackTab: React.FC = () => {
       const oportunidades = await fetchOportunidadesVtex();
       console.log('Oportunidades carregadas:', oportunidades.length);
       setOportunidadesVtex(oportunidades);
+      
+      // Atualizar debug info
+      setDebugInfo(prev => ({
+        ...prev,
+        vtexOportunidades: oportunidades.length
+      }));
     } catch (error) {
       console.error('Erro ao carregar oportunidades:', error);
     } finally {
       setIsLoadingOportunidades(false);
     }
   };
+
+  useEffect(() => {
+    // Atualizar estatísticas quando feedbacks mudarem
+    setDebugInfo(prev => ({
+      ...prev,
+      totalFeedbacks: feedbacks.length
+    }));
+  }, [feedbacks]);
 
   const handleDarFeedback = (oportunidade: Oportunidade) => {
     setSelectedOportunidade(oportunidade);
@@ -77,6 +95,8 @@ export const VtexFeedbackTab: React.FC = () => {
       </div>
     );
   }
+
+  const stats = getEstatisticasFeedback(oportunidadesVtex);
 
   return (
     <div className="space-y-6">
@@ -121,15 +141,63 @@ export const VtexFeedbackTab: React.FC = () => {
         )}
       </div>
 
-      {/* Debug Info - Remove in production */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <p className="text-sm text-yellow-800">
-            Debug: {oportunidadesVtex.length} oportunidades VTEX encontradas | 
-            Usuário: {user?.nome || 'N/A'} | 
-            Loading: {loading ? 'Sim' : 'Não'}
-          </p>
-        </div>
+      {/* Status de Controle */}
+      {activeView === 'list' && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <BarChart3 className="h-5 w-5" />
+              Status de Controle VTEX
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+              <div>
+                <span className="text-muted-foreground">Oportunidades VTEX:</span>
+                <span className="ml-2 font-semibold">{debugInfo.vtexOportunidades}</span>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Total Feedbacks:</span>
+                <span className="ml-2 font-semibold">{debugInfo.totalFeedbacks}</span>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Compliance:</span>
+                <span className="ml-2 font-semibold">
+                  {stats.total > 0 ? Math.round((stats.em_dia / stats.total) * 100) : 0}%
+                </span>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Pendentes:</span>
+                <span className="ml-2 font-semibold text-red-500">
+                  {stats.atrasado + stats.nunca_enviado}
+                </span>
+              </div>
+            </div>
+            
+            {stats.atrasado + stats.nunca_enviado > 0 && (
+              <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-red-500" />
+                <span className="text-sm text-red-700">
+                  Existem {stats.atrasado + stats.nunca_enviado} oportunidades que precisam de feedback!
+                </span>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Debug Info - Apenas em desenvolvimento */}
+      {process.env.NODE_ENV === 'development' && activeView === 'list' && (
+        <Card className="bg-yellow-50 border-yellow-200">
+          <CardContent className="p-4">
+            <p className="text-sm text-yellow-800">
+              <strong>Debug Info:</strong> {debugInfo.vtexOportunidades} oportunidades VTEX | 
+              {debugInfo.totalFeedbacks} feedbacks | 
+              Usuário: {user?.nome || 'N/A'} | 
+              Loading: {loading ? 'Sim' : 'Não'}
+            </p>
+          </CardContent>
+        </Card>
       )}
 
       {/* Content */}

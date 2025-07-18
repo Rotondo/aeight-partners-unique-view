@@ -1,111 +1,60 @@
 
-import * as React from "react";
-import { Button } from "@/components/ui/button";
+import React from 'react';
 
 interface LoadingScreenProps {
-  timeout?: number; // Timeout em ms para mostrar opções de recuperação
+  timeout?: number;
+  message?: string;
 }
 
-const LoadingScreen: React.FC<LoadingScreenProps> = ({ timeout = 15000 }) => {
-  // Add safety check for React initialization
-  if (!React || typeof React.useState !== 'function') {
-    console.error('[LoadingScreen] React is not properly initialized');
+const LoadingScreen: React.FC<LoadingScreenProps> = ({ 
+  timeout = 30000,
+  message = "Carregando..." 
+}) => {
+  const [showTimeoutMessage, setShowTimeoutMessage] = React.useState(false);
+
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowTimeoutMessage(true);
+      console.warn('[LoadingScreen] Timeout atingido, mostrando opções de recovery');
+    }, timeout);
+
+    return () => clearTimeout(timer);
+  }, [timeout]);
+
+  if (showTimeoutMessage) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="text-center space-y-4 max-w-md">
+          <h2 className="text-xl font-semibold text-destructive">
+            Carregamento Demorado
+          </h2>
+          <p className="text-muted-foreground">
+            A aplicação está demorando mais que o esperado para carregar.
+          </p>
+          <div className="space-y-2">
+            <button
+              onClick={() => window.location.reload()}
+              className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+            >
+              Recarregar Página
+            </button>
+            <button
+              onClick={() => window.location.href = '/login'}
+              className="w-full px-4 py-2 bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/90 transition-colors"
+            >
+              Ir para Login
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
 
-  const [showRecovery, setShowRecovery] = React.useState(false);
-  const [loadingTime, setLoadingTime] = React.useState(0);
-
-  React.useEffect(() => {
-    const startTime = Date.now();
-    
-    // Atualizar tempo de carregamento
-    const interval = setInterval(() => {
-      setLoadingTime(Date.now() - startTime);
-    }, 1000);
-
-    // Mostrar opções de recuperação após timeout
-    const timer = setTimeout(() => {
-      setShowRecovery(true);
-      console.warn('[LoadingScreen] Timeout atingido, mostrando opções de recuperação');
-    }, timeout);
-
-    return () => {
-      clearInterval(interval);
-      clearTimeout(timer);
-    };
-  }, [timeout]);
-
-  const handleForceReload = () => {
-    console.log('[LoadingScreen] Forçando recarregamento...');
-    window.location.reload();
-  };
-
-  const handleClearCacheAndReload = async () => {
-    console.log('[LoadingScreen] Limpando cache e recarregando...');
-    
-    try {
-      if ('caches' in window) {
-        const names = await caches.keys();
-        await Promise.all(names.map(name => caches.delete(name)));
-      }
-      
-      // Limpar localStorage também
-      localStorage.clear();
-      sessionStorage.clear();
-      
-      window.location.reload();
-    } catch (error) {
-      console.error('Erro ao limpar cache:', error);
-      window.location.reload();
-    }
-  };
-
   return (
-    <div className="flex items-center justify-center min-h-screen bg-background">
-      <div className="flex flex-col items-center space-y-4 max-w-md text-center p-6">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-        
-        <div className="space-y-2">
-          <span className="text-lg text-muted-foreground">Carregando...</span>
-          <div className="text-sm text-muted-foreground">
-            {Math.round(loadingTime / 1000)}s
-          </div>
-        </div>
-
-        {showRecovery && (
-          <div className="space-y-4 mt-6 p-4 border rounded-lg bg-muted/50">
-            <div className="text-sm text-muted-foreground">
-              O carregamento está demorando mais que o esperado.
-            </div>
-            
-            <div className="flex flex-col gap-2">
-              <Button 
-                onClick={handleForceReload}
-                variant="outline"
-                size="sm"
-              >
-                Recarregar Página
-              </Button>
-              
-              <Button 
-                onClick={handleClearCacheAndReload}
-                variant="outline"
-                size="sm"
-              >
-                Limpar Cache e Recarregar
-              </Button>
-            </div>
-            
-            <div className="text-xs text-muted-foreground">
-              Se o problema persistir, verifique sua conexão com a internet.
-            </div>
-          </div>
-        )}
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="text-center space-y-4">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+        <p className="text-muted-foreground">{message}</p>
       </div>
     </div>
   );
