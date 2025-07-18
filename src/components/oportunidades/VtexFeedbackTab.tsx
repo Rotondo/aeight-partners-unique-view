@@ -6,7 +6,7 @@ import { VtexFeedbackForm } from './VtexFeedbackForm';
 import { VtexFeedbackHistory } from './VtexFeedbackHistory';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Settings, BarChart3, RefreshCw, AlertTriangle } from 'lucide-react';
+import { Plus, Settings, BarChart3, RefreshCw, AlertTriangle, Wifi, WifiOff } from 'lucide-react';
 import { Oportunidade } from '@/types';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -15,37 +15,80 @@ export const VtexFeedbackTab: React.FC = () => {
   const [selectedOportunidade, setSelectedOportunidade] = useState<Oportunidade | null>(null);
   const [activeView, setActiveView] = useState<'list' | 'form' | 'history'>('list');
   const [isLoadingOportunidades, setIsLoadingOportunidades] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [debugInfo, setDebugInfo] = useState<{
     totalOportunidades: number;
     vtexOportunidades: number;
     totalFeedbacks: number;
-  }>({ totalOportunidades: 0, vtexOportunidades: 0, totalFeedbacks: 0 });
+    isOnline: boolean;
+    lastSync: Date | null;
+  }>({ 
+    totalOportunidades: 0, 
+    vtexOportunidades: 0, 
+    totalFeedbacks: 0,
+    isOnline: navigator.onLine,
+    lastSync: null
+  });
   
   const { fetchOportunidadesVtex, loading, fetchFeedbacks, feedbacks, getEstatisticasFeedback } = useVtexFeedback();
   const { user } = useAuth();
 
+  // Monitorar status de conexão
+  useEffect(() => {
+    const handleOnline = () => {
+      console.log('[VTEX] Conectado à internet');
+      setDebugInfo(prev => ({ ...prev, isOnline: true }));
+    };
+    
+    const handleOffline = () => {
+      console.log('[VTEX] Desconectado da internet');
+      setDebugInfo(prev => ({ ...prev, isOnline: false }));
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
   useEffect(() => {
     if (user) {
+      console.log('[VTEX] Usuário autenticado, carregando dados...', user.nome);
       loadOportunidades();
       fetchFeedbacks();
+    } else {
+      console.log('[VTEX] Usuário não autenticado');
+      setError('Usuário não autenticado');
     }
   }, [user]);
 
   const loadOportunidades = async () => {
     setIsLoadingOportunidades(true);
+    setError(null);
+    
     try {
-      console.log('Iniciando carregamento de oportunidades VTEX...');
+      console.log('[VTEX] Iniciando carregamento de oportunidades VTEX...');
       const oportunidades = await fetchOportunidadesVtex();
-      console.log('Oportunidades carregadas:', oportunidades.length);
+      console.log('[VTEX] Oportunidades carregadas:', oportunidades.length);
+      
       setOportunidadesVtex(oportunidades);
       
       // Atualizar debug info
       setDebugInfo(prev => ({
         ...prev,
-        vtexOportunidades: oportunidades.length
+        vtexOportunidades: oportunidades.length,
+        lastSync: new Date()
       }));
+      
+      if (oportunidades.length === 0) {
+        setError('Nenhuma oportunidade VTEX encontrada. Verifique se existem oportunidades ativas com empresas relacionadas à VTEX.');
+      }
     } catch (error) {
-      console.error('Erro ao carregar oportunidades:', error);
+      console.error('[VTEX] Erro ao carregar oportunidades:', error);
+      setError(error instanceof Error ? error.message : 'Erro desconhecido ao carregar oportunidades');
     } finally {
       setIsLoadingOportunidades(false);
     }
@@ -60,27 +103,32 @@ export const VtexFeedbackTab: React.FC = () => {
   }, [feedbacks]);
 
   const handleDarFeedback = (oportunidade: Oportunidade) => {
+    console.log('[VTEX] Iniciando feedback para oportunidade:', oportunidade.id);
     setSelectedOportunidade(oportunidade);
     setActiveView('form');
   };
 
   const handleVerHistorico = (oportunidade: Oportunidade) => {
+    console.log('[VTEX] Visualizando histórico da oportunidade:', oportunidade.id);
     setSelectedOportunidade(oportunidade);
     setActiveView('history');
   };
 
   const handleVoltar = () => {
+    console.log('[VTEX] Voltando para lista');
     setActiveView('list');
     setSelectedOportunidade(null);
   };
 
   const handleFeedbackSalvo = () => {
+    console.log('[VTEX] Feedback salvo, recarregando dados...');
     loadOportunidades();
     fetchFeedbacks();
     handleVoltar();
   };
 
   const handleRefresh = () => {
+    console.log('[VTEX] Refresh solicitado pelo usuário');
     loadOportunidades();
     fetchFeedbacks();
   };
@@ -91,7 +139,52 @@ export const VtexFeedbackTab: React.FC = () => {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
           <p className="mt-4 text-muted-foreground">Carregando dados VTEX...</p>
+          {!debugInfo.isOnline && (
+            <p className="mt-2 text-sm text-yellow-600">
+              <WifiOff className="inline h-4 w-4 mr-1" />
+              Sem conexão com a internet
+            </p>
+          )}
         </div>
+      </div>
+    );
+  }
+
+  // Mostrar erro se houver
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h2 className="text-lg font-semibold">Feedback VTEX</h2>
+            <p className="text-sm text-muted-foreground">
+              Gerencie feedbacks semanais para oportunidades VTEX
+            </p>
+          </div>
+          
+          <Button
+            variant="outline"
+            onClick={handleRefresh}
+            className="flex items-center gap-2"
+            disabled={isLoadingOportunidades}
+          >
+            <RefreshCw className={`h-4 w-4 ${isLoadingOportunidades ? 'animate-spin' : ''}`} />
+            Tentar Novamente
+          </Button>
+        </div>
+
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <AlertTriangle className="h-12 w-12 text-red-500 mb-4" />
+            <h3 className="text-lg font-semibold mb-2 text-red-700">Erro ao Carregar Dados</h3>
+            <p className="text-red-600 text-center mb-4">{error}</p>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={handleRefresh}>
+                Tentar Novamente
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -103,7 +196,14 @@ export const VtexFeedbackTab: React.FC = () => {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-lg font-semibold">Feedback VTEX</h2>
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            Feedback VTEX
+            {debugInfo.isOnline ? (
+              <Wifi className="h-4 w-4 text-green-500" />
+            ) : (
+              <WifiOff className="h-4 w-4 text-red-500" />
+            )}
+          </h2>
           <p className="text-sm text-muted-foreground">
             Gerencie feedbacks semanais para oportunidades VTEX
           </p>
@@ -182,6 +282,12 @@ export const VtexFeedbackTab: React.FC = () => {
                 </span>
               </div>
             )}
+
+            {debugInfo.lastSync && (
+              <div className="mt-2 text-xs text-muted-foreground">
+                Última sincronização: {debugInfo.lastSync.toLocaleTimeString()}
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
@@ -194,7 +300,8 @@ export const VtexFeedbackTab: React.FC = () => {
               <strong>Debug Info:</strong> {debugInfo.vtexOportunidades} oportunidades VTEX | 
               {debugInfo.totalFeedbacks} feedbacks | 
               Usuário: {user?.nome || 'N/A'} | 
-              Loading: {loading ? 'Sim' : 'Não'}
+              Loading: {loading ? 'Sim' : 'Não'} | 
+              Online: {debugInfo.isOnline ? 'Sim' : 'Não'}
             </p>
           </CardContent>
         </Card>

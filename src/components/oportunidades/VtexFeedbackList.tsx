@@ -4,9 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { MessageSquare, History, Clock, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
+import { MessageSquare, History, Clock, AlertTriangle, CheckCircle, XCircle, Bug } from 'lucide-react';
 import { Oportunidade } from '@/types';
 import { useVtexFeedback } from '@/hooks/useVtexFeedback';
+import { VtexDebugPanel } from './VtexDebugPanel';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -23,6 +24,7 @@ export const VtexFeedbackList: React.FC<VtexFeedbackListProps> = ({
 }) => {
   const { getUltimoFeedback, getStatusFeedback, getEstatisticasFeedback } = useVtexFeedback();
   const [filtroStatus, setFiltroStatus] = useState<string>('todos');
+  const [showDebug, setShowDebug] = useState(process.env.NODE_ENV === 'development');
 
   const stats = getEstatisticasFeedback(oportunidades);
 
@@ -76,20 +78,52 @@ export const VtexFeedbackList: React.FC<VtexFeedbackListProps> = ({
 
   if (oportunidades.length === 0) {
     return (
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center py-12">
-          <MessageSquare className="h-12 w-12 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold mb-2">Nenhuma oportunidade VTEX encontrada</h3>
-          <p className="text-muted-foreground text-center">
-            Não há oportunidades VTEX ativas no momento.
-          </p>
-        </CardContent>
-      </Card>
+      <div className="space-y-4">
+        {/* Debug Panel */}
+        <VtexDebugPanel isVisible={showDebug} />
+        
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <MessageSquare className="h-12 w-12 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold mb-2">Nenhuma oportunidade VTEX encontrada</h3>
+            <p className="text-muted-foreground text-center">
+              Não há oportunidades VTEX ativas no momento.
+            </p>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowDebug(!showDebug)}
+              className="mt-4 text-xs"
+            >
+              <Bug className="h-3 w-3 mr-1" />
+              {showDebug ? 'Ocultar' : 'Mostrar'} Debug
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
   return (
     <div className="space-y-6">
+      {/* Debug Panel */}
+      <VtexDebugPanel isVisible={showDebug} />
+
+      {/* Debug Toggle */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="flex justify-end">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowDebug(!showDebug)}
+            className="text-xs"
+          >
+            <Bug className="h-3 w-3 mr-1" />
+            {showDebug ? 'Ocultar' : 'Mostrar'} Debug
+          </Button>
+        </div>
+      )}
+
       {/* Estatísticas */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>

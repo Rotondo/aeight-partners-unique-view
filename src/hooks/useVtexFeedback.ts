@@ -14,13 +14,17 @@ export const useVtexFeedback = () => {
   // Carregar campos customizados
   const fetchCamposCustomizados = async () => {
     try {
+      console.log('[VTEX] Carregando campos customizados...');
       const { data, error } = await supabase
         .from('vtex_feedback_campos_customizados')
         .select('*')
         .eq('ativo', true)
         .order('ordem');
 
-      if (error) throw error;
+      if (error) {
+        console.error('[VTEX] Erro ao carregar campos:', error);
+        throw error;
+      }
       
       const camposConvertidos: VtexFeedbackCampoCustomizado[] = (data || []).map(campo => ({
         ...campo,
@@ -36,9 +40,10 @@ export const useVtexFeedback = () => {
         descricao: campo.descricao || null
       }));
       
+      console.log('[VTEX] Campos customizados carregados:', camposConvertidos.length);
       setCamposCustomizados(camposConvertidos);
     } catch (error) {
-      console.error('Erro ao carregar campos customizados:', error);
+      console.error('[VTEX] Erro ao carregar campos customizados:', error);
       toast({
         title: "Erro",
         description: "Não foi possível carregar os campos customizados.",
@@ -50,6 +55,8 @@ export const useVtexFeedback = () => {
   // Carregar feedbacks
   const fetchFeedbacks = async (oportunidadeId?: string) => {
     try {
+      console.log('[VTEX] Carregando feedbacks...', oportunidadeId ? `para oportunidade ${oportunidadeId}` : 'todos');
+      
       let query = supabase
         .from('vtex_feedback_oportunidades')
         .select('*')
@@ -61,7 +68,10 @@ export const useVtexFeedback = () => {
 
       const { data, error } = await query;
 
-      if (error) throw error;
+      if (error) {
+        console.error('[VTEX] Erro ao carregar feedbacks:', error);
+        throw error;
+      }
       
       const feedbacksConvertidos: VtexFeedbackOportunidade[] = (data || []).map(feedback => ({
         ...feedback,
@@ -72,62 +82,101 @@ export const useVtexFeedback = () => {
         usuario_responsavel_id: feedback.usuario_responsavel_id || null
       }));
       
+      console.log('[VTEX] Feedbacks carregados:', feedbacksConvertidos.length);
       setFeedbacks(feedbacksConvertidos);
+      return feedbacksConvertidos;
     } catch (error) {
-      console.error('Erro ao carregar feedbacks:', error);
+      console.error('[VTEX] Erro ao carregar feedbacks:', error);
       toast({
         title: "Erro",
         description: "Não foi possível carregar os feedbacks.",
         variant: "destructive"
       });
+      return [];
     }
   };
 
-  // Buscar oportunidades VTEX - Query corrigida e simplificada
+  // Buscar oportunidades VTEX - Query melhorada com verificação de autenticação
   const fetchOportunidadesVtex = async (): Promise<Oportunidade[]> => {
     try {
       setLoading(true);
-      console.log('Iniciando busca por oportunidades VTEX...');
+      console.log('[VTEX] Iniciando busca por oportunidades VTEX...');
 
-      // Buscar todas as oportunidades ativas primeiro
+      // Verificar se usuário está autenticado
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        console.error('[VTEX] Usuário não autenticado:', authError);
+        throw new Error('Usuário não autenticado');
+      }
+
+      console.log('[VTEX] Usuário autenticado:', user.id);
+
+      // Buscar todas as oportunidades ativas com JOINs explícitos
       const { data: oportunidades, error } = await supabase
         .from('oportunidades')
         .select(`
           *,
-          empresa_origem:empresas!empresa_origem_id(*),
-          empresa_destino:empresas!empresa_destino_id(*),
-          usuario_envio:usuarios!usuario_envio_id(*),
-          usuario_recebe:usuarios!usuario_recebe_id(*)
+          empresa_origem:empresas!empresa_origem_id(id, nome, tipo, status),
+          empresa_destino:empresas!empresa_destino_id(id, nome, tipo, status),
+          usuario_envio:usuarios!usuario_envio_id(id, nome, email),
+          usuario_recebe:usuarios!usuario_recebe_id(id, nome, email)
         `)
-        .not('status', 'eq', 'perdido')
-        .not('status', 'eq', 'ganho')
+        .neq('status', 'perdido')
+        .neq('status', 'ganho')
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Erro na query Supabase:', error);
+        console.error('[VTEX] Erro na query Supabase:', error);
         throw error;
       }
 
-      console.log('Total de oportunidades encontradas:', oportunidades?.length || 0);
+      console.log('[VTEX] Total de oportunidades encontradas:', oportunidades?.length || 0);
 
-      // Filtrar oportunidades VTEX localmente para evitar problemas de query
-      const vtexOportunidades = (oportunidades || []).filter(op => {
-        const origemNome = op.empresa_origem?.nome?.toLowerCase() || '';
-        const destinoNome = op.empresa_destino?.nome?.toLowerCase() || '';
-        const isVtex = origemNome.includes('vtex') || destinoNome.includes('vtex');
-        
-        if (isVtex) {
-          console.log('Oportunidade VTEX encontrada:', op.nome_lead, '|', origemNome, '->', destinoNome);
+      if (!oportunidades || oportunidades.length === 0) {
+        console.log('[VTEX] Nenhuma oportunidade encontrada');
+        return [];
+      }
+
+      // Filtrar oportunidades VTEX com verificação mais robusta
+      const vtexOportunidades = oportunidades.filter(op => {
+        try {
+          const origemNome = op.empresa_origem?.nome?.toLowerCase() || '';
+          const destinoNome = op.empresa_destino?.nome?.toLowerCase() || '';
+          
+          // Verificar se alguma das empresas contém 'vtex'
+          const isVtexOrigem = origemNome.includes('vtex');
+          const isVtexDestino = destinoNome.includes('vtex');
+          const isVtex = isVtexOrigem || isVtexDestino;
+          
+          if (isVtex) {
+            console.log('[VTEX] Oportunidade VTEX encontrada:', {
+              id: op.id,
+              lead: op.nome_lead,
+              origem: origemNome,
+              destino: destinoNome,
+              isVtexOrigem,
+              isVtexDestino
+            });
+          }
+          
+          return isVtex;
+        } catch (filterError) {
+          console.error('[VTEX] Erro ao filtrar oportunidade:', op.id, filterError);
+          return false;
         }
-        
-        return isVtex;
       });
 
-      console.log('Oportunidades VTEX filtradas:', vtexOportunidades.length);
+      console.log('[VTEX] Oportunidades VTEX filtradas:', vtexOportunidades.length);
+      
+      // Log detalhado das oportunidades encontradas
+      vtexOportunidades.forEach((op, index) => {
+        console.log(`[VTEX] ${index + 1}. ${op.nome_lead} - ${op.empresa_origem?.nome} → ${op.empresa_destino?.nome}`);
+      });
+
       return vtexOportunidades;
       
     } catch (error) {
-      console.error('Erro ao buscar oportunidades VTEX:', error);
+      console.error('[VTEX] Erro ao buscar oportunidades VTEX:', error);
       toast({
         title: "Erro",
         description: "Não foi possível carregar as oportunidades VTEX.",
@@ -146,6 +195,13 @@ export const useVtexFeedback = () => {
   ) => {
     setLoading(true);
     try {
+      console.log('[VTEX] Salvando feedback:', { oportunidadeId, status });
+      
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        throw new Error('Usuário não autenticado');
+      }
+
       const { data, error } = await supabase
         .from('vtex_feedback_oportunidades')
         .insert({
@@ -159,13 +215,17 @@ export const useVtexFeedback = () => {
           contexto_breve: formData.contexto_breve,
           campos_customizados: formData.campos_customizados,
           status,
-          usuario_responsavel_id: (await supabase.auth.getUser()).data.user?.id
+          usuario_responsavel_id: user.id
         })
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('[VTEX] Erro ao salvar feedback:', error);
+        throw error;
+      }
 
+      console.log('[VTEX] Feedback salvo com sucesso:', data.id);
       toast({
         title: "Sucesso",
         description: `Feedback ${status === 'rascunho' ? 'salvo como rascunho' : 'enviado'} com sucesso!`
@@ -174,7 +234,7 @@ export const useVtexFeedback = () => {
       await fetchFeedbacks();
       return data;
     } catch (error) {
-      console.error('Erro ao salvar feedback:', error);
+      console.error('[VTEX] Erro ao salvar feedback:', error);
       toast({
         title: "Erro",
         description: "Não foi possível salvar o feedback.",
@@ -193,6 +253,8 @@ export const useVtexFeedback = () => {
   ) => {
     setLoading(true);
     try {
+      console.log('[VTEX] Atualizando feedback:', { feedbackId, status });
+      
       const { data, error } = await supabase
         .from('vtex_feedback_oportunidades')
         .update({
@@ -210,8 +272,12 @@ export const useVtexFeedback = () => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('[VTEX] Erro ao atualizar feedback:', error);
+        throw error;
+      }
 
+      console.log('[VTEX] Feedback atualizado com sucesso:', data.id);
       toast({
         title: "Sucesso",
         description: `Feedback ${status === 'rascunho' ? 'salvo como rascunho' : 'atualizado'} com sucesso!`
@@ -220,7 +286,7 @@ export const useVtexFeedback = () => {
       await fetchFeedbacks();
       return data;
     } catch (error) {
-      console.error('Erro ao atualizar feedback:', error);
+      console.error('[VTEX] Erro ao atualizar feedback:', error);
       toast({
         title: "Erro",
         description: "Não foi possível atualizar o feedback.",
@@ -249,7 +315,7 @@ export const useVtexFeedback = () => {
     return feedbacksOportunidade.length > 0 ? feedbacksOportunidade[0] : null;
   };
 
-  // Verificar status do feedback (novo)
+  // Verificar status do feedback
   const getStatusFeedback = (oportunidadeId: string) => {
     const ultimoFeedback = getUltimoFeedback(oportunidadeId);
     
@@ -261,7 +327,7 @@ export const useVtexFeedback = () => {
     return isPendente ? 'atrasado' : 'em_dia';
   };
 
-  // Estatísticas de controle (novo)
+  // Estatísticas de controle
   const getEstatisticasFeedback = (oportunidades: Oportunidade[]) => {
     const stats = {
       total: oportunidades.length,
@@ -275,6 +341,7 @@ export const useVtexFeedback = () => {
       stats[status as keyof typeof stats]++;
     });
 
+    console.log('[VTEX] Estatísticas calculadas:', stats);
     return stats;
   };
 
