@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
@@ -111,15 +110,15 @@ export const useVtexFeedback = () => {
 
       console.log('[VTEX] Usuário autenticado:', user.id);
 
-      // Buscar todas as oportunidades ativas com JOINs explícitos
+      // Buscar todas as oportunidades ativas com JOINs explícitos incluindo todos os campos de Usuario
       const { data: oportunidades, error } = await supabase
         .from('oportunidades')
         .select(`
           *,
           empresa_origem:empresas!empresa_origem_id(id, nome, tipo, status),
           empresa_destino:empresas!empresa_destino_id(id, nome, tipo, status),
-          usuario_envio:usuarios!usuario_envio_id(id, nome, email),
-          usuario_recebe:usuarios!usuario_recebe_id(id, nome, email)
+          usuario_envio:usuarios!usuario_envio_id(id, nome, email, empresa_id, papel, ativo),
+          usuario_recebe:usuarios!usuario_recebe_id(id, nome, email, empresa_id, papel, ativo)
         `)
         .neq('status', 'perdido')
         .neq('status', 'ganho')
@@ -173,7 +172,7 @@ export const useVtexFeedback = () => {
         console.log(`[VTEX] ${index + 1}. ${op.nome_lead} - ${op.empresa_origem?.nome} → ${op.empresa_destino?.nome}`);
       });
 
-      return vtexOportunidades;
+      return vtexOportunidades as Oportunidade[];
       
     } catch (error) {
       console.error('[VTEX] Erro ao buscar oportunidades VTEX:', error);
