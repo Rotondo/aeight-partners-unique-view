@@ -55,127 +55,129 @@ function App() {
             <Sonner />
             <BrowserRouter>
               <Routes>
+                {/* Rota de login desprotegida */}
                 <Route path="/login" element={
                   <Suspense fallback={<LoadingScreen />}>
                     <LoginPage />
                   </Suspense>
                 } />
                 
-                <Route path="/" element={<MainLayout />}>
-                  <Route index element={
-                    <Suspense fallback={<LoadingScreen />}>
-                      <Index />
-                    </Suspense>
-                  } />
-                  
-                  <Route path="/mapa-parceiros" element={
-                    <Suspense fallback={<LoadingScreen />}>
-                      <MapaParceirosPage />
-                    </Suspense>
-                  } />
+                {/* Todas as outras rotas protegidas */}
+                <Route path="/*" element={
+                  <PrivateRoute>
+                    <MainLayout>
+                      <Routes>
+                        <Route index element={
+                          <Suspense fallback={<LoadingScreen />}>
+                            <Index />
+                          </Suspense>
+                        } />
+                        
+                        <Route path="mapa-parceiros" element={
+                          <Suspense fallback={<LoadingScreen />}>
+                            <MapaParceirosPage />
+                          </Suspense>
+                        } />
 
-                  <Route path="/empresas" element={
-                    <Suspense fallback={<LoadingScreen />}>
-                      <EmpresasPage />
-                    </Suspense>
-                  } />
+                        <Route path="empresas" element={
+                          <Suspense fallback={<LoadingScreen />}>
+                            <EmpresasPage />
+                          </Suspense>
+                        } />
 
-                  <Route path="/categorias" element={
-                    <Suspense fallback={<LoadingScreen />}>
-                      <CategoriasPage />
-                    </Suspense>
-                  } />
+                        <Route path="categorias" element={
+                          <Suspense fallback={<LoadingScreen />}>
+                            <CategoriasPage />
+                          </Suspense>
+                        } />
 
-                  <Route path="/contatos" element={
-                    <Suspense fallback={<LoadingScreen />}>
-                      <ContatosPage />
-                    </Suspense>
-                  } />
+                        <Route path="contatos" element={
+                          <Suspense fallback={<LoadingScreen />}>
+                            <ContatosPage />
+                          </Suspense>
+                        } />
 
-                  <Route path="/clientes" element={
-                    <Suspense fallback={<LoadingScreen />}>
-                      <ClientesPage />
-                    </Suspense>
-                  } />
+                        <Route path="clientes" element={
+                          <Suspense fallback={<LoadingScreen />}>
+                            <ClientesPage />
+                          </Suspense>
+                        } />
 
-                  <Route path="/indicadores" element={
-                    <Suspense fallback={<LoadingScreen />}>
-                      <IndicadoresPage />
-                    </Suspense>
-                  } />
+                        <Route path="indicadores" element={
+                          <Suspense fallback={<LoadingScreen />}>
+                            <IndicadoresPage />
+                          </Suspense>
+                        } />
 
-                  <Route path="/one-pagers" element={
-                    <Suspense fallback={<LoadingScreen />}>
-                      <OnePagersPage />
-                    </Suspense>
-                  } />
+                        <Route path="one-pagers" element={
+                          <Suspense fallback={<LoadingScreen />}>
+                            <OnePagersPage />
+                          </Suspense>
+                        } />
 
-                  <Route path="/repositorio" element={
-                    <Suspense fallback={<LoadingScreen />}>
-                      <RepositorioPage />
-                    </Suspense>
-                  } />
+                        <Route path="repositorio" element={
+                          <Suspense fallback={<LoadingScreen />}>
+                            <RepositorioPage />
+                          </Suspense>
+                        } />
 
-                  <Route path="/wishlist/*" element={
-                    <Suspense fallback={<LoadingScreen />}>
-                      <WishlistPage />
-                    </Suspense>
-                  } />
+                        <Route path="wishlist/*" element={
+                          <Suspense fallback={<LoadingScreen />}>
+                            <WishlistPage />
+                          </Suspense>
+                        } />
 
-                  <Route path="/eventos" element={
-                    <Suspense fallback={<LoadingScreen />}>
-                      <EventosPage />
-                    </Suspense>
-                  } />
+                        <Route path="eventos" element={
+                          <Suspense fallback={<LoadingScreen />}>
+                            <EventosPage />
+                          </Suspense>
+                        } />
 
-                  <Route path="/metas-oportunidades" element={
-                    <Suspense fallback={<LoadingScreen />}>
-                      <MetasOportunidadesPage />
-                    </Suspense>
-                  } />
+                        <Route path="metas-oportunidades" element={
+                          <Suspense fallback={<LoadingScreen />}>
+                            <MetasOportunidadesPage />
+                          </Suspense>
+                        } />
 
-                  <Route path="/oportunidades" element={
-                    <Suspense fallback={<LoadingScreen />}>
-                      <OportunidadesPage />
-                    </Suspense>
-                  } />
+                        <Route path="oportunidades" element={
+                          <Suspense fallback={<LoadingScreen />}>
+                            <OportunidadesPage />
+                          </Suspense>
+                        } />
 
-                  <Route path="/oportunidades-dashboard" element={
-                    <Suspense fallback={<LoadingScreen />}>
-                      <OportunidadesDashboardPage />
-                    </Suspense>
-                  } />
+                        <Route path="oportunidades-dashboard" element={
+                          <Suspense fallback={<LoadingScreen />}>
+                            <OportunidadesDashboardPage />
+                          </Suspense>
+                        } />
 
-                  <Route path="/quadrante" element={
-                    <Suspense fallback={<LoadingScreen />}>
-                      <QuadrantePage />
-                    </Suspense>
-                  } />
+                        <Route path="quadrante" element={
+                          <Suspense fallback={<LoadingScreen />}>
+                            <QuadrantePage />
+                          </Suspense>
+                        } />
 
-                  <Route path="/diario" element={
-                    <PrivateRoute>
-                      <Suspense fallback={<LoadingScreen />}>
-                        <DiarioPage />
-                      </Suspense>
-                    </PrivateRoute>
-                  } />
-                  
-                  <Route path="/admin" element={
-                    <PrivateRoute>
-                      <Suspense fallback={<LoadingScreen />}>
-                        <AdminPage />
-                      </Suspense>
-                    </PrivateRoute>
-                  } />
+                        <Route path="diario" element={
+                          <Suspense fallback={<LoadingScreen />}>
+                            <DiarioPage />
+                          </Suspense>
+                        } />
+                        
+                        <Route path="admin" element={
+                          <Suspense fallback={<LoadingScreen />}>
+                            <AdminPage />
+                          </Suspense>
+                        } />
 
-                  <Route path="/admin/mapa-parceiros" element={
-                    <PrivateRoute>
-                      <Suspense fallback={<LoadingScreen />}>
-                        <MapaParceiroAdminPage />
-                      </Suspense>
-                    </PrivateRoute>
-                  } />
-                </Route>
+                        <Route path="admin/mapa-parceiros" element={
+                          <Suspense fallback={<LoadingScreen />}>
+                            <MapaParceiroAdminPage />
+                          </Suspense>
+                        } />
+                      </Routes>
+                    </MainLayout>
+                  </PrivateRoute>
+                } />
               </Routes>
             </BrowserRouter>
           </TooltipProvider>
