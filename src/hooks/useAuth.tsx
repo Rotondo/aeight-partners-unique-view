@@ -3,6 +3,30 @@ import * as React from "react";
 import { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
+// Enhanced React validation with retry mechanism
+const validateReact = () => {
+  if (!React || !React.useState || !React.useEffect || !React.useContext || !createContext || !useState || !useEffect || !useContext) {
+    console.error('[useAuth] React hooks are not available:', {
+      React: !!React,
+      'React.useState': !!React?.useState,
+      'React.useEffect': !!React?.useEffect,
+      'React.useContext': !!React?.useContext,
+      createContext: !!createContext,
+      useState: !!useState,
+      useEffect: !!useEffect,
+      useContext: !!useContext
+    });
+    return false;
+  }
+  return true;
+};
+
+// Validate React is properly initialized
+if (!validateReact()) {
+  console.error('[useAuth] React is not properly initialized - hooks are not available');
+  // Don't throw error, let the component handle it gracefully
+}
+
 interface User {
   id: string;
   nome?: string | null;
@@ -32,28 +56,86 @@ const AuthContext = createContext<AuthContextType>({
   refreshUser: async () => {},
 });
 
+// AuthProvider component with comprehensive React validation
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // Must validate React before ANY hook usage
+  if (!validateReact()) {
+    console.error('[AuthProvider] React hooks are not available - providing fallback');
+    return (
+      <div style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        minHeight: '100vh',
+        fontFamily: 'system-ui',
+        textAlign: 'center',
+        padding: '2rem'
+      }}>
+        <div>
+          <h2 style={{ color: '#dc2626', marginBottom: '1rem' }}>React Loading Error</h2>
+          <p style={{ marginBottom: '1rem' }}>React is not properly initialized. Please wait or reload the page.</p>
+          <button 
+            onClick={() => window.location.reload()}
+            style={{
+              padding: '0.5rem 1rem',
+              background: '#3b82f6',
+              color: 'white',
+              border: 'none',
+              borderRadius: '0.375rem',
+              cursor: 'pointer'
+            }}
+          >
+            Reload Page
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Only use hooks if React is properly initialized
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState<number>(0);
 
-  console.log("[AuthProvider] Inicializando provider");
+  const isDevelopment = process.env.NODE_ENV === 'development';
 
-  // Busca usuário da tabela usuarios pelo e-mail do Auth
-  const fetchUserFromDB = async (email: string | null | undefined): Promise<User | null> => {
+  // Timeout para requests de autenticação
+  const AUTH_TIMEOUT = 10000; // 10 segundos
+  const MAX_RETRIES = 3;
+
+  const withTimeout = <T,>(promise: Promise<T>, timeout: number): Promise<T> => {
+    return Promise.race([
+      promise,
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Timeout na autenticação')), timeout)
+      )
+    ]);
+  };
+
+  const logAuth = (action: string, data?: any) => {
+    if (isDevelopment) {
+      console.log(`[Auth] ${action}:`, data);
+    }
+  };
+
+  // Busca usuário da tabela usuarios pelo e-mail do Auth com retry
+  const fetchUserFromDB = async (email: string | null | undefined, attempt = 1): Promise<User | null> => {
     if (!email) return null;
     
     try {
-      console.log("[AuthProvider] Buscando usuário no banco:", email);
+      logAuth('fetchUserFromDB_attempt', { email, attempt });
       
-      const { data, error: dbError } = await supabase
+      const query = supabase
         .from("usuarios")
         .select("*")
         .eq("email", email)
         .maybeSingle();
       
+      const result = await withTimeout(Promise.resolve(query), AUTH_TIMEOUT);
+      const { data, error: dbError } = result;
+      
       if (dbError) {
-        console.error("[AuthProvider] Erro ao buscar usuário:", dbError);
         throw dbError;
       }
       
@@ -67,39 +149,52 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           ativo: data.ativo,
         } as User;
         
-        console.log("[AuthProvider] Usuário encontrado:", userData.id);
+        logAuth('user_found', { userId: userData.id });
         return userData;
       }
       
-      console.log("[AuthProvider] Usuário não encontrado");
+      logAuth('user_not_found');
       return null;
     } catch (err) {
-      console.error("[AuthProvider] Erro na fetchUserFromDB:", err);
+      console.error(`[Auth] Erro na fetchUserFromDB (tentativa ${attempt}):`, err);
+      
+      if (attempt < MAX_RETRIES && (err instanceof Error && err.message.includes('Timeout'))) {
+        logAuth('retrying_fetchUserFromDB', { attempt: attempt + 1 });
+        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+        return fetchUserFromDB(email, attempt + 1);
+      }
+      
       setError(`Erro ao buscar dados do usuário: ${err instanceof Error ? err.message : 'Erro desconhecido'}`);
       return null;
     }
   };
 
   const refreshUser = async () => {
-    console.log("[AuthProvider] Refreshing user");
+    logAuth('refreshUser_start');
     setError(null);
     
     try {
-      const { data: authData, error: authError } = await supabase.auth.getUser();
+      const { data: authData, error: authError } = await withTimeout(
+        supabase.auth.getUser(),
+        AUTH_TIMEOUT
+      );
       
       if (authError || !authData?.user) {
-        console.log("[AuthProvider] Nenhum usuário autenticado");
+        logAuth('no_authenticated_user');
         setUser(null);
         return;
       }
       
       const dbUser = await fetchUserFromDB(authData.user.email);
       setUser(dbUser);
+      setRetryCount(0);
       
     } catch (err) {
-      console.error("[AuthProvider] Erro em refreshUser:", err);
+      console.error('[Auth] Erro em refreshUser:', err);
       setError(`Erro na autenticação: ${err instanceof Error ? err.message : 'Erro desconhecido'}`);
       setUser(null);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -107,27 +202,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     let mounted = true;
     
     const initAuth = async () => {
-      console.log("[AuthProvider] Inicializando autenticação");
+      logAuth('auth_initialization_start');
       
       try {
-        // Verificar sessão atual
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session } } = await withTimeout(
+          supabase.auth.getSession(),
+          AUTH_TIMEOUT
+        );
         
         if (mounted) {
           if (session?.user) {
-            console.log("[AuthProvider] Sessão encontrada, buscando usuário");
             const dbUser = await fetchUserFromDB(session.user.email);
             if (mounted) {
               setUser(dbUser);
             }
-          } else {
-            console.log("[AuthProvider] Nenhuma sessão encontrada");
           }
           setLoading(false);
         }
         
+        logAuth('auth_initialization_complete');
       } catch (err) {
-        console.error("[AuthProvider] Erro na inicialização:", err);
+        console.error('[Auth] Erro na inicialização:', err);
         if (mounted) {
           setError('Erro na inicialização da autenticação');
           setLoading(false);
@@ -137,19 +232,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     initAuth();
 
-    // Listener para mudanças no estado de autenticação
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (!mounted) return;
         
-        console.log("[AuthProvider] Auth state change:", event);
+        logAuth('auth_state_change', { event });
         
         if (session?.user) {
-          const dbUser = await fetchUserFromDB(session.user.email);
-          if (mounted) {
-            setUser(dbUser);
-            setLoading(false);
-          }
+          setTimeout(async () => {
+            if (mounted) {
+              const dbUser = await fetchUserFromDB(session.user.email);
+              if (mounted) {
+                setUser(dbUser);
+                setLoading(false);
+              }
+            }
+          }, 0);
         } else {
           setUser(null);
           setLoading(false);
@@ -175,15 +273,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return false;
     }
 
-    console.log("[AuthProvider] Tentativa de login:", email);
+    logAuth('login_attempt', { email });
     setLoading(true);
     setError(null);
     
     try {
-      const { data, error: authError } = await supabase.auth.signInWithPassword({
-        email: email.trim().toLowerCase(),
-        password: senha,
-      });
+      const { data, error: authError } = await withTimeout(
+        supabase.auth.signInWithPassword({
+          email: email.trim().toLowerCase(),
+          password: senha,
+        }),
+        AUTH_TIMEOUT
+      );
 
       if (authError) {
         throw authError;
@@ -202,19 +303,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       setUser(dbUser);
-      console.log("[AuthProvider] Login bem-sucedido");
+      setRetryCount(0);
+      logAuth('login_success');
       return true;
       
     } catch (err) {
-      console.error("[AuthProvider] Erro durante login:", err);
+      console.error('[Auth] Erro durante login:', err);
       
-      if (err instanceof Error && err.message.includes('Invalid login credentials')) {
+      if (err instanceof Error && err.message.includes('Timeout')) {
+        setError("Timeout na autenticação. Verifique sua conexão.");
+      } else if (err instanceof Error && err.message.includes('Invalid login credentials')) {
         setError("Email ou senha incorretos.");
       } else {
         setError("Erro durante o login. Tente novamente.");
       }
       
       setUser(null);
+      setRetryCount(prev => prev + 1);
       return false;
     } finally {
       setLoading(false);
@@ -222,16 +327,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
-    console.log("[AuthProvider] Fazendo logout");
+    logAuth('logout_start');
     setLoading(true);
     
     try {
       await supabase.auth.signOut();
       setUser(null);
       setError(null);
-      console.log("[AuthProvider] Logout bem-sucedido");
+      setRetryCount(0);
+      logAuth('logout_success');
     } catch (err) {
-      console.error("[AuthProvider] Erro durante logout:", err);
+      console.error('[Auth] Erro durante logout:', err);
       setError("Erro durante logout");
     } finally {
       setLoading(false);
@@ -247,12 +353,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     logout,
     refreshUser,
   };
-
-  console.log("[AuthProvider] Estado atual:", {
-    user: !!user,
-    isAuthenticated: !!user && user.ativo !== false,
-    loading
-  });
 
   return (
     <AuthContext.Provider value={contextValue}>
