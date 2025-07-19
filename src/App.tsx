@@ -52,9 +52,9 @@ function App() {
         <AuthProvider>
           <PrivacyProvider>
             <TooltipProvider>
-              <Toaster />
-              <Sonner />
               <BrowserRouter>
+                <Toaster />
+                <Sonner />
                 <Routes>
                   {/* Rota de login desprotegida */}
                   <Route path="/login" element={
