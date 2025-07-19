@@ -1,7 +1,6 @@
+
 import * as React from 'react';
 import { Suspense, lazy } from 'react';
-import { Toaster } from '@/components/ui/toaster';
-import { Toaster as Sonner } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
@@ -53,8 +52,6 @@ function App() {
           <PrivacyProvider>
             <TooltipProvider>
               <BrowserRouter>
-                <Toaster />
-                <Sonner />
                 <Routes>
                   {/* Rota de login desprotegida */}
                   <Route path="/login" element={

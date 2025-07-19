@@ -6,6 +6,7 @@ import { AppSidebar } from "./AppSidebar";
 import { Header } from "./Header";
 import { useAuth } from "@/hooks/useAuth";
 import LoadingScreen from "@/components/ui/LoadingScreen";
+import { Toaster } from "@/components/ui/toaster";
 
 interface MainLayoutProps {
   children?: React.ReactNode;
@@ -38,6 +39,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           </footer>
         </SidebarInset>
       </div>
+      <Toaster />
     </SidebarProvider>
   );
 };
