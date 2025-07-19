@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Save, Send, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Save, Send } from 'lucide-react';
 import { Oportunidade } from '@/types';
 import { useVtexFeedback } from '@/hooks/useVtexFeedback';
 import { VtexFeedbackFormData } from '@/types/vtex';
@@ -34,13 +34,6 @@ export const VtexFeedbackForm: React.FC<VtexFeedbackFormProps> = ({
     campos_customizados: {}
   });
 
-  // Verificar se é realmente uma oportunidade VTEX
-  const isVtexOportunidade = () => {
-    const origemNome = oportunidade.empresa_origem?.nome?.toLowerCase() || '';
-    const destinoNome = oportunidade.empresa_destino?.nome?.toLowerCase() || '';
-    return origemNome.includes('vtex') || destinoNome.includes('vtex');
-  };
-
   useEffect(() => {
     // Preencher com dados da oportunidade
     const nomeCompleto = oportunidade.nome_lead?.split(' ') || [];
@@ -60,22 +53,6 @@ export const VtexFeedbackForm: React.FC<VtexFeedbackFormProps> = ({
   }, [oportunidade]);
 
   const handleSubmit = async (status: 'rascunho' | 'enviado') => {
-    // Validações básicas
-    if (!formData.nome_lead.trim() || !formData.sobrenome_lead.trim()) {
-      alert('Nome e sobrenome são obrigatórios');
-      return;
-    }
-
-    if (!formData.email_lead.trim() || !formData.telefone_lead.trim()) {
-      alert('Email e telefone são obrigatórios');
-      return;
-    }
-
-    if (!formData.contexto_breve.trim()) {
-      alert('O contexto breve é obrigatório');
-      return;
-    }
-
     try {
       await salvarFeedback(oportunidade.id, formData, status);
       onFeedbackSalvo();
@@ -171,33 +148,6 @@ export const VtexFeedbackForm: React.FC<VtexFeedbackFormProps> = ({
         return null;
     }
   };
-
-  // Verificar se não é uma oportunidade VTEX
-  if (!isVtexOportunidade()) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" onClick={onVoltar}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <h2 className="text-lg font-semibold">Erro - Oportunidade Inválida</h2>
-          </div>
-        </div>
-
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <AlertTriangle className="h-12 w-12 text-red-500 mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Oportunidade não é VTEX</h3>
-            <p className="text-muted-foreground text-center mb-4">
-              Esta oportunidade não possui empresas relacionadas à VTEX.
-            </p>
-            <Button onClick={onVoltar}>Voltar à Lista</Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">

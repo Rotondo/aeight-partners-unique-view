@@ -1,5 +1,6 @@
 
-import React, { createContext, useContext, ReactNode, useState, useEffect, useCallback, useMemo } from 'react';
+import * as React from 'react';
+import { createContext, useContext, ReactNode } from 'react';
 
 interface PrivacyContextType {
   isDemoMode: boolean;
@@ -14,14 +15,20 @@ interface PrivacyProviderProps {
 }
 
 export const PrivacyProvider: React.FC<PrivacyProviderProps> = ({ children }) => {
-  // Initialize state with a safe default
-  const [isDemoMode, setIsDemoMode] = useState<boolean>(() => {
+  // Comprehensive safety check for React hooks
+  if (!React || !React.useState || !React.useEffect || !React.useCallback || !React.useMemo) {
+    console.error('[PrivacyProvider] React hooks are not properly initialized');
+    return <div>Loading...</div>;
+  }
+
+  // Initialize state with a safe default using React.useState consistently
+  const [isDemoMode, setIsDemoMode] = React.useState<boolean>(() => {
     // Check if we're in browser environment
     if (typeof window === 'undefined') {
       return false;
     }
     
-    // Safe localStorage access
+    // Verificação segura do localStorage
     try {
       const saved = localStorage.getItem('aeight-demo-mode');
       return saved ? JSON.parse(saved) : false;
@@ -31,8 +38,8 @@ export const PrivacyProvider: React.FC<PrivacyProviderProps> = ({ children }) =>
     }
   });
 
-  // Save to localStorage when changed
-  useEffect(() => {
+  // Salvar no localStorage quando mudar
+  React.useEffect(() => {
     // Check if we're in browser environment
     if (typeof window === 'undefined') {
       return;
@@ -45,15 +52,15 @@ export const PrivacyProvider: React.FC<PrivacyProviderProps> = ({ children }) =>
     }
   }, [isDemoMode]);
 
-  const toggleDemoMode = useCallback(() => {
+  const toggleDemoMode = React.useCallback(() => {
     setIsDemoMode(prev => !prev);
   }, []);
 
-  const setDemoMode = useCallback((enabled: boolean) => {
+  const setDemoMode = React.useCallback((enabled: boolean) => {
     setIsDemoMode(enabled);
   }, []);
 
-  const value: PrivacyContextType = useMemo(() => ({
+  const value: PrivacyContextType = React.useMemo(() => ({
     isDemoMode,
     toggleDemoMode,
     setDemoMode

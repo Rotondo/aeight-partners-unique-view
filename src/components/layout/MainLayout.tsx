@@ -4,24 +4,12 @@ import { Outlet } from "react-router-dom";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
 import { Header } from "./Header";
-import { useAuth } from "@/hooks/useAuth";
-import LoadingScreen from "@/components/ui/LoadingScreen";
-import { Toaster } from "@/components/ui/toaster";
 
 interface MainLayoutProps {
   children?: React.ReactNode;
 }
 
 const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
-  const { loading } = useAuth();
-
-  console.log('[MainLayout] Estado de loading:', loading);
-
-  // Show loading while authentication is being verified
-  if (loading) {
-    return <LoadingScreen timeout={10000} message="Carregando dashboard..." />;
-  }
-
   return (
     <SidebarProvider defaultOpen={true}>
       <div className="min-h-screen flex w-full">
@@ -39,7 +27,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           </footer>
         </SidebarInset>
       </div>
-      <Toaster />
     </SidebarProvider>
   );
 };
