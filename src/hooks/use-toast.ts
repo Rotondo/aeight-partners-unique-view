@@ -1,6 +1,4 @@
-
-
-import * as React from "react"
+import { useState, useEffect } from "react"
 
 import type {
   ToastProps,
@@ -158,45 +156,23 @@ function toast({ ...props }: Toast) {
 }
 
 function useToast() {
-  // Add safety check for React hooks
-  try {
-    if (!React || typeof React.useState !== 'function') {
-      console.error('[useToast] React is not properly initialized')
-      // Return safe fallback
-      return {
-        toasts: [],
-        toast,
-        dismiss: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId }),
+  const [state, setState] = useState<State>(memoryState)
+
+  useEffect(() => {
+    listeners.push(setState)
+    return () => {
+      const index = listeners.indexOf(setState)
+      if (index > -1) {
+        listeners.splice(index, 1)
       }
     }
-    
-    const [state, setState] = React.useState<State>(memoryState)
+  }, [state])
 
-    React.useEffect(() => {
-      listeners.push(setState)
-      return () => {
-        const index = listeners.indexOf(setState)
-        if (index > -1) {
-          listeners.splice(index, 1)
-        }
-      }
-    }, [state])
-
-    return {
-      ...state,
-      toast,
-      dismiss: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId }),
-    }
-  } catch (error) {
-    console.error('[useToast] Hook error:', error)
-    // Return safe fallback
-    return {
-      toasts: [],
-      toast,
-      dismiss: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId }),
-    }
+  return {
+    ...state,
+    toast,
+    dismiss: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId }),
   }
 }
 
 export { useToast, toast }
-

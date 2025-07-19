@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -5,16 +6,7 @@ import * as ToastPrimitives from "@radix-ui/react-toast"
 import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
-const ToastProvider = (props: React.ComponentPropsWithoutRef<typeof ToastPrimitives.Provider>) => {
-  // Add safety check for React
-  if (!React || typeof React.useState !== 'function') {
-    console.error('[ToastProvider] React is not properly initialized')
-    return null
-  }
-  
-  return <ToastPrimitives.Provider {...props} />
-}
-ToastProvider.displayName = ToastPrimitives.Provider.displayName
+const ToastProvider = ToastPrimitives.Provider
 
 const ToastViewport = React.forwardRef<
   React.ElementRef<typeof ToastPrimitives.Viewport>,
