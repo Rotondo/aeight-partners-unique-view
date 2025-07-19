@@ -10,18 +10,15 @@ if (!React || typeof React.useState !== 'function') {
   throw new Error('React is not properly initialized - hooks are not available');
 }
 
-const TooltipProvider = React.forwardRef<
-  React.ElementRef<typeof TooltipPrimitive.Provider>,
-  React.ComponentPropsWithoutRef<typeof TooltipPrimitive.Provider>
->((props, ref) => {
+const TooltipProvider: React.FC<React.ComponentPropsWithoutRef<typeof TooltipPrimitive.Provider>> = (props) => {
   // Additional safety check before rendering
   if (!React.useState) {
     console.error('[TooltipProvider] useState is not available');
     return null;
   }
   
-  return <TooltipPrimitive.Provider ref={ref} {...props} />;
-});
+  return <TooltipPrimitive.Provider {...props} />;
+};
 TooltipProvider.displayName = 'TooltipProvider';
 
 const Tooltip = TooltipPrimitive.Root
