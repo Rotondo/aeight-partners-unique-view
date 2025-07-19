@@ -4,13 +4,25 @@ import * as TooltipPrimitive from "@radix-ui/react-tooltip"
 
 import { cn } from "@/lib/utils"
 
-// Ensure React is properly initialized
+// Enhanced React safety check
 if (!React || typeof React.useState !== 'function') {
   console.error('[Tooltip] React is not properly initialized');
   throw new Error('React is not properly initialized - hooks are not available');
 }
 
-const TooltipProvider = TooltipPrimitive.Provider
+const TooltipProvider = React.forwardRef<
+  React.ElementRef<typeof TooltipPrimitive.Provider>,
+  React.ComponentPropsWithoutRef<typeof TooltipPrimitive.Provider>
+>((props, ref) => {
+  // Additional safety check before rendering
+  if (!React.useState) {
+    console.error('[TooltipProvider] useState is not available');
+    return null;
+  }
+  
+  return <TooltipPrimitive.Provider ref={ref} {...props} />;
+});
+TooltipProvider.displayName = 'TooltipProvider';
 
 const Tooltip = TooltipPrimitive.Root
 
