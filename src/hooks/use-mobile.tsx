@@ -4,12 +4,12 @@ import * as React from "react"
 const MOBILE_BREAKPOINT = 768
 
 export function useIsMobile() {
-  // Add safety check for React initialization
-  if (!React || typeof React.useState !== 'function') {
-    console.error('[useIsMobile] React is not properly initialized')
+  // More comprehensive React safety check
+  if (typeof window === 'undefined') {
     return false
   }
 
+  // Use React hooks directly instead of through React object
   const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined)
 
   React.useEffect(() => {
