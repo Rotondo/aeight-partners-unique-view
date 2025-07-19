@@ -1,11 +1,13 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { MessageSquare, History, Clock, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { MessageSquare, History, Clock, AlertTriangle, CheckCircle, XCircle, Bug } from 'lucide-react';
 import { Oportunidade } from '@/types';
 import { useVtexFeedback } from '@/hooks/useVtexFeedback';
+import { VtexDebugPanel } from './VtexDebugPanel';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -20,36 +22,43 @@ export const VtexFeedbackList: React.FC<VtexFeedbackListProps> = ({
   onDarFeedback,
   onVerHistorico
 }) => {
-  const { getUltimoFeedback, temFeedbackPendente } = useVtexFeedback();
+  const { getUltimoFeedback, getStatusFeedback, getEstatisticasFeedback } = useVtexFeedback();
+  const [filtroStatus, setFiltroStatus] = useState<string>('todos');
+  const [showDebug, setShowDebug] = useState(process.env.NODE_ENV === 'development');
 
-  const getStatusFeedback = (oportunidade: Oportunidade) => {
-    const ultimoFeedback = getUltimoFeedback(oportunidade.id);
-    const isPendente = temFeedbackPendente(oportunidade.id, ultimoFeedback?.data_feedback);
-    
-    if (!ultimoFeedback) {
-      return {
-        status: 'nunca_enviado',
-        label: 'Nunca enviado',
-        variant: 'destructive' as const,
-        icon: AlertTriangle
-      };
+  const stats = getEstatisticasFeedback(oportunidades);
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'nunca_enviado':
+        return {
+          label: 'Nunca enviado',
+          variant: 'destructive' as const,
+          icon: XCircle,
+          color: 'text-red-500'
+        };
+      case 'atrasado':
+        return {
+          label: 'Atrasado',
+          variant: 'destructive' as const,
+          icon: AlertTriangle,
+          color: 'text-red-500'
+        };
+      case 'em_dia':
+        return {
+          label: 'Em dia',
+          variant: 'default' as const,
+          icon: CheckCircle,
+          color: 'text-green-500'
+        };
+      default:
+        return {
+          label: 'Desconhecido',
+          variant: 'secondary' as const,
+          icon: Clock,
+          color: 'text-gray-500'
+        };
     }
-    
-    if (isPendente) {
-      return {
-        status: 'atrasado',
-        label: 'Atrasado',
-        variant: 'destructive' as const,
-        icon: AlertTriangle
-      };
-    }
-    
-    return {
-      status: 'em_dia',
-      label: 'Em dia',
-      variant: 'default' as const,
-      icon: CheckCircle
-    };
   };
 
   const getProximoFeedback = (ultimaData?: string) => {
@@ -61,30 +70,68 @@ export const VtexFeedbackList: React.FC<VtexFeedbackListProps> = ({
     return format(proxima, 'dd/MM/yyyy', { locale: ptBR });
   };
 
+  // Filtrar oportunidades
+  const oportunidadesFiltradas = oportunidades.filter(op => {
+    if (filtroStatus === 'todos') return true;
+    return getStatusFeedback(op.id) === filtroStatus;
+  });
+
   if (oportunidades.length === 0) {
     return (
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center py-12">
-          <MessageSquare className="h-12 w-12 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold mb-2">Nenhuma oportunidade VTEX encontrada</h3>
-          <p className="text-muted-foreground text-center">
-            Não há oportunidades VTEX ativas no momento.
-          </p>
-        </CardContent>
-      </Card>
+      <div className="space-y-4">
+        {/* Debug Panel */}
+        <VtexDebugPanel isVisible={showDebug} />
+        
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <MessageSquare className="h-12 w-12 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold mb-2">Nenhuma oportunidade VTEX encontrada</h3>
+            <p className="text-muted-foreground text-center">
+              Não há oportunidades VTEX ativas no momento.
+            </p>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowDebug(!showDebug)}
+              className="mt-4 text-xs"
+            >
+              <Bug className="h-3 w-3 mr-1" />
+              {showDebug ? 'Ocultar' : 'Mostrar'} Debug
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div className="space-y-6">
+      {/* Debug Panel */}
+      <VtexDebugPanel isVisible={showDebug} />
+
+      {/* Debug Toggle */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="flex justify-end">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowDebug(!showDebug)}
+            className="text-xs"
+          >
+            <Bug className="h-3 w-3 mr-1" />
+            {showDebug ? 'Ocultar' : 'Mostrar'} Debug
+          </Button>
+        </div>
+      )}
+
+      {/* Estatísticas */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Total</p>
-                <p className="text-2xl font-bold">{oportunidades.length}</p>
+                <p className="text-2xl font-bold">{stats.total}</p>
               </div>
               <MessageSquare className="h-8 w-8 text-blue-500" />
             </div>
@@ -95,13 +142,20 @@ export const VtexFeedbackList: React.FC<VtexFeedbackListProps> = ({
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
+                <p className="text-sm text-muted-foreground">Nunca enviado</p>
+                <p className="text-2xl font-bold text-gray-500">{stats.nunca_enviado}</p>
+              </div>
+              <XCircle className="h-8 w-8 text-gray-500" />
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
                 <p className="text-sm text-muted-foreground">Atrasados</p>
-                <p className="text-2xl font-bold text-red-500">
-                  {oportunidades.filter(op => {
-                    const ultimoFeedback = getUltimoFeedback(op.id);
-                    return temFeedbackPendente(op.id, ultimoFeedback?.data_feedback);
-                  }).length}
-                </p>
+                <p className="text-2xl font-bold text-red-500">{stats.atrasado}</p>
               </div>
               <AlertTriangle className="h-8 w-8 text-red-500" />
             </div>
@@ -113,12 +167,7 @@ export const VtexFeedbackList: React.FC<VtexFeedbackListProps> = ({
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Em dia</p>
-                <p className="text-2xl font-bold text-green-500">
-                  {oportunidades.filter(op => {
-                    const ultimoFeedback = getUltimoFeedback(op.id);
-                    return !temFeedbackPendente(op.id, ultimoFeedback?.data_feedback);
-                  }).length}
-                </p>
+                <p className="text-2xl font-bold text-green-500">{stats.em_dia}</p>
               </div>
               <CheckCircle className="h-8 w-8 text-green-500" />
             </div>
@@ -126,12 +175,31 @@ export const VtexFeedbackList: React.FC<VtexFeedbackListProps> = ({
         </Card>
       </div>
 
+      {/* Filtros */}
+      <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium">Filtrar por status:</span>
+          <Select value={filtroStatus} onValueChange={setFiltroStatus}>
+            <SelectTrigger className="w-48">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos ({stats.total})</SelectItem>
+              <SelectItem value="nunca_enviado">Nunca enviado ({stats.nunca_enviado})</SelectItem>
+              <SelectItem value="atrasado">Atrasados ({stats.atrasado})</SelectItem>
+              <SelectItem value="em_dia">Em dia ({stats.em_dia})</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
       {/* Lista de oportunidades */}
       <div className="space-y-4">
-        {oportunidades.map((oportunidade) => {
-          const statusFeedback = getStatusFeedback(oportunidade);
+        {oportunidadesFiltradas.map((oportunidade) => {
+          const status = getStatusFeedback(oportunidade.id);
+          const statusInfo = getStatusBadge(status);
           const ultimoFeedback = getUltimoFeedback(oportunidade.id);
-          const StatusIcon = statusFeedback.icon;
+          const StatusIcon = statusInfo.icon;
           
           return (
             <Card key={oportunidade.id} className="hover:shadow-md transition-shadow">
@@ -143,9 +211,9 @@ export const VtexFeedbackList: React.FC<VtexFeedbackListProps> = ({
                       {oportunidade.empresa_origem?.nome} → {oportunidade.empresa_destino?.nome}
                     </p>
                   </div>
-                  <Badge variant={statusFeedback.variant} className="flex items-center gap-1">
+                  <Badge variant={statusInfo.variant} className="flex items-center gap-1">
                     <StatusIcon className="h-3 w-3" />
-                    {statusFeedback.label}
+                    {statusInfo.label}
                   </Badge>
                 </div>
               </CardHeader>
@@ -180,9 +248,10 @@ export const VtexFeedbackList: React.FC<VtexFeedbackListProps> = ({
                       size="sm"
                       onClick={() => onDarFeedback(oportunidade)}
                       className="flex items-center gap-1"
+                      variant={status === 'atrasado' || status === 'nunca_enviado' ? 'destructive' : 'default'}
                     >
                       <MessageSquare className="h-4 w-4" />
-                      Dar Feedback
+                      {status === 'nunca_enviado' ? 'Primeiro Feedback' : 'Dar Feedback'}
                     </Button>
                   </div>
                 </div>
@@ -191,6 +260,16 @@ export const VtexFeedbackList: React.FC<VtexFeedbackListProps> = ({
           );
         })}
       </div>
+
+      {oportunidadesFiltradas.length === 0 && filtroStatus !== 'todos' && (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-8">
+            <p className="text-muted-foreground">
+              Nenhuma oportunidade encontrada com o status selecionado.
+            </p>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };

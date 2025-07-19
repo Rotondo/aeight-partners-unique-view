@@ -13,33 +13,32 @@ import {
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useAuth } from "@/hooks/useAuth";
 import { LogOut, User, Settings } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 export const Header = () => {
-  // Safety check for React hooks
-  if (!React || typeof React.useState !== 'function') {
-    console.error('[Header] React hooks not available');
-    return (
-      <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12 px-4 border-b">
-        <div className="flex items-center gap-2 flex-1">
-          <div className="flex items-center gap-2">
-            <div className="font-semibold">Dashboard</div>
-          </div>
-        </div>
-      </header>
-    );
-  }
+  const { user, logout, loading } = useAuth();
+  const { toast } = useToast();
 
-  let user = null;
-  let logout = () => {};
+  console.log('[Header] Estado:', { user: !!user, loading });
 
-  // Safe hook usage with error handling
-  try {
-    const authContext = useAuth();
-    user = authContext?.user;
-    logout = authContext?.logout || (() => {});
-  } catch (error) {
-    console.error('[Header] Error accessing useAuth:', error);
-  }
+  const handleLogout = async () => {
+    try {
+      console.log('[Header] Iniciando logout...');
+      await logout();
+      toast({
+        title: "Logout realizado",
+        description: "Você foi desconectado com sucesso",
+        variant: "default",
+      });
+    } catch (error) {
+      console.error('[Header] Erro no logout:', error);
+      toast({
+        title: "Erro no logout",
+        description: "Ocorreu um erro ao fazer logout",
+        variant: "destructive",
+      });
+    }
+  };
 
   const getInitials = (name: string | undefined) => {
     if (!name) return "U";
@@ -56,17 +55,18 @@ export const Header = () => {
       <div className="flex items-center gap-2 flex-1">
         <SidebarTrigger className="-ml-1" />
         <div className="flex items-center gap-2">
-          <div className="font-semibold">Dashboard</div>
+          <div className="font-semibold">A&eight Partnership Hub</div>
         </div>
       </div>
 
       <div className="ml-auto flex items-center gap-2">
-        {user ? (
+        {loading ? (
+          <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
+        ) : user ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src={user?.avatar_url} alt={user?.nome || "User"} />
                   <AvatarFallback>
                     {getInitials(user?.nome)}
                   </AvatarFallback>
@@ -82,6 +82,9 @@ export const Header = () => {
                   <p className="text-xs leading-none text-muted-foreground">
                     {user?.email}
                   </p>
+                  <p className="text-xs leading-none text-muted-foreground">
+                    Papel: {user?.papel}
+                  </p>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
@@ -94,7 +97,7 @@ export const Header = () => {
                 <span>Configurações</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={logout}>
+              <DropdownMenuItem onClick={handleLogout}>
                 <LogOut className="mr-2 h-4 w-4" />
                 <span>Sair</span>
               </DropdownMenuItem>

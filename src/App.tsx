@@ -1,5 +1,6 @@
+
 import * as React from 'react';
-import { Suspense, lazy, useState } from 'react';
+import { Suspense, lazy } from 'react';
 import { Toaster } from '@/components/ui/toaster';
 import { Toaster as Sonner } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -11,22 +12,7 @@ import MainLayout from '@/components/layout/MainLayout';
 import { PrivateRoute } from '@/components/auth/PrivateRoute';
 import LoadingScreen from '@/components/ui/LoadingScreen';
 
-// Comprehensive React validation before any component usage
-if (!React || !React.useState || !React.useEffect || !React.Suspense || typeof React.lazy !== 'function') {
-  console.error('[App] React is not properly initialized:', {
-    React: !!React,
-    useState: !!React?.useState,
-    useEffect: !!React?.useEffect,
-    Suspense: !!React?.Suspense,
-    lazy: typeof React?.lazy
-  });
-  
-  // Emergency fallback - reload the page
-  if (typeof window !== 'undefined') {
-    window.location.reload();
-  }
-}
-
+// Lazy load components
 const Index = lazy(() => import('@/pages/Index'));
 const LoginPage = lazy(() => import('@/pages/auth/LoginPage'));
 const AdminPage = lazy(() => import('@/components/admin/AdminPage'));
@@ -47,235 +33,158 @@ const QuadrantePage = lazy(() => import('@/pages/quadrante'));
 const DiarioPage = lazy(() => import('@/pages/diario'));
 const MapaParceiroAdminPage = lazy(() => import('@/pages/admin/MapaParceiroAdminPage'));
 
-// React-safe wrapper component
-const ReactSafeApp: React.FC = () => {
-  const [isReactReady, setIsReactReady] = useState(false);
-  const [queryClient, setQueryClient] = useState<QueryClient | null>(null);
+// Create QueryClient outside component to prevent recreation
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      staleTime: 5 * 60 * 1000, // 5 minutes
+    },
+  },
+});
 
-  React.useEffect(() => {
-    // Comprehensive React validation
-    const checkReactReady = () => {
-      const reactReady = React && 
-        React.useState && 
-        React.useEffect && 
-        React.Suspense && 
-        React.lazy &&
-        typeof React.useState === 'function' &&
-        typeof React.useEffect === 'function';
-      
-      if (reactReady) {
-        console.log('[ReactSafeApp] React is fully initialized, creating QueryClient');
-        setQueryClient(new QueryClient());
-        setIsReactReady(true);
-      } else {
-        console.log('[ReactSafeApp] React not ready, retrying...');
-        setTimeout(checkReactReady, 100);
-      }
-    };
-
-    checkReactReady();
-  }, []);
-
-  if (!isReactReady || !queryClient) {
-    return (
-      <div style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center', 
-        minHeight: '100vh',
-        fontFamily: 'system-ui',
-        textAlign: 'center',
-        padding: '2rem'
-      }}>
-        <div>
-          <h1 style={{ color: '#3b82f6', marginBottom: '1rem' }}>Loading React...</h1>
-          <p>Please wait while the application initializes.</p>
-        </div>
-      </div>
-    );
-  }
-
-  return <AppContent queryClient={queryClient} />;
-};
-
-const AppContent: React.FC<{ queryClient: QueryClient }> = ({ queryClient }) => {
+function App() {
+  console.log('[App] Inicializando aplicação');
 
   return (
     <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <PrivacyProvider>
-            <TooltipProvider>
+      <AuthProvider>
+        <PrivacyProvider>
+          <TooltipProvider>
             <Toaster />
             <Sonner />
             <BrowserRouter>
               <Routes>
+                {/* Rota de login desprotegida */}
                 <Route path="/login" element={
                   <Suspense fallback={<LoadingScreen />}>
                     <LoginPage />
                   </Suspense>
                 } />
                 
-                <Route path="/" element={<MainLayout />}>
-                  <Route index element={
-                    <Suspense fallback={<LoadingScreen />}>
-                      <Index />
-                    </Suspense>
-                  } />
-                  
-                  <Route path="/mapa-parceiros" element={
-                    <Suspense fallback={<LoadingScreen />}>
-                      <MapaParceirosPage />
-                    </Suspense>
-                  } />
+                {/* Todas as outras rotas protegidas */}
+                <Route path="/*" element={
+                  <PrivateRoute>
+                    <MainLayout>
+                      <Routes>
+                        <Route index element={
+                          <Suspense fallback={<LoadingScreen />}>
+                            <Index />
+                          </Suspense>
+                        } />
+                        
+                        <Route path="mapa-parceiros" element={
+                          <Suspense fallback={<LoadingScreen />}>
+                            <MapaParceirosPage />
+                          </Suspense>
+                        } />
 
-                  <Route path="/empresas" element={
-                    <Suspense fallback={<LoadingScreen />}>
-                      <EmpresasPage />
-                    </Suspense>
-                  } />
+                        <Route path="empresas" element={
+                          <Suspense fallback={<LoadingScreen />}>
+                            <EmpresasPage />
+                          </Suspense>
+                        } />
 
-                  <Route path="/categorias" element={
-                    <Suspense fallback={<LoadingScreen />}>
-                      <CategoriasPage />
-                    </Suspense>
-                  } />
+                        <Route path="categorias" element={
+                          <Suspense fallback={<LoadingScreen />}>
+                            <CategoriasPage />
+                          </Suspense>
+                        } />
 
-                  <Route path="/contatos" element={
-                    <Suspense fallback={<LoadingScreen />}>
-                      <ContatosPage />
-                    </Suspense>
-                  } />
+                        <Route path="contatos" element={
+                          <Suspense fallback={<LoadingScreen />}>
+                            <ContatosPage />
+                          </Suspense>
+                        } />
 
-                  <Route path="/clientes" element={
-                    <Suspense fallback={<LoadingScreen />}>
-                      <ClientesPage />
-                    </Suspense>
-                  } />
+                        <Route path="clientes" element={
+                          <Suspense fallback={<LoadingScreen />}>
+                            <ClientesPage />
+                          </Suspense>
+                        } />
 
-                  <Route path="/indicadores" element={
-                    <Suspense fallback={<LoadingScreen />}>
-                      <IndicadoresPage />
-                    </Suspense>
-                  } />
+                        <Route path="indicadores" element={
+                          <Suspense fallback={<LoadingScreen />}>
+                            <IndicadoresPage />
+                          </Suspense>
+                        } />
 
-                  <Route path="/one-pagers" element={
-                    <Suspense fallback={<LoadingScreen />}>
-                      <OnePagersPage />
-                    </Suspense>
-                  } />
+                        <Route path="one-pagers" element={
+                          <Suspense fallback={<LoadingScreen />}>
+                            <OnePagersPage />
+                          </Suspense>
+                        } />
 
-                  <Route path="/repositorio" element={
-                    <Suspense fallback={<LoadingScreen />}>
-                      <RepositorioPage />
-                    </Suspense>
-                  } />
+                        <Route path="repositorio" element={
+                          <Suspense fallback={<LoadingScreen />}>
+                            <RepositorioPage />
+                          </Suspense>
+                        } />
 
-                  <Route path="/wishlist/*" element={
-                    <Suspense fallback={<LoadingScreen />}>
-                      <WishlistPage />
-                    </Suspense>
-                  } />
+                        <Route path="wishlist/*" element={
+                          <Suspense fallback={<LoadingScreen />}>
+                            <WishlistPage />
+                          </Suspense>
+                        } />
 
-                  <Route path="/eventos" element={
-                    <Suspense fallback={<LoadingScreen />}>
-                      <EventosPage />
-                    </Suspense>
-                  } />
+                        <Route path="eventos" element={
+                          <Suspense fallback={<LoadingScreen />}>
+                            <EventosPage />
+                          </Suspense>
+                        } />
 
-                  <Route path="/metas-oportunidades" element={
-                    <Suspense fallback={<LoadingScreen />}>
-                      <MetasOportunidadesPage />
-                    </Suspense>
-                  } />
+                        <Route path="metas-oportunidades" element={
+                          <Suspense fallback={<LoadingScreen />}>
+                            <MetasOportunidadesPage />
+                          </Suspense>
+                        } />
 
-                  <Route path="/oportunidades" element={
-                    <Suspense fallback={<LoadingScreen />}>
-                      <OportunidadesPage />
-                    </Suspense>
-                  } />
+                        <Route path="oportunidades" element={
+                          <Suspense fallback={<LoadingScreen />}>
+                            <OportunidadesPage />
+                          </Suspense>
+                        } />
 
-                  <Route path="/oportunidades-dashboard" element={
-                    <Suspense fallback={<LoadingScreen />}>
-                      <OportunidadesDashboardPage />
-                    </Suspense>
-                  } />
+                        <Route path="oportunidades-dashboard" element={
+                          <Suspense fallback={<LoadingScreen />}>
+                            <OportunidadesDashboardPage />
+                          </Suspense>
+                        } />
 
-                  <Route path="/quadrante" element={
-                    <Suspense fallback={<LoadingScreen />}>
-                      <QuadrantePage />
-                    </Suspense>
-                  } />
+                        <Route path="quadrante" element={
+                          <Suspense fallback={<LoadingScreen />}>
+                            <QuadrantePage />
+                          </Suspense>
+                        } />
 
-                  <Route path="/diario" element={
-                    <PrivateRoute>
-                      <Suspense fallback={<LoadingScreen />}>
-                        <DiarioPage />
-                      </Suspense>
-                    </PrivateRoute>
-                  } />
-                  
-                  <Route path="/admin" element={
-                    <PrivateRoute>
-                      <Suspense fallback={<LoadingScreen />}>
-                        <AdminPage />
-                      </Suspense>
-                    </PrivateRoute>
-                  } />
+                        <Route path="diario" element={
+                          <Suspense fallback={<LoadingScreen />}>
+                            <DiarioPage />
+                          </Suspense>
+                        } />
+                        
+                        <Route path="admin" element={
+                          <Suspense fallback={<LoadingScreen />}>
+                            <AdminPage />
+                          </Suspense>
+                        } />
 
-                  <Route path="/admin/mapa-parceiros" element={
-                    <PrivateRoute>
-                      <Suspense fallback={<LoadingScreen />}>
-                        <MapaParceiroAdminPage />
-                      </Suspense>
-                    </PrivateRoute>
-                  } />
-                </Route>
+                        <Route path="admin/mapa-parceiros" element={
+                          <Suspense fallback={<LoadingScreen />}>
+                            <MapaParceiroAdminPage />
+                          </Suspense>
+                        } />
+                      </Routes>
+                    </MainLayout>
+                  </PrivateRoute>
+                } />
               </Routes>
             </BrowserRouter>
-            </TooltipProvider>
-          </PrivacyProvider>
-        </AuthProvider>
-      </QueryClientProvider>
+          </TooltipProvider>
+        </PrivacyProvider>
+      </AuthProvider>
+    </QueryClientProvider>
   );
-}
-
-// Main App component that ensures React is ready
-function App() {
-  // Additional runtime safety check
-  if (!React || !useState || !Suspense || typeof lazy !== 'function') {
-    console.error('[App] React hooks not available at runtime');
-    return (
-      <div style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center', 
-        minHeight: '100vh',
-        fontFamily: 'system-ui',
-        textAlign: 'center',
-        padding: '2rem'
-      }}>
-        <div>
-          <h1 style={{ color: '#dc2626', marginBottom: '1rem' }}>React Initialization Error</h1>
-          <p style={{ marginBottom: '1rem' }}>React hooks are not available. Please reload the page.</p>
-          <button 
-            onClick={() => window.location.reload()}
-            style={{
-              padding: '0.5rem 1rem',
-              background: '#3b82f6',
-              color: 'white',
-              border: 'none',
-              borderRadius: '0.375rem',
-              cursor: 'pointer'
-            }}
-          >
-            Reload Page
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  return <ReactSafeApp />;
 }
 
 export default App;
