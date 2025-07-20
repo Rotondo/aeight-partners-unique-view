@@ -1,20 +1,16 @@
 
-import * as React from "react";
-import { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 // Enhanced React validation with retry mechanism
 const validateReact = () => {
-  if (!React || !React.useState || !React.useEffect || !React.useContext || !createContext || !useState || !useEffect || !useContext) {
+  if (!React || !useState || !useEffect || !useContext || !createContext) {
     console.error('[useAuth] React hooks are not available:', {
       React: !!React,
-      'React.useState': !!React?.useState,
-      'React.useEffect': !!React?.useEffect,
-      'React.useContext': !!React?.useContext,
-      createContext: !!createContext,
       useState: !!useState,
       useEffect: !!useEffect,
-      useContext: !!useContext
+      useContext: !!useContext,
+      createContext: !!createContext
     });
     return false;
   }
@@ -24,7 +20,6 @@ const validateReact = () => {
 // Validate React is properly initialized
 if (!validateReact()) {
   console.error('[useAuth] React is not properly initialized - hooks are not available');
-  // Don't throw error, let the component handle it gracefully
 }
 
 interface User {
