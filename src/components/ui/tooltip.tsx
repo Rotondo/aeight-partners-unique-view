@@ -1,33 +1,10 @@
 
-import React from "react"
+import * as React from "react"
 import * as TooltipPrimitive from "@radix-ui/react-tooltip"
 
 import { cn } from "@/lib/utils"
 
-// Enhanced React validation specifically for tooltip
-const validateReactForTooltip = () => {
-  if (!React || !React.useState || !React.useEffect || !React.useRef) {
-    console.error('[Tooltip] React hooks not available:', {
-      React: !!React,
-      useState: !!React?.useState,
-      useEffect: !!React?.useEffect,
-      useRef: !!React?.useRef
-    });
-    return false;
-  }
-  return true;
-};
-
-// Safe TooltipProvider wrapper
-const TooltipProvider: React.FC<React.ComponentProps<typeof TooltipPrimitive.Provider>> = (props) => {
-  // Validate React before using hooks
-  if (!validateReactForTooltip()) {
-    console.warn('[TooltipProvider] React not ready, rendering fallback');
-    return <div style={{ display: 'contents' }}>{props.children}</div>;
-  }
-  
-  return <TooltipPrimitive.Provider {...props} />;
-};
+const TooltipProvider = TooltipPrimitive.Provider
 
 const Tooltip = TooltipPrimitive.Root
 

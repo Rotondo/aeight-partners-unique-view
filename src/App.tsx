@@ -1,5 +1,5 @@
 
-import React, { Suspense, lazy, useState, useEffect } from 'react';
+import React, { Suspense, lazy } from 'react';
 import { Toaster } from '@/components/ui/toaster';
 import { Toaster as Sonner } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -11,20 +11,7 @@ import MainLayout from '@/components/layout/MainLayout';
 import { PrivateRoute } from '@/components/auth/PrivateRoute';
 import LoadingScreen from '@/components/ui/LoadingScreen';
 
-// Enhanced React validation
-const validateReactHooks = () => {
-  return React && 
-    React.useState && 
-    React.useEffect && 
-    React.Suspense && 
-    React.lazy &&
-    typeof React.useState === 'function' &&
-    typeof React.useEffect === 'function' &&
-    typeof React.Suspense === 'function' &&
-    typeof React.lazy === 'function';
-};
-
-// Only load components after React validation
+// Lazy load components
 const Index = lazy(() => import('@/pages/Index'));
 const LoginPage = lazy(() => import('@/pages/auth/LoginPage'));
 const AdminPage = lazy(() => import('@/components/admin/AdminPage'));
@@ -45,8 +32,19 @@ const QuadrantePage = lazy(() => import('@/pages/quadrante'));
 const DiarioPage = lazy(() => import('@/pages/diario'));
 const MapaParceiroAdminPage = lazy(() => import('@/pages/admin/MapaParceiroAdminPage'));
 
-// Safe App Content component
-const AppContent: React.FC<{ queryClient: QueryClient }> = ({ queryClient }) => {
+// Create QueryClient instance
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 2,
+      staleTime: 5 * 60 * 1000, // 5 minutes
+    },
+  },
+});
+
+function App() {
+  console.log('[App] Rendering main application...');
+
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
@@ -184,52 +182,6 @@ const AppContent: React.FC<{ queryClient: QueryClient }> = ({ queryClient }) => 
       </AuthProvider>
     </QueryClientProvider>
   );
-};
-
-// Main App component with React initialization protection
-function App() {
-  const [isReactReady, setIsReactReady] = useState(false);
-  const [queryClient, setQueryClient] = useState<QueryClient | null>(null);
-
-  useEffect(() => {
-    console.log('[App] Checking React initialization...');
-    
-    // Comprehensive React validation with retry mechanism
-    const checkReactReady = () => {
-      if (validateReactHooks()) {
-        console.log('[App] React is fully initialized');
-        setQueryClient(new QueryClient());
-        setIsReactReady(true);
-      } else {
-        console.log('[App] React not ready, retrying in 100ms...');
-        setTimeout(checkReactReady, 100);
-      }
-    };
-
-    checkReactReady();
-  }, []);
-
-  // Don't render anything until React is fully ready
-  if (!isReactReady || !queryClient) {
-    return (
-      <div style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center', 
-        minHeight: '100vh',
-        fontFamily: 'system-ui',
-        textAlign: 'center',
-        padding: '2rem'
-      }}>
-        <div>
-          <h1 style={{ color: '#3b82f6', marginBottom: '1rem' }}>Initializing React...</h1>
-          <p>Please wait while the application loads.</p>
-        </div>
-      </div>
-    );
-  }
-
-  return <AppContent queryClient={queryClient} />;
 }
 
 export default App;

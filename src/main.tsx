@@ -4,81 +4,110 @@ import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 
-// Enhanced React initialization check
-const initializeApp = async () => {
-  console.log("[Main] Starting React initialization check...");
-  
-  // Wait for React to be fully loaded
-  let attempts = 0;
-  while ((!React || !React.version || !React.useState || !React.useEffect || !React.useRef) && attempts < 10) {
-    console.log(`[Main] React not ready, attempt ${attempts + 1}/10`);
-    await new Promise(resolve => setTimeout(resolve, 100));
-    attempts++;
-  }
-  
-  // Enhanced React validation
-  if (!React || !React.version || !React.useState || !React.useEffect || !React.useRef) {
-    throw new Error("React is not properly initialized - missing core functions after retries");
-  }
+// Enhanced React initialization check with better validation
+const waitForReactInitialization = (): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    let attempts = 0;
+    const maxAttempts = 50;
+    
+    const checkReact = () => {
+      console.log(`[Main] React initialization check attempt ${attempts + 1}/${maxAttempts}`);
+      
+      // Comprehensive React validation
+      const isReactReady = React && 
+        typeof React === 'object' &&
+        React.version &&
+        React.useState &&
+        React.useEffect &&
+        React.useRef &&
+        React.useCallback &&
+        React.useMemo &&
+        React.useContext &&
+        React.Suspense &&
+        React.lazy &&
+        typeof React.useState === 'function' &&
+        typeof React.useEffect === 'function' &&
+        typeof React.useRef === 'function';
 
-  console.log("[Main] React is properly initialized:", {
-    version: React.version,
-    useState: typeof React.useState,
-    useEffect: typeof React.useEffect,
-    useRef: typeof React.useRef,
-    Suspense: typeof React.Suspense,
-    lazy: typeof React.lazy
+      if (isReactReady) {
+        console.log('[Main] React is fully initialized:', {
+          version: React.version,
+          hasHooks: true,
+          hasComponents: !!React.Suspense
+        });
+        resolve();
+        return;
+      }
+
+      attempts++;
+      if (attempts >= maxAttempts) {
+        reject(new Error('React failed to initialize after maximum attempts'));
+        return;
+      }
+
+      setTimeout(checkReact, 100);
+    };
+
+    checkReact();
   });
-
-  console.log("[Main] Inicializando aplicação...");
-
-  const rootElement = document.getElementById("root");
-  if (!rootElement) {
-    throw new Error("Root element not found");
-  }
-
-  // Verificar se já existe uma root montada
-  let root;
-  try {
-    root = createRoot(rootElement);
-  } catch (error) {
-    console.error("[Main] Erro ao criar root:", error);
-    // Tentar limpar e recriar
-    rootElement.innerHTML = '';
-    root = createRoot(rootElement);
-  }
-
-  // Render with StrictMode to help catch issues
-  root.render(
-    <React.StrictMode>
-      <App />
-    </React.StrictMode>
-  );
-
-  console.log("[Main] Aplicação renderizada com sucesso");
 };
 
-// Execute initialization
-initializeApp().catch((error) => {
-  console.error("[Main] Erro crítico na inicialização:", error);
-  
-  // Fallback de emergência
-  const rootElement = document.getElementById("root");
-  if (rootElement) {
-    rootElement.innerHTML = `
-      <div style="display: flex; align-items: center; justify-content: center; min-height: 100vh; font-family: system-ui;">
-        <div style="text-align: center; padding: 2rem;">
-          <h1 style="color: #dc2626; margin-bottom: 1rem;">Erro na Inicialização do React</h1>
-          <p style="margin-bottom: 1rem;">Ocorreu um erro ao inicializar o React. Isso pode ser um problema de carregamento do bundle.</p>
-          <button onclick="window.location.reload()" style="padding: 0.5rem 1rem; background: #3b82f6; color: white; border: none; border-radius: 0.375rem; cursor: pointer;">
-            Recarregar Página
-          </button>
-          <details style="margin-top: 1rem; text-align: left;">
-            <summary style="cursor: pointer;">Detalhes do Erro</summary>
-            <pre style="margin-top: 0.5rem; padding: 1rem; background: #f3f4f6; border-radius: 0.375rem; overflow: auto;">${error}</pre>
-          </details>
+// Initialize the application only after React is ready
+const initializeApp = async () => {
+  try {
+    console.log('[Main] Starting application initialization...');
+    
+    // Wait for React to be fully ready
+    await waitForReactInitialization();
+    
+    console.log('[Main] React is ready, initializing DOM...');
+
+    const rootElement = document.getElementById("root");
+    if (!rootElement) {
+      throw new Error("Root element not found");
+    }
+
+    // Clean any existing content
+    rootElement.innerHTML = '';
+    
+    // Create root and render
+    const root = createRoot(rootElement);
+    
+    root.render(
+      <React.StrictMode>
+        <App />
+      </React.StrictMode>
+    );
+
+    console.log('[Main] Application rendered successfully');
+    
+  } catch (error) {
+    console.error('[Main] Critical initialization error:', error);
+    
+    // Emergency fallback
+    const rootElement = document.getElementById("root");
+    if (rootElement) {
+      rootElement.innerHTML = `
+        <div style="display: flex; align-items: center; justify-content: center; min-height: 100vh; font-family: system-ui; background: #f9fafb;">
+          <div style="text-align: center; padding: 2rem; background: white; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+            <h1 style="color: #dc2626; margin-bottom: 1rem; font-size: 1.5rem;">React Initialization Error</h1>
+            <p style="margin-bottom: 1rem; color: #4b5563;">Failed to initialize React properly. This may be a loading issue.</p>
+            <button 
+              onclick="window.location.reload()" 
+              style="padding: 0.75rem 1.5rem; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;"
+            >
+              Reload Application
+            </button>
+            <details style="margin-top: 1.5rem; text-align: left;">
+              <summary style="cursor: pointer; font-weight: 500; color: #6b7280;">Error Details</summary>
+              <pre style="margin-top: 0.5rem; padding: 1rem; background: #f3f4f6; border-radius: 6px; overflow: auto; font-size: 0.875rem; color: #374151;">${error}</pre>
+            </details>
+          </div>
         </div>
-      </div>
-    `;
+      `;
+    }
   }
-});
+};
+
+// Start initialization
+initializeApp();
