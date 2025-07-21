@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Input } from "@/components/ui/input";
 import {
@@ -34,12 +33,12 @@ const FiltroWishlistItens: React.FC<FiltroWishlistItensProps> = ({
   onDestinoChange,
   items,
 }) => {
-  // Extract unique origin companies
+  // Extrai empresas proprietárias únicas para filtro de origem
   const origensUnicas = Array.from(
     new Set(items.map(item => item.empresa_proprietaria?.nome).filter(Boolean))
   ).sort();
 
-  // Extract unique destination companies
+  // Extrai empresas de destino únicas para filtro de destino (CORREÇÃO: empresa_desejada)
   const destinosUnicos = Array.from(
     new Set(items.map(item => item.empresa_desejada?.nome).filter(Boolean))
   ).sort();
