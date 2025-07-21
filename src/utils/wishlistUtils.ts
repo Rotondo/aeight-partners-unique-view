@@ -1,3 +1,4 @@
+
 import { WishlistItem, WishlistStatus } from "@/types";
 
 const CONSOLE_PREFIX = "[WishlistUtils]";
@@ -5,7 +6,9 @@ const CONSOLE_PREFIX = "[WishlistUtils]";
 export const filterWishlistItems = (
   items: WishlistItem[],
   searchTerm: string,
-  statusFilter: WishlistStatus | "all"
+  statusFilter: WishlistStatus | "all",
+  origemFilter?: string,
+  destinoFilter?: string
 ): WishlistItem[] => {
   return items.filter((item) => {
     try {
@@ -21,6 +24,12 @@ export const filterWishlistItems = (
           .includes(searchTerm.toLowerCase());
 
       const matchesStatus = statusFilter === "all" || item.status === statusFilter;
+      
+      const matchesOrigem = !origemFilter || origemFilter === "all" || 
+        item.empresa_proprietaria?.nome === origemFilter;
+      
+      const matchesDestino = !destinoFilter || destinoFilter === "all" || 
+        item.empresa_desejada?.nome === destinoFilter;
 
       if (
         !item.empresa_interessada?.nome ||
@@ -33,11 +42,66 @@ export const filterWishlistItems = (
         );
       }
 
-      return matchesSearch && matchesStatus;
+      return matchesSearch && matchesStatus && matchesOrigem && matchesDestino;
     } catch (error) {
       console.error(`${CONSOLE_PREFIX} Erro ao filtrar wishlistItens:`, error, item);
       return false;
     }
+  });
+};
+
+export const sortWishlistItems = (
+  items: WishlistItem[],
+  sortField: string | null,
+  sortDirection: "asc" | "desc"
+): WishlistItem[] => {
+  if (!sortField) return items;
+
+  return [...items].sort((a, b) => {
+    let valueA: any;
+    let valueB: any;
+
+    switch (sortField) {
+      case "empresa_interessada.nome":
+        valueA = a.empresa_interessada?.nome || "";
+        valueB = b.empresa_interessada?.nome || "";
+        break;
+      case "empresa_proprietaria.nome":
+        valueA = a.empresa_proprietaria?.nome || "";
+        valueB = b.empresa_proprietaria?.nome || "";
+        break;
+      case "empresa_desejada.nome":
+        valueA = a.empresa_desejada?.nome || "";
+        valueB = b.empresa_desejada?.nome || "";
+        break;
+      case "prioridade":
+        valueA = a.prioridade;
+        valueB = b.prioridade;
+        break;
+      case "status":
+        valueA = a.status;
+        valueB = b.status;
+        break;
+      case "data_solicitacao":
+        valueA = new Date(a.data_solicitacao);
+        valueB = new Date(b.data_solicitacao);
+        break;
+      default:
+        return 0;
+    }
+
+    if (typeof valueA === "string" && typeof valueB === "string") {
+      valueA = valueA.toLowerCase();
+      valueB = valueB.toLowerCase();
+    }
+
+    if (valueA < valueB) {
+      return sortDirection === "asc" ? -1 : 1;
+    }
+    if (valueA > valueB) {
+      return sortDirection === "asc" ? 1 : -1;
+    }
+    return 0;
   });
 };
 

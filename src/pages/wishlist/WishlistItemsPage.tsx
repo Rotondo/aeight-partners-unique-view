@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useWishlist } from "@/contexts/WishlistContext";
@@ -12,14 +13,11 @@ import WishlistSolicitacaoModal from "@/components/wishlist/WishlistSolicitacaoM
 import WishlistFormModal from "@/components/wishlist/WishlistFormModal";
 import WishlistFluxoAprimorado from "@/components/wishlist/WishlistFluxoAprimorado";
 import FiltroWishlistItens from "@/components/wishlist/FiltroWishlistItens";
-import ListaWishlistItens from "@/components/wishlist/ListaWishlistItens";
+import WishlistItemsTable from "@/components/wishlist/WishlistItemsTable";
 import WishlistStats from "@/components/wishlist/WishlistStats";
-import { filterWishlistItems } from "@/utils/wishlistUtils";
+import { filterWishlistItems, sortWishlistItems } from "@/utils/wishlistUtils";
 
 const CONSOLE_PREFIX = "[WishlistItensPage]";
-
-// IMPORTANTE: src/pages/wishlist/WishlistItemsPage.tsx foi refatorado em componentes menores.
-// Agora utiliza FiltroWishlistItens, ListaWishlistItens, WishlistStats, WishlistItemCard e WishlistFormModal
 
 const WishlistItensPage: React.FC = () => {
   const {
@@ -37,6 +35,10 @@ const WishlistItensPage: React.FC = () => {
 
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<WishlistStatus | "all">("all");
+  const [origemFilter, setOrigemFilter] = useState<string>("all");
+  const [destinoFilter, setDestinoFilter] = useState<string>("all");
+  const [sortField, setSortField] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
   const [formModalOpen, setFormModalOpen] = useState(false);
   const [novoModalOpen, setNovoModalOpen] = useState(false);
@@ -46,9 +48,26 @@ const WishlistItensPage: React.FC = () => {
   // Aprovação/Rejeição
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
 
+  // Handle sorting
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
+    }
+  };
 
-  // Filtrar itens usando a função utilitária
-  const filteredItens = filterWishlistItems(wishlistItems, searchTerm, statusFilter);
+  // Filter and sort items
+  const filteredItems = filterWishlistItems(
+    wishlistItems, 
+    searchTerm, 
+    statusFilter, 
+    origemFilter, 
+    destinoFilter
+  );
+  
+  const sortedItems = sortWishlistItems(filteredItems, sortField, sortDirection);
 
   // Aprovar item
   const handleAprovar = async (item: WishlistItem) => {
@@ -106,9 +125,9 @@ const WishlistItensPage: React.FC = () => {
   useEffect(() => {
     console.log(`${CONSOLE_PREFIX} Estado inicial`, {
       wishlistItems,
-      filteredItens,
+      sortedItems,
     });
-  }, [wishlistItems, filteredItens]);
+  }, [wishlistItems, sortedItems]);
 
   if (loadingItems) {
     return (
@@ -176,24 +195,29 @@ const WishlistItensPage: React.FC = () => {
         onSearchChange={setSearchTerm}
         statusFilter={statusFilter}
         onStatusChange={setStatusFilter}
+        origemFilter={origemFilter}
+        onOrigemChange={setOrigemFilter}
+        destinoFilter={destinoFilter}
+        onDestinoChange={setDestinoFilter}
+        items={wishlistItems}
       />
 
       {/* Stats */}
       <WishlistStats items={wishlistItems} />
 
-      {/* Lista de Itens */}
-      <ListaWishlistItens
-        items={filteredItens}
+      {/* Table */}
+      <WishlistItemsTable
+        items={sortedItems}
         onAprovar={handleAprovar}
         onRejeitar={handleRejeitar}
         onEditar={(item) => {
           setEditingItem(item);
           setFormModalOpen(true);
         }}
-        onNovaSolicitacao={() => setNovoModalOpen(true)}
         actionLoadingId={actionLoadingId}
-        searchTerm={searchTerm}
-        hasStatusFilter={statusFilter !== "all"}
+        sortField={sortField}
+        sortDirection={sortDirection}
+        onSort={handleSort}
       />
 
       {/* Modais */}

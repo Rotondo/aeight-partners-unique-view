@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Input } from "@/components/ui/input";
 import {
@@ -8,13 +9,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Search } from "lucide-react";
-import { WishlistStatus } from "@/types";
+import { WishlistStatus, WishlistItem } from "@/types";
 
 interface FiltroWishlistItensProps {
   searchTerm: string;
   onSearchChange: (value: string) => void;
   statusFilter: WishlistStatus | "all";
   onStatusChange: (value: WishlistStatus | "all") => void;
+  origemFilter: string;
+  onOrigemChange: (value: string) => void;
+  destinoFilter: string;
+  onDestinoChange: (value: string) => void;
+  items: WishlistItem[];
 }
 
 const FiltroWishlistItens: React.FC<FiltroWishlistItensProps> = ({
@@ -22,10 +28,25 @@ const FiltroWishlistItens: React.FC<FiltroWishlistItensProps> = ({
   onSearchChange,
   statusFilter,
   onStatusChange,
+  origemFilter,
+  onOrigemChange,
+  destinoFilter,
+  onDestinoChange,
+  items,
 }) => {
+  // Extract unique origin companies
+  const origensUnicas = Array.from(
+    new Set(items.map(item => item.empresa_proprietaria?.nome).filter(Boolean))
+  ).sort();
+
+  // Extract unique destination companies
+  const destinosUnicos = Array.from(
+    new Set(items.map(item => item.empresa_desejada?.nome).filter(Boolean))
+  ).sort();
+
   return (
-    <div className="flex items-center space-x-2">
-      <div className="relative flex-1 max-w-sm">
+    <div className="flex flex-wrap items-center gap-4">
+      <div className="relative flex-1 min-w-[200px] max-w-sm">
         <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
         <Input
           placeholder="Buscar por empresa..."
@@ -34,6 +55,7 @@ const FiltroWishlistItens: React.FC<FiltroWishlistItensProps> = ({
           className="pl-8"
         />
       </div>
+      
       <Select value={statusFilter} onValueChange={onStatusChange}>
         <SelectTrigger className="w-[180px]">
           <SelectValue placeholder="Filtrar por status" />
@@ -45,6 +67,34 @@ const FiltroWishlistItens: React.FC<FiltroWishlistItensProps> = ({
           <SelectItem value="aprovado">Aprovado</SelectItem>
           <SelectItem value="rejeitado">Rejeitado</SelectItem>
           <SelectItem value="convertido">Convertido</SelectItem>
+        </SelectContent>
+      </Select>
+
+      <Select value={origemFilter} onValueChange={onOrigemChange}>
+        <SelectTrigger className="w-[180px]">
+          <SelectValue placeholder="Filtrar por origem" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">Todas as origens</SelectItem>
+          {origensUnicas.map((origem) => (
+            <SelectItem key={origem} value={origem}>
+              {origem}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      <Select value={destinoFilter} onValueChange={onDestinoChange}>
+        <SelectTrigger className="w-[180px]">
+          <SelectValue placeholder="Filtrar por destino" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">Todos os destinos</SelectItem>
+          {destinosUnicos.map((destino) => (
+            <SelectItem key={destino} value={destino}>
+              {destino}
+            </SelectItem>
+          ))}
         </SelectContent>
       </Select>
     </div>
