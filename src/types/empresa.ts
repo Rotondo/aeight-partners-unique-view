@@ -11,6 +11,12 @@ export interface Empresa {
   logo_url?: string;
   status: boolean;
   created_at?: string;
+  // New field for owner partner information
+  parceiro_proprietario?: {
+    id: string;
+    nome: string;
+    tipo: EmpresaTipoString;
+  };
 }
 
 export interface EmpresaCategoria {

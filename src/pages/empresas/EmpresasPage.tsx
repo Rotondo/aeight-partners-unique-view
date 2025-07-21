@@ -37,10 +37,16 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { PrivateData } from "@/components/privacy/PrivateData";
 
 // Categoria type
- type Categoria = { id: string; nome: string };
+type Categoria = { id: string; nome: string };
+
+// Type for owner partner options
+type ParceiroProprietario = {
+  id: string;
+  nome: string;
+  tipo: EmpresaTipoString;
+};
 
 const EmpresasPage: React.FC = () => {
-  // ... estados já existentes ...
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [contatos, setContatos] = useState<any[]>([]);
   const [oportunidades, setOportunidades] = useState<any[]>([]);
@@ -63,25 +69,46 @@ const EmpresasPage: React.FC = () => {
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [categoriaId, setCategoriaId] = useState<string | undefined>(undefined);
 
-  // ... funções já existentes ...
-  // (mantém fetchEmpresas, fetchContatos, fetchOportunidades, etc)
+  // New state for owner partner filter
+  const [parceiroProprietarioFilter, setParceiroProprietarioFilter] = useState<string>("");
+  const [parceirosProprietarios, setParceirosProprietarios] = useState<ParceiroProprietario[]>([]);
 
   useEffect(() => {
     fetchEmpresas();
     fetchContatos();
     fetchOportunidades();
     fetchCategorias();
+    fetchParceirosProprietarios();
   }, []);
 
   const fetchEmpresas = async () => {
     try {
       setLoading(true);
+      
+      // Query with LEFT JOIN to get owner partner information for client companies
       const { data, error } = await supabase
         .from("empresas")
-        .select("*")
+        .select(`
+          *,
+          empresa_clientes!empresa_clientes_empresa_cliente_id_fkey(
+            empresa_proprietaria:empresa_proprietaria_id(
+              id,
+              nome,
+              tipo
+            )
+          )
+        `)
         .order("nome");
+      
       if (error) throw error;
-      setEmpresas(data as Empresa[]);
+      
+      // Transform the data to include owner partner information
+      const transformedData = data.map((empresa: any) => ({
+        ...empresa,
+        parceiro_proprietario: empresa.empresa_clientes?.[0]?.empresa_proprietaria || null
+      }));
+      
+      setEmpresas(transformedData as Empresa[]);
     } catch (error) {
       console.error("Erro ao buscar empresas:", error);
       toast({
@@ -91,6 +118,37 @@ const EmpresasPage: React.FC = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchParceirosProprietarios = async () => {
+    try {
+      // Get all companies that are owners (intragrupo or parceiro) and have clients
+      const { data, error } = await supabase
+        .from("empresas")
+        .select(`
+          id,
+          nome,
+          tipo,
+          empresa_clientes!empresa_clientes_empresa_proprietaria_id_fkey(id)
+        `)
+        .in("tipo", ["intragrupo", "parceiro"])
+        .order("nome");
+      
+      if (error) throw error;
+      
+      // Filter only companies that have clients
+      const parceirosComClientes = data
+        .filter((empresa: any) => empresa.empresa_clientes && empresa.empresa_clientes.length > 0)
+        .map((empresa: any) => ({
+          id: empresa.id,
+          nome: empresa.nome,
+          tipo: empresa.tipo
+        }));
+      
+      setParceirosProprietarios(parceirosComClientes);
+    } catch (error) {
+      console.error("Erro ao buscar parceiros proprietários:", error);
     }
   };
 
@@ -135,7 +193,6 @@ const EmpresasPage: React.FC = () => {
     }
   };
 
-  // --- Funções do modal de edição ---
   const startEditing = (empresa: Empresa) => {
     setNome(empresa.nome);
     setDescricao(empresa.descricao || "");
@@ -176,7 +233,6 @@ const EmpresasPage: React.FC = () => {
     }
   };
 
-  // Funções auxiliares para gráficos e tabela
   function getTipoLabel(tipo: EmpresaTipoString): string {
     switch (tipo) {
       case "intragrupo": return "Intragrupo";
@@ -214,12 +270,13 @@ const EmpresasPage: React.FC = () => {
     .sort((a, b) => b.oportunidades - a.oportunidades)
     .slice(0, 10);
   const exportToCSV = () => {
-    const headers = ["Nome", "Tipo", "Status", "Oportunidades", "Descrição"];
+    const headers = ["Nome", "Tipo", "Status", "Oportunidades", "Parceiro Proprietário", "Descrição"];
     const rows = filteredEmpresas.map((empresa) => [
       empresa.nome,
       getTipoLabel(empresa.tipo),
       empresa.status ? "Ativo" : "Inativo",
       getOportunidadesCount(empresa.id),
+      empresa.parceiro_proprietario?.nome || "-",
       empresa.descricao?.replace(/(\r\n|\n|\r)/gm, " ") || "",
     ]);
     let csvContent =
@@ -233,6 +290,7 @@ const EmpresasPage: React.FC = () => {
     link.click();
     document.body.removeChild(link);
   };
+
   const filteredEmpresas = empresas
     .filter((empresa) => {
       const matchesSearch =
@@ -247,7 +305,14 @@ const EmpresasPage: React.FC = () => {
           : currentTab === "parceiros"
           ? empresa.tipo === "parceiro"
           : empresa.tipo === "cliente";
-      return matchesSearch && matchesType && matchesTab;
+      
+      // New filter for owner partner (only applies to client companies)
+      const matchesOwnerPartner = 
+        !parceiroProprietarioFilter || 
+        parceiroProprietarioFilter === "all" ||
+        (empresa.tipo === "cliente" && empresa.parceiro_proprietario?.id === parceiroProprietarioFilter);
+      
+      return matchesSearch && matchesType && matchesTab && matchesOwnerPartner;
     })
     .sort((a, b) => {
       let vA: any;
@@ -255,6 +320,9 @@ const EmpresasPage: React.FC = () => {
       if (sortColumn === "oportunidades") {
         vA = getOportunidadesCount(a.id);
         vB = getOportunidadesCount(b.id);
+      } else if (sortColumn === "parceiro_proprietario") {
+        vA = a.parceiro_proprietario?.nome || "";
+        vB = b.parceiro_proprietario?.nome || "";
       } else {
         vA = a[sortColumn as keyof Empresa];
         vB = b[sortColumn as keyof Empresa];
@@ -269,6 +337,7 @@ const EmpresasPage: React.FC = () => {
       if (vA > vB) return sortAsc ? 1 : -1;
       return 0;
     });
+
   const handleSort = (column: string) => {
     if (sortColumn === column) {
       setSortAsc(!sortAsc);
@@ -316,6 +385,7 @@ const EmpresasPage: React.FC = () => {
           </Button>
         </div>
       </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <Card>
           <CardContent className="pt-6">
@@ -370,6 +440,7 @@ const EmpresasPage: React.FC = () => {
           </CardContent>
         </Card>
       </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="lg:col-span-1">
           <CardHeader>
@@ -422,6 +493,7 @@ const EmpresasPage: React.FC = () => {
           </CardContent>
         </Card>
       </div>
+
       <Card>
         <CardHeader>
           <CardTitle>Lista de Empresas</CardTitle>
@@ -450,6 +522,23 @@ const EmpresasPage: React.FC = () => {
                   <SelectItem value="cliente">Cliente</SelectItem>
                 </SelectContent>
               </Select>
+              
+              {/* New owner partner filter - only show when cliente is selected */}
+              {(tipoFilter === "cliente" || currentTab === "clientes") && (
+                <Select value={parceiroProprietarioFilter} onValueChange={setParceiroProprietarioFilter}>
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="Parceiro Proprietário" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os parceiros</SelectItem>
+                    {parceirosProprietarios.map((parceiro) => (
+                      <SelectItem key={parceiro.id} value={parceiro.id}>
+                        {parceiro.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
             <Tabs defaultValue="todas" value={currentTab} onValueChange={setCurrentTab}>
               <TabsList className="grid grid-cols-4 mb-4">
@@ -522,7 +611,7 @@ const EmpresasPage: React.FC = () => {
           </div>
         </CardContent>
       </Card>
-      {/* Modal de detalhes */}
+
       <Dialog open={modalAberto} onOpenChange={setModalAberto}>
         <DialogContent className="max-w-xl w-[95vw]">
           <DialogHeader>
@@ -556,6 +645,14 @@ const EmpresasPage: React.FC = () => {
                   {getOportunidadesCount(selectedEmpresa.id)}
                 </PrivateData>
               </div>
+              {selectedEmpresa.parceiro_proprietario && (
+                <div>
+                  <strong>Parceiro Proprietário:</strong>{' '}
+                  <PrivateData type="company">
+                    {selectedEmpresa.parceiro_proprietario.nome}
+                  </PrivateData>
+                </div>
+              )}
               <div>
                 <strong>Descrição:</strong> {selectedEmpresa.descricao || "-"}
               </div>
@@ -563,7 +660,7 @@ const EmpresasPage: React.FC = () => {
           )}
         </DialogContent>
       </Dialog>
-      {/* Modal de edição de empresa */}
+
       <Dialog open={!!isEditingEmpresa} onOpenChange={(v) => { if (!v) { setIsEditingEmpresa(null); resetForm(); } }}>
         <DialogContent>
           <DialogHeader>
@@ -649,7 +746,6 @@ const EmpresasPage: React.FC = () => {
   );
 };
 
-// Definição do componente EmpresasTable
 interface EmpresasTableProps {
   empresas: Empresa[];
   loading: boolean;
@@ -694,6 +790,7 @@ const EmpresasTable = ({
           <TableHead className="cursor-pointer" onClick={() => onSort("tipo")}>Tipo {renderSortIcon("tipo")}</TableHead>
           <TableHead className="cursor-pointer" onClick={() => onSort("status")}>Status {renderSortIcon("status")}</TableHead>
           <TableHead className="cursor-pointer" onClick={() => onSort("oportunidades")}>Oportunidades {renderSortIcon("oportunidades")}</TableHead>
+          <TableHead className="cursor-pointer" onClick={() => onSort("parceiro_proprietario")}>Parceiro Proprietário {renderSortIcon("parceiro_proprietario")}</TableHead>
           <TableHead>Descrição</TableHead>
           <TableHead>Ações</TableHead>
         </TableRow>
@@ -701,11 +798,11 @@ const EmpresasTable = ({
       <TableBody>
         {loading ? (
           <TableRow>
-            <TableCell colSpan={6} className="text-center">Carregando...</TableCell>
+            <TableCell colSpan={7} className="text-center">Carregando...</TableCell>
           </TableRow>
         ) : empresas.length === 0 ? (
           <TableRow>
-            <TableCell colSpan={6} className="text-center">Nenhuma empresa encontrada</TableCell>
+            <TableCell colSpan={7} className="text-center">Nenhuma empresa encontrada</TableCell>
           </TableRow>
         ) : (
           empresas.map((empresa) => (
@@ -721,6 +818,13 @@ const EmpresasTable = ({
               </TableCell>
               <TableCell>
                 <PrivateData type="asterisk">{getOportunidadesCount(empresa.id)}</PrivateData>
+              </TableCell>
+              <TableCell>
+                {empresa.parceiro_proprietario ? (
+                  <PrivateData type="company">{empresa.parceiro_proprietario.nome}</PrivateData>
+                ) : (
+                  "-"
+                )}
               </TableCell>
               <TableCell className="max-w-xs truncate">{empresa.descricao || "-"}</TableCell>
               <TableCell>
