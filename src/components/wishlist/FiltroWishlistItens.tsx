@@ -38,7 +38,7 @@ const FiltroWishlistItens: React.FC<FiltroWishlistItensProps> = ({
     new Set(items.map(item => item.empresa_proprietaria?.nome).filter(Boolean))
   ).sort();
 
-  // Empresas únicas para filtro de destino (empresa desejada)
+  // Empresas únicas para filtro de destino (empresa desejada) - deve refletir exatamente o que está na coluna "Destino"
   const destinosUnicos = Array.from(
     new Set(items.map(item => item.empresa_desejada?.nome).filter(Boolean))
   ).sort();
