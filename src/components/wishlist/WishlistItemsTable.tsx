@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -67,32 +66,56 @@ const WishlistItemsTable: React.FC<WishlistItemsTableProps> = ({
         <TableHeader>
           <TableRow>
             <TableHead>
-              <Button variant="ghost" onClick={() => onSort("empresa_interessada.nome")} className="h-auto p-0 font-semibold hover:bg-transparent">
-                Cliente {getSortIcon("empresa_interessada.nome")}
+              <Button
+                variant="ghost"
+                onClick={() => onSort("empresa_desejada.nome")}
+                className="h-auto p-0 font-semibold hover:bg-transparent"
+              >
+                Cliente {getSortIcon("empresa_desejada.nome")}
               </Button>
             </TableHead>
             <TableHead>
-              <Button variant="ghost" onClick={() => onSort("empresa_proprietaria.nome")} className="h-auto p-0 font-semibold hover:bg-transparent">
+              <Button
+                variant="ghost"
+                onClick={() => onSort("empresa_proprietaria.nome")}
+                className="h-auto p-0 font-semibold hover:bg-transparent"
+              >
                 Origem {getSortIcon("empresa_proprietaria.nome")}
               </Button>
             </TableHead>
             <TableHead>
-              <Button variant="ghost" onClick={() => onSort("empresa_desejada.nome")} className="h-auto p-0 font-semibold hover:bg-transparent">
-                Destino {getSortIcon("empresa_desejada.nome")}
+              <Button
+                variant="ghost"
+                onClick={() => onSort("empresa_interessada.nome")}
+                className="h-auto p-0 font-semibold hover:bg-transparent"
+              >
+                Destino {getSortIcon("empresa_interessada.nome")}
               </Button>
             </TableHead>
             <TableHead>
-              <Button variant="ghost" onClick={() => onSort("prioridade")} className="h-auto p-0 font-semibold hover:bg-transparent">
+              <Button
+                variant="ghost"
+                onClick={() => onSort("prioridade")}
+                className="h-auto p-0 font-semibold hover:bg-transparent"
+              >
                 Prioridade {getSortIcon("prioridade")}
               </Button>
             </TableHead>
             <TableHead>
-              <Button variant="ghost" onClick={() => onSort("status")} className="h-auto p-0 font-semibold hover:bg-transparent">
+              <Button
+                variant="ghost"
+                onClick={() => onSort("status")}
+                className="h-auto p-0 font-semibold hover:bg-transparent"
+              >
                 Status {getSortIcon("status")}
               </Button>
             </TableHead>
             <TableHead>
-              <Button variant="ghost" onClick={() => onSort("data_solicitacao")} className="h-auto p-0 font-semibold hover:bg-transparent">
+              <Button
+                variant="ghost"
+                onClick={() => onSort("data_solicitacao")}
+                className="h-auto p-0 font-semibold hover:bg-transparent"
+              >
                 Data Solicitação {getSortIcon("data_solicitacao")}
               </Button>
             </TableHead>
@@ -103,13 +126,13 @@ const WishlistItemsTable: React.FC<WishlistItemsTableProps> = ({
           {items.map((item) => (
             <TableRow key={item.id}>
               <TableCell className="font-medium">
-                {item.empresa_interessada?.nome || "N/A"}
+                {item.empresa_desejada?.nome || "N/A"}
               </TableCell>
               <TableCell>
                 {item.empresa_proprietaria?.nome || "N/A"}
               </TableCell>
               <TableCell>
-                {item.empresa_desejada?.nome || "N/A"}
+                {item.empresa_interessada?.nome || "N/A"}
               </TableCell>
               <TableCell>
                 {getPriorityDisplay(item.prioridade)}
