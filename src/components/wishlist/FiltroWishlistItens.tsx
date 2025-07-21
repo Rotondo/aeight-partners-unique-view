@@ -38,7 +38,7 @@ const FiltroWishlistItens: React.FC<FiltroWishlistItensProps> = ({
     new Set(items.map(item => item.empresa_proprietaria?.nome).filter(Boolean))
   ).sort();
 
-  // Extrai empresas de destino únicas para filtro de destino (CORREÇÃO: empresa_desejada)
+  // Extrai empresas de destino únicas para filtro de destino (segue o padrão aplicado em origem)
   const destinosUnicos = Array.from(
     new Set(items.map(item => item.empresa_desejada?.nome).filter(Boolean))
   ).sort();
@@ -89,7 +89,7 @@ const FiltroWishlistItens: React.FC<FiltroWishlistItensProps> = ({
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">Todos os destinos</SelectItem>
-          {destinosUnicos.map((destino) => (
+          {destinosUnicas.map((destino) => (
             <SelectItem key={destino} value={destino}>
               {destino}
             </SelectItem>
