@@ -45,10 +45,12 @@ const WishlistItemsTable: React.FC<WishlistItemsTableProps> = ({
     return <Badge variant={config.variant}>{config.label}</Badge>;
   };
 
-  const getPriorityStars = (priority: number) => {
-    // Inverted priority: 1 = 5 stars (max), 5 = 1 star (min)
-    const stars = 6 - priority;
-    return "★".repeat(stars) + "☆".repeat(5 - stars);
+  const getPriorityDisplay = (priority: number) => {
+    return (
+      <div className="flex items-center justify-center">
+        <span className="text-lg font-semibold">{priority}</span>
+      </div>
+    );
   };
 
   if (items.length === 0) {
@@ -110,10 +112,7 @@ const WishlistItemsTable: React.FC<WishlistItemsTableProps> = ({
                 {item.empresa_desejada?.nome || "N/A"}
               </TableCell>
               <TableCell>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm">{getPriorityStars(item.prioridade)}</span>
-                  <span className="text-xs text-muted-foreground">({item.prioridade})</span>
-                </div>
+                {getPriorityDisplay(item.prioridade)}
               </TableCell>
               <TableCell>
                 {getStatusBadge(item.status)}
