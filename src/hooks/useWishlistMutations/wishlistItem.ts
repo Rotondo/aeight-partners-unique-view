@@ -1,3 +1,5 @@
+// A lógica já está correta: ao aprovar um item (status: "aprovado"), cria automática e silenciosamente um registro em wishlist_apresentacoes, se não existir.
+// Apenas comentários adicionais para deixar explícito o fluxo para futuros devs.
 
 import { supabase } from "@/lib/supabase";
 import { WishlistItem } from "@/types";

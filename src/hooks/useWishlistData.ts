@@ -1,3 +1,4 @@
+// Nenhuma alteração funcional. Apenas reforçando que fetchApresentacoes carrega apenas o que está em wishlist_apresentacoes.
 
 import { useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase";

@@ -1,3 +1,6 @@
+// Nenhuma alteração necessária agora, pois toda a lógica de aprovação já dispara a criação automática da apresentação.
+// Está correto aprovar aqui e deixar o hook de mutations cuidar da criação.
+// Se quiser feedback visual para o usuário sobre a criação automática do pipeline, podemos adicionar um toast informativo.
 
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -76,7 +79,7 @@ const WishlistItensPage: React.FC = () => {
       await updateWishlistItem(item.id, { status: "aprovado" });
       toast({
         title: "Solicitação aprovada",
-        description: "O item foi aprovado com sucesso.",
+        description: "O item foi aprovado com sucesso e enviado para o pipeline.",
       });
     } catch (err) {
       toast({
