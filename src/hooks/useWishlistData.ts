@@ -7,6 +7,7 @@ import {
   WishlistApresentacao,
   WishlistStats,
 } from "@/types/wishlist";
+import { WishlistStatus, TipoApresentacao } from "@/types/common";
 
 const CONSOLE_PREFIX = "[useWishlistData]";
 
@@ -25,8 +26,8 @@ export const useWishlistData = () => {
         .from("empresa_clientes")
         .select(`
           *,
-          empresa_proprietaria:empresas!empresa_clientes_empresa_proprietaria_id_fkey(id, nome, tipo),
-          empresa_cliente:empresas!empresa_clientes_empresa_cliente_id_fkey(id, nome, tipo)
+          empresa_proprietaria:empresas!empresa_clientes_empresa_proprietaria_id_fkey(id, nome, tipo, status),
+          empresa_cliente:empresas!empresa_clientes_empresa_cliente_id_fkey(id, nome, tipo, status)
         `)
         .eq("status", true)
         .order("created_at", { ascending: false });
@@ -37,7 +38,7 @@ export const useWishlistData = () => {
       }
 
       console.log(`${CONSOLE_PREFIX} Empresas clientes encontradas:`, data?.length || 0);
-      setEmpresasClientes(data || []);
+      setEmpresasClientes(data as EmpresaCliente[] || []);
     } catch (error) {
       console.error(`${CONSOLE_PREFIX} Erro no fetchEmpresasClientes:`, error);
       throw error;
@@ -53,9 +54,9 @@ export const useWishlistData = () => {
         .from("wishlist_items")
         .select(`
           *,
-          empresa_interessada:empresas!wishlist_items_empresa_interessada_id_fkey(id, nome, tipo),
-          empresa_desejada:empresas!wishlist_items_empresa_desejada_id_fkey(id, nome, tipo),
-          empresa_proprietaria:empresas!wishlist_items_empresa_proprietaria_id_fkey(id, nome, tipo)
+          empresa_interessada:empresas!wishlist_items_empresa_interessada_id_fkey(id, nome, tipo, status),
+          empresa_desejada:empresas!wishlist_items_empresa_desejada_id_fkey(id, nome, tipo, status),
+          empresa_proprietaria:empresas!wishlist_items_empresa_proprietaria_id_fkey(id, nome, tipo, status)
         `)
         .order("created_at", { ascending: false });
 
@@ -65,7 +66,14 @@ export const useWishlistData = () => {
       }
 
       console.log(`${CONSOLE_PREFIX} Wishlist items encontrados:`, data?.length || 0);
-      setWishlistItems(data || []);
+      
+      // Type cast to ensure correct types
+      const typedData = data?.map(item => ({
+        ...item,
+        status: item.status as WishlistStatus
+      })) as WishlistItem[] || [];
+      
+      setWishlistItems(typedData);
     } catch (error) {
       console.error(`${CONSOLE_PREFIX} Erro no fetchWishlistItems:`, error);
       throw error;
@@ -83,11 +91,11 @@ export const useWishlistData = () => {
           *,
           wishlist_item:wishlist_items(
             *,
-            empresa_interessada:empresas!wishlist_items_empresa_interessada_id_fkey(id, nome, tipo),
-            empresa_desejada:empresas!wishlist_items_empresa_desejada_id_fkey(id, nome, tipo),
-            empresa_proprietaria:empresas!wishlist_items_empresa_proprietaria_id_fkey(id, nome, tipo)
+            empresa_interessada:empresas!wishlist_items_empresa_interessada_id_fkey(id, nome, tipo, status),
+            empresa_desejada:empresas!wishlist_items_empresa_desejada_id_fkey(id, nome, tipo, status),
+            empresa_proprietaria:empresas!wishlist_items_empresa_proprietaria_id_fkey(id, nome, tipo, status)
           ),
-          empresa_facilitadora:empresas!wishlist_apresentacoes_empresa_facilitadora_id_fkey(id, nome, tipo),
+          empresa_facilitadora:empresas!wishlist_apresentacoes_empresa_facilitadora_id_fkey(id, nome, tipo, status),
           executivo_responsavel:usuarios(id, nome)
         `)
         .order("created_at", { ascending: false });
@@ -98,7 +106,18 @@ export const useWishlistData = () => {
       }
 
       console.log(`${CONSOLE_PREFIX} Apresentações encontradas:`, data?.length || 0);
-      setApresentacoes(data || []);
+      
+      // Type cast to ensure correct types
+      const typedData = data?.map(apresentacao => ({
+        ...apresentacao,
+        tipo_apresentacao: apresentacao.tipo_apresentacao as TipoApresentacao,
+        wishlist_item: apresentacao.wishlist_item ? {
+          ...apresentacao.wishlist_item,
+          status: apresentacao.wishlist_item.status as WishlistStatus
+        } : undefined
+      })) as WishlistApresentacao[] || [];
+      
+      setApresentacoes(typedData);
     } catch (error) {
       console.error(`${CONSOLE_PREFIX} Erro no fetchApresentacoes:`, error);
       throw error;
