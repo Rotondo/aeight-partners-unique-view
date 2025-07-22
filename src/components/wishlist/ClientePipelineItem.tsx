@@ -16,11 +16,13 @@ import { PrivateData } from "@/components/privacy/PrivateData";
 interface ClientePipelineItemProps {
   apresentacao: WishlistApresentacao;
   onUpdate: () => void;
+  parceiroNome?: string;
 }
 
 const ClientePipelineItem: React.FC<ClientePipelineItemProps> = ({
   apresentacao,
   onUpdate,
+  parceiroNome,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({
@@ -77,6 +79,11 @@ const ClientePipelineItem: React.FC<ClientePipelineItemProps> = ({
   };
 
   const clienteNome = apresentacao.wishlist_item?.empresa_desejada?.nome || "Cliente não identificado";
+  const facilitadoraNome = apresentacao.empresa_facilitadora?.nome;
+  const interessadaNome = apresentacao.wishlist_item?.empresa_interessada?.nome;
+  const proprietariaNome = apresentacao.wishlist_item?.empresa_proprietaria?.nome;
+  const tipoApresentacao = apresentacao.tipo_apresentacao;
+  const dataApresentacao = apresentacao.data_apresentacao;
 
   return (
     <Card className="w-full">
@@ -87,17 +94,23 @@ const ClientePipelineItem: React.FC<ClientePipelineItemProps> = ({
               <h4 className="font-medium text-sm">
                 <PrivateData type="company">{clienteNome}</PrivateData>
               </h4>
-              {apresentacao.executivo_responsavel && (
-                <p className="text-xs text-muted-foreground">
-                  Executivo: <PrivateData type="generic">{apresentacao.executivo_responsavel.nome}</PrivateData>
-                </p>
+              {/* Subtítulo: nome do parceiro */}
+              {parceiroNome && (
+                <p className="text-xs text-muted-foreground font-semibold">Parceiro: <PrivateData type="company">{parceiroNome}</PrivateData></p>
               )}
-              {apresentacao.data_planejada && (
-                <p className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Calendar className="h-3 w-3" />
-                  {format(new Date(apresentacao.data_planejada), "dd/MM/yyyy", { locale: ptBR })}
-                </p>
-              )}
+              {/* Badges para data prevista e tipo de apresentação */}
+              <div className="flex gap-2 mt-1">
+                {apresentacao.data_planejada && (
+                  <Badge variant="outline" className="text-xs">
+                    Previsto: {format(new Date(apresentacao.data_planejada), "dd/MM/yyyy", { locale: ptBR })}
+                  </Badge>
+                )}
+                {tipoApresentacao && (
+                  <Badge variant="secondary" className="text-xs">
+                    {tipoApresentacao}
+                  </Badge>
+                )}
+              </div>
             </div>
             <Button
               variant="ghost"
@@ -109,8 +122,50 @@ const ClientePipelineItem: React.FC<ClientePipelineItemProps> = ({
             </Button>
           </div>
 
+          {/* Modo edição: mostra contexto completo */}
           {isEditing && (
             <div className="space-y-2 pt-2 border-t">
+              {/* Contexto detalhado só no modo edição */}
+              {facilitadoraNome && (
+                <p className="text-xs text-muted-foreground">Facilitadora: <PrivateData type="company">{facilitadoraNome}</PrivateData></p>
+              )}
+              {interessadaNome && (
+                <p className="text-xs text-muted-foreground">Interessada: <PrivateData type="company">{interessadaNome}</PrivateData></p>
+              )}
+              {proprietariaNome && (
+                <p className="text-xs text-muted-foreground">Proprietária: <PrivateData type="company">{proprietariaNome}</PrivateData></p>
+              )}
+              {/* Contexto extra */}
+              {facilitadoraNome && (
+                <p className="text-xs text-muted-foreground">Facilitadora: <PrivateData type="company">{facilitadoraNome}</PrivateData></p>
+              )}
+              {interessadaNome && (
+                <p className="text-xs text-muted-foreground">Interessada: <PrivateData type="company">{interessadaNome}</PrivateData></p>
+              )}
+              {proprietariaNome && (
+                <p className="text-xs text-muted-foreground">Proprietária: <PrivateData type="company">{proprietariaNome}</PrivateData></p>
+              )}
+              {tipoApresentacao && (
+                <p className="text-xs text-muted-foreground">Tipo: {tipoApresentacao}</p>
+              )}
+              {dataApresentacao && (
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Calendar className="h-3 w-3" />
+                  {format(new Date(dataApresentacao), "dd/MM/yyyy", { locale: ptBR })}
+                </p>
+              )}
+              {apresentacao.executivo_responsavel && (
+                <p className="text-xs text-muted-foreground">
+                  Executivo: <PrivateData type="generic">{apresentacao.executivo_responsavel.nome}</PrivateData>
+                </p>
+              )}
+              {apresentacao.data_planejada && (
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Calendar className="h-3 w-3" />
+                  {format(new Date(apresentacao.data_planejada), "dd/MM/yyyy", { locale: ptBR })}
+                </p>
+              )}
+
               <Select
                 value={editData.fase_pipeline}
                 onValueChange={(value) => setEditData({ ...editData, fase_pipeline: value as PipelineFase })}

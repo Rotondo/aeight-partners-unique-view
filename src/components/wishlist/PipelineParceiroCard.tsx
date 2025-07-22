@@ -159,6 +159,7 @@ const PipelineParceiroCard: React.FC<PipelineParceiroCardProps> = (props) => {
                   fase={fase}
                   apresentacoes={apresentacoesPorFase[fase]}
                   draggingId={props.draggingId}
+                  parceiroNome={props.parceiroNome}
                 />
               ))}
             </div>
@@ -181,10 +182,12 @@ function DroppableFaseColumn({
   fase,
   apresentacoes,
   draggingId,
+  parceiroNome,
 }: {
   fase: PipelineFase;
   apresentacoes: WishlistApresentacao[];
   draggingId?: string;
+  parceiroNome?: string;
 }) {
   const { setNodeRef, isOver } = useDroppable({
     id: fase,
@@ -211,6 +214,7 @@ function DroppableFaseColumn({
             key={apresentacao.id}
             apresentacao={apresentacao}
             isDragging={draggingId === apresentacao.id}
+            parceiroNome={parceiroNome}
           />
         ))}
       </SortableContext>
@@ -222,10 +226,13 @@ function DroppableFaseColumn({
 function DraggableClientePipelineItem({
   apresentacao,
   isDragging,
+  parceiroNome,
 }: {
   apresentacao: WishlistApresentacao;
   isDragging?: boolean;
+  parceiroNome?: string;
 }) {
+  // Usar useDraggable apenas no handle
   const { attributes, listeners, setNodeRef, transform, isDragging: dndIsDragging } =
     useDraggable({ id: apresentacao.id });
 
@@ -234,13 +241,45 @@ function DraggableClientePipelineItem({
     transition: "transform 200ms ease",
     opacity: dndIsDragging || isDragging ? 0.6 : 1,
     zIndex: dndIsDragging || isDragging ? 10 : "auto",
-    cursor: "grab",
+    cursor: "default",
     marginBottom: 8,
   } as React.CSSProperties;
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      <ClientePipelineItem apresentacao={apresentacao} onUpdate={() => {}} />
+    <div ref={setNodeRef} style={style}>
+      <div style={{ position: "relative" }}>
+        {/* Handle de drag no canto esquerdo */}
+        <div
+          {...attributes}
+          {...listeners}
+          style={{
+            position: "absolute",
+            left: 4,
+            top: 4,
+            cursor: "grab",
+            zIndex: 2,
+            background: "rgba(255,255,255,0.7)",
+            borderRadius: 4,
+            padding: 2,
+            display: "flex",
+            alignItems: "center",
+          }}
+          title="Arrastar"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="4" cy="4" r="1.5" fill="#888" />
+            <circle cx="4" cy="8" r="1.5" fill="#888" />
+            <circle cx="4" cy="12" r="1.5" fill="#888" />
+            <circle cx="12" cy="4" r="1.5" fill="#888" />
+            <circle cx="12" cy="8" r="1.5" fill="#888" />
+            <circle cx="12" cy="12" r="1.5" fill="#888" />
+          </svg>
+        </div>
+        {/* Card inteiro clicável normalmente */}
+        <div style={{ paddingLeft: 28 }}>
+          <ClientePipelineItem apresentacao={apresentacao} onUpdate={() => {}} parceiroNome={parceiroNome} />
+        </div>
+      </div>
     </div>
   );
 }
