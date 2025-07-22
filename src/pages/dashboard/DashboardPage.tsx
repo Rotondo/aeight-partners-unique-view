@@ -269,16 +269,23 @@ const DashboardPage: React.FC = () => {
 
   async function handleSaveEdit(id: string) {
     try {
-      const updates: Partial<Oportunidade> = { ...editValues };
-      delete (updates as any).empresa_origem;
-      delete (updates as any).empresa_destino;
-      delete (updates as any).tipo_relacao;
-      delete (updates as any).isRemetente;
-      delete (updates as any).isDestinatario;
+      // Create a clean updates object with database-compatible types
+      const updates: any = { ...editValues };
+      
+      // Remove properties that shouldn't be sent to database
+      delete updates.empresa_origem;
+      delete updates.empresa_destino;
+      delete updates.contato;
+      delete updates.usuario_envio;
+      delete updates.usuario_recebe;
+      delete updates.tipo_relacao;
+      delete updates.isRemetente;
+      delete updates.isDestinatario;
+      delete updates.tipo_natureza;
       
       // Convert status to database-compatible format
       if (updates.status) {
-        updates.status = mapStatusToDatabase(updates.status) as StatusOportunidade;
+        updates.status = mapStatusToDatabase(updates.status);
       }
       
       const { error } = await supabase

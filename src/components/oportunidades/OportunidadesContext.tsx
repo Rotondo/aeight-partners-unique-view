@@ -389,8 +389,21 @@ export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ child
       const currentOp = oportunidades.find(op => op.id === id);
       if (!currentOp) throw new Error("Oportunidade não encontrada");
 
+      // Create a clean updates object with database-compatible types
+      const cleanUpdates: any = { ...updates };
+      
+      // Remove properties that shouldn't be sent to database
+      delete cleanUpdates.empresa_origem;
+      delete cleanUpdates.empresa_destino;
+      delete cleanUpdates.contato;
+      delete cleanUpdates.usuario_envio;
+      delete cleanUpdates.usuario_recebe;
+      delete cleanUpdates.tipo_relacao;
+      delete cleanUpdates.isRemetente;
+      delete cleanUpdates.isDestinatario;
+      delete cleanUpdates.tipo_natureza;
+      
       // Convert status to database acceptable format
-      const cleanUpdates = { ...updates };
       if (cleanUpdates.status) {
         cleanUpdates.status = mapStatusToDatabase(cleanUpdates.status);
       }
