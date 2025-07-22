@@ -79,6 +79,7 @@ const ClientePipelineItem: React.FC<ClientePipelineItemProps> = ({
   };
 
   const clienteNome = apresentacao.wishlist_item?.empresa_desejada?.nome || "Cliente não identificado";
+  const parceiroOrigemNome = apresentacao.wishlist_item?.empresa_interessada?.nome || apresentacao.wishlist_item?.empresa_proprietaria?.nome;
   const facilitadoraNome = apresentacao.empresa_facilitadora?.nome;
   const interessadaNome = apresentacao.wishlist_item?.empresa_interessada?.nome;
   const proprietariaNome = apresentacao.wishlist_item?.empresa_proprietaria?.nome;
@@ -94,9 +95,9 @@ const ClientePipelineItem: React.FC<ClientePipelineItemProps> = ({
               <h4 className="font-medium text-sm">
                 <PrivateData type="company">{clienteNome}</PrivateData>
               </h4>
-              {/* Subtítulo: nome do parceiro */}
-              {parceiroNome && (
-                <p className="text-xs text-muted-foreground font-semibold">Parceiro: <PrivateData type="company">{parceiroNome}</PrivateData></p>
+              {/* Subtítulo: parceiro origem (quem pediu) */}
+              {parceiroOrigemNome && (
+                <p className="text-xs text-muted-foreground font-semibold">Origem: <PrivateData type="company">{parceiroOrigemNome}</PrivateData></p>
               )}
               {/* Badges para data prevista e tipo de apresentação */}
               <div className="flex gap-2 mt-1">
@@ -125,20 +126,7 @@ const ClientePipelineItem: React.FC<ClientePipelineItemProps> = ({
           {/* Modo edição: mostra contexto completo */}
           {isEditing && (
             <div className="space-y-2 pt-2 border-t">
-              {/* Contexto detalhado só no modo edição */}
-              {facilitadoraNome && (
-                <p className="text-xs text-muted-foreground">Facilitadora: <PrivateData type="company">{facilitadoraNome}</PrivateData></p>
-              )}
-              {interessadaNome && (
-                <p className="text-xs text-muted-foreground">Interessada: <PrivateData type="company">{interessadaNome}</PrivateData></p>
-              )}
-              {proprietariaNome && (
-                <p className="text-xs text-muted-foreground">Proprietária: <PrivateData type="company">{proprietariaNome}</PrivateData></p>
-              )}
-              {/* Contexto extra */}
-              {facilitadoraNome && (
-                <p className="text-xs text-muted-foreground">Facilitadora: <PrivateData type="company">{facilitadoraNome}</PrivateData></p>
-              )}
+              {/* Contexto detalhado só no modo edição: Interessada, Proprietária, tipo e data */}
               {interessadaNome && (
                 <p className="text-xs text-muted-foreground">Interessada: <PrivateData type="company">{interessadaNome}</PrivateData></p>
               )}
@@ -152,17 +140,6 @@ const ClientePipelineItem: React.FC<ClientePipelineItemProps> = ({
                 <p className="text-xs text-muted-foreground flex items-center gap-1">
                   <Calendar className="h-3 w-3" />
                   {format(new Date(dataApresentacao), "dd/MM/yyyy", { locale: ptBR })}
-                </p>
-              )}
-              {apresentacao.executivo_responsavel && (
-                <p className="text-xs text-muted-foreground">
-                  Executivo: <PrivateData type="generic">{apresentacao.executivo_responsavel.nome}</PrivateData>
-                </p>
-              )}
-              {apresentacao.data_planejada && (
-                <p className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Calendar className="h-3 w-3" />
-                  {format(new Date(apresentacao.data_planejada), "dd/MM/yyyy", { locale: ptBR })}
                 </p>
               )}
 
