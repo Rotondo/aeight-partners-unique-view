@@ -1,14 +1,17 @@
 
-// Re-export all types for backward compatibility
+// Re-export all types from individual modules
 export * from './common';
-export * from './categoria';
 export * from './empresa';
-export * from './usuario';
 export * from './oportunidade';
-export * from './repositorio';
-export * from './indicadores';
-export * from './onepager';
 export * from './wishlist';
+export * from './indicadores';
+export * from './usuario';
+export * from './categoria';
 export * from './dashboard';
+export * from './eventos';
+export * from './diario';
 export * from './metas';
+export * from './onepager';
+export * from './repositorio';
 export * from './vtex';
+export * from './mapa-parceiros';
