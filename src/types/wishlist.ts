@@ -1,5 +1,4 @@
-
-import { WishlistStatus, TipoApresentacao, StatusApresentacao } from './common';
+import { WishlistStatus, TipoApresentacao, StatusApresentacao, PipelineFase } from './common';
 import { Empresa } from './empresa';
 import { Oportunidade } from './oportunidade';
 
@@ -47,11 +46,15 @@ export interface WishlistApresentacao {
   feedback?: string;
   converteu_oportunidade: boolean;
   oportunidade_id?: string;
+  executivo_responsavel_id?: string;
+  data_planejada?: string;
+  fase_pipeline: PipelineFase;
   created_at: string;
   updated_at: string;
   wishlist_item?: WishlistItem;
   empresa_facilitadora?: Empresa;
   oportunidade?: Oportunidade;
+  executivo_responsavel?: { id: string; nome: string };
 }
 
 export interface WishlistStats {

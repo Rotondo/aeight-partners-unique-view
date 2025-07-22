@@ -1355,7 +1355,12 @@ export type Database = {
           converteu_oportunidade: boolean | null
           created_at: string
           data_apresentacao: string
+          data_planejada: string | null
           empresa_facilitadora_id: string
+          executivo_responsavel_id: string | null
+          fase_pipeline:
+            | Database["public"]["Enums"]["pipeline_fase_enum"]
+            | null
           feedback: string | null
           id: string
           oportunidade_id: string | null
@@ -1369,7 +1374,12 @@ export type Database = {
           converteu_oportunidade?: boolean | null
           created_at?: string
           data_apresentacao?: string
+          data_planejada?: string | null
           empresa_facilitadora_id: string
+          executivo_responsavel_id?: string | null
+          fase_pipeline?:
+            | Database["public"]["Enums"]["pipeline_fase_enum"]
+            | null
           feedback?: string | null
           id?: string
           oportunidade_id?: string | null
@@ -1383,7 +1393,12 @@ export type Database = {
           converteu_oportunidade?: boolean | null
           created_at?: string
           data_apresentacao?: string
+          data_planejada?: string | null
           empresa_facilitadora_id?: string
+          executivo_responsavel_id?: string | null
+          fase_pipeline?:
+            | Database["public"]["Enums"]["pipeline_fase_enum"]
+            | null
           feedback?: string | null
           id?: string
           oportunidade_id?: string | null
@@ -1399,6 +1414,13 @@ export type Database = {
             columns: ["empresa_facilitadora_id"]
             isOneToOne: false
             referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wishlist_apresentacoes_executivo_responsavel_id_fkey"
+            columns: ["executivo_responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
             referencedColumns: ["id"]
           },
           {
@@ -1526,6 +1548,13 @@ export type Database = {
         | "Sem contato"
         | "proposta_enviada"
         | "aguardando_aprovacao"
+      pipeline_fase_enum:
+        | "aprovado"
+        | "planejado"
+        | "apresentado"
+        | "aguardando_feedback"
+        | "convertido"
+        | "rejeitado"
       status_acao_crm: "pendente" | "em_andamento" | "concluida" | "cancelada"
       status_acao_crm_enum:
         | "pendente"
@@ -1695,6 +1724,14 @@ export const Constants = {
         "Sem contato",
         "proposta_enviada",
         "aguardando_aprovacao",
+      ],
+      pipeline_fase_enum: [
+        "aprovado",
+        "planejado",
+        "apresentado",
+        "aguardando_feedback",
+        "convertido",
+        "rejeitado",
       ],
       status_acao_crm: ["pendente", "em_andamento", "concluida", "cancelada"],
       status_acao_crm_enum: [

@@ -2,9 +2,10 @@ import React from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Check, X, Edit, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Check, X, Edit, ArrowUpDown, ArrowUp, ArrowDown, TrendingUp } from "lucide-react";
 import { WishlistItem } from "@/types";
 import { format } from "date-fns";
+import { useNavigate } from "react-router-dom";
 
 interface WishlistItemsTableProps {
   items: WishlistItem[];
@@ -27,6 +28,8 @@ const WishlistItemsTable: React.FC<WishlistItemsTableProps> = ({
   sortDirection,
   onSort,
 }) => {
+  const navigate = useNavigate();
+
   const getSortIcon = (field: string) => {
     if (sortField !== field) return <ArrowUpDown className="h-4 w-4" />;
     return sortDirection === "asc" ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />;
@@ -166,6 +169,17 @@ const WishlistItemsTable: React.FC<WishlistItemsTableProps> = ({
                         <X className="h-4 w-4 text-red-600" />
                       </Button>
                     </>
+                  )}
+                  {item.status === "aprovado" && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => navigate("/wishlist/pipeline")}
+                      className="h-8 px-2 text-xs"
+                    >
+                      <TrendingUp className="h-4 w-4 mr-1" />
+                      Ver Pipeline
+                    </Button>
                   )}
                   <Button
                     size="sm"

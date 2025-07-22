@@ -9,6 +9,7 @@ import {
   WishlistStatus,
   StatusApresentacao,
   TipoApresentacao,
+  PipelineFase,
 } from "@/types";
 import { toast } from "@/hooks/use-toast";
 
@@ -168,6 +169,7 @@ export const useWishlistData = () => {
         .select(`
           *,
           empresa_facilitadora:empresas(*),
+          executivo_responsavel:usuarios(id, nome),
           wishlist_item:wishlist_items(
             *,
             empresa_interessada:empresas!wishlist_items_empresa_interessada_id_fkey(*),
@@ -183,7 +185,9 @@ export const useWishlistData = () => {
         ...item,
         tipo_apresentacao: item.tipo_apresentacao as TipoApresentacao,
         status_apresentacao: item.status_apresentacao as StatusApresentacao,
+        fase_pipeline: item.fase_pipeline as PipelineFase,
         empresa_facilitadora: item.empresa_facilitadora || null,
+        executivo_responsavel: item.executivo_responsavel || null,
         wishlist_item: item.wishlist_item
           ? {
               ...item.wishlist_item,
