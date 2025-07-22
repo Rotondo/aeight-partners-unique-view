@@ -1,4 +1,5 @@
 
+
 export type WishlistStatus =
   | "pendente"
   | "em_andamento"
@@ -30,12 +31,20 @@ export type PipelineFase =
 export type EmpresaTipoString = "intragrupo" | "parceiro" | "cliente";
 export type TipoEmpresa = EmpresaTipoString;
 
-// Opportunity types
+// Opportunity types - matching actual usage in codebase
 export type StatusOportunidade =
-  | "indicado"
-  | "em_andamento" 
-  | "fechado"
+  | "em_contato"
+  | "negociando"
+  | "proposta_enviada"
+  | "aguardando_aprovacao"
+  | "ganho"
   | "perdido"
+  | "Contato"
+  | "Apresentado"
+  | "Sem contato"
+  | "indicado"
+  | "em_andamento"
+  | "fechado"
   | "cancelado";
 
 export type TipoNatureza =
@@ -43,7 +52,10 @@ export type TipoNatureza =
   | "renovacao"
   | "expansao"
   | "cross_sell"
-  | "upsell";
+  | "upsell"
+  | "intragrupo"
+  | "extragrupo";
 
 // Company size types
 export type TamanhoEmpresa = "PP" | "P" | "M" | "G" | "GG";
+
