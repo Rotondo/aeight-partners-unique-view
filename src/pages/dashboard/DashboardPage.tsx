@@ -11,9 +11,43 @@ import { MatrizParceiros } from "@/components/dashboard/MatrizParceiros";
 import { OportunidadesTable } from "@/components/dashboard/OportunidadesTable";
 import { IndicacoesRecebidasTable } from "@/components/dashboard/IndicacoesRecebidasTable";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { Empresa, Oportunidade } from "@/types";
+import { Empresa, Oportunidade, StatusOportunidade } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import useDashboardStats from "@/hooks/useDashboardStats";
+
+// Database accepted status values
+type DatabaseStatusOportunidade = 
+  | "em_contato"
+  | "negociando" 
+  | "proposta_enviada"
+  | "aguardando_aprovacao"
+  | "ganho"
+  | "perdido"
+  | "Contato"
+  | "Apresentado"
+  | "Sem contato";
+
+// Convert frontend status to database-compatible status
+function mapStatusToDatabase(status: StatusOportunidade): DatabaseStatusOportunidade {
+  const statusMap: Record<StatusOportunidade, DatabaseStatusOportunidade> = {
+    "em_contato": "em_contato",
+    "negociando": "negociando",
+    "proposta_enviada": "proposta_enviada",
+    "aguardando_aprovacao": "aguardando_aprovacao",
+    "ganho": "ganho",
+    "perdido": "perdido",
+    "Contato": "Contato",
+    "Apresentado": "Apresentado",
+    "Sem contato": "Sem contato",
+    // Map additional statuses to closest database equivalent
+    "indicado": "em_contato",
+    "em_andamento": "negociando",
+    "fechado": "ganho",
+    "cancelado": "perdido"
+  };
+  
+  return statusMap[status] || "em_contato";
+}
 
 function getQuarter(date: Date) {
   return Math.floor(date.getMonth() / 3) + 1;
@@ -241,6 +275,12 @@ const DashboardPage: React.FC = () => {
       delete (updates as any).tipo_relacao;
       delete (updates as any).isRemetente;
       delete (updates as any).isDestinatario;
+      
+      // Convert status to database-compatible format
+      if (updates.status) {
+        updates.status = mapStatusToDatabase(updates.status) as StatusOportunidade;
+      }
+      
       const { error } = await supabase
         .from("oportunidades")
         .update(updates)

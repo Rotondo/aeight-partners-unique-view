@@ -6,6 +6,18 @@ import { useAuth } from "@/hooks/useAuth";
 import { validateUUID, sanitizeString } from "@/utils/inputValidation";
 import { useDemoMask } from "@/utils/demoMask"; // <-- Importação do hook de máscara
 
+// Database accepted status values
+type DatabaseStatusOportunidade = 
+  | "em_contato"
+  | "negociando" 
+  | "proposta_enviada"
+  | "aguardando_aprovacao"
+  | "ganho"
+  | "perdido"
+  | "Contato"
+  | "Apresentado"
+  | "Sem contato";
+
 interface OportunidadesContextType {
   oportunidades: Oportunidade[];
   filteredOportunidades: Oportunidade[];
@@ -26,6 +38,28 @@ const OportunidadesContext = createContext<OportunidadesContextType | undefined>
 function isValidUUID(uuid: string | undefined | null): boolean {
   if (!uuid) return false;
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(uuid);
+}
+
+// Convert frontend status to database-compatible status
+function mapStatusToDatabase(status: StatusOportunidade): DatabaseStatusOportunidade {
+  const statusMap: Record<StatusOportunidade, DatabaseStatusOportunidade> = {
+    "em_contato": "em_contato",
+    "negociando": "negociando",
+    "proposta_enviada": "proposta_enviada",
+    "aguardando_aprovacao": "aguardando_aprovacao",
+    "ganho": "ganho",
+    "perdido": "perdido",
+    "Contato": "Contato",
+    "Apresentado": "Apresentado",
+    "Sem contato": "Sem contato",
+    // Map additional statuses to closest database equivalent
+    "indicado": "em_contato",
+    "em_andamento": "negociando",
+    "fechado": "ganho",
+    "cancelado": "perdido"
+  };
+  
+  return statusMap[status] || "em_contato";
 }
 
 export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -296,12 +330,14 @@ export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ child
         return null;
       }
 
+      const dbStatus = mapStatusToDatabase(oportunidade.status || "em_contato");
+
       const newOportunidade = {
         empresa_origem_id: oportunidade.empresa_origem_id,
         empresa_destino_id: oportunidade.empresa_destino_id,
         contato_id: oportunidade.contato_id,
         valor: oportunidade.valor,
-        status: oportunidade.status || "em_contato",
+        status: dbStatus,
         data_indicacao: oportunidade.data_indicacao || new Date().toISOString(),
         data_fechamento: oportunidade.data_fechamento,
         motivo_perda: sanitizeString(oportunidade.motivo_perda),
@@ -356,7 +392,7 @@ export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ child
       // Convert status to database acceptable format
       const cleanUpdates = { ...updates };
       if (cleanUpdates.status) {
-        cleanUpdates.status = cleanUpdates.status;
+        cleanUpdates.status = mapStatusToDatabase(cleanUpdates.status);
       }
 
       const { error } = await supabase
