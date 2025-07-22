@@ -37,6 +37,53 @@ export const useWishlistItemMutations = (
     data: Partial<WishlistItem>
   ) => {
     try {
+      // Se o status está sendo alterado para "aprovado", criar apresentação automaticamente
+      const shouldCreateApresentacao = data.status === "aprovado";
+      
+      if (shouldCreateApresentacao) {
+        // Buscar o item atual para obter os dados necessários
+        const { data: currentItem, error: fetchError } = await supabase
+          .from("wishlist_items")
+          .select("*")
+          .eq("id", id)
+          .single();
+
+        if (fetchError) throw fetchError;
+
+        // Verificar se já existe uma apresentação para este item
+        const { data: existingApresentacao } = await supabase
+          .from("wishlist_apresentacoes")
+          .select("id")
+          .eq("wishlist_item_id", id)
+          .maybeSingle();
+
+        // Só criar apresentação se não existir uma
+        if (!existingApresentacao && currentItem) {
+          const { error: apresentacaoError } = await supabase
+            .from("wishlist_apresentacoes")
+            .insert({
+              wishlist_item_id: id,
+              empresa_facilitadora_id: currentItem.empresa_proprietaria_id,
+              data_apresentacao: new Date().toISOString(),
+              tipo_apresentacao: 'reuniao',
+              status_apresentacao: 'pendente',
+              fase_pipeline: 'aprovado',
+              converteu_oportunidade: false,
+            });
+
+          if (apresentacaoError) {
+            console.error("Erro ao criar apresentação:", apresentacaoError);
+            toast({
+              title: "Aviso",
+              description: "Item aprovado, mas houve erro ao criar a apresentação automática",
+              variant: "destructive",
+            });
+          } else {
+            console.log("Apresentação criada automaticamente para item aprovado");
+          }
+        }
+      }
+
       const { error } = await supabase
         .from("wishlist_items")
         .update({ ...data, updated_at: new Date().toISOString() })

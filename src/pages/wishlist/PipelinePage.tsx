@@ -73,14 +73,14 @@ const PipelinePage: React.FC = () => {
       {/* Header */}
       <div className="flex justify-between items-center flex-wrap gap-4">
         <div className="flex items-center gap-4">
-          <Button variant="outline" onClick={() => navigate("/wishlist")} className="flex-shrink-0">
+          <Button variant="outline" onClick={() => navigate("/wishlist/itens")} className="flex-shrink-0">
             <ChevronLeft className="h-4 w-4 mr-1" />
-            Voltar ao Dashboard
+            Voltar aos Itens
           </Button>
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Pipeline de Apresentações</h1>
             <p className="text-muted-foreground">
-              Gerencie o fluxo de apresentações por parceiro
+              Gerencie o fluxo de apresentações por parceiro facilitador
             </p>
           </div>
         </div>
@@ -112,6 +112,9 @@ const PipelinePage: React.FC = () => {
         {Object.keys(apresentacoesPorParceiro).length === 0 ? (
           <div className="text-center py-8">
             <p className="text-muted-foreground">Nenhuma apresentação encontrada</p>
+            <p className="text-sm text-muted-foreground mt-2">
+              Apresentações são criadas automaticamente quando itens da wishlist são aprovados
+            </p>
           </div>
         ) : (
           Object.entries(apresentacoesPorParceiro).map(([parceiroNome, apresentacoesParceiro]) => (

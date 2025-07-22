@@ -24,7 +24,7 @@ const PipelineFilters: React.FC<PipelineFiltersProps> = ({
   apresentacoes,
 }) => {
   // Extract unique values for filters
-  const parceirosUnicos = Array.from(
+  const facilitadoresUnicos = Array.from(
     new Set(apresentacoes.map(item => item.empresa_facilitadora?.nome).filter(Boolean))
   ).sort();
 
@@ -46,16 +46,16 @@ const PipelineFilters: React.FC<PipelineFiltersProps> = ({
       <CardContent className="pt-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="space-y-2">
-            <label className="text-sm font-medium">Parceiro</label>
+            <label className="text-sm font-medium">Parceiro Facilitador</label>
             <Select value={parceiroFilter} onValueChange={onParceiroChange}>
               <SelectTrigger>
-                <SelectValue placeholder="Todos os parceiros" />
+                <SelectValue placeholder="Todos os parceiros facilitadores" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos os parceiros</SelectItem>
-                {parceirosUnicos.map((parceiro) => (
-                  <SelectItem key={parceiro} value={parceiro}>
-                    {parceiro}
+                <SelectItem value="all">Todos os parceiros facilitadores</SelectItem>
+                {facilitadoresUnicos.map((facilitador) => (
+                  <SelectItem key={facilitador} value={facilitador}>
+                    {facilitador}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -63,7 +63,7 @@ const PipelineFilters: React.FC<PipelineFiltersProps> = ({
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">Executivo</label>
+            <label className="text-sm font-medium">Executivo Responsável</label>
             <Select value={executivoFilter} onValueChange={onExecutivoChange}>
               <SelectTrigger>
                 <SelectValue placeholder="Todos os executivos" />
@@ -80,7 +80,7 @@ const PipelineFilters: React.FC<PipelineFiltersProps> = ({
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">Fase</label>
+            <label className="text-sm font-medium">Fase do Pipeline</label>
             <Select value={faseFilter} onValueChange={onFaseChange}>
               <SelectTrigger>
                 <SelectValue placeholder="Todas as fases" />

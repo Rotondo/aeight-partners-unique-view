@@ -1,272 +1,149 @@
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import {
-  EmpresaCliente,
   WishlistItem,
+  EmpresaCliente,
   WishlistApresentacao,
   WishlistStats,
-  WishlistStatus,
-  StatusApresentacao,
-  TipoApresentacao,
-  PipelineFase,
-} from "@/types";
-import { toast } from "@/hooks/use-toast";
+} from "@/types/wishlist";
 
 const CONSOLE_PREFIX = "[useWishlistData]";
 
-/**
- * Hook para manipulação de dados da Wishlist e Clientes.
- * Corrigido para garantir carregamento correto dos relacionamentos entre empresas.
- */
 export const useWishlistData = () => {
   const [empresasClientes, setEmpresasClientes] = useState<EmpresaCliente[]>([]);
   const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>([]);
   const [apresentacoes, setApresentacoes] = useState<WishlistApresentacao[]>([]);
   const [stats, setStats] = useState<WishlistStats | null>(null);
-  const [loading, setLoading] = useState(false);
 
-  // Fetch Empresas Clientes com join correto
-  const fetchEmpresasClientes = async () => {
-    console.log(`${CONSOLE_PREFIX} Iniciando fetchEmpresasClientes...`);
+  // Fetch empresas clientes
+  const fetchEmpresasClientes = useCallback(async () => {
     try {
-      setLoading(true);
+      console.log(`${CONSOLE_PREFIX} Buscando empresas clientes...`);
       
-      // Query com joins explícitos para garantir que os dados sejam carregados
       const { data, error } = await supabase
         .from("empresa_clientes")
         .select(`
-          id,
-          empresa_proprietaria_id,
-          empresa_cliente_id,
-          data_relacionamento,
-          status,
-          observacoes,
-          created_at,
-          updated_at,
-          empresa_proprietaria:empresas!empresa_clientes_empresa_proprietaria_id_fkey(
-            id,
-            nome,
-            tipo,
-            status
-          ),
-          empresa_cliente:empresas!empresa_clientes_empresa_cliente_id_fkey(
-            id,
-            nome,
-            tipo,
-            status
-          )
+          *,
+          empresa_proprietaria:empresas!empresa_clientes_empresa_proprietaria_id_fkey(id, nome, tipo),
+          empresa_cliente:empresas!empresa_clientes_empresa_cliente_id_fkey(id, nome, tipo)
         `)
         .eq("status", true)
         .order("created_at", { ascending: false });
 
       if (error) {
-        console.error(`${CONSOLE_PREFIX} Erro na query empresa_clientes:`, error);
+        console.error(`${CONSOLE_PREFIX} Erro ao buscar empresas clientes:`, error);
         throw error;
       }
 
-      console.log(`${CONSOLE_PREFIX} Dados brutos recebidos:`, data);
-
-      if (!data || data.length === 0) {
-        console.warn(`${CONSOLE_PREFIX} Nenhum registro encontrado na tabela empresa_clientes`);
-        setEmpresasClientes([]);
-        return;
-      }
-
-      // Processar dados garantindo que os joins não sejam null
-      const processedData = data.map((item: any) => {
-        const processed = {
-          ...item,
-          empresa_proprietaria: item.empresa_proprietaria || {
-            id: item.empresa_proprietaria_id,
-            nome: '[Empresa não encontrada]',
-            tipo: 'parceiro',
-            status: false
-          },
-          empresa_cliente: item.empresa_cliente || {
-            id: item.empresa_cliente_id,
-            nome: '[Cliente não encontrado]',
-            tipo: 'cliente',
-            status: false
-          },
-        };
-
-        // Log de diagnóstico para cada item
-        if (!item.empresa_proprietaria) {
-          console.warn(`${CONSOLE_PREFIX} Proprietário não encontrado para relacionamento ${item.id}`);
-        }
-        if (!item.empresa_cliente) {
-          console.warn(`${CONSOLE_PREFIX} Cliente não encontrado para relacionamento ${item.id}`);
-        }
-
-        return processed;
-      });
-
-      console.log(`${CONSOLE_PREFIX} Dados processados:`, processedData);
-      setEmpresasClientes(processedData);
-
+      console.log(`${CONSOLE_PREFIX} Empresas clientes encontradas:`, data?.length || 0);
+      setEmpresasClientes(data || []);
     } catch (error) {
-      console.error(`${CONSOLE_PREFIX} Erro ao buscar empresas clientes:`, error);
-      toast({
-        title: "Erro",
-        description: "Erro ao carregar empresas clientes",
-        variant: "destructive",
-      });
-      setEmpresasClientes([]);
-    } finally {
-      setLoading(false);
-      console.log(`${CONSOLE_PREFIX} fetchEmpresasClientes concluído.`);
+      console.error(`${CONSOLE_PREFIX} Erro no fetchEmpresasClientes:`, error);
+      throw error;
     }
-  };
+  }, []);
 
-  // Fetch Wishlist Items
-  const fetchWishlistItems = async () => {
-    console.log(`${CONSOLE_PREFIX} Iniciando fetchWishlistItems...`);
+  // Fetch wishlist items
+  const fetchWishlistItems = useCallback(async () => {
     try {
-      setLoading(true);
+      console.log(`${CONSOLE_PREFIX} Buscando wishlist items...`);
+      
       const { data, error } = await supabase
         .from("wishlist_items")
         .select(`
           *,
-          empresa_interessada:empresas!wishlist_items_empresa_interessada_id_fkey(*),
-          empresa_desejada:empresas!wishlist_items_empresa_desejada_id_fkey(*),
-          empresa_proprietaria:empresas!wishlist_items_empresa_proprietaria_id_fkey(*)
+          empresa_interessada:empresas!wishlist_items_empresa_interessada_id_fkey(id, nome, tipo),
+          empresa_desejada:empresas!wishlist_items_empresa_desejada_id_fkey(id, nome, tipo),
+          empresa_proprietaria:empresas!wishlist_items_empresa_proprietaria_id_fkey(id, nome, tipo)
         `)
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error(`${CONSOLE_PREFIX} Erro ao buscar wishlist items:`, error);
+        throw error;
+      }
 
-      // Garantir que os tipos estão corretos e nulos tratados
-      const typedData = (data || []).map((item: any) => ({
-        ...item,
-        status: item.status as WishlistStatus,
-        empresa_interessada: item.empresa_interessada || null,
-        empresa_desejada: item.empresa_desejada || null,
-        empresa_proprietaria: item.empresa_proprietaria || null,
-      }));
-
-      setWishlistItems(typedData);
+      console.log(`${CONSOLE_PREFIX} Wishlist items encontrados:`, data?.length || 0);
+      setWishlistItems(data || []);
     } catch (error) {
-      console.error(`${CONSOLE_PREFIX} Erro ao buscar wishlist items:`, error);
-      toast({
-        title: "Erro",
-        description: "Erro ao carregar itens da wishlist",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-      console.log(`${CONSOLE_PREFIX} fetchWishlistItems concluído.`);
+      console.error(`${CONSOLE_PREFIX} Erro no fetchWishlistItems:`, error);
+      throw error;
     }
-  };
+  }, []);
 
-  // Fetch Apresentações
-  const fetchApresentacoes = async () => {
-    console.log(`${CONSOLE_PREFIX} Iniciando fetchApresentacoes...`);
+  // Fetch apresentações
+  const fetchApresentacoes = useCallback(async () => {
     try {
-      setLoading(true);
+      console.log(`${CONSOLE_PREFIX} Buscando apresentações...`);
+      
       const { data, error } = await supabase
         .from("wishlist_apresentacoes")
         .select(`
           *,
-          empresa_facilitadora:empresas(*),
-          executivo_responsavel:usuarios(id, nome),
           wishlist_item:wishlist_items(
             *,
-            empresa_interessada:empresas!wishlist_items_empresa_interessada_id_fkey(*),
-            empresa_desejada:empresas!wishlist_items_empresa_desejada_id_fkey(*)
-          )
+            empresa_interessada:empresas!wishlist_items_empresa_interessada_id_fkey(id, nome, tipo),
+            empresa_desejada:empresas!wishlist_items_empresa_desejada_id_fkey(id, nome, tipo),
+            empresa_proprietaria:empresas!wishlist_items_empresa_proprietaria_id_fkey(id, nome, tipo)
+          ),
+          empresa_facilitadora:empresas!wishlist_apresentacoes_empresa_facilitadora_id_fkey(id, nome, tipo),
+          executivo_responsavel:usuarios(id, nome)
         `)
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error(`${CONSOLE_PREFIX} Erro ao buscar apresentações:`, error);
+        throw error;
+      }
 
-      // Garantir que os tipos estão corretos e nulos tratados
-      const typedData = (data || []).map((item: any) => ({
-        ...item,
-        tipo_apresentacao: item.tipo_apresentacao as TipoApresentacao,
-        status_apresentacao: item.status_apresentacao as StatusApresentacao,
-        fase_pipeline: item.fase_pipeline as PipelineFase,
-        empresa_facilitadora: item.empresa_facilitadora || null,
-        executivo_responsavel: item.executivo_responsavel || null,
-        wishlist_item: item.wishlist_item
-          ? {
-              ...item.wishlist_item,
-              status: item.wishlist_item.status as WishlistStatus,
-              empresa_interessada: item.wishlist_item.empresa_interessada || null,
-              empresa_desejada: item.wishlist_item.empresa_desejada || null,
-            }
-          : null,
-      }));
-
-      setApresentacoes(typedData);
+      console.log(`${CONSOLE_PREFIX} Apresentações encontradas:`, data?.length || 0);
+      setApresentacoes(data || []);
     } catch (error) {
-      console.error(`${CONSOLE_PREFIX} Erro ao buscar apresentações:`, error);
-      toast({
-        title: "Erro",
-        description: "Erro ao carregar apresentações",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-      console.log(`${CONSOLE_PREFIX} fetchApresentacoes concluído.`);
+      console.error(`${CONSOLE_PREFIX} Erro no fetchApresentacoes:`, error);
+      throw error;
     }
-  };
+  }, []);
 
-  // Fetch Stats
-  const fetchStats = async () => {
-    console.log(`${CONSOLE_PREFIX} Iniciando fetchStats...`);
+  // Fetch stats
+  const fetchStats = useCallback(async () => {
     try {
-      // Buscar estatísticas básicas
-      const [wishlistData, apresentacoesData] = await Promise.all([
-        supabase.from("wishlist_items").select("*"),
-        supabase.from("wishlist_apresentacoes").select("*"),
-      ]);
-
-      if (wishlistData.error) throw wishlistData.error;
-      if (apresentacoesData.error) throw apresentacoesData.error;
-
-      const wishlist = wishlistData.data || [];
-      const apresentacoes = apresentacoesData.data || [];
+      console.log(`${CONSOLE_PREFIX} Calculando estatísticas...`);
+      
+      // Implementar cálculos de estatísticas baseado nos dados atuais
+      const totalSolicitacoes = wishlistItems.length;
+      const solicitacoesPendentes = wishlistItems.filter(item => item.status === "pendente").length;
+      const solicitacoesAprovadas = wishlistItems.filter(item => item.status === "aprovado").length;
+      const apresentacoesRealizadas = apresentacoes.filter(ap => ap.fase_pipeline === "apresentado").length;
+      const conversaoOportunidades = apresentacoes.filter(ap => ap.converteu_oportunidade).length;
 
       const statsData: WishlistStats = {
-        totalSolicitacoes: wishlist.length,
-        solicitacoesPendentes: wishlist.filter(
-          (item: any) => item.status === "pendente"
-        ).length,
-        solicitacoesAprovadas: wishlist.filter(
-          (item: any) => item.status === "aprovado"
-        ).length,
-        apresentacoesRealizadas: apresentacoes.filter(
-          (item: any) => item.status_apresentacao === "realizada"
-        ).length,
-        conversaoOportunidades: apresentacoes.filter(
-          (item: any) => item.converteu_oportunidade
-        ).length,
+        totalSolicitacoes,
+        solicitacoesPendentes,
+        solicitacoesAprovadas,
+        apresentacoesRealizadas,
+        conversaoOportunidades,
         empresasMaisDesejadas: [],
         facilitacoesPorParceiro: [],
       };
 
       setStats(statsData);
+      console.log(`${CONSOLE_PREFIX} Estatísticas calculadas:`, statsData);
     } catch (error) {
-      console.error(`${CONSOLE_PREFIX} Erro ao buscar estatísticas:`, error);
-    } finally {
-      console.log(`${CONSOLE_PREFIX} fetchStats concluído.`);
+      console.error(`${CONSOLE_PREFIX} Erro no fetchStats:`, error);
+      throw error;
     }
-  };
+  }, [wishlistItems, apresentacoes]);
 
   return {
-    // State
     empresasClientes,
     wishlistItems,
     apresentacoes,
     stats,
-    loading,
-    // Setters
     setEmpresasClientes,
     setWishlistItems,
     setApresentacoes,
     setStats,
-    // Fetch functions
     fetchEmpresasClientes,
     fetchWishlistItems,
     fetchApresentacoes,

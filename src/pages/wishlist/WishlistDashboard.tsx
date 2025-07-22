@@ -1,302 +1,235 @@
+
 import React from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { useWishlist } from "@/contexts/WishlistContext";
-import { Heart, Users, Presentation, TrendingUp, Plus, Eye, Monitor, Star } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useClientesSobrepostos } from "@/hooks/useClientesSobrepostos";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useWishlist } from "@/contexts/WishlistContext";
+import { 
+  Users, 
+  ListChecks, 
+  Presentation, 
+  TrendingUp,
+  UserPlus,
+  Building2,
+  Target,
+  ArrowRight,
+  BarChart3,
+  FileText,
+  GitBranch
+} from "lucide-react";
 import { DemoModeToggle } from "@/components/privacy/DemoModeToggle";
 import { DemoModeIndicator } from "@/components/privacy/DemoModeIndicator";
-import { PrivateData } from "@/components/privacy/PrivateData";
 
 const WishlistDashboard: React.FC = () => {
-  const { stats, loading, apresentacoes, wishlistItems } = useWishlist();
-  const { totalSobrepostos, getClientesMaisCompartilhados } = useClientesSobrepostos();
   const navigate = useNavigate();
+  const { wishlistItems, empresasClientes, apresentacoes, stats } = useWishlist();
 
-  // Buscar atividades recentes reais
-  const getRecentActivities = () => {
-    const activities = [];
-
-    // Adicionar wishlist items recentes
-    const recentWishlistItems = wishlistItems
-      ?.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-      ?.slice(0, 3) || [];
-
-    recentWishlistItems.forEach(item => {
-      activities.push({
-        type: 'wishlist',
-        message: `Nova solicitação de apresentação`,
-        detail: `${item.empresa_interessada?.nome} interessada em cliente da ${item.empresa_proprietaria?.nome}`,
-        time: new Date(item.created_at)
-      });
-    });
-
-    // Adicionar apresentações recentes
-    const recentApresentacoes = apresentacoes
-      ?.filter(a => a.converteu_oportunidade)
-      ?.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-      ?.slice(0, 2) || [];
-
-    recentApresentacoes.forEach(apresentacao => {
-      activities.push({
-        type: 'apresentacao',
-        message: 'Apresentação realizada',
-        detail: `Empresa facilitada pela ${apresentacao.empresa_facilitadora?.nome} converteu em oportunidade`,
-        time: new Date(apresentacao.created_at)
-      });
-    });
-
-    return activities
-      .sort((a, b) => b.time.getTime() - a.time.getTime())
-      .slice(0, 5);
+  const quickStats = {
+    totalEmpresas: empresasClientes.length,
+    totalWishlistItems: wishlistItems.length,
+    totalApresentacoes: apresentacoes.length,
+    itemsPendentes: wishlistItems.filter(item => item.status === "pendente").length,
+    itensAprovados: wishlistItems.filter(item => item.status === "aprovado").length,
+    apresentacoesConvertidas: apresentacoes.filter(ap => ap.converteu_oportunidade).length,
   };
 
-  const formatTimeAgo = (date: Date) => {
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffDays = Math.floor(diffHours / 24);
+  const menuItems = [
+    {
+      title: "Base de Clientes",
+      description: "Gerencie a base de clientes das empresas parceiras",
+      icon: Building2,
+      path: "/wishlist/clientes",
+      count: quickStats.totalEmpresas,
+      color: "bg-blue-500"
+    },
+    {
+      title: "Wishlist Itens",
+      description: "Solicitações de apresentações e interesses",
+      icon: ListChecks,
+      path: "/wishlist/itens",
+      count: quickStats.totalWishlistItems,
+      color: "bg-green-500"
+    },
+    {
+      title: "Pipeline",
+      description: "Gerencie o fluxo de apresentações por parceiro",
+      icon: GitBranch,
+      path: "/wishlist/pipeline",
+      count: quickStats.totalApresentacoes,
+      color: "bg-purple-500"
+    },
+    {
+      title: "Apresentações",
+      description: "Histórico completo de apresentações realizadas",
+      icon: Presentation,
+      path: "/wishlist/apresentacoes",
+      count: quickStats.totalApresentacoes,
+      color: "bg-orange-500"
+    }
+  ];
 
-    if (diffDays > 0) return `${diffDays}d atrás`;
-    if (diffHours > 0) return `${diffHours}h atrás`;
-    return 'Agora mesmo';
-  };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">Carregando dashboard...</p>
-        </div>
-      </div>
-    );
-  }
-
-  const recentActivities = getRecentActivities();
+  const processItems = [
+    {
+      title: "Clientes Sobrepostos",
+      description: "Identifique oportunidades de cross-sell",
+      icon: Target,
+      path: "/wishlist/sobrepostos",
+      color: "bg-cyan-500"
+    },
+    {
+      title: "Modo Apresentação",
+      description: "Interface otimizada para apresentações",
+      icon: BarChart3,
+      path: "/wishlist/modo-apresentacao",
+      color: "bg-indigo-500"
+    },
+    {
+      title: "Troca Mútua",
+      description: "Facilite trocas de clientes entre parceiros",
+      icon: TrendingUp,
+      path: "/wishlist/troca-mutua",
+      color: "bg-pink-500"
+    },
+    {
+      title: "Qualificação",
+      description: "Qualifique leads e oportunidades",
+      icon: FileText,
+      path: "/wishlist/qualificacao",
+      color: "bg-emerald-500"
+    }
+  ];
 
   return (
     <div className="space-y-6">
       <DemoModeIndicator />
       
       {/* Header */}
-      <div className="flex justify-between items-center flex-wrap gap-4">
+      <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Wishlist - Networking Inteligente</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Wishlist Dashboard</h1>
+          <p className="text-muted-foreground">
+            Central de gerenciamento de relacionamentos e apresentações
+          </p>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <DemoModeToggle />
-          <Button onClick={() => navigate("modo-apresentacao")} variant="outline">
-            <Monitor className="mr-2 h-4 w-4" />
-            Troca & Apresentação
-          </Button>
-          <Button onClick={() => navigate("sobrepostos")} variant="outline">
-            <Eye className="mr-2 h-4 w-4" />
-            Clientes Sobrepostos
-          </Button>
-          <Button onClick={() => navigate("itens")}>
-            <Plus className="mr-2 h-4 w-4" />
-            Nova Solicitação
-          </Button>
-        </div>
+        <DemoModeToggle />
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      {/* Quick Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Solicitações</CardTitle>
-            <Heart className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.totalSolicitacoes || 0}</div>
-            <p className="text-xs text-muted-foreground">
-              Total de itens na wishlist
-            </p>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Total Empresas</p>
+                <p className="text-2xl font-bold">{quickStats.totalEmpresas}</p>
+              </div>
+              <Building2 className="h-8 w-8 text-blue-500" />
+            </div>
           </CardContent>
         </Card>
-
+        
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Apresentações</CardTitle>
-            <Presentation className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.apresentacoesRealizadas || 0}</div>
-            <p className="text-xs text-muted-foreground">
-              Realizadas este mês
-            </p>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Itens Pendentes</p>
+                <p className="text-2xl font-bold">{quickStats.itemsPendentes}</p>
+              </div>
+              <ListChecks className="h-8 w-8 text-yellow-500" />
+            </div>
           </CardContent>
         </Card>
-
+        
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Conversões</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.conversaoOportunidades || 0}</div>
-            <p className="text-xs text-muted-foreground">
-              Para oportunidades
-            </p>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Itens Aprovados</p>
+                <p className="text-2xl font-bold">{quickStats.itensAprovados}</p>
+              </div>
+              <TrendingUp className="h-8 w-8 text-green-500" />
+            </div>
           </CardContent>
         </Card>
+        
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Base de Clientes</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.empresasMaisDesejadas?.length || 0}</div>
-            <p className="text-xs text-muted-foreground">
-              Empresas cadastradas
-            </p>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Convertidas</p>
+                <p className="text-2xl font-bold">{quickStats.apresentacoesConvertidas}</p>
+              </div>
+              <Presentation className="h-8 w-8 text-purple-500" />
+            </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Workflow - atualizado */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <Card className="cursor-pointer hover:shadow-md transition-shadow"
-              onClick={() => navigate("sobrepostos")}>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center">
-              <Eye className="mr-2 h-5 w-5 text-orange-500" />
-              1. Identificar Sobreposições
-            </CardTitle>
-            <CardDescription>
-              Detecte clientes compartilhados automaticamente
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Badge variant="secondary">Fase 1</Badge>
-          </CardContent>
-        </Card>
-
-        <Card className="cursor-pointer hover:shadow-md transition-shadow"
-              onClick={() => navigate("modo-apresentacao")}>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center">
-              <Monitor className="mr-2 h-5 w-5 text-blue-500" />
-              2. Troca & Apresentação
-            </CardTitle>
-            <CardDescription>
-              Interface unificada para reuniões e negociação
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button variant="outline" className="w-full">
-              <Monitor className="mr-2 h-4 w-4" />
-              Iniciar
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card className="cursor-pointer hover:shadow-md transition-shadow"
-              onClick={() => navigate("qualificacao")}>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center">
-              <Star className="mr-2 h-5 w-5 text-purple-500" />
-              3. Qualificação
-            </CardTitle>
-            <CardDescription>
-              Avalie e converta clientes em oportunidades
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button variant="outline" className="w-full">
-              <Star className="mr-2 h-4 w-4" />
-              Qualificar
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Acesso Rápido - Funcionalidades Originais */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Funcionalidades Adicionais</CardTitle>
-          <CardDescription>
-            Acesso rápido às funcionalidades complementares
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-3">
-            <Button variant="outline" onClick={() => navigate("clientes")} className="h-auto p-4">
-              <div className="flex flex-col items-center gap-2">
-                <Users className="h-6 w-6" />
-                <div className="text-center">
-                  <div className="font-medium">Base de Clientes</div>
-                  <div className="text-sm text-muted-foreground">Gerencie carteiras</div>
-                </div>
-              </div>
-            </Button>
-
-            <Button variant="outline" onClick={() => navigate("itens")} className="h-auto p-4">
-              <div className="flex flex-col items-center gap-2">
-                <Heart className="h-6 w-6" />
-                <div className="text-center">
-                  <div className="font-medium">Wishlist Itens</div>
-                  <div className="text-sm text-muted-foreground">Solicitações de interesse</div>
-                </div>
-              </div>
-            </Button>
-
-            <Button variant="outline" onClick={() => navigate("apresentacoes")} className="h-auto p-4">
-              <div className="flex flex-col items-center gap-2">
-                <Presentation className="h-6 w-6" />
-                <div className="text-center">
-                  <div className="font-medium">Apresentações</div>
-                  <div className="text-sm text-muted-foreground">Facilitações realizadas</div>
-                </div>
-              </div>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Recent Activity */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Atividade Recente</CardTitle>
-          <CardDescription>
-            Últimas movimentações na wishlist e networking
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {recentActivities.length > 0 ? (
-              recentActivities.map((activity, index) => (
-                <div key={index} className="flex items-center">
-                  <div className="ml-4 space-y-1">
-                    <p className="text-sm font-medium leading-none">
-                      {activity.message}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      <PrivateData type="generic">
-                        {activity.detail}
-                      </PrivateData>
-                    </p>
+      {/* Main Menu */}
+      <div>
+        <h2 className="text-xl font-semibold mb-4">Menu Principal</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {menuItems.map((item) => (
+            <Card key={item.path} className="cursor-pointer hover:shadow-md transition-shadow">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className={`p-2 rounded-lg ${item.color}`}>
+                      <item.icon className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-lg">{item.title}</CardTitle>
+                      <p className="text-sm text-muted-foreground">{item.description}</p>
+                    </div>
                   </div>
-                  <div className="ml-auto text-sm text-muted-foreground">
-                    {formatTimeAgo(activity.time)}
+                  <div className="flex items-center space-x-2">
+                    <span className="text-2xl font-bold">{item.count}</span>
+                    <ArrowRight className="h-4 w-4 text-muted-foreground" />
                   </div>
                 </div>
-              ))
-            ) : (
-              <div className="text-center py-4">
-                <p className="text-sm text-muted-foreground">
-                  Nenhuma atividade recente encontrada
-                </p>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-      <div className="text-xs text-muted-foreground text-right pt-2">
-        Desenvolvido por Thiago Rotondo
+              </CardHeader>
+              <CardContent className="pt-0">
+                <Button 
+                  variant="outline" 
+                  className="w-full"
+                  onClick={() => navigate(item.path)}
+                >
+                  Acessar {item.title}
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+
+      {/* Process Tools */}
+      <div>
+        <h2 className="text-xl font-semibold mb-4">Ferramentas de Processo</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {processItems.map((item) => (
+            <Card key={item.path} className="cursor-pointer hover:shadow-md transition-shadow">
+              <CardContent className="pt-6">
+                <div className="text-center space-y-3">
+                  <div className={`mx-auto p-3 rounded-lg ${item.color} w-fit`}>
+                    <item.icon className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-sm">{item.title}</h3>
+                    <p className="text-xs text-muted-foreground">{item.description}</p>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className="w-full"
+                    onClick={() => navigate(item.path)}
+                  >
+                    Acessar
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
     </div>
   );

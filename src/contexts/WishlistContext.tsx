@@ -86,7 +86,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     fetchStats: fetchStatsData,
   } = useWishlistData();
 
-  // Usar o hook de mutations
+  // Usar o hook de mutations - Agora passa fetchApresentacoes também para wishlistItem mutations
   const {
     addEmpresaCliente,
     updateEmpresaCliente,
@@ -100,7 +100,10 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     solicitarApresentacao,
   } = useWishlistMutations(
     fetchEmpresasClientesData,
-    fetchWishlistItemsData,
+    async () => {
+      await fetchWishlistItemsData();
+      await fetchApresentacoesData(); // Recarregar apresentações quando wishlist items mudarem
+    },
     fetchApresentacoesData
   );
 
@@ -184,13 +187,14 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     try {
       await fetchWishlistItemsData();
+      await fetchApresentacoesData(); // Sempre recarregar apresentações junto
     } catch (err) {
       console.error(`${CONSOLE_PREFIX} Erro ao buscar wishlist items:`, err);
       throw err;
     } finally {
       setLoading(false);
     }
-  }, [fetchWishlistItemsData]);
+  }, [fetchWishlistItemsData, fetchApresentacoesData]);
 
   const fetchEmpresasClientes = useCallback(async () => {
     setLoading(true);
