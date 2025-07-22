@@ -1,3 +1,5 @@
+// Sem alteração. Este componente só exibe o modal para um relacionamento já selecionado,
+// não é responsável por filtrar a listagem de itens aprovados.
 
 import React from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
