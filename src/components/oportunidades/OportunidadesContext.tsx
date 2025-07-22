@@ -301,7 +301,7 @@ export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ child
         empresa_destino_id: oportunidade.empresa_destino_id,
         contato_id: oportunidade.contato_id,
         valor: oportunidade.valor,
-        status: (oportunidade.status || "em_contato") as any, // Type assertion para contornar o erro temporariamente
+        status: oportunidade.status || "em_contato",
         data_indicacao: oportunidade.data_indicacao || new Date().toISOString(),
         data_fechamento: oportunidade.data_fechamento,
         motivo_perda: sanitizeString(oportunidade.motivo_perda),
@@ -356,7 +356,7 @@ export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ child
       // Convert status to database acceptable format
       const cleanUpdates = { ...updates };
       if (cleanUpdates.status) {
-        cleanUpdates.status = cleanUpdates.status as any; // Type assertion
+        cleanUpdates.status = cleanUpdates.status;
       }
 
       const { error } = await supabase

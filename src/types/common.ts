@@ -1,5 +1,6 @@
 
 
+
 export type WishlistStatus =
   | "pendente"
   | "em_andamento"
@@ -11,6 +12,8 @@ export type TipoApresentacao =
   | "email"
   | "telefone"
   | "reuniao"
+  | "evento"
+  | "digital"
   | "outro";
 
 export type StatusApresentacao =
@@ -58,4 +61,5 @@ export type TipoNatureza =
 
 // Company size types
 export type TamanhoEmpresa = "PP" | "P" | "M" | "G" | "GG";
+
 
