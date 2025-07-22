@@ -63,8 +63,14 @@ const PipelineParceiroCard: React.FC<PipelineParceiroCardProps> = ({
 }) => {
   const [isExpanded, setIsExpanded] = useState(true);
   const [activeCard, setActiveCard] = useState<WishlistApresentacao | null>(null);
+  // Estado local otimista para apresentações
+  const [localApresentacoes, setLocalApresentacoes] = useState<WishlistApresentacao[]>(apresentacoes);
 
-  // Agrupa por fase
+  React.useEffect(() => {
+    setLocalApresentacoes(apresentacoes);
+  }, [apresentacoes]);
+
+  // Agrupa por fase usando localApresentacoes
   const apresentacoesPorFase = React.useMemo(() => {
     const grouped: Record<PipelineFase, WishlistApresentacao[]> = {
       aprovado: [],
@@ -75,31 +81,51 @@ const PipelineParceiroCard: React.FC<PipelineParceiroCardProps> = ({
       rejeitado: [],
     };
 
-    apresentacoes.forEach((apresentacao) => {
+    localApresentacoes.forEach((apresentacao) => {
       if (apresentacao.fase_pipeline) {
         grouped[apresentacao.fase_pipeline].push(apresentacao);
       }
     });
 
     return grouped;
-  }, [apresentacoes]);
+  }, [localApresentacoes]);
 
-  const totalClientes = apresentacoes.length;
+  const totalClientes = localApresentacoes.length;
 
-  // DnD: handle drag end para troca de fase
+  // DnD: handle drag end para troca de fase (otimista)
   const handleDragEnd = async (event: DragEndEvent) => {
     setActiveCard(null);
     const { active, over } = event;
     if (!over) return;
 
-    const card = apresentacoes.find(ap => ap.id === active.id);
+    const card = localApresentacoes.find(ap => ap.id === active.id);
     const faseDestino = over.id as PipelineFase;
     if (!card || card.fase_pipeline === faseDestino) return;
 
+    // Salva estado anterior para possível rollback
+    const prevApresentacoes = [...localApresentacoes];
+
+    // Atualização otimista
+    setLocalApresentacoes(apresentacoesAntigas =>
+      apresentacoesAntigas.map(ap =>
+        ap.id === card.id ? { ...ap, fase_pipeline: faseDestino } : ap
+      )
+    );
+
+    // Chama backend
     if (updateApresentacaoFase) {
-      await updateApresentacaoFase(card.id, faseDestino);
+      try {
+        await updateApresentacaoFase(card.id, faseDestino);
+        onUpdateApresentacao(); // Recarrega do backend se necessário
+      } catch (error) {
+        // Rollback em caso de erro
+        setLocalApresentacoes(prevApresentacoes);
+        // Feedback visual de erro
+        if (typeof window !== "undefined") {
+          window.alert("Erro ao atualizar fase. Tente novamente.");
+        }
+      }
     }
-    onUpdateApresentacao();
   };
 
   return (
@@ -125,7 +151,7 @@ const PipelineParceiroCard: React.FC<PipelineParceiroCardProps> = ({
             collisionDetection={closestCenter}
             onDragStart={event => {
               const itemId = event.active.id as string;
-              const card = apresentacoes.find(ap => ap.id === itemId);
+              const card = localApresentacoes.find(ap => ap.id === itemId);
               setActiveCard(card || null);
             }}
             onDragEnd={handleDragEnd}
