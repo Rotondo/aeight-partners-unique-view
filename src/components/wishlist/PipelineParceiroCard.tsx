@@ -54,21 +54,17 @@ const faseColors: Record<PipelineFase, string> = {
   rejeitado: "bg-red-100 text-red-800",
 };
 
-const PipelineParceiroCard: React.FC<PipelineParceiroCardProps> = ({
-  parceiroNome,
-  apresentacoes,
-  onUpdateApresentacao,
-  draggingId,
-  updateApresentacaoFase,
-}) => {
+const PipelineParceiroCard: React.FC<PipelineParceiroCardProps> = (props) => {
+  // Conteúdo comentado para debug
+  // const { parceiroNome, apresentacoes, onUpdateApresentacao, draggingId, updateApresentacaoFase } = props;
   const [isExpanded, setIsExpanded] = useState(true);
   const [activeCard, setActiveCard] = useState<WishlistApresentacao | null>(null);
   // Estado local otimista para apresentações
-  const [localApresentacoes, setLocalApresentacoes] = useState<WishlistApresentacao[]>(apresentacoes);
+  const [localApresentacoes, setLocalApresentacoes] = useState<WishlistApresentacao[]>(props.apresentacoes);
 
   React.useEffect(() => {
-    setLocalApresentacoes(apresentacoes);
-  }, [apresentacoes]);
+    setLocalApresentacoes(props.apresentacoes);
+  }, [props.apresentacoes]);
 
   // Agrupa por fase usando localApresentacoes
   const apresentacoesPorFase = React.useMemo(() => {
@@ -113,10 +109,10 @@ const PipelineParceiroCard: React.FC<PipelineParceiroCardProps> = ({
     );
 
     // Chama backend
-    if (updateApresentacaoFase) {
+    if (props.updateApresentacaoFase) {
       try {
-        await updateApresentacaoFase(card.id, faseDestino);
-        onUpdateApresentacao(); // Recarrega do backend se necessário
+        await props.updateApresentacaoFase(card.id, faseDestino);
+        props.onUpdateApresentacao(); // Recarrega do backend se necessário
       } catch (error) {
         // Rollback em caso de erro
         setLocalApresentacoes(prevApresentacoes);
@@ -133,7 +129,7 @@ const PipelineParceiroCard: React.FC<PipelineParceiroCardProps> = ({
       <CardHeader>
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <CardTitle className="text-lg">{parceiroNome}</CardTitle>
+            <CardTitle className="text-lg">{props.parceiroNome}</CardTitle>
             <Badge variant="outline">{totalClientes} clientes</Badge>
           </div>
           <Button
@@ -162,13 +158,13 @@ const PipelineParceiroCard: React.FC<PipelineParceiroCardProps> = ({
                   key={fase}
                   fase={fase}
                   apresentacoes={apresentacoesPorFase[fase]}
-                  draggingId={draggingId}
+                  draggingId={props.draggingId}
                 />
               ))}
             </div>
             <DragOverlay>
               {activeCard && (
-                <ClientePipelineItem apresentacao={activeCard} onUpdate={onUpdateApresentacao} />
+                <ClientePipelineItem apresentacao={activeCard} onUpdate={props.onUpdateApresentacao} />
               )}
             </DragOverlay>
           </DndContext>
