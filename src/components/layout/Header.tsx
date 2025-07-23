@@ -13,6 +13,7 @@ import {
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useAuth } from "@/hooks/useAuth";
 import { LogOut, User, Settings } from "lucide-react";
+import { DemoModeToggle } from "@/components/privacy/DemoModeToggle";
 
 export const Header = () => {
   // Safety check for React hooks
@@ -61,6 +62,8 @@ export const Header = () => {
       </div>
 
       <div className="ml-auto flex items-center gap-2">
+        <DemoModeToggle variant="ghost" size="sm" showLabel={false} />
+        
         {user ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
