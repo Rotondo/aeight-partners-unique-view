@@ -8,7 +8,7 @@ import { useOportunidades } from "@/components/oportunidades/OportunidadesContex
 const Index = () => {
   console.log('Index: Renderizando página principal');
   
-  const { oportunidades, loading } = useOportunidades();
+  const { oportunidades, isLoading } = useOportunidades();
   const stats = useDashboardStats(oportunidades);
   
   return (
@@ -16,7 +16,7 @@ const Index = () => {
       <DemoModeIndicator />
       <div className="space-y-6">
         <QuickAccess />
-        <DashboardStats stats={stats} loading={loading} />
+        <DashboardStats stats={stats} loading={isLoading} />
       </div>
     </div>
   );
