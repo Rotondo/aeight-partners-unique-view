@@ -1,186 +1,112 @@
+import React from "react";
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 
-import React, { Suspense, lazy } from 'react';
-import { Toaster } from '@/components/ui/toaster';
-import { Toaster as Sonner } from '@/components/ui/sonner';
-import { TooltipProvider } from '@/components/ui/tooltip';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { PrivacyProvider } from '@/contexts/PrivacyContext';
-import { AuthProvider } from '@/hooks/useAuth';
-import MainLayout from '@/components/layout/MainLayout';
-import { PrivateRoute } from '@/components/auth/PrivateRoute';
-import LoadingScreen from '@/components/ui/LoadingScreen';
+import Index from "./pages/Index";
+import LoginPage from "./pages/auth/LoginPage";
+import PrivateRoute from "./components/auth/PrivateRoute";
+import MainLayout from "./components/layout/MainLayout";
+import DashboardPage from "./pages/dashboard/DashboardPage";
+import OportunidadesPage from "./pages/oportunidades";
+import OportunidadesDashboard from "./pages/oportunidades-dashboard";
+import EventosPage from "./pages/eventos/EventosPage";
+import QuadrantePage from "./pages/quadrante/QuadrantePage";
+import MapaParceirosPage from "./pages/mapa-parceiros/MapaParceirosPage";
+import OnePagerPage from "./pages/onepager/OnePagerPage";
+import DiarioPage from "./pages/diario";
+import AdminPage from "./pages/admin";
+import MapaParceiroAdminPage from "./pages/admin/MapaParceiroAdminPage";
+import UsuariosAdminPage from "./pages/admin/UsuariosAdminPage";
+import WishlistPage from "./pages/wishlist/WishlistPage";
+import ClientesSobrepostosPage from "./pages/wishlist/ClientesSobrepostosPage";
+import { WishlistProvider } from "./contexts/WishlistContext";
+import { CrmProvider } from "./contexts/CrmContext";
+import CategoriasPage from "./pages/categorias/CategoriasPage";
+import ContatosPage from "./pages/contatos/ContatosPage";
+import EmpresasPage from "./pages/empresas/EmpresasPage";
+import IndicadoresPage from "./pages/indicadores/IndicadoresPage";
+import RepositorioPage from "./pages/repositorio/RepositorioPage";
+import NotFoundPage from "./pages/NotFoundPage";
+import { PrivacyProvider } from "./contexts/PrivacyContext";
+import { IAProvider } from "./contexts/IAContext";
+import ErrorBoundary from "./components/ErrorBoundary";
+import ReactSafetyProvider from "./components/ui/ReactSafetyProvider";
 
-// Lazy load components
-const Index = lazy(() => import('@/pages/Index'));
-const LoginPage = lazy(() => import('@/pages/auth/LoginPage'));
-const AdminPage = lazy(() => import('@/components/admin/AdminPage'));
-const MapaParceirosPage = lazy(() => import('@/pages/mapa-parceiros/MapaParceirosPage'));
-const EmpresasPage = lazy(() => import('@/pages/empresas/EmpresasPage'));
-const CategoriasPage = lazy(() => import('@/pages/categorias/CategoriasPage'));
-const ContatosPage = lazy(() => import('@/pages/contatos/ContatosPage'));
-const ClientesPage = lazy(() => import('@/pages/wishlist/ClientesSobrepostosPage'));
-const IndicadoresPage = lazy(() => import('@/pages/indicadores/IndicadoresPage'));
-const OnePagersPage = lazy(() => import('@/pages/onepager'));
-const RepositorioPage = lazy(() => import('@/pages/repositorio/RepositorioPage'));
-const WishlistPage = lazy(() => import('@/pages/wishlist/WishlistPage'));
-const EventosPage = lazy(() => import('@/pages/eventos/EventosPage'));
-const MetasOportunidadesPage = lazy(() => import('@/pages/indicadores/IndicadoresPage'));
-const OportunidadesPage = lazy(() => import('@/pages/oportunidades/index'));
-const OportunidadesDashboardPage = lazy(() => import('@/pages/oportunidades-dashboard'));
-const QuadrantePage = lazy(() => import('@/pages/quadrante'));
-const DiarioPage = lazy(() => import('@/pages/diario'));
-const MapaParceiroAdminPage = lazy(() => import('@/pages/admin/MapaParceiroAdminPage'));
-
-// Create QueryClient instance
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: 2,
-      staleTime: 5 * 60 * 1000, // 5 minutes
+      retry: 1,
+      refetchOnWindowFocus: false,
     },
   },
 });
 
 function App() {
-  console.log('[App] Rendering main application...');
+  console.log("[App] Rendering main application...");
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <PrivacyProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <Routes>
-                <Route path="/login" element={
-                  <Suspense fallback={<LoadingScreen />}>
-                    <LoginPage />
-                  </Suspense>
-                } />
-                
-                <Route path="/" element={<MainLayout />}>
-                  <Route index element={
-                    <Suspense fallback={<LoadingScreen />}>
-                      <Index />
-                    </Suspense>
-                  } />
-                  
-                  <Route path="/mapa-parceiros" element={
-                    <Suspense fallback={<LoadingScreen />}>
-                      <MapaParceirosPage />
-                    </Suspense>
-                  } />
-
-                  <Route path="/empresas" element={
-                    <Suspense fallback={<LoadingScreen />}>
-                      <EmpresasPage />
-                    </Suspense>
-                  } />
-
-                  <Route path="/categorias" element={
-                    <Suspense fallback={<LoadingScreen />}>
-                      <CategoriasPage />
-                    </Suspense>
-                  } />
-
-                  <Route path="/contatos" element={
-                    <Suspense fallback={<LoadingScreen />}>
-                      <ContatosPage />
-                    </Suspense>
-                  } />
-
-                  <Route path="/clientes" element={
-                    <Suspense fallback={<LoadingScreen />}>
-                      <ClientesPage />
-                    </Suspense>
-                  } />
-
-                  <Route path="/indicadores" element={
-                    <Suspense fallback={<LoadingScreen />}>
-                      <IndicadoresPage />
-                    </Suspense>
-                  } />
-
-                  <Route path="/one-pagers" element={
-                    <Suspense fallback={<LoadingScreen />}>
-                      <OnePagersPage />
-                    </Suspense>
-                  } />
-
-                  <Route path="/repositorio" element={
-                    <Suspense fallback={<LoadingScreen />}>
-                      <RepositorioPage />
-                    </Suspense>
-                  } />
-
-                  <Route path="/wishlist/*" element={
-                    <Suspense fallback={<LoadingScreen />}>
-                      <WishlistPage />
-                    </Suspense>
-                  } />
-
-                  <Route path="/eventos" element={
-                    <Suspense fallback={<LoadingScreen />}>
-                      <EventosPage />
-                    </Suspense>
-                  } />
-
-                  <Route path="/metas-oportunidades" element={
-                    <Suspense fallback={<LoadingScreen />}>
-                      <MetasOportunidadesPage />
-                    </Suspense>
-                  } />
-
-                  <Route path="/oportunidades" element={
-                    <Suspense fallback={<LoadingScreen />}>
-                      <OportunidadesPage />
-                    </Suspense>
-                  } />
-
-                  <Route path="/oportunidades-dashboard" element={
-                    <Suspense fallback={<LoadingScreen />}>
-                      <OportunidadesDashboardPage />
-                    </Suspense>
-                  } />
-
-                  <Route path="/quadrante" element={
-                    <Suspense fallback={<LoadingScreen />}>
-                      <QuadrantePage />
-                    </Suspense>
-                  } />
-
-                  <Route path="/diario" element={
-                    <PrivateRoute>
-                      <Suspense fallback={<LoadingScreen />}>
-                        <DiarioPage />
-                      </Suspense>
-                    </PrivateRoute>
-                  } />
-                  
-                  <Route path="/admin" element={
-                    <PrivateRoute>
-                      <Suspense fallback={<LoadingScreen />}>
-                        <AdminPage />
-                      </Suspense>
-                    </PrivateRoute>
-                  } />
-
-                  <Route path="/admin/mapa-parceiros" element={
-                    <PrivateRoute>
-                      <Suspense fallback={<LoadingScreen />}>
-                        <MapaParceiroAdminPage />
-                      </Suspense>
-                    </PrivateRoute>
-                  } />
-                </Route>
-              </Routes>
-            </BrowserRouter>
-          </TooltipProvider>
-        </PrivacyProvider>
-      </AuthProvider>
-    </QueryClientProvider>
+    <ReactSafetyProvider>
+      <PrivacyProvider>
+        <IAProvider>
+          <QueryClientProvider client={queryClient}>
+            <Router>
+              <ErrorBoundary>
+                <Routes>
+                  <Route path="/login" element={<LoginPage />} />
+                  <Route
+                    path="/*"
+                    element={
+                      <PrivateRoute>
+                        <MainLayout>
+                          <Routes>
+                            <Route index element={<Index />} />
+                            <Route path="/dashboard" element={<DashboardPage />} />
+                            <Route path="/oportunidades/*" element={<OportunidadesPage />} />
+                            <Route path="/oportunidades-dashboard" element={<OportunidadesDashboard />} />
+                            <Route path="/eventos" element={<EventosPage />} />
+                            <Route path="/quadrante" element={<QuadrantePage />} />
+                            <Route path="/mapa-parceiros" element={<MapaParceirosPage />} />
+                            <Route path="/onepager" element={<OnePagerPage />} />
+                            <Route path="/diario/*" element={<DiarioPage />} />
+                            <Route path="/admin" element={<AdminPage />} />
+                            <Route path="/admin/mapa-parceiro" element={<MapaParceiroAdminPage />} />
+                            <Route path="/admin/usuarios" element={<UsuariosAdminPage />} />
+                            <Route path="/wishlist/*" element={<WishlistPage />} />
+                            {/* Wrap clientes route with WishlistProvider and CrmProvider */}
+                            <Route 
+                              path="/clientes" 
+                              element={
+                                <WishlistProvider>
+                                  <CrmProvider>
+                                    <ClientesSobrepostosPage />
+                                  </CrmProvider>
+                                </WishlistProvider>
+                              } 
+                            />
+                            <Route path="/categorias" element={<CategoriasPage />} />
+                            <Route path="/contatos" element={<ContatosPage />} />
+                            <Route path="/empresas" element={<EmpresasPage />} />
+                            <Route path="/indicadores" element={<IndicadoresPage />} />
+                            <Route path="/repositorio" element={<RepositorioPage />} />
+                            <Route path="*" element={<NotFoundPage />} />
+                          </Routes>
+                        </MainLayout>
+                      </PrivateRoute>
+                    }
+                  />
+                </Routes>
+              </ErrorBoundary>
+              <Toaster />
+              <Sonner />
+              <SpeedInsights />
+            </Router>
+          </QueryClientProvider>
+        </IAProvider>
+      </PrivacyProvider>
+    </ReactSafetyProvider>
   );
 }
 
