@@ -2,11 +2,11 @@
 import React from 'react';
 import { AreaChart, Zap } from 'lucide-react';
 import { DashboardCard } from './DashboardCard';
-import { DashboardStats } from '@/hooks/useDashboardStats';
+import { DashboardStats as DashboardStatsType } from '@/hooks/useDashboardStats';
 import { PrivateData } from '@/components/privacy/PrivateData';
 
 interface DashboardStatsProps {
-  stats: DashboardStats | null;
+  stats: DashboardStatsType | null;
   loading: boolean;
 }
 
@@ -83,3 +83,6 @@ export const DashboardStatsSection: React.FC<DashboardStatsProps> = ({
     </div>
   );
 };
+
+// Export the main component as DashboardStats for backward compatibility
+export const DashboardStats = DashboardStatsSection;
