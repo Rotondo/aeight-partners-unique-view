@@ -2,7 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/sonner';
-import { MainLayout } from '@/components/layout/MainLayout';
+import MainLayout from '@/components/layout/MainLayout';
 import { PrivacyProvider } from '@/contexts/PrivacyContext';
 import { WishlistProvider } from '@/contexts/WishlistContext';
 import { CrmProvider } from '@/contexts/CrmContext';
@@ -11,22 +11,22 @@ import { ReactSafetyProvider } from '@/components/ui/ReactSafetyProvider';
 
 // Imports for all pages
 import Index from '@/pages/Index';
-import { LoginPage } from '@/pages/auth/LoginPage';
-import { DashboardPage } from '@/pages/dashboard/DashboardPage';
+import LoginPage from '@/pages/auth/LoginPage';
+import DashboardPage from '@/pages/dashboard/DashboardPage';
 import { OportunidadesPage } from '@/components/oportunidades/OportunidadesPage';
-import { EmpresasPage } from '@/pages/empresas/EmpresasPage';
-import { ContatosPage } from '@/pages/contatos/ContatosPage';
-import { CategoriasPage } from '@/pages/categorias/CategoriasPage';
-import { IndicadoresPage } from '@/pages/indicadores/IndicadoresPage';
-import { AdminPage } from '@/pages/admin.tsx';
-import { MapaParceirosPage } from '@/pages/mapa-parceiros/MapaParceirosPage';
-import { OnePagerPage } from '@/pages/onepager/OnePagerPage';
-import { RepositorioPage } from '@/pages/repositorio/RepositorioPage';
-import { QuadrantePage } from '@/pages/quadrante/QuadrantePage';
-import { EventosPage } from '@/pages/eventos/EventosPage';
-import { WishlistPage } from '@/pages/wishlist/WishlistPage';
-import { DiarioPage } from '@/pages/diario/index';
-import { NotFoundPage } from '@/pages/NotFoundPage';
+import EmpresasPage from '@/pages/empresas/EmpresasPage';
+import ContatosPage from '@/pages/contatos/ContatosPage';
+import CategoriasPage from '@/pages/categorias/CategoriasPage';
+import IndicadoresPage from '@/pages/indicadores/IndicadoresPage';
+import AdminPage from '@/pages/admin.tsx';
+import MapaParceirosPage from '@/pages/mapa-parceiros/MapaParceirosPage';
+import OnePagerPage from '@/pages/onepager/OnePagerPage';
+import RepositorioPage from '@/pages/repositorio/RepositorioPage';
+import QuadrantePage from '@/pages/quadrante/QuadrantePage';
+import EventosPage from '@/pages/eventos/EventosPage';
+import WishlistPage from '@/pages/wishlist/WishlistPage';
+import DiarioPage from '@/pages/diario/index';
+import NotFoundPage from '@/pages/NotFoundPage';
 
 // Create a client
 const queryClient = new QueryClient({

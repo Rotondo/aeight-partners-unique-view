@@ -86,8 +86,8 @@ export const useParceiroStats = (filters: UseParceiroStatsFilters = {}) => {
       if (oportunidadesRecebidas.length > 0) {
         const dataCadastro = parseISO(parceiro.created_at);
         const diasDesdecadastro = differenceInDays(new Date(), dataCadastro);
-        if (diasDesdecastro > 0) {
-          mediaOportunidadesPorDia = recebidas / diasDesdecastro;
+        if (diasDesdecadastro > 0) {
+          mediaOportunidadesPorDia = recebidas / diasDesdecadastro;
         }
       }
 
