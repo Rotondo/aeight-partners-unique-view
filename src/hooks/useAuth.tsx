@@ -60,15 +60,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       logAuth('fetchUserFromDB', { email });
       
-      // Execute the query and await the response
-      const queryResult = await supabase
+      // Corrigido: garantir que a Promise seja executada
+      const queryPromise = supabase
         .from("usuarios")
         .select("*")
         .eq("email", email)
         .maybeSingle();
       
       // Apply timeout to the already resolved query result
-      const { data, error: dbError } = await withTimeout(Promise.resolve(queryResult), AUTH_TIMEOUT);
+      const { data, error: dbError } = await withTimeout((async () => await queryPromise)(), AUTH_TIMEOUT);
       
       if (dbError) {
         throw dbError;
@@ -102,8 +102,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setError(null);
     
     try {
-      const authResult = await supabase.auth.getUser();
-      const { data: authData, error: authError } = await withTimeout(Promise.resolve(authResult), AUTH_TIMEOUT);
+      // Corrigido: garantir que a Promise seja executada
+      const authPromise = supabase.auth.getUser();
+      const { data: authData, error: authError } = await withTimeout((async () => await authPromise)(), AUTH_TIMEOUT);
       
       if (authError || !authData?.user) {
         logAuth('no_authenticated_user');
@@ -130,8 +131,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       logAuth('auth_initialization_start');
       
       try {
-        const sessionResult = await supabase.auth.getSession();
-        const { data: { session } } = await withTimeout(Promise.resolve(sessionResult), AUTH_TIMEOUT);
+        // Corrigido: garantir que a Promise seja executada
+        const sessionPromise = supabase.auth.getSession();
+        const { data: { session } } = await withTimeout((async () => await sessionPromise)(), AUTH_TIMEOUT);
         
         if (mounted) {
           if (session?.user) {
@@ -197,12 +199,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setError(null);
     
     try {
-      const signInResult = await supabase.auth.signInWithPassword({
+      // Corrigido: garantir que a Promise seja executada
+      const signInPromise = supabase.auth.signInWithPassword({
         email: email.trim().toLowerCase(),
         password: senha,
       });
 
-      const { data, error: authError } = await withTimeout(Promise.resolve(signInResult), AUTH_TIMEOUT);
+      const { data, error: authError } = await withTimeout((async () => await signInPromise)(), AUTH_TIMEOUT);
 
       if (authError) {
         throw authError;
