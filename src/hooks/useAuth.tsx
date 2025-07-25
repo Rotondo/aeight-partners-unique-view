@@ -201,7 +201,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         email: email.trim().toLowerCase(),
         password: senha,
       });
+      console.log('[Auth] Antes do await signInPromise');
       const { data, error: authError } = await withTimeout((async () => await signInPromise)(), AUTH_TIMEOUT);
+      console.log('[Auth] Depois do await signInPromise');
       console.log('[Auth] Supabase Auth response:', { data, authError });
       if (authError) {
         throw authError;
