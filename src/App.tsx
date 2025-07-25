@@ -1,111 +1,166 @@
-import React from "react";
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { SpeedInsights } from "@vercel/speed-insights/react";
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Toaster } from '@/components/ui/sonner';
+import { MainLayout } from '@/components/layout/MainLayout';
+import { PrivacyProvider } from '@/contexts/PrivacyContext';
+import { WishlistProvider } from '@/contexts/WishlistContext';
+import { CrmProvider } from '@/contexts/CrmContext';
+import { PrivateRoute } from '@/components/auth/PrivateRoute';
+import { ReactSafetyProvider } from '@/components/ui/ReactSafetyProvider';
 
-import Index from "./pages/Index";
-import LoginPage from "./pages/auth/LoginPage";
-import PrivateRoute from "./components/auth/PrivateRoute";
-import MainLayout from "./components/layout/MainLayout";
-import DashboardPage from "./pages/dashboard/DashboardPage";
-import OportunidadesPage from "./pages/oportunidades";
-import OportunidadesDashboard from "./pages/oportunidades-dashboard";
-import EventosPage from "./pages/eventos/EventosPage";
-import QuadrantePage from "./pages/quadrante/QuadrantePage";
-import MapaParceirosPage from "./pages/mapa-parceiros/MapaParceirosPage";
-import OnePagerPage from "./pages/onepager/OnePagerPage";
-import DiarioPage from "./pages/diario";
-import AdminPage from "./pages/admin";
-import MapaParceiroAdminPage from "./pages/admin/MapaParceiroAdminPage";
-import UsuariosAdminPage from "./pages/admin/UsuariosAdminPage";
-import WishlistPage from "./pages/wishlist/WishlistPage";
-import ClientesSobrepostosPage from "./pages/wishlist/ClientesSobrepostosPage";
-import { WishlistProvider } from "./contexts/WishlistContext";
-import { CrmProvider } from "./contexts/CrmContext";
-import CategoriasPage from "./pages/categorias/CategoriasPage";
-import ContatosPage from "./pages/contatos/ContatosPage";
-import EmpresasPage from "./pages/empresas/EmpresasPage";
-import IndicadoresPage from "./pages/indicadores/IndicadoresPage";
-import RepositorioPage from "./pages/repositorio/RepositorioPage";
-import NotFoundPage from "./pages/NotFoundPage";
-import { PrivacyProvider } from "./contexts/PrivacyContext";
-import { IAProvider } from "./contexts/IAContext";
-import ErrorBoundary from "./components/ErrorBoundary";
-import ReactSafetyProvider from "./components/ui/ReactSafetyProvider";
+// Imports for all pages
+import Index from '@/pages/Index';
+import { LoginPage } from '@/pages/auth/LoginPage';
+import { DashboardPage } from '@/pages/dashboard/DashboardPage';
+import { OportunidadesPage } from '@/components/oportunidades/OportunidadesPage';
+import { EmpresasPage } from '@/pages/empresas/EmpresasPage';
+import { ContatosPage } from '@/pages/contatos/ContatosPage';
+import { CategoriasPage } from '@/pages/categorias/CategoriasPage';
+import { IndicadoresPage } from '@/pages/indicadores/IndicadoresPage';
+import { AdminPage } from '@/pages/admin.tsx';
+import { MapaParceirosPage } from '@/pages/mapa-parceiros/MapaParceirosPage';
+import { OnePagerPage } from '@/pages/onepager/OnePagerPage';
+import { RepositorioPage } from '@/pages/repositorio/RepositorioPage';
+import { QuadrantePage } from '@/pages/quadrante/QuadrantePage';
+import { EventosPage } from '@/pages/eventos/EventosPage';
+import { WishlistPage } from '@/pages/wishlist/WishlistPage';
+import { DiarioPage } from '@/pages/diario/index';
+import { NotFoundPage } from '@/pages/NotFoundPage';
 
+// Create a client
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutes
       retry: 1,
-      refetchOnWindowFocus: false,
     },
   },
 });
 
 function App() {
-  console.log("[App] Rendering main application...");
-
   return (
     <ReactSafetyProvider>
-      <PrivacyProvider>
-        <IAProvider>
-          <QueryClientProvider client={queryClient}>
-            <Router>
-              <ErrorBoundary>
-                <Routes>
-                  <Route path="/login" element={<LoginPage />} />
-                  <Route
-                    path="/*"
-                    element={
-                      <PrivateRoute>
-                        <MainLayout>
-                          <Routes>
-                            <Route index element={<Index />} />
-                            <Route path="/dashboard" element={<DashboardPage />} />
-                            <Route path="/oportunidades/*" element={<OportunidadesPage />} />
-                            <Route path="/oportunidades-dashboard" element={<OportunidadesDashboard />} />
-                            <Route path="/eventos" element={<EventosPage />} />
-                            <Route path="/quadrante" element={<QuadrantePage />} />
-                            <Route path="/mapa-parceiros" element={<MapaParceirosPage />} />
-                            <Route path="/onepager" element={<OnePagerPage />} />
-                            <Route path="/diario/*" element={<DiarioPage />} />
-                            <Route path="/admin" element={<AdminPage />} />
-                            <Route path="/admin/mapa-parceiro" element={<MapaParceiroAdminPage />} />
-                            <Route path="/admin/usuarios" element={<UsuariosAdminPage />} />
-                            <Route path="/wishlist/*" element={<WishlistPage />} />
-                            {/* Wrap clientes route with WishlistProvider and CrmProvider */}
-                            <Route 
-                              path="/clientes" 
-                              element={
-                                <WishlistProvider>
-                                  <CrmProvider>
-                                    <ClientesSobrepostosPage />
-                                  </CrmProvider>
-                                </WishlistProvider>
-                              } 
-                            />
-                            <Route path="/categorias" element={<CategoriasPage />} />
-                            <Route path="/contatos" element={<ContatosPage />} />
-                            <Route path="/empresas" element={<EmpresasPage />} />
-                            <Route path="/indicadores" element={<IndicadoresPage />} />
-                            <Route path="/repositorio" element={<RepositorioPage />} />
-                            <Route path="*" element={<NotFoundPage />} />
-                          </Routes>
-                        </MainLayout>
-                      </PrivateRoute>
-                    }
-                  />
-                </Routes>
-              </ErrorBoundary>
-              <Toaster />
-              <Sonner />
-              <SpeedInsights />
-            </Router>
-          </QueryClientProvider>
-        </IAProvider>
-      </PrivacyProvider>
+      <QueryClientProvider client={queryClient}>
+        <PrivacyProvider>
+          <Router>
+            <Routes>
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/" element={
+                <PrivateRoute>
+                  <MainLayout>
+                    <Index />
+                  </MainLayout>
+                </PrivateRoute>
+              } />
+              <Route path="/dashboard" element={
+                <PrivateRoute>
+                  <MainLayout>
+                    <DashboardPage />
+                  </MainLayout>
+                </PrivateRoute>
+              } />
+              <Route path="/oportunidades" element={
+                <PrivateRoute>
+                  <MainLayout>
+                    <OportunidadesPage />
+                  </MainLayout>
+                </PrivateRoute>
+              } />
+              <Route path="/empresas" element={
+                <PrivateRoute>
+                  <MainLayout>
+                    <EmpresasPage />
+                  </MainLayout>
+                </PrivateRoute>
+              } />
+              <Route path="/contatos" element={
+                <PrivateRoute>
+                  <MainLayout>
+                    <ContatosPage />
+                  </MainLayout>
+                </PrivateRoute>
+              } />
+              <Route path="/categorias" element={
+                <PrivateRoute>
+                  <MainLayout>
+                    <CategoriasPage />
+                  </MainLayout>
+                </PrivateRoute>
+              } />
+              <Route path="/indicadores" element={
+                <PrivateRoute>
+                  <MainLayout>
+                    <IndicadoresPage />
+                  </MainLayout>
+                </PrivateRoute>
+              } />
+              <Route path="/admin" element={
+                <PrivateRoute>
+                  <MainLayout>
+                    <AdminPage />
+                  </MainLayout>
+                </PrivateRoute>
+              } />
+              <Route path="/mapa-parceiros" element={
+                <PrivateRoute>
+                  <MainLayout>
+                    <MapaParceirosPage />
+                  </MainLayout>
+                </PrivateRoute>
+              } />
+              <Route path="/onepager" element={
+                <PrivateRoute>
+                  <MainLayout>
+                    <OnePagerPage />
+                  </MainLayout>
+                </PrivateRoute>
+              } />
+              <Route path="/repositorio" element={
+                <PrivateRoute>
+                  <MainLayout>
+                    <RepositorioPage />
+                  </MainLayout>
+                </PrivateRoute>
+              } />
+              <Route path="/quadrante" element={
+                <PrivateRoute>
+                  <MainLayout>
+                    <QuadrantePage />
+                  </MainLayout>
+                </PrivateRoute>
+              } />
+              <Route path="/eventos" element={
+                <PrivateRoute>
+                  <MainLayout>
+                    <EventosPage />
+                  </MainLayout>
+                </PrivateRoute>
+              } />
+              <Route path="/clientes" element={
+                <PrivateRoute>
+                  <MainLayout>
+                    <WishlistProvider>
+                      <CrmProvider>
+                        <WishlistPage />
+                      </CrmProvider>
+                    </WishlistProvider>
+                  </MainLayout>
+                </PrivateRoute>
+              } />
+              <Route path="/diario" element={
+                <PrivateRoute>
+                  <MainLayout>
+                    <DiarioPage />
+                  </MainLayout>
+                </PrivateRoute>
+              } />
+              <Route path="*" element={<NotFoundPage />} />
+            </Routes>
+            <Toaster />
+          </Router>
+        </PrivacyProvider>
+      </QueryClientProvider>
     </ReactSafetyProvider>
   );
 }
