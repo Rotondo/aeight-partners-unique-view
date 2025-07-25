@@ -60,13 +60,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       logAuth('fetchUserFromDB', { email });
       
-      const query = supabase
+      const queryPromise = supabase
         .from("usuarios")
         .select("*")
         .eq("email", email)
         .maybeSingle();
       
-      const { data, error: dbError } = await withTimeout(query, AUTH_TIMEOUT);
+      const { data, error: dbError } = await withTimeout(queryPromise, AUTH_TIMEOUT);
       
       if (dbError) {
         throw dbError;
@@ -100,10 +100,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setError(null);
     
     try {
-      const { data: authData, error: authError } = await withTimeout(
-        supabase.auth.getUser(),
-        AUTH_TIMEOUT
-      );
+      const authPromise = supabase.auth.getUser();
+      const { data: authData, error: authError } = await withTimeout(authPromise, AUTH_TIMEOUT);
       
       if (authError || !authData?.user) {
         logAuth('no_authenticated_user');
@@ -130,10 +128,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       logAuth('auth_initialization_start');
       
       try {
-        const { data: { session } } = await withTimeout(
-          supabase.auth.getSession(),
-          AUTH_TIMEOUT
-        );
+        const sessionPromise = supabase.auth.getSession();
+        const { data: { session } } = await withTimeout(sessionPromise, AUTH_TIMEOUT);
         
         if (mounted) {
           if (session?.user) {
@@ -199,13 +195,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setError(null);
     
     try {
-      const { data, error: authError } = await withTimeout(
-        supabase.auth.signInWithPassword({
-          email: email.trim().toLowerCase(),
-          password: senha,
-        }),
-        AUTH_TIMEOUT
-      );
+      const signInPromise = supabase.auth.signInWithPassword({
+        email: email.trim().toLowerCase(),
+        password: senha,
+      });
+
+      const { data, error: authError } = await withTimeout(signInPromise, AUTH_TIMEOUT);
 
       if (authError) {
         throw authError;
