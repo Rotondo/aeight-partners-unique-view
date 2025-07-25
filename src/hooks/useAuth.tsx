@@ -199,30 +199,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setError(null);
     
     try {
-      // Corrigido: garantir que a Promise seja executada
-      const signInPromise = supabase.auth.signInWithPassword({
+      console.log('[Auth] Iniciando signInWithPassword...');
+      
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
         email: email.trim().toLowerCase(),
         password: senha,
       });
 
-      const { data, error: authError } = await withTimeout((async () => await signInPromise)(), AUTH_TIMEOUT);
+      console.log('[Auth] Resultado signInWithPassword:', { data: !!data, error: authError });
 
       if (authError) {
+        console.error('[Auth] Erro de autenticação:', authError);
         throw authError;
       }
 
+      console.log('[Auth] Autenticação bem-sucedida, buscando usuário no DB...');
       const dbUser = await fetchUserFromDB(email);
+      console.log('[Auth] Resultado fetchUserFromDB:', { user: !!dbUser });
       
       if (!dbUser) {
+        console.log('[Auth] Usuário não encontrado na base de dados');
         setError("Usuário não encontrado na base de dados.");
         return false;
       }
       
       if (dbUser.ativo === false) {
+        console.log('[Auth] Usuário inativo');
         setError("Usuário inativo. Entre em contato com o administrador.");
         return false;
       }
       
+      console.log('[Auth] Login bem-sucedido!');
       setUser(dbUser);
       logAuth('login_success');
       return true;
@@ -243,7 +250,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setLoading(false);
     }
-  }, [logAuth, withTimeout, fetchUserFromDB]);
+  }, [logAuth, fetchUserFromDB]);
 
   const logout = useCallback(async () => {
     logAuth('logout_start');
