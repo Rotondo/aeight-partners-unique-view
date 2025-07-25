@@ -60,12 +60,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       logAuth('fetchUserFromDB', { email });
       
+      // Create the promise directly from the query
       const queryPromise = supabase
         .from("usuarios")
         .select("*")
         .eq("email", email)
         .maybeSingle();
       
+      // Await the query to get the actual response
       const { data, error: dbError } = await withTimeout(queryPromise, AUTH_TIMEOUT);
       
       if (dbError) {
