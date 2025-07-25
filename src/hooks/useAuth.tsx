@@ -60,15 +60,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       logAuth('fetchUserFromDB', { email });
       
-      // Create the promise directly from the query
-      const queryPromise = supabase
+      // Execute the query and await the response
+      const queryResult = await supabase
         .from("usuarios")
         .select("*")
         .eq("email", email)
         .maybeSingle();
       
-      // Await the query to get the actual response
-      const { data, error: dbError } = await withTimeout(queryPromise, AUTH_TIMEOUT);
+      // Apply timeout to the already resolved query result
+      const { data, error: dbError } = await withTimeout(Promise.resolve(queryResult), AUTH_TIMEOUT);
       
       if (dbError) {
         throw dbError;
@@ -102,8 +102,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setError(null);
     
     try {
-      const authPromise = supabase.auth.getUser();
-      const { data: authData, error: authError } = await withTimeout(authPromise, AUTH_TIMEOUT);
+      const authResult = await supabase.auth.getUser();
+      const { data: authData, error: authError } = await withTimeout(Promise.resolve(authResult), AUTH_TIMEOUT);
       
       if (authError || !authData?.user) {
         logAuth('no_authenticated_user');
@@ -130,8 +130,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       logAuth('auth_initialization_start');
       
       try {
-        const sessionPromise = supabase.auth.getSession();
-        const { data: { session } } = await withTimeout(sessionPromise, AUTH_TIMEOUT);
+        const sessionResult = await supabase.auth.getSession();
+        const { data: { session } } = await withTimeout(Promise.resolve(sessionResult), AUTH_TIMEOUT);
         
         if (mounted) {
           if (session?.user) {
@@ -197,12 +197,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setError(null);
     
     try {
-      const signInPromise = supabase.auth.signInWithPassword({
+      const signInResult = await supabase.auth.signInWithPassword({
         email: email.trim().toLowerCase(),
         password: senha,
       });
 
-      const { data, error: authError } = await withTimeout(signInPromise, AUTH_TIMEOUT);
+      const { data, error: authError } = await withTimeout(Promise.resolve(signInResult), AUTH_TIMEOUT);
 
       if (authError) {
         throw authError;
