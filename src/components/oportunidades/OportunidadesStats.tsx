@@ -16,8 +16,6 @@ import {
 } from "@/components/ui/dialog";
 import { StatusDistributionChart } from "@/components/dashboard/StatusDistributionChart";
 import { ConversionRatesChart } from "@/components/dashboard/ConversionRatesChart";
-import { ParceiroStatsTable } from "./ParceiroStatsTable";
-import { useParceiroStats } from "@/hooks/useParceiroStats";
 
 function getGrupoStatus(empresa_origem_tipo: string, empresa_destino_tipo: string) {
   if (empresa_origem_tipo === "intragrupo" && empresa_destino_tipo === "intragrupo") return "intragrupo";
@@ -31,11 +29,9 @@ function getQuarter(date: Date) {
   if (month < 9) return 'Q3';
   return 'Q4';
 }
-
 function getYear(date: Date) {
   return date.getFullYear();
 }
-
 function getMonthYear(date: Date) {
   return format(date, "MMM/yyyy", { locale: ptBR });
 }
@@ -51,19 +47,6 @@ export const OportunidadesStats: React.FC = () => {
 
   const [modalAberto, setModalAberto] = useState<{ faixa: string, oportunidades: any[] } | null>(null);
   const [openDialog, setOpenDialog] = useState(false);
-
-  // Partner stats filters
-  const [parceiroDataInicio, setParceiroDataInicio] = useState<string>("");
-  const [parceiroDataFim, setParceiroDataFim] = useState<string>("");
-  const [parceiroQuarter, setParceiroQuarter] = useState<string>("");
-  const [parceiroQuarterYear, setParceiroQuarterYear] = useState<number>(new Date().getFullYear());
-
-  const { stats: parceiroStats, loading: parceiroStatsLoading } = useParceiroStats({
-    dataInicio: parceiroDataInicio || undefined,
-    dataFim: parceiroDataFim || undefined,
-    quarter: parceiroQuarter || undefined,
-    quarterYear: parceiroQuarter ? parceiroQuarterYear : undefined,
-  });
 
   const anosDisponiveis = useMemo(() => {
     return Array.from(new Set(oportunidades.map(op => {
@@ -242,7 +225,6 @@ export const OportunidadesStats: React.FC = () => {
           <TabsTrigger value="mensal">Volume Mensal</TabsTrigger>
           <TabsTrigger value="status">Status</TabsTrigger>
           <TabsTrigger value="taxas">Taxas de Conversão</TabsTrigger>
-          <TabsTrigger value="parceiros">Parceiros</TabsTrigger>
         </TabsList>
 
         <TabsContent value="mensal">
@@ -358,73 +340,6 @@ export const OportunidadesStats: React.FC = () => {
               <ConversionRatesChart />
             </CardContent>
           </Card>
-        </TabsContent>
-
-        <TabsContent value="parceiros">
-          <div className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Filtros para Estatísticas de Parceiros</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-wrap gap-3">
-                  <div>
-                    <label className="text-sm font-medium">Data Início</label>
-                    <input
-                      type="date"
-                      value={parceiroDataInicio}
-                      onChange={(e) => setParceiroDataInicio(e.target.value)}
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium">Data Fim</label>
-                    <input
-                      type="date"
-                      value={parceiroDataFim}
-                      onChange={(e) => setParceiroDataFim(e.target.value)}
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium">Quarter</label>
-                    <Select value={parceiroQuarter} onValueChange={setParceiroQuarter}>
-                      <SelectTrigger className="w-32">
-                        <SelectValue placeholder="Selecione" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="">Todos</SelectItem>
-                        <SelectItem value="Q1">Q1</SelectItem>
-                        <SelectItem value="Q2">Q2</SelectItem>
-                        <SelectItem value="Q3">Q3</SelectItem>
-                        <SelectItem value="Q4">Q4</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  {parceiroQuarter && (
-                    <div>
-                      <label className="text-sm font-medium">Ano</label>
-                      <Select value={String(parceiroQuarterYear)} onValueChange={v => setParceiroQuarterYear(Number(v))}>
-                        <SelectTrigger className="w-24">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {anosDisponiveis.map(ano => (
-                            <SelectItem key={ano} value={String(ano)}>{ano}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-            
-            <ParceiroStatsTable 
-              stats={parceiroStats} 
-              loading={parceiroStatsLoading} 
-            />
-          </div>
         </TabsContent>
       </Tabs>
     </div>
