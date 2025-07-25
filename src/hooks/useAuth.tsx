@@ -187,56 +187,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setError("Email e senha são obrigatórios.");
       return false;
     }
-
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       setError("Email inválido.");
       return false;
     }
-
     logAuth('login_attempt', { email });
     setLoading(true);
     setError(null);
-    
     try {
-      console.log('[Auth] Iniciando signInWithPassword...');
-      
-      const { data, error: authError } = await supabase.auth.signInWithPassword({
+      // Corrigido: garantir que a Promise seja real
+      const signInPromise = supabase.auth.signInWithPassword({
         email: email.trim().toLowerCase(),
         password: senha,
       });
-
-      console.log('[Auth] Resultado signInWithPassword:', { data: !!data, error: authError });
-
+      const { data, error: authError } = await withTimeout((async () => await signInPromise)(), AUTH_TIMEOUT);
+      console.log('[Auth] Supabase Auth response:', { data, authError });
       if (authError) {
-        console.error('[Auth] Erro de autenticação:', authError);
         throw authError;
       }
-
-      console.log('[Auth] Autenticação bem-sucedida, buscando usuário no DB...');
       const dbUser = await fetchUserFromDB(email);
-      console.log('[Auth] Resultado fetchUserFromDB:', { user: !!dbUser });
-      
       if (!dbUser) {
-        console.log('[Auth] Usuário não encontrado na base de dados');
         setError("Usuário não encontrado na base de dados.");
         return false;
       }
-      
       if (dbUser.ativo === false) {
-        console.log('[Auth] Usuário inativo');
         setError("Usuário inativo. Entre em contato com o administrador.");
         return false;
       }
-      
-      console.log('[Auth] Login bem-sucedido!');
       setUser(dbUser);
       logAuth('login_success');
       return true;
-      
     } catch (err) {
       console.error('[Auth] Erro durante login:', err);
-      
       if (err instanceof Error && err.message.includes('Timeout')) {
         setError("Timeout na autenticação. Verifique sua conexão.");
       } else if (err instanceof Error && err.message.includes('Invalid login credentials')) {
@@ -244,13 +227,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else {
         setError("Erro durante o login. Tente novamente.");
       }
-      
       setUser(null);
       return false;
     } finally {
       setLoading(false);
     }
-  }, [logAuth, fetchUserFromDB]);
+  }, [logAuth, withTimeout, fetchUserFromDB]);
 
   const logout = useCallback(async () => {
     logAuth('logout_start');
