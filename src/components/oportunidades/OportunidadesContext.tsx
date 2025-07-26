@@ -153,8 +153,8 @@ export const OportunidadesProvider: React.FC<OportunidadesProviderProps> = ({
         .from("oportunidades")
         .select(`
           *,
-          empresa_origem:empresas!empresa_origem_id(id, nome, tipo),
-          empresa_destino:empresas!empresa_destino_id(id, nome, tipo),
+          empresa_origem:empresas!empresa_origem_id(id, nome, tipo, status),
+          empresa_destino:empresas!empresa_destino_id(id, nome, tipo, status),
           usuario_envio:usuarios!usuario_envio_id(id, nome, email),
           usuario_recebe:usuarios!usuario_recebe_id(id, nome, email),
           contato:contatos(id, nome, email, telefone)
@@ -169,7 +169,7 @@ export const OportunidadesProvider: React.FC<OportunidadesProviderProps> = ({
       }
 
       console.log('[OportunidadesContext] Oportunidades carregadas:', data?.length || 0);
-      setOportunidades(data || []);
+      setOportunidades(data as Oportunidade[] || []);
     } catch (error: any) {
       console.error('[OportunidadesContext] Erro/timeout ao carregar oportunidades:', error);
       const errorMessage = error.message || 'Erro ao carregar oportunidades';

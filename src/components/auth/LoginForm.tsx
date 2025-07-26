@@ -10,7 +10,7 @@ const LoginForm: React.FC = () => {
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [loading, setLoading] = useState(false);
-  const { login, error: authError } = useAuth();
+  const { signIn, error: authError } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -37,10 +37,10 @@ const LoginForm: React.FC = () => {
 
     try {
       console.log('[LoginForm] Iniciando processo de login...');
-      const success = await login(email, senha);
-      console.log('[LoginForm] Resultado do login:', { success, timestamp: new Date().toISOString() });
+      const result = await signIn(email, senha);
+      console.log('[LoginForm] Resultado do login:', { result, timestamp: new Date().toISOString() });
 
-      if (success) {
+      if (result.success) {
         console.log('[LoginForm] Login bem-sucedido, preparando redirecionamento...');
         toast({
           title: "Login realizado",
@@ -52,10 +52,10 @@ const LoginForm: React.FC = () => {
         console.log('[LoginForm] Executando redirecionamento imediato para /');
         navigate("/", { replace: true });
       } else {
-        console.error('[LoginForm] Login falhou:', { authError, timestamp: new Date().toISOString() });
+        console.error('[LoginForm] Login falhou:', { error: result.error, timestamp: new Date().toISOString() });
         toast({
           title: "Erro no login",
-          description: authError || "Credenciais inválidas. Verifique email e senha.",
+          description: result.error || "Credenciais inválidas. Verifique email e senha.",
           variant: "destructive",
         });
       }

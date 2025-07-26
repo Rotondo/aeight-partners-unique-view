@@ -1,6 +1,6 @@
 
 import { useAuth } from "@/hooks/useAuth";
-import { LoginForm } from "./LoginForm";
+import LoginForm from "./LoginForm";
 import { LoadingScreen } from "@/components/ui/LoadingScreen";
 import { useEffect, useState } from "react";
 

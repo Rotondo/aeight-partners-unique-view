@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -8,7 +9,6 @@ import { WishlistProvider } from '@/contexts/WishlistContext';
 import { CrmProvider } from '@/contexts/CrmContext';
 import { PrivateRoute } from '@/components/auth/PrivateRoute';
 import { ReactSafetyProvider } from '@/components/ui/ReactSafetyProvider';
-import { AuthProvider } from '@/hooks/useAuth';
 
 // Imports for all pages
 import Index from '@/pages/Index';
@@ -43,9 +43,8 @@ function App() {
   return (
     <ReactSafetyProvider>
       <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <PrivacyProvider>
-            <Router>
+        <PrivacyProvider>
+          <Router>
             <Routes>
               <Route path="/login" element={<LoginPage />} />
               <Route path="/" element={
@@ -162,9 +161,8 @@ function App() {
             <Toaster />
           </Router>
         </PrivacyProvider>
-      </AuthProvider>
-    </QueryClientProvider>
-  </ReactSafetyProvider>
+      </QueryClientProvider>
+    </ReactSafetyProvider>
   );
 }
 
