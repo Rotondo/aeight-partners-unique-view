@@ -199,9 +199,32 @@ export const OportunidadesProvider: React.FC<OportunidadesProviderProps> = ({
   // Função para criar nova oportunidade
   const createOportunidade = async (data: Partial<Oportunidade>): Promise<boolean> => {
     try {
+      // Garantir que os campos obrigatórios estejam presentes
+      if (!data.empresa_origem_id || !data.empresa_destino_id || !data.nome_lead) {
+        throw new Error('Campos obrigatórios faltando');
+      }
+
       const { error } = await supabase
         .from("oportunidades")
-        .insert([data]);
+        .insert([{
+          empresa_origem_id: data.empresa_origem_id,
+          empresa_destino_id: data.empresa_destino_id,
+          nome_lead: data.nome_lead,
+          contato_id: data.contato_id,
+          valor: data.valor,
+          status: data.status || 'em_contato',
+          data_indicacao: data.data_indicacao || new Date().toISOString(),
+          data_fechamento: data.data_fechamento,
+          motivo_perda: data.motivo_perda,
+          usuario_envio_id: data.usuario_envio_id,
+          usuario_recebe_id: data.usuario_recebe_id,
+          observacoes: data.observacoes,
+          tipo_natureza: data.tipo_natureza,
+          tipo_movimentacao: data.tipo_movimentacao,
+          usuario_origem_id: data.usuario_origem_id,
+          usuario_destino_id: data.usuario_destino_id,
+          tipo_relacao: data.tipo_relacao
+        }]);
 
       if (error) throw error;
 
@@ -226,9 +249,30 @@ export const OportunidadesProvider: React.FC<OportunidadesProviderProps> = ({
   // Função para atualizar oportunidade
   const updateOportunidade = async (id: string, data: Partial<Oportunidade>): Promise<boolean> => {
     try {
+      const updateData: any = {};
+      
+      // Mapear apenas os campos que podem ser atualizados
+      if (data.empresa_origem_id) updateData.empresa_origem_id = data.empresa_origem_id;
+      if (data.empresa_destino_id) updateData.empresa_destino_id = data.empresa_destino_id;
+      if (data.nome_lead) updateData.nome_lead = data.nome_lead;
+      if (data.contato_id !== undefined) updateData.contato_id = data.contato_id;
+      if (data.valor !== undefined) updateData.valor = data.valor;
+      if (data.status) updateData.status = data.status;
+      if (data.data_indicacao) updateData.data_indicacao = data.data_indicacao;
+      if (data.data_fechamento !== undefined) updateData.data_fechamento = data.data_fechamento;
+      if (data.motivo_perda !== undefined) updateData.motivo_perda = data.motivo_perda;
+      if (data.usuario_envio_id !== undefined) updateData.usuario_envio_id = data.usuario_envio_id;
+      if (data.usuario_recebe_id !== undefined) updateData.usuario_recebe_id = data.usuario_recebe_id;
+      if (data.observacoes !== undefined) updateData.observacoes = data.observacoes;
+      if (data.tipo_natureza) updateData.tipo_natureza = data.tipo_natureza;
+      if (data.tipo_movimentacao !== undefined) updateData.tipo_movimentacao = data.tipo_movimentacao;
+      if (data.usuario_origem_id !== undefined) updateData.usuario_origem_id = data.usuario_origem_id;
+      if (data.usuario_destino_id !== undefined) updateData.usuario_destino_id = data.usuario_destino_id;
+      if (data.tipo_relacao) updateData.tipo_relacao = data.tipo_relacao;
+
       const { error } = await supabase
         .from("oportunidades")
-        .update(data)
+        .update(updateData)
         .eq("id", id);
 
       if (error) throw error;

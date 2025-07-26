@@ -22,16 +22,30 @@ interface OportunidadeDetailsProps {
 
 export const OportunidadeDetails: React.FC<OportunidadeDetailsProps> = ({ id }) => {
   const { getOportunidade } = useOportunidades();
+  const [oportunidade, setOportunidade] = useState<OportunidadeType | null>(null);
   const [historico, setHistorico] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-
-  const oportunidade = getOportunidade(id);
+  const [isLoadingHistorico, setIsLoadingHistorico] = useState(false);
 
   useEffect(() => {
-    const fetchHistorico = async () => {
+    const fetchOportunidade = async () => {
       if (!id) return;
 
       setIsLoading(true);
+      try {
+        const data = await getOportunidade(id);
+        setOportunidade(data);
+      } catch (error) {
+        console.error("Erro ao buscar oportunidade:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    const fetchHistorico = async () => {
+      if (!id) return;
+
+      setIsLoadingHistorico(true);
       try {
         const { data, error } = await supabase
           .from('historico_oportunidade')
@@ -47,12 +61,25 @@ export const OportunidadeDetails: React.FC<OportunidadeDetailsProps> = ({ id }) 
       } catch (error) {
         console.error("Erro ao buscar histórico:", error);
       } finally {
-        setIsLoading(false);
+        setIsLoadingHistorico(false);
       }
     };
 
+    fetchOportunidade();
     fetchHistorico();
-  }, [id]);
+  }, [id, getOportunidade]);
+
+  if (isLoading) {
+    return (
+      <div className="p-6">
+        <div className="space-y-4">
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} className="h-16 w-full" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   if (!oportunidade) {
     return <div className="p-6">Oportunidade não encontrada</div>;
@@ -203,7 +230,7 @@ export const OportunidadeDetails: React.FC<OportunidadeDetailsProps> = ({ id }) 
       
       <div>
         <h3 className="font-medium mb-2">Histórico de Alterações</h3>
-        {isLoading ? (
+        {isLoadingHistorico ? (
           <div className="space-y-2">
             {[1, 2, 3].map((i) => (
               <Skeleton key={i} className="h-12 w-full" />

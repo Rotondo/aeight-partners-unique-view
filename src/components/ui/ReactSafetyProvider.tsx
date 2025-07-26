@@ -1,5 +1,5 @@
 
-import * as React from 'react';
+import React from 'react';
 
 // Emergency React Safety Provider
 interface ReactSafetyProviderProps {
@@ -7,26 +7,8 @@ interface ReactSafetyProviderProps {
 }
 
 export const ReactSafetyProvider: React.FC<ReactSafetyProviderProps> = ({ children }) => {
-  // Comprehensive React verification
-  const [hasError, setHasError] = React.useState(false);
-  const [errorDetails, setErrorDetails] = React.useState<string>('');
-
-  // Enhanced error boundary
-  React.useEffect(() => {
-    const handleError = (event: ErrorEvent) => {
-      console.error('[ReactSafetyProvider] Runtime error caught:', event.error);
-      if (event.error?.message?.includes('useState') || event.error?.message?.includes('useRef')) {
-        setHasError(true);
-        setErrorDetails(event.error.message);
-      }
-    };
-
-    window.addEventListener('error', handleError);
-    return () => window.removeEventListener('error', handleError);
-  }, []);
-
-  // Verify React is available before proceeding
-  if (!React || !React.useState || !React.useEffect || !React.useRef) {
+  // Verificar se React está disponível antes de usar hooks
+  if (!React || !React.useState || !React.useEffect) {
     console.error('[ReactSafetyProvider] React hooks are not available');
     return (
       <div style={{
@@ -62,6 +44,24 @@ export const ReactSafetyProvider: React.FC<ReactSafetyProviderProps> = ({ childr
       </div>
     );
   }
+
+  // Agora podemos usar hooks com segurança
+  const [hasError, setHasError] = React.useState(false);
+  const [errorDetails, setErrorDetails] = React.useState<string>('');
+
+  // Enhanced error boundary
+  React.useEffect(() => {
+    const handleError = (event: ErrorEvent) => {
+      console.error('[ReactSafetyProvider] Runtime error caught:', event.error);
+      if (event.error?.message?.includes('useState') || event.error?.message?.includes('useRef')) {
+        setHasError(true);
+        setErrorDetails(event.error.message);
+      }
+    };
+
+    window.addEventListener('error', handleError);
+    return () => window.removeEventListener('error', handleError);
+  }, []);
 
   // If we caught a React hook error, show recovery options
   if (hasError) {
