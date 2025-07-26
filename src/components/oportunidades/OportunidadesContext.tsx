@@ -23,8 +23,10 @@ interface OportunidadesContextType {
   filteredOportunidades: Oportunidade[];
   isLoading: boolean;
   error: string | null;
+  isLoaded: boolean;
   filterParams: OportunidadesFilterParams;
   setFilterParams: (params: OportunidadesFilterParams) => void;
+  loadData: () => Promise<void>;
   fetchOportunidades: () => Promise<void>;
   createOportunidade: (oportunidade: Partial<Oportunidade>) => Promise<string | null>;
   updateOportunidade: (id: string, oportunidade: Partial<Oportunidade>) => Promise<boolean>;
@@ -62,11 +64,12 @@ function mapStatusToDatabase(status: StatusOportunidade): DatabaseStatusOportuni
   return statusMap[status] || "em_contato";
 }
 
-export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+export const OportunidadesProvider: React.FC<{ children: ReactNode; autoLoad?: boolean }> = ({ children, autoLoad = false }) => {
   const [oportunidades, setOportunidades] = useState<Oportunidade[]>([]);
   const [filteredOportunidades, setFilteredOportunidades] = useState<Oportunidade[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isLoaded, setIsLoaded] = useState(false);
   const [filterParams, setFilterParams] = useState<OportunidadesFilterParams>({});
   const { toast } = useToast();
   const { user } = useAuth();
@@ -74,6 +77,15 @@ export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ child
   // NOVO: Aplica a máscara do modo Demo nos dados expostos para os consumidores do contexto
   const oportunidadesMasked = useDemoMask(oportunidades);
   const filteredOportunidadesMasked = useDemoMask(filteredOportunidades);
+
+  const loadData = async () => {
+    if (isLoaded) {
+      console.log("[OportunidadesContext] Dados já carregados, pulando...");
+      return;
+    }
+    await fetchOportunidades();
+    setIsLoaded(true);
+  };
 
   const fetchOportunidades = async () => {
     // Se não há usuário autenticado, apenas limpa os dados
@@ -487,9 +499,8 @@ export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ child
   const initialDataLoaded = useRef(false); // Ref para rastrear o carregamento inicial
 
   useEffect(() => {
-    // Evitar dupla chamada em desenvolvimento com React.StrictMode
-    // e garantir que só carregue se o usuário estiver presente e válido.
-    if (user && validateUUID(user.id)) {
+    // Carregar dados automaticamente apenas se autoLoad=true
+    if (autoLoad && user && validateUUID(user.id)) {
       if (process.env.NODE_ENV === 'development') {
         if (initialDataLoaded.current) {
           console.log("[OportunidadesContext] StrictMode: Carregamento inicial já realizado ou em andamento, pulando segunda chamada.");
@@ -497,26 +508,28 @@ export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ child
         }
         initialDataLoaded.current = true;
       }
-      fetchOportunidades();
-    } else {
+      loadData();
+    } else if (!user || !validateUUID(user.id)) {
       // Se não houver usuário ou ID inválido, limpa os dados e reseta o flag
       setOportunidades([]);
       setFilteredOportunidades([]);
       setIsLoading(false);
+      setIsLoaded(false);
       initialDataLoaded.current = false; // Permite carregar se o usuário logar depois
       console.log("[OportunidadesContext] Usuário não disponível ou ID inválido, dados de oportunidades limpos.");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]); // fetchOportunidades não precisa estar aqui se for estável e chamado internamente.
-              // A dependência em 'user' é a chave para disparar o carregamento.
+  }, [user, autoLoad]); // autoLoad e user como dependências
 
   const value = {
     oportunidades: oportunidadesMasked,
     filteredOportunidades: filteredOportunidadesMasked,
     isLoading,
     error,
+    isLoaded,
     filterParams,
     setFilterParams,
+    loadData,
     fetchOportunidades,
     createOportunidade,
     updateOportunidade,

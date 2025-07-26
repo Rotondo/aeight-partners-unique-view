@@ -139,10 +139,10 @@ function App() {
                   </MainLayout>
                 </PrivateRoute>
               } />
-              <Route path="/clientes" element={
+              <Route path="/clientes/*" element={
                 <PrivateRoute>
                   <MainLayout>
-                    <WishlistProvider>
+                    <WishlistProvider autoLoad={true}>
                       <CrmProvider>
                         <WishlistPage />
                       </CrmProvider>
