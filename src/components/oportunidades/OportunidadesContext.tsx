@@ -62,7 +62,7 @@ export const OportunidadesProvider: React.FC<OportunidadesProviderProps> = ({
 
       const queryPromise = supabase
         .from("empresas")
-        .select("*")
+        .select("id, nome, tipo, status")
         .eq("status", true)
         .order("nome");
 
@@ -204,27 +204,30 @@ export const OportunidadesProvider: React.FC<OportunidadesProviderProps> = ({
         throw new Error('Campos obrigatórios faltando');
       }
 
+      // Prepare the insert data with only the fields that exist in the database
+      const insertData = {
+        empresa_origem_id: data.empresa_origem_id,
+        empresa_destino_id: data.empresa_destino_id,
+        nome_lead: data.nome_lead,
+        contato_id: data.contato_id || null,
+        valor: data.valor || null,
+        status: data.status || 'em_contato',
+        data_indicacao: data.data_indicacao || new Date().toISOString(),
+        data_fechamento: data.data_fechamento || null,
+        motivo_perda: data.motivo_perda || null,
+        usuario_envio_id: data.usuario_envio_id || null,
+        usuario_recebe_id: data.usuario_recebe_id || null,
+        observacoes: data.observacoes || null,
+        tipo_natureza: data.tipo_natureza || null,
+        tipo_movimentacao: data.tipo_movimentacao || null,
+        usuario_origem_id: data.usuario_origem_id || null,
+        usuario_destino_id: data.usuario_destino_id || null,
+        tipo_relacao: data.tipo_relacao || null
+      };
+
       const { error } = await supabase
         .from("oportunidades")
-        .insert([{
-          empresa_origem_id: data.empresa_origem_id,
-          empresa_destino_id: data.empresa_destino_id,
-          nome_lead: data.nome_lead,
-          contato_id: data.contato_id,
-          valor: data.valor,
-          status: data.status || 'em_contato',
-          data_indicacao: data.data_indicacao || new Date().toISOString(),
-          data_fechamento: data.data_fechamento,
-          motivo_perda: data.motivo_perda,
-          usuario_envio_id: data.usuario_envio_id,
-          usuario_recebe_id: data.usuario_recebe_id,
-          observacoes: data.observacoes,
-          tipo_natureza: data.tipo_natureza,
-          tipo_movimentacao: data.tipo_movimentacao,
-          usuario_origem_id: data.usuario_origem_id,
-          usuario_destino_id: data.usuario_destino_id,
-          tipo_relacao: data.tipo_relacao
-        }]);
+        .insert([insertData]);
 
       if (error) throw error;
 
