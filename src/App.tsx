@@ -8,6 +8,7 @@ import { WishlistProvider } from '@/contexts/WishlistContext';
 import { CrmProvider } from '@/contexts/CrmContext';
 import { PrivateRoute } from '@/components/auth/PrivateRoute';
 import { ReactSafetyProvider } from '@/components/ui/ReactSafetyProvider';
+import { AuthProvider } from '@/hooks/useAuth';
 
 // Imports for all pages
 import Index from '@/pages/Index';
@@ -42,8 +43,9 @@ function App() {
   return (
     <ReactSafetyProvider>
       <QueryClientProvider client={queryClient}>
-        <PrivacyProvider>
-          <Router>
+        <AuthProvider>
+          <PrivacyProvider>
+            <Router>
             <Routes>
               <Route path="/login" element={<LoginPage />} />
               <Route path="/" element={
@@ -160,8 +162,9 @@ function App() {
             <Toaster />
           </Router>
         </PrivacyProvider>
-      </QueryClientProvider>
-    </ReactSafetyProvider>
+      </AuthProvider>
+    </QueryClientProvider>
+  </ReactSafetyProvider>
   );
 }
 

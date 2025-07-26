@@ -8,18 +8,27 @@ interface PrivateRouteProps {
 }
 
 export const PrivateRoute: React.FC<PrivateRouteProps> = ({ children }) => {
-  const { user, isAuthenticated, loading } = useAuth();
+  const { user, isAuthenticated, loading, error } = useAuth();
   const location = useLocation();
 
   console.log("[PrivateRoute] Estado atual:", { 
     user: !!user, 
     isAuthenticated, 
     loading, 
-    pathname: location.pathname 
+    error,
+    pathname: location.pathname,
+    timestamp: new Date().toISOString()
   });
+
+  // Se há erro crítico de autenticação
+  if (error && !loading) {
+    console.error("[PrivateRoute] Erro de autenticação:", error);
+    return <Navigate to="/login" state={{ from: location, error }} replace />;
+  }
 
   // Mostrar loading enquanto verifica autenticação
   if (loading) {
+    console.log("[PrivateRoute] Aguardando autenticação...");
     return <LoadingScreen timeout={10000} />;
   }
 
@@ -35,6 +44,6 @@ export const PrivateRoute: React.FC<PrivateRouteProps> = ({ children }) => {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  console.log("[PrivateRoute] Acesso permitido para:", user.nome);
+  console.log("[PrivateRoute] Acesso permitido para:", user.nome || user.email);
   return <>{children}</>;
 };

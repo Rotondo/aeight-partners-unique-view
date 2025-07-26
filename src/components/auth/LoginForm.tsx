@@ -18,12 +18,16 @@ const LoginForm: React.FC = () => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('handleLogin chamado com:', { email, senha: '***' });
+    
+    const timestamp = new Date().toISOString();
+    console.log('[LoginForm] handleLogin iniciado:', { email, timestamp });
     
     if (!email || !senha) {
+      const errorMsg = "Por favor, preencha email e senha";
+      console.warn('[LoginForm] Campos obrigatórios vazios');
       toast({
         title: "Erro",
-        description: "Por favor, preencha email e senha",
+        description: errorMsg,
         variant: "destructive",
       });
       return;
@@ -32,31 +36,36 @@ const LoginForm: React.FC = () => {
     setLoading(true);
 
     try {
-      console.log('Tentando fazer login...');
+      console.log('[LoginForm] Iniciando processo de login...');
       const success = await login(email, senha);
-      console.log('Resultado do login:', success);
+      console.log('[LoginForm] Resultado do login:', { success, timestamp: new Date().toISOString() });
 
       if (success) {
+        console.log('[LoginForm] Login bem-sucedido, preparando redirecionamento...');
         toast({
           title: "Login bem-sucedido",
           description: "Redirecionando...",
           variant: "default",
         });
-        console.log('Login bem-sucedido, redirecionando...');
-        navigate("/");
+        
+        // Pequeno delay para garantir que o estado foi atualizado
+        setTimeout(() => {
+          console.log('[LoginForm] Executando redirecionamento para /');
+          navigate("/", { replace: true });
+        }, 500);
       } else {
-        console.log('Login falhou');
+        console.error('[LoginForm] Login falhou:', { authError, timestamp: new Date().toISOString() });
         toast({
           title: "Erro no login",
-          description: authError || "Falha na autenticação",
+          description: authError || "Credenciais inválidas. Verifique email e senha.",
           variant: "destructive",
         });
       }
     } catch (error) {
-      console.error("Erro durante login:", error);
+      console.error("[LoginForm] Erro inesperado durante login:", error);
       toast({
         title: "Erro",
-        description: "Erro interno durante o login",
+        description: "Erro de conexão. Verifique sua internet e tente novamente.",
         variant: "destructive",
       });
     } finally {
