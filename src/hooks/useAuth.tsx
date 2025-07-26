@@ -37,7 +37,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [error, setError] = useState<string | null>(null);
 
   const isDevelopment = process.env.NODE_ENV === 'development';
-  const AUTH_TIMEOUT = 8000; // 8 segundos
 
   const logAuth = useCallback((action: string, data?: any) => {
     if (isDevelopment) {
@@ -45,30 +44,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [isDevelopment]);
 
-  const withTimeout = useCallback(<T,>(promise: Promise<T>, timeout: number): Promise<T> => {
-    return Promise.race([
-      promise,
-      new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('Timeout na autenticação')), timeout)
-      )
-    ]);
-  }, []);
-
   const fetchUserFromDB = useCallback(async (email: string | null | undefined): Promise<User | null> => {
     if (!email) return null;
     
     try {
       logAuth('fetchUserFromDB', { email });
       
-      // Corrigido: garantir que a Promise seja executada
-      const queryPromise = supabase
+      const { data, error: dbError } = await supabase
         .from("usuarios")
         .select("*")
         .eq("email", email)
         .maybeSingle();
-      
-      // Apply timeout to the already resolved query result
-      const { data, error: dbError } = await withTimeout((async () => await queryPromise)(), AUTH_TIMEOUT);
       
       if (dbError) {
         throw dbError;
@@ -95,16 +81,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setError(`Erro ao buscar dados do usuário: ${err instanceof Error ? err.message : 'Erro desconhecido'}`);
       return null;
     }
-  }, [logAuth, withTimeout]);
+  }, [logAuth]);
 
   const refreshUser = useCallback(async () => {
     logAuth('refreshUser_start');
     setError(null);
     
     try {
-      // Corrigido: garantir que a Promise seja executada
-      const authPromise = supabase.auth.getUser();
-      const { data: authData, error: authError } = await withTimeout((async () => await authPromise)(), AUTH_TIMEOUT);
+      const { data: authData, error: authError } = await supabase.auth.getUser();
       
       if (authError || !authData?.user) {
         logAuth('no_authenticated_user');
@@ -122,7 +106,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setLoading(false);
     }
-  }, [logAuth, withTimeout, fetchUserFromDB]);
+  }, [logAuth, fetchUserFromDB]);
 
   useEffect(() => {
     let mounted = true;
@@ -131,9 +115,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       logAuth('auth_initialization_start');
       
       try {
-        // Corrigido: garantir que a Promise seja executada
-        const sessionPromise = supabase.auth.getSession();
-        const { data: { session } } = await withTimeout((async () => await sessionPromise)(), AUTH_TIMEOUT);
+        const { data: { session } } = await supabase.auth.getSession();
         
         if (mounted) {
           if (session?.user) {
@@ -180,7 +162,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [logAuth, withTimeout, fetchUserFromDB]);
+  }, [logAuth, fetchUserFromDB]);
 
   const login = useCallback(async (email: string, senha: string): Promise<boolean> => {
     if (!email || !senha) {
@@ -196,15 +178,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(true);
     setError(null);
     try {
-      // Corrigido: garantir que a Promise seja real
-      const signInPromise = supabase.auth.signInWithPassword({
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
         email: email.trim().toLowerCase(),
         password: senha,
       });
-      console.log('[Auth] Antes do await signInPromise');
-      const { data, error: authError } = await withTimeout((async () => await signInPromise)(), AUTH_TIMEOUT);
-      console.log('[Auth] Depois do await signInPromise');
-      console.log('[Auth] Supabase Auth response:', { data, authError });
+      
       if (authError) {
         throw authError;
       }
@@ -222,9 +200,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return true;
     } catch (err) {
       console.error('[Auth] Erro durante login:', err);
-      if (err instanceof Error && err.message.includes('Timeout')) {
-        setError("Timeout na autenticação. Verifique sua conexão.");
-      } else if (err instanceof Error && err.message.includes('Invalid login credentials')) {
+      if (err instanceof Error && err.message.includes('Invalid login credentials')) {
         setError("Email ou senha incorretos.");
       } else {
         setError("Erro durante o login. Tente novamente.");
@@ -234,7 +210,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setLoading(false);
     }
-  }, [logAuth, withTimeout, fetchUserFromDB]);
+  }, [logAuth, fetchUserFromDB]);
 
   const logout = useCallback(async () => {
     logAuth('logout_start');
