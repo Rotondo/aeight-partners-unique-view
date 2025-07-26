@@ -1,30 +1,25 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { supabase } from "@/lib/supabase";
-import { Oportunidade, Empresa, Usuario } from "@/types";
+import { Oportunidade, Empresa, Usuario, OportunidadesFilterParams } from "@/types";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 
-interface FilterState {
-  dataInicio: Date | null;
-  dataFim: Date | null;
-  status: string | null;
-  empresaOrigem: string | null;
-  empresaDestino: string | null;
-  searchTerm: string;
-}
-
 interface OportunidadesContextType {
   oportunidades: Oportunidade[];
-  filteredOportunidades: Oportunidade[] | null;
+  filteredOportunidades: Oportunidade[];
   empresas: Empresa[];
   usuarios: Usuario[];
   isLoading: boolean;
   error: string | null;
-  filters: FilterState;
-  setFilters: (filters: FilterState) => void;
+  filterParams: OportunidadesFilterParams;
+  setFilterParams: (params: OportunidadesFilterParams) => void;
   refreshData: () => Promise<void>;
   loadOportunidades: () => Promise<void>;
+  getOportunidade: (id: string) => Promise<Oportunidade | null>;
+  createOportunidade: (data: Partial<Oportunidade>) => Promise<boolean>;
+  updateOportunidade: (id: string, data: Partial<Oportunidade>) => Promise<boolean>;
+  deleteOportunidade: (id: string) => Promise<boolean>;
 }
 
 const OportunidadesContext = createContext<OportunidadesContextType | undefined>(undefined);
@@ -51,14 +46,7 @@ export const OportunidadesProvider: React.FC<OportunidadesProviderProps> = ({
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [filters, setFilters] = useState<FilterState>({
-    dataInicio: null,
-    dataFim: null,
-    status: null,
-    empresaOrigem: null,
-    empresaDestino: null,
-    searchTerm: "",
-  });
+  const [filterParams, setFilterParams] = useState<OportunidadesFilterParams>({});
 
   const { toast } = useToast();
   const { user, isAuthenticated } = useAuth();
@@ -184,6 +172,113 @@ export const OportunidadesProvider: React.FC<OportunidadesProviderProps> = ({
     }
   };
 
+  // Função para obter uma oportunidade específica
+  const getOportunidade = async (id: string): Promise<Oportunidade | null> => {
+    try {
+      const { data, error } = await supabase
+        .from("oportunidades")
+        .select(`
+          *,
+          empresa_origem:empresas!empresa_origem_id(id, nome, tipo, status),
+          empresa_destino:empresas!empresa_destino_id(id, nome, tipo, status),
+          usuario_envio:usuarios!usuario_envio_id(id, nome, email),
+          usuario_recebe:usuarios!usuario_recebe_id(id, nome, email),
+          contato:contatos(id, nome, email, telefone)
+        `)
+        .eq("id", id)
+        .single();
+
+      if (error) throw error;
+      return data as Oportunidade;
+    } catch (error) {
+      console.error('[OportunidadesContext] Erro ao buscar oportunidade:', error);
+      return null;
+    }
+  };
+
+  // Função para criar nova oportunidade
+  const createOportunidade = async (data: Partial<Oportunidade>): Promise<boolean> => {
+    try {
+      const { error } = await supabase
+        .from("oportunidades")
+        .insert([data]);
+
+      if (error) throw error;
+
+      toast({
+        title: "Oportunidade criada",
+        description: "A oportunidade foi criada com sucesso.",
+      });
+
+      await loadOportunidades();
+      return true;
+    } catch (error) {
+      console.error('[OportunidadesContext] Erro ao criar oportunidade:', error);
+      toast({
+        title: "Erro ao criar oportunidade",
+        description: "Ocorreu um erro ao criar a oportunidade.",
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+
+  // Função para atualizar oportunidade
+  const updateOportunidade = async (id: string, data: Partial<Oportunidade>): Promise<boolean> => {
+    try {
+      const { error } = await supabase
+        .from("oportunidades")
+        .update(data)
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Oportunidade atualizada",
+        description: "A oportunidade foi atualizada com sucesso.",
+      });
+
+      await loadOportunidades();
+      return true;
+    } catch (error) {
+      console.error('[OportunidadesContext] Erro ao atualizar oportunidade:', error);
+      toast({
+        title: "Erro ao atualizar oportunidade",
+        description: "Ocorreu um erro ao atualizar a oportunidade.",
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+
+  // Função para deletar oportunidade
+  const deleteOportunidade = async (id: string): Promise<boolean> => {
+    try {
+      const { error } = await supabase
+        .from("oportunidades")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Oportunidade excluída",
+        description: "A oportunidade foi excluída com sucesso.",
+      });
+
+      await loadOportunidades();
+      return true;
+    } catch (error) {
+      console.error('[OportunidadesContext] Erro ao deletar oportunidade:', error);
+      toast({
+        title: "Erro ao excluir oportunidade",
+        description: "Ocorreu um erro ao excluir a oportunidade.",
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+
   // Função para refresh completo dos dados
   const refreshData = async () => {
     if (!isAuthenticated) {
@@ -235,32 +330,36 @@ export const OportunidadesProvider: React.FC<OportunidadesProviderProps> = ({
     let filtered = [...oportunidades];
 
     // Aplicar filtros
-    if (filters.dataInicio) {
+    if (filterParams.dataInicio) {
       filtered = filtered.filter(op => 
-        new Date(op.data_indicacao) >= filters.dataInicio!
+        new Date(op.data_indicacao) >= new Date(filterParams.dataInicio!)
       );
     }
 
-    if (filters.dataFim) {
+    if (filterParams.dataFim) {
       filtered = filtered.filter(op => 
-        new Date(op.data_indicacao) <= filters.dataFim!
+        new Date(op.data_indicacao) <= new Date(filterParams.dataFim!)
       );
     }
 
-    if (filters.status && filters.status !== "todos") {
-      filtered = filtered.filter(op => op.status === filters.status);
+    if (filterParams.status) {
+      filtered = filtered.filter(op => op.status === filterParams.status);
     }
 
-    if (filters.empresaOrigem) {
-      filtered = filtered.filter(op => op.empresa_origem_id === filters.empresaOrigem);
+    if (filterParams.empresaOrigemId) {
+      filtered = filtered.filter(op => op.empresa_origem_id === filterParams.empresaOrigemId);
     }
 
-    if (filters.empresaDestino) {
-      filtered = filtered.filter(op => op.empresa_destino_id === filters.empresaDestino);
+    if (filterParams.empresaDestinoId) {
+      filtered = filtered.filter(op => op.empresa_destino_id === filterParams.empresaDestinoId);
     }
 
-    if (filters.searchTerm.trim()) {
-      const searchLower = filters.searchTerm.toLowerCase().trim();
+    if (filterParams.usuarioId) {
+      filtered = filtered.filter(op => op.usuario_recebe_id === filterParams.usuarioId);
+    }
+
+    if (filterParams.searchTerm?.trim()) {
+      const searchLower = filterParams.searchTerm.toLowerCase().trim();
       filtered = filtered.filter(op =>
         op.nome_lead.toLowerCase().includes(searchLower) ||
         op.empresa_origem?.nome.toLowerCase().includes(searchLower) ||
@@ -269,14 +368,22 @@ export const OportunidadesProvider: React.FC<OportunidadesProviderProps> = ({
       );
     }
 
+    if (filterParams.valorStatus) {
+      if (filterParams.valorStatus === "com_valor") {
+        filtered = filtered.filter(op => typeof op.valor === "number" && !isNaN(op.valor) && op.valor > 0);
+      } else if (filterParams.valorStatus === "sem_valor") {
+        filtered = filtered.filter(op => !(typeof op.valor === "number" && !isNaN(op.valor) && op.valor > 0));
+      }
+    }
+
     console.log('[OportunidadesContext] Filtros aplicados:', {
       total: oportunidades.length,
       filtrados: filtered.length,
-      filtros: filters
+      filtros: filterParams
     });
 
     return filtered;
-  }, [oportunidades, filters]);
+  }, [oportunidades, filterParams]);
 
   const contextValue: OportunidadesContextType = {
     oportunidades,
@@ -285,10 +392,14 @@ export const OportunidadesProvider: React.FC<OportunidadesProviderProps> = ({
     usuarios,
     isLoading,
     error,
-    filters,
-    setFilters,
+    filterParams,
+    setFilterParams,
     refreshData,
     loadOportunidades,
+    getOportunidade,
+    createOportunidade,
+    updateOportunidade,
+    deleteOportunidade,
   };
 
   return (

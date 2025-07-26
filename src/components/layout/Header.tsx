@@ -31,13 +31,13 @@ export const Header = () => {
   }
 
   let user = null;
-  let logout = () => {};
+  let signOut = () => {};
 
   // Safe hook usage with error handling
   try {
     const authContext = useAuth();
     user = authContext?.user;
-    logout = authContext?.logout || (() => {});
+    signOut = authContext?.signOut || (() => {});
   } catch (error) {
     console.error('[Header] Error accessing useAuth:', error);
   }
@@ -50,6 +50,10 @@ export const Header = () => {
       .join("")
       .toUpperCase()
       .slice(0, 2);
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
   };
 
   return (
@@ -97,7 +101,7 @@ export const Header = () => {
                 <span>Configurações</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={logout}>
+              <DropdownMenuItem onClick={handleSignOut}>
                 <LogOut className="mr-2 h-4 w-4" />
                 <span>Sair</span>
               </DropdownMenuItem>
