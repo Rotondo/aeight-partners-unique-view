@@ -3,6 +3,8 @@ import { WishlistItem, WishlistStatus } from "@/types";
 
 const CONSOLE_PREFIX = "[WishlistUtils]";
 
+// Exported utility functions for wishlist operations
+
 export const filterWishlistItems = (
   items: WishlistItem[],
   searchTerm: string,
