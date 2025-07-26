@@ -44,27 +44,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [isDevelopment]);
 
+  const createTimeoutPromise = useCallback((ms: number, errorMessage: string) => {
+    return new Promise<never>((_, reject) => {
+      setTimeout(() => {
+        reject(new Error(errorMessage));
+      }, ms);
+    });
+  }, []);
+
   const fetchUserFromDB = useCallback(async (email: string | null | undefined): Promise<User | null> => {
     if (!email) return null;
     
     try {
       logAuth('fetchUserFromDB_start', { email });
       
-      // Timeout agressivo de 2 segundos para query de usuário
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => {
-        controller.abort();
-        console.error('[Auth] TIMEOUT na fetchUserFromDB após 2s');
-      }, 2000);
+      // Use Promise.race with timeout instead of abortSignal
+      const timeoutPromise = createTimeoutPromise(2000, 'TIMEOUT na fetchUserFromDB após 2s');
       
-      const { data, error: dbError } = await supabase
+      const queryPromise = supabase
         .from("usuarios")
         .select("*")
         .eq("email", email)
-        .maybeSingle()
-        .abortSignal(controller.signal);
+        .maybeSingle();
       
-      clearTimeout(timeoutId);
+      const { data, error: dbError } = await Promise.race([queryPromise, timeoutPromise]);
       
       if (dbError) {
         throw dbError;
@@ -90,7 +93,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('[Auth] Erro na fetchUserFromDB:', err);
       
       // Se for timeout ou erro de conexão, retornar usuário básico para permitir acesso
-      if (err.name === 'AbortError' || err.code === 'PGRST301') {
+      if (err.message?.includes('TIMEOUT') || err.code === 'PGRST301') {
         console.warn('[Auth] Usando fallback devido ao timeout - criando usuário básico');
         return {
           id: 'fallback-user',
@@ -104,22 +107,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setError(`Erro ao buscar dados do usuário: ${err instanceof Error ? err.message : 'Erro desconhecido'}`);
       return null;
     }
-  }, [logAuth]);
+  }, [logAuth, createTimeoutPromise]);
 
   const refreshUser = useCallback(async () => {
     logAuth('refreshUser_start');
     setError(null);
     
     try {
-      // Timeout agressivo para getUser
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => {
-        controller.abort();
-        console.error('[Auth] TIMEOUT no refreshUser após 2s');
-      }, 2000);
+      // Use Promise.race with timeout instead of abortSignal
+      const timeoutPromise = createTimeoutPromise(2000, 'TIMEOUT no refreshUser após 2s');
       
-      const { data: authData, error: authError } = await supabase.auth.getUser();
-      clearTimeout(timeoutId);
+      const sessionPromise = supabase.auth.getUser();
+      const { data: authData, error: authError } = await Promise.race([sessionPromise, timeoutPromise]);
       
       if (authError || !authData?.user) {
         logAuth('refreshUser_no_auth');
@@ -134,7 +133,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('[Auth] Erro em refreshUser:', err);
       
       // Fallback crítico - se timeout, assumir que não há usuário autenticado
-      if (err.name === 'AbortError') {
+      if (err.message?.includes('TIMEOUT')) {
         console.warn('[Auth] Timeout em refreshUser - assumindo não autenticado');
         setUser(null);
       } else {
@@ -144,7 +143,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setLoading(false);
     }
-  }, [logAuth, fetchUserFromDB]);
+  }, [logAuth, fetchUserFromDB, createTimeoutPromise]);
 
   useEffect(() => {
     let mounted = true;
@@ -152,25 +151,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const initAuth = async () => {
       logAuth('auth_initialization_start');
       
-      // Timeout máximo de 3 segundos para inicialização completa
+      // Timeout máximo de 2 segundos para inicialização completa
       const initTimeout = setTimeout(() => {
         if (mounted) {
-          console.error('[Auth] TIMEOUT GERAL na inicialização após 3s - forçando fim do loading');
+          console.error('[Auth] TIMEOUT GERAL na inicialização após 2s - forçando fim do loading');
           setLoading(false);
           setUser(null);
         }
-      }, 3000);
+      }, 2000);
       
       try {
-        // Timeout específico para getSession
-        const controller = new AbortController();
-        const sessionTimeout = setTimeout(() => {
-          controller.abort();
-          console.error('[Auth] TIMEOUT no getSession após 2s');
-        }, 2000);
+        // Use Promise.race with timeout instead of abortSignal
+        const timeoutPromise = createTimeoutPromise(2000, 'TIMEOUT no getSession após 2s');
         
-        const { data: { session } } = await supabase.auth.getSession();
-        clearTimeout(sessionTimeout);
+        const sessionPromise = supabase.auth.getSession();
+        const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]);
         
         if (mounted) {
           if (session?.user) {
@@ -190,7 +185,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } catch (err: any) {
         console.error('[Auth] Erro na inicialização:', err);
         if (mounted) {
-          if (err.name === 'AbortError') {
+          if (err.message?.includes('TIMEOUT')) {
             console.warn('[Auth] Timeout na inicialização - finalizando sem erro');
           } else {
             setError('Erro na inicialização da autenticação');
@@ -226,7 +221,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [logAuth, fetchUserFromDB]);
+  }, [logAuth, fetchUserFromDB, createTimeoutPromise]);
 
   const login = useCallback(async (email: string, senha: string): Promise<boolean> => {
     if (!email || !senha) {
@@ -243,19 +238,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setError(null);
     
     try {
-      // Timeout agressivo para login
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => {
-        controller.abort();
-        console.error('[Auth] TIMEOUT no login após 3s');
-      }, 3000);
+      // Use Promise.race with timeout instead of abortSignal
+      const timeoutPromise = createTimeoutPromise(2000, 'TIMEOUT no login após 2s');
       
-      const { data, error: authError } = await supabase.auth.signInWithPassword({
+      const loginPromise = supabase.auth.signInWithPassword({
         email: email.trim().toLowerCase(),
         password: senha,
       });
       
-      clearTimeout(timeoutId);
+      const { data, error: authError } = await Promise.race([loginPromise, timeoutPromise]);
       
       if (authError) {
         throw authError;
@@ -276,7 +267,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (err: any) {
       console.error('[Auth] Erro durante login:', err);
       
-      if (err.name === 'AbortError') {
+      if (err.message?.includes('TIMEOUT')) {
         setError("Timeout no login. Verifique sua conexão.");
       } else if (err instanceof Error && err.message.includes('Invalid login credentials')) {
         setError("Email ou senha incorretos.");
@@ -288,7 +279,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setLoading(false);
     }
-  }, [logAuth, fetchUserFromDB]);
+  }, [logAuth, fetchUserFromDB, createTimeoutPromise]);
 
   const logout = useCallback(async () => {
     logAuth('logout_start');
