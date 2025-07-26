@@ -7,7 +7,7 @@ interface LoadingScreenProps {
   timeout?: number; // Timeout em ms para mostrar opções de recuperação
 }
 
-const LoadingScreen: React.FC<LoadingScreenProps> = ({ timeout = 15000 }) => {
+const LoadingScreen: React.FC<LoadingScreenProps> = ({ timeout = 8000 }) => {
   // Add safety check for React initialization
   if (!React || typeof React.useState !== 'function') {
     console.error('[LoadingScreen] React is not properly initialized');
@@ -38,13 +38,13 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ timeout = 15000 }) => {
       setLoadingTime(Date.now() - startTime);
     }, 1000);
 
-    // Mostrar opções de recuperação após timeout
+    // Mostrar opções de recuperação após timeout reduzido
     const timer = setTimeout(() => {
       setShowRecovery(true);
       console.warn('[LoadingScreen] Timeout atingido, mostrando opções de recuperação');
       console.log('[LoadingScreen] Debug Info:', {
         url: window.location.href,
-        userAgent: navigator.userAgent,
+        userAgent: navigator.userAgent.substring(0, 100),
         online: navigator.onLine,
         retryCount,
         loadingTime: Date.now() - startTime
@@ -65,31 +65,9 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ timeout = 15000 }) => {
     window.location.reload();
   };
 
-  const handleClearCacheAndReload = async () => {
-    setRetryCount(prev => prev + 1);
-    console.log('[LoadingScreen] Limpando cache e recarregando... Tentativa:', retryCount + 1);
-    
-    try {
-      if ('caches' in window) {
-        const names = await caches.keys();
-        await Promise.all(names.map(name => caches.delete(name)));
-      }
-      
-      // Limpar localStorage também (mas preservar configurações importantes)
-      const supabaseSession = localStorage.getItem('sb-amuadbftctnmckncgeua-auth-token');
-      localStorage.clear();
-      sessionStorage.clear();
-      
-      // Restaurar sessão se existir
-      if (supabaseSession) {
-        localStorage.setItem('sb-amuadbftctnmckncgeua-auth-token', supabaseSession);
-      }
-      
-      window.location.reload();
-    } catch (error) {
-      console.error('Erro ao limpar cache:', error);
-      window.location.reload();
-    }
+  const handleQuickNavigation = () => {
+    console.log('[LoadingScreen] Tentando navegação direta...');
+    window.location.href = '/login';
   };
 
   return (
@@ -108,7 +86,7 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ timeout = 15000 }) => {
           <div className="space-y-4 mt-6 p-4 border rounded-lg bg-muted/50 max-w-sm">
             <div className="flex items-center gap-2 text-amber-600">
               <AlertTriangle className="h-4 w-4" />
-              <span className="text-sm font-medium">Problema Detectado</span>
+              <span className="text-sm font-medium">Sistema Lento</span>
             </div>
             
             <div className="text-sm text-muted-foreground">
@@ -125,29 +103,29 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ timeout = 15000 }) => {
             
             <div className="flex flex-col gap-2">
               <Button 
+                onClick={handleQuickNavigation}
+                variant="default"
+                size="sm"
+                className="w-full"
+              >
+                Ir para Login
+              </Button>
+              
+              <Button 
                 onClick={handleForceReload}
                 variant="outline"
                 size="sm"
                 className="w-full"
               >
                 <RefreshCw className="h-3 w-3 mr-2" />
-                Recarregar Página
-              </Button>
-              
-              <Button 
-                onClick={handleClearCacheAndReload}
-                variant="outline"
-                size="sm"
-                className="w-full"
-              >
-                Limpar Cache e Recarregar
+                Recarregar
               </Button>
             </div>
             
             <div className="text-xs text-muted-foreground space-y-1">
-              <div>• Verifique sua conexão com a internet</div>
-              <div>• Tente recarregar a página</div>
-              {retryCount > 2 && <div className="text-amber-600">• Se persiste, contate o suporte</div>}
+              <div>• Verifique sua conexão</div>
+              <div>• Aguarde ou recarregue</div>
+              {retryCount > 1 && <div className="text-amber-600">• Se persiste, contate o suporte</div>}
             </div>
           </div>
         )}

@@ -14,7 +14,7 @@ const LoginForm: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  console.log('LoginForm renderizado - authError:', authError);
+  console.log('[LoginForm] Renderizado - authError:', authError);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,16 +43,14 @@ const LoginForm: React.FC = () => {
       if (success) {
         console.log('[LoginForm] Login bem-sucedido, preparando redirecionamento...');
         toast({
-          title: "Login bem-sucedido",
-          description: "Redirecionando...",
+          title: "Login realizado",
+          description: "Redirecionando para a página inicial...",
           variant: "default",
         });
         
-        // Pequeno delay para garantir que o estado foi atualizado
-        setTimeout(() => {
-          console.log('[LoginForm] Executando redirecionamento para /');
-          navigate("/", { replace: true });
-        }, 500);
+        // Redirecionamento imediato sem delay
+        console.log('[LoginForm] Executando redirecionamento imediato para /');
+        navigate("/", { replace: true });
       } else {
         console.error('[LoginForm] Login falhou:', { authError, timestamp: new Date().toISOString() });
         toast({

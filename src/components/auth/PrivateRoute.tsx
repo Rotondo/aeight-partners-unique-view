@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -26,10 +27,10 @@ export const PrivateRoute: React.FC<PrivateRouteProps> = ({ children }) => {
     return <Navigate to="/login" state={{ from: location, error }} replace />;
   }
 
-  // Mostrar loading enquanto verifica autenticação
+  // Mostrar loading enquanto verifica autenticação - timeout reduzido para 5 segundos
   if (loading) {
     console.log("[PrivateRoute] Aguardando autenticação...");
-    return <LoadingScreen timeout={10000} />;
+    return <LoadingScreen timeout={5000} />;
   }
 
   // Se não autenticado, redirecionar para login
