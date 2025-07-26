@@ -1,43 +1,42 @@
+import React from 'react';
 
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
-
+// Fallback mais simples para evitar erros de inicialização
 interface PrivacyContextType {
   isDemoMode: boolean;
   toggleDemoMode: () => void;
   setDemoMode: (enabled: boolean) => void;
 }
 
-const PrivacyContext = createContext<PrivacyContextType | undefined>(undefined);
+const defaultPrivacyContext: PrivacyContextType = {
+  isDemoMode: false,
+  toggleDemoMode: () => {},
+  setDemoMode: () => {}
+};
+
+const PrivacyContext = React.createContext<PrivacyContextType>(defaultPrivacyContext);
 
 interface PrivacyProviderProps {
-  children: ReactNode;
+  children: React.ReactNode;
 }
 
 export const PrivacyProvider: React.FC<PrivacyProviderProps> = ({ children }) => {
-  // Initialize state with a safe default
-  const [isDemoMode, setIsDemoMode] = useState<boolean>(() => {
-    // Check if we're in browser environment
-    if (typeof window === 'undefined') {
-      return false;
-    }
-    
-    // Verificação segura do localStorage
+  // Estado inicial simples
+  const [isDemoMode, setIsDemoMode] = React.useState<boolean>(false);
+
+  // Carregar estado do localStorage apenas depois do mount
+  React.useEffect(() => {
     try {
       const saved = localStorage.getItem('aeight-demo-mode');
-      return saved ? JSON.parse(saved) : false;
+      if (saved) {
+        setIsDemoMode(JSON.parse(saved));
+      }
     } catch (error) {
-      console.warn('[PrivacyContext] Erro ao acessar localStorage:', error);
-      return false;
+      console.warn('[PrivacyContext] Erro ao carregar localStorage:', error);
     }
-  });
+  }, []);
 
   // Salvar no localStorage quando mudar
-  useEffect(() => {
-    // Check if we're in browser environment
-    if (typeof window === 'undefined') {
-      return;
-    }
-    
+  React.useEffect(() => {
     try {
       localStorage.setItem('aeight-demo-mode', JSON.stringify(isDemoMode));
     } catch (error) {
@@ -45,15 +44,15 @@ export const PrivacyProvider: React.FC<PrivacyProviderProps> = ({ children }) =>
     }
   }, [isDemoMode]);
 
-  const toggleDemoMode = useCallback(() => {
+  const toggleDemoMode = React.useCallback(() => {
     setIsDemoMode(prev => !prev);
   }, []);
 
-  const setDemoMode = useCallback((enabled: boolean) => {
+  const setDemoMode = React.useCallback((enabled: boolean) => {
     setIsDemoMode(enabled);
   }, []);
 
-  const value: PrivacyContextType = useMemo(() => ({
+  const value: PrivacyContextType = React.useMemo(() => ({
     isDemoMode,
     toggleDemoMode,
     setDemoMode
@@ -67,7 +66,7 @@ export const PrivacyProvider: React.FC<PrivacyProviderProps> = ({ children }) =>
 };
 
 export const usePrivacy = () => {
-  const context = useContext(PrivacyContext);
+  const context = React.useContext(PrivacyContext);
   if (context === undefined) {
     throw new Error('usePrivacy deve ser usado dentro de um PrivacyProvider');
   }
