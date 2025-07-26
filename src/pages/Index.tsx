@@ -1,37 +1,35 @@
 
 import { QuickAccess } from "@/components/dashboard/QuickAccess";
 import { DemoModeIndicator } from "@/components/privacy/DemoModeIndicator";
-import { useLazyDashboardStats } from "@/hooks/useLazyDashboardStats";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { BarChart3, TrendingUp, Users, DollarSign, RefreshCw } from "lucide-react";
-import { useEffect } from "react";
+import { BarChart3, TrendingUp, Users, DollarSign, PlayCircle, AlertTriangle } from "lucide-react";
 
 const Index = () => {
-  console.log('[Index] Renderizando página principal otimizada - sem carregamento automático');
-  
-  const { stats, loadStats, loadStatsBackground } = useLazyDashboardStats();
-
-  useEffect(() => {
-    // Não carregar automaticamente na inicialização para não travar o login
-    console.log('[Index] Página carregada - stats não carregadas automaticamente');
-    
-    // Carregamento em background após 2 segundos (não bloquear login)
-    const timer = setTimeout(() => {
-      console.log('[Index] Iniciando carregamento de stats em background...');
-      loadStatsBackground();
-    }, 2000);
-
-    return () => clearTimeout(timer);
-  }, [loadStatsBackground]);
+  console.log('[Index] ETAPA 1 - Página inicial ESTÁTICA sem queries automáticas');
   
   return (
     <div className="container mx-auto p-6 space-y-6">
       <DemoModeIndicator />
+      
+      {/* Indicador de Modo de Teste */}
+      <Card className="border-amber-200 bg-amber-50">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-amber-700">
+            <AlertTriangle className="h-5 w-5" />
+            Modo de Teste - ETAPA 1
+          </CardTitle>
+          <CardDescription className="text-amber-600">
+            Página inicial funcionando sem queries automáticas para teste de login.
+            Stats são carregadas manualmente quando necessário.
+          </CardDescription>
+        </CardHeader>
+      </Card>
+
       <div className="space-y-6">
         <QuickAccess />
         
-        {/* Stats Cards Otimizadas */}
+        {/* Stats Cards Estáticas */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -39,19 +37,10 @@ const Index = () => {
               <BarChart3 className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                {stats.loading ? (
-                  <div className="flex items-center gap-2">
-                    <RefreshCw className="h-4 w-4 animate-spin" />
-                    <span>...</span>
-                  </div>
-                ) : stats.totalOportunidades || '--'}
-              </div>
-              {stats.error && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  Carregando em background...
-                </p>
-              )}
+              <div className="text-2xl font-bold">--</div>
+              <p className="text-xs text-muted-foreground">
+                Clique em "Carregar Stats" para ver dados
+              </p>
             </CardContent>
           </Card>
 
@@ -61,14 +50,10 @@ const Index = () => {
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                {stats.loading ? (
-                  <div className="flex items-center gap-2">
-                    <RefreshCw className="h-4 w-4 animate-spin" />
-                    <span>...</span>
-                  </div>
-                ) : stats.totalEmAndamento || '--'}
-              </div>
+              <div className="text-2xl font-bold">--</div>
+              <p className="text-xs text-muted-foreground">
+                Stats em modo manual
+              </p>
             </CardContent>
           </Card>
 
@@ -78,14 +63,10 @@ const Index = () => {
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                {stats.loading ? (
-                  <div className="flex items-center gap-2">
-                    <RefreshCw className="h-4 w-4 animate-spin" />
-                    <span>...</span>
-                  </div>
-                ) : stats.totalGanhos || '--'}
-              </div>
+              <div className="text-2xl font-bold">--</div>
+              <p className="text-xs text-muted-foreground">
+                Stats em modo manual
+              </p>
             </CardContent>
           </Card>
 
@@ -95,39 +76,37 @@ const Index = () => {
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                {stats.loading ? (
-                  <div className="flex items-center gap-2">
-                    <RefreshCw className="h-4 w-4 animate-spin" />
-                    <span>...</span>
-                  </div>
-                ) : stats.valorTotalGanho ? `R$ ${stats.valorTotalGanho.toLocaleString()}` : '--'}
-              </div>
+              <div className="text-2xl font-bold">--</div>
+              <p className="text-xs text-muted-foreground">
+                Stats em modo manual
+              </p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Botão para carregar stats manualmente se necessário */}
-        {!stats.loading && stats.totalOportunidades === 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Carregar Estatísticas</CardTitle>
-              <CardDescription>
-                Clique para carregar as estatísticas do dashboard
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button 
-                onClick={loadStats}
-                variant="outline"
-                className="w-full"
-              >
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Carregar Stats
-              </Button>
-            </CardContent>
-          </Card>
-        )}
+        {/* Botão para carregar stats manualmente */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Carregar Estatísticas (TESTE)</CardTitle>
+            <CardDescription>
+              Em modo de teste - stats não são carregadas automaticamente.
+              Use este botão quando quiser testar o carregamento.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button 
+              onClick={() => {
+                console.log('[Index] TESTE - Botão de carregar stats clicado');
+                alert('TESTE - Em modo estático. Stats não implementadas nesta etapa.');
+              }}
+              variant="outline"
+              className="w-full"
+            >
+              <PlayCircle className="h-4 w-4 mr-2" />
+              Testar Carregamento de Stats
+            </Button>
+          </CardContent>
+        </Card>
 
         {/* Botão para dashboard completo */}
         <Card>
@@ -139,11 +118,30 @@ const Index = () => {
           </CardHeader>
           <CardContent>
             <Button 
-              onClick={() => window.location.href = '/dashboard'}
+              onClick={() => {
+                console.log('[Index] Redirecionando para dashboard completo');
+                window.location.href = '/dashboard';
+              }}
               className="w-full"
             >
               Ver Dashboard Completo
             </Button>
+          </CardContent>
+        </Card>
+
+        {/* Informações de Debug */}
+        <Card className="border-blue-200 bg-blue-50">
+          <CardHeader>
+            <CardTitle className="text-blue-700">Debug - ETAPA 1</CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm text-blue-600 space-y-2">
+            <p>✅ Login funcionando sem queries automáticas</p>
+            <p>✅ Página inicial carregada apenas com componentes estáticos</p>
+            <p>✅ Nenhuma consulta ao banco de dados na inicialização</p>
+            <p>⏳ Stats disponíveis apenas sob demanda</p>
+            <p className="font-medium">
+              Se esta página carregar rapidamente após login, o problema está nas queries automáticas.
+            </p>
           </CardContent>
         </Card>
       </div>

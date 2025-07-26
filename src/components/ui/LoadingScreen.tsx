@@ -1,134 +1,95 @@
 
-import * as React from "react";
-import { Button } from "@/components/ui/button";
-import { RefreshCw, AlertTriangle, Wifi } from "lucide-react";
+import React, { useEffect, useState } from 'react';
+import { AlertCircle, RefreshCw } from 'lucide-react';
+import { Button } from './button';
 
 interface LoadingScreenProps {
-  timeout?: number; // Timeout em ms para mostrar opções de recuperação
+  timeout?: number;
+  message?: string;
 }
 
-const LoadingScreen: React.FC<LoadingScreenProps> = ({ timeout = 8000 }) => {
-  // Add safety check for React initialization
-  if (!React || typeof React.useState !== 'function') {
-    console.error('[LoadingScreen] React is not properly initialized');
+const LoadingScreen: React.FC<LoadingScreenProps> = ({ 
+  timeout = 3000, // Reduzido para 3 segundos na ETAPA 1
+  message = "Carregando..." 
+}) => {
+  const [showTimeout, setShowTimeout] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(Math.ceil(timeout / 1000));
+
+  useEffect(() => {
+    console.log(`[LoadingScreen] ETAPA 1 - Iniciado com timeout de ${timeout}ms`);
+    
+    // Contador regressivo
+    const countdownInterval = setInterval(() => {
+      setTimeLeft(prev => {
+        const newTime = prev - 1;
+        if (newTime <= 0) {
+          clearInterval(countdownInterval);
+        }
+        return newTime;
+      });
+    }, 1000);
+
+    // Timer para mostrar opções de timeout
+    const timer = setTimeout(() => {
+      console.log('[LoadingScreen] ETAPA 1 - Timeout atingido');
+      setShowTimeout(true);
+      clearInterval(countdownInterval);
+    }, timeout);
+
+    return () => {
+      clearTimeout(timer);
+      clearInterval(countdownInterval);
+    };
+  }, [timeout]);
+
+  const handleForceLogin = () => {
+    console.log('[LoadingScreen] ETAPA 1 - Forçando redirecionamento para login');
+    window.location.href = '/login';
+  };
+
+  const handleReload = () => {
+    console.log('[LoadingScreen] ETAPA 1 - Recarregando página');
+    window.location.reload();
+  };
+
+  if (showTimeout) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <div className="max-w-md w-full bg-card border rounded-lg p-6 shadow-lg text-center space-y-4">
+          <AlertCircle className="h-12 w-12 text-amber-500 mx-auto" />
+          <h2 className="text-xl font-semibold text-foreground">
+            ETAPA 1 - Timeout de Autenticação
+          </h2>
+          <div className="text-muted-foreground space-y-2">
+            <p>A autenticação está demorando mais que o esperado.</p>
+            <p className="text-sm">
+              Modo de teste ativo - timeout reduzido para 3 segundos.
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Button onClick={handleReload} className="w-full" variant="default">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Tentar Novamente
+            </Button>
+            <Button onClick={handleForceLogin} className="w-full" variant="outline">
+              Voltar ao Login
+            </Button>
+          </div>
+        </div>
       </div>
     );
   }
 
-  const [showRecovery, setShowRecovery] = React.useState(false);
-  const [loadingTime, setLoadingTime] = React.useState(0);
-  const [retryCount, setRetryCount] = React.useState(0);
-  const [isOnline, setIsOnline] = React.useState(navigator.onLine);
-
-  React.useEffect(() => {
-    const startTime = Date.now();
-    
-    // Monitor de conexão
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-    
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    
-    // Atualizar tempo de carregamento
-    const interval = setInterval(() => {
-      setLoadingTime(Date.now() - startTime);
-    }, 1000);
-
-    // Mostrar opções de recuperação após timeout reduzido
-    const timer = setTimeout(() => {
-      setShowRecovery(true);
-      console.warn('[LoadingScreen] Timeout atingido, mostrando opções de recuperação');
-      console.log('[LoadingScreen] Debug Info:', {
-        url: window.location.href,
-        userAgent: navigator.userAgent.substring(0, 100),
-        online: navigator.onLine,
-        retryCount,
-        loadingTime: Date.now() - startTime
-      });
-    }, timeout);
-
-    return () => {
-      clearInterval(interval);
-      clearTimeout(timer);
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, [timeout, retryCount]);
-
-  const handleForceReload = () => {
-    setRetryCount(prev => prev + 1);
-    console.log('[LoadingScreen] Forçando recarregamento... Tentativa:', retryCount + 1);
-    window.location.reload();
-  };
-
-  const handleQuickNavigation = () => {
-    console.log('[LoadingScreen] Tentando navegação direta...');
-    window.location.href = '/login';
-  };
-
   return (
-    <div className="flex items-center justify-center min-h-screen bg-background">
-      <div className="flex flex-col items-center space-y-4 max-w-md text-center p-6">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-        
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="text-center space-y-4">
+        <RefreshCw className="h-12 w-12 text-primary mx-auto animate-spin" />
         <div className="space-y-2">
-          <span className="text-lg text-muted-foreground">Carregando...</span>
-          <div className="text-sm text-muted-foreground">
-            {Math.round(loadingTime / 1000)}s
-          </div>
+          <p className="text-lg font-medium text-foreground">{message}</p>
+          <p className="text-sm text-muted-foreground">
+            ETAPA 1 - Teste rápido ({timeLeft}s restantes)
+          </p>
         </div>
-
-        {showRecovery && (
-          <div className="space-y-4 mt-6 p-4 border rounded-lg bg-muted/50 max-w-sm">
-            <div className="flex items-center gap-2 text-amber-600">
-              <AlertTriangle className="h-4 w-4" />
-              <span className="text-sm font-medium">Sistema Lento</span>
-            </div>
-            
-            <div className="text-sm text-muted-foreground">
-              O carregamento está demorando mais que o esperado.
-              {retryCount > 0 && ` (Tentativa ${retryCount + 1})`}
-            </div>
-            
-            <div className="flex items-center gap-2 text-xs">
-              <Wifi className={`h-3 w-3 ${isOnline ? 'text-green-600' : 'text-red-600'}`} />
-              <span className={isOnline ? 'text-green-600' : 'text-red-600'}>
-                {isOnline ? 'Conectado' : 'Sem conexão'}
-              </span>
-            </div>
-            
-            <div className="flex flex-col gap-2">
-              <Button 
-                onClick={handleQuickNavigation}
-                variant="default"
-                size="sm"
-                className="w-full"
-              >
-                Ir para Login
-              </Button>
-              
-              <Button 
-                onClick={handleForceReload}
-                variant="outline"
-                size="sm"
-                className="w-full"
-              >
-                <RefreshCw className="h-3 w-3 mr-2" />
-                Recarregar
-              </Button>
-            </div>
-            
-            <div className="text-xs text-muted-foreground space-y-1">
-              <div>• Verifique sua conexão</div>
-              <div>• Aguarde ou recarregue</div>
-              {retryCount > 1 && <div className="text-amber-600">• Se persiste, contate o suporte</div>}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

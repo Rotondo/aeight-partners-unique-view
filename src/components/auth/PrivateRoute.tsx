@@ -12,7 +12,7 @@ export const PrivateRoute: React.FC<PrivateRouteProps> = ({ children }) => {
   const { user, isAuthenticated, loading, error } = useAuth();
   const location = useLocation();
 
-  console.log("[PrivateRoute] Estado atual:", { 
+  console.log("[PrivateRoute] ETAPA 1 - Estado atual:", { 
     user: !!user, 
     isAuthenticated, 
     loading, 
@@ -23,28 +23,28 @@ export const PrivateRoute: React.FC<PrivateRouteProps> = ({ children }) => {
 
   // Se há erro crítico de autenticação
   if (error && !loading) {
-    console.error("[PrivateRoute] Erro de autenticação:", error);
+    console.error("[PrivateRoute] ETAPA 1 - Erro de autenticação:", error);
     return <Navigate to="/login" state={{ from: location, error }} replace />;
   }
 
-  // Mostrar loading enquanto verifica autenticação - timeout reduzido para 5 segundos
+  // Mostrar loading apenas por 3 segundos máximo para ETAPA 1
   if (loading) {
-    console.log("[PrivateRoute] Aguardando autenticação...");
-    return <LoadingScreen timeout={5000} />;
+    console.log("[PrivateRoute] ETAPA 1 - Aguardando autenticação (máximo 3s)...");
+    return <LoadingScreen timeout={3000} />;
   }
 
   // Se não autenticado, redirecionar para login
   if (!isAuthenticated || !user) {
-    console.log("[PrivateRoute] Redirecionando para login - não autenticado");
+    console.log("[PrivateRoute] ETAPA 1 - Redirecionando para login - não autenticado");
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   // Se usuário inativo, redirecionar para login
   if (user.ativo === false) {
-    console.log("[PrivateRoute] Redirecionando para login - usuário inativo");
+    console.log("[PrivateRoute] ETAPA 1 - Redirecionando para login - usuário inativo");
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  console.log("[PrivateRoute] Acesso permitido para:", user.nome || user.email);
+  console.log("[PrivateRoute] ETAPA 1 - ✅ Acesso permitido para:", user.nome || user.email);
   return <>{children}</>;
 };
