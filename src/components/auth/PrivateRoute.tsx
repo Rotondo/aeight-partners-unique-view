@@ -21,16 +21,16 @@ export const PrivateRoute: React.FC<PrivateRouteProps> = ({ children }) => {
     timestamp: new Date().toISOString()
   });
 
-  // Se há erro crítico de autenticação
+  // Se há erro crítico de autenticação, redirecionar imediatamente
   if (error && !loading) {
     console.error("[PrivateRoute] ETAPA 1 - Erro de autenticação:", error);
     return <Navigate to="/login" state={{ from: location, error }} replace />;
   }
 
-  // Mostrar loading apenas por 3 segundos máximo para ETAPA 1
+  // Mostrar loading apenas por 2 segundos máximo (reduzido ainda mais)
   if (loading) {
-    console.log("[PrivateRoute] ETAPA 1 - Aguardando autenticação (máximo 3s)...");
-    return <LoadingScreen timeout={3000} />;
+    console.log("[PrivateRoute] ETAPA 1 - Aguardando autenticação (máximo 2s)...");
+    return <LoadingScreen timeout={2000} />;
   }
 
   // Se não autenticado, redirecionar para login
