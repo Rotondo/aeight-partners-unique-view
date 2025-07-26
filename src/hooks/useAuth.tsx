@@ -1,318 +1,223 @@
 
-import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useState, useEffect, useCallback } from "react";
+import { supabase } from "@/lib/supabase";
+import { Usuario } from "@/types";
+import { Session } from "@supabase/supabase-js";
 
-interface User {
-  id: string;
-  nome?: string | null;
-  email: string;
-  papel?: string;
-  empresa_id?: string;
-  ativo?: boolean;
-}
-
-interface AuthContextType {
-  user: User | null;
-  isAuthenticated: boolean;
-  loading: boolean;
-  error: string | null;
-  login: (email: string, senha: string) => Promise<boolean>;
-  logout: () => void;
-  refreshUser: () => Promise<void>;
-}
-
-const AuthContext = createContext<AuthContextType>({
-  user: null,
-  isAuthenticated: false,
-  loading: false,
-  error: null,
-  login: async () => false,
-  logout: () => {},
-  refreshUser: async () => {},
-});
-
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+export const useAuth = () => {
+  const [user, setUser] = useState<Usuario | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const isDevelopment = process.env.NODE_ENV === 'development';
+  // Função para buscar usuário com timeout mais equilibrado
+  const fetchUser = useCallback(async (userId: string): Promise<Usuario | null> => {
+    try {
+      console.log('[useAuth] Buscando usuário:', userId);
+      
+      // Timeout de 5 segundos (mais equilibrado)
+      const timeoutPromise = new Promise<never>((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout ao buscar usuário')), 5000)
+      );
 
-  const logAuth = useCallback((action: string, data?: any) => {
-    if (isDevelopment) {
-      console.log(`[Auth] ${action}:`, data);
+      const queryPromise = supabase
+        .from('usuarios')
+        .select(`
+          id,
+          nome,
+          email,
+          papel,
+          empresa_id,
+          ativo,
+          created_at,
+          empresa:empresas(id, nome, tipo)
+        `)
+        .eq('id', userId)
+        .eq('ativo', true)
+        .single();
+
+      const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
+
+      if (error) {
+        console.error('[useAuth] Erro ao buscar usuário:', error);
+        return null;
+      }
+
+      console.log('[useAuth] Usuário encontrado:', data);
+      return data as Usuario;
+    } catch (error) {
+      console.error('[useAuth] Erro/timeout ao buscar usuário:', error);
+      return null;
     }
-  }, [isDevelopment]);
-
-  const createTimeoutPromise = useCallback((ms: number, errorMessage: string) => {
-    return new Promise<never>((_, reject) => {
-      setTimeout(() => {
-        reject(new Error(errorMessage));
-      }, ms);
-    });
   }, []);
 
-  const fetchUserFromDB = useCallback(async (email: string | null | undefined): Promise<User | null> => {
-    if (!email) return null;
-    
+  // Função para obter sessão com timeout
+  const getSession = useCallback(async (): Promise<Session | null> => {
     try {
-      logAuth('fetchUserFromDB_start', { email });
+      console.log('[useAuth] Obtendo sessão...');
       
-      // Use Promise.race with timeout instead of abortSignal
-      const timeoutPromise = createTimeoutPromise(2000, 'TIMEOUT na fetchUserFromDB após 2s');
+      const timeoutPromise = new Promise<never>((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout ao obter sessão')), 3000)
+      );
+
+      const sessionPromise = supabase.auth.getSession();
       
-      const queryPromise = supabase
-        .from("usuarios")
-        .select("*")
-        .eq("email", email)
-        .maybeSingle();
+      const { data, error } = await Promise.race([sessionPromise, timeoutPromise]);
       
-      const { data, error: dbError } = await Promise.race([queryPromise, timeoutPromise]);
-      
-      if (dbError) {
-        throw dbError;
+      if (error) {
+        console.error('[useAuth] Erro ao obter sessão:', error);
+        return null;
       }
       
-      if (data) {
-        const userData = {
-          id: data.id,
-          nome: data.nome,
-          email: data.email,
-          papel: data.papel,
-          empresa_id: data.empresa_id,
-          ativo: data.ativo,
-        } as User;
-        
-        logAuth('fetchUserFromDB_success', { userId: userData.id, ativo: userData.ativo });
-        return userData;
-      }
-      
-      logAuth('fetchUserFromDB_not_found');
-      return null;
-    } catch (err: any) {
-      console.error('[Auth] Erro na fetchUserFromDB:', err);
-      
-      // Se for timeout ou erro de conexão, retornar usuário básico para permitir acesso
-      if (err.message?.includes('TIMEOUT') || err.code === 'PGRST301') {
-        console.warn('[Auth] Usando fallback devido ao timeout - criando usuário básico');
-        return {
-          id: 'fallback-user',
-          email: email,
-          nome: 'Usuário (Modo Fallback)',
-          papel: 'user',
-          ativo: true
-        } as User;
-      }
-      
-      setError(`Erro ao buscar dados do usuário: ${err instanceof Error ? err.message : 'Erro desconhecido'}`);
+      console.log('[useAuth] Sessão obtida:', !!data.session);
+      return data.session;
+    } catch (error) {
+      console.error('[useAuth] Erro/timeout ao obter sessão:', error);
       return null;
     }
-  }, [logAuth, createTimeoutPromise]);
+  }, []);
 
-  const refreshUser = useCallback(async () => {
-    logAuth('refreshUser_start');
-    setError(null);
-    
-    try {
-      // Use Promise.race with timeout instead of abortSignal
-      const timeoutPromise = createTimeoutPromise(2000, 'TIMEOUT no refreshUser após 2s');
-      
-      const sessionPromise = supabase.auth.getUser();
-      const { data: authData, error: authError } = await Promise.race([sessionPromise, timeoutPromise]);
-      
-      if (authError || !authData?.user) {
-        logAuth('refreshUser_no_auth');
-        setUser(null);
-        return;
-      }
-      
-      const dbUser = await fetchUserFromDB(authData.user.email);
-      setUser(dbUser);
-      
-    } catch (err: any) {
-      console.error('[Auth] Erro em refreshUser:', err);
-      
-      // Fallback crítico - se timeout, assumir que não há usuário autenticado
-      if (err.message?.includes('TIMEOUT')) {
-        console.warn('[Auth] Timeout em refreshUser - assumindo não autenticado');
-        setUser(null);
-      } else {
-        setError(`Erro na autenticação: ${err instanceof Error ? err.message : 'Erro desconhecido'}`);
-        setUser(null);
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, [logAuth, fetchUserFromDB, createTimeoutPromise]);
-
+  // Inicializar autenticação
   useEffect(() => {
-    let mounted = true;
-    
+    let isMounted = true;
+
     const initAuth = async () => {
-      logAuth('auth_initialization_start');
-      
-      // Timeout máximo de 2 segundos para inicialização completa
-      const initTimeout = setTimeout(() => {
-        if (mounted) {
-          console.error('[Auth] TIMEOUT GERAL na inicialização após 2s - forçando fim do loading');
-          setLoading(false);
-          setUser(null);
-        }
-      }, 2000);
-      
       try {
-        // Use Promise.race with timeout instead of abortSignal
-        const timeoutPromise = createTimeoutPromise(2000, 'TIMEOUT no getSession após 2s');
+        setError(null);
+        console.log('[useAuth] Inicializando autenticação...');
+
+        const currentSession = await getSession();
         
-        const sessionPromise = supabase.auth.getSession();
-        const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]);
-        
-        if (mounted) {
-          if (session?.user) {
-            logAuth('session_found', { email: session.user.email });
-            const dbUser = await fetchUserFromDB(session.user.email);
-            if (mounted) {
-              setUser(dbUser);
-            }
+        if (!isMounted) return;
+
+        if (currentSession?.user) {
+          setSession(currentSession);
+          
+          const userData = await fetchUser(currentSession.user.id);
+          
+          if (!isMounted) return;
+          
+          if (userData) {
+            setUser(userData);
+            console.log('[useAuth] Usuário autenticado:', userData.nome);
           } else {
-            logAuth('no_session');
+            console.log('[useAuth] Usuário não encontrado no banco');
+            setError('Usuário não encontrado');
           }
-          setLoading(false);
-          clearTimeout(initTimeout);
+        } else {
+          console.log('[useAuth] Nenhuma sessão ativa');
         }
-        
-        logAuth('auth_initialization_complete');
-      } catch (err: any) {
-        console.error('[Auth] Erro na inicialização:', err);
-        if (mounted) {
-          if (err.message?.includes('TIMEOUT')) {
-            console.warn('[Auth] Timeout na inicialização - finalizando sem erro');
-          } else {
-            setError('Erro na inicialização da autenticação');
-          }
+      } catch (error) {
+        console.error('[useAuth] Erro na inicialização:', error);
+        if (isMounted) {
+          setError('Erro ao inicializar autenticação');
+        }
+      } finally {
+        if (isMounted) {
           setLoading(false);
-          clearTimeout(initTimeout);
         }
       }
     };
 
     initAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (!mounted) return;
-        
-        logAuth('auth_state_change', { event });
-        
-        if (session?.user) {
-          const dbUser = await fetchUserFromDB(session.user.email);
-          if (mounted) {
-            setUser(dbUser);
-            setLoading(false);
-          }
-        } else {
-          setUser(null);
-          setLoading(false);
+    // Listener para mudanças de autenticação
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('[useAuth] Estado de auth mudou:', event);
+      
+      if (!isMounted) return;
+
+      setSession(session);
+      
+      if (event === 'SIGNED_IN' && session?.user) {
+        const userData = await fetchUser(session.user.id);
+        if (isMounted && userData) {
+          setUser(userData);
+          setError(null);
         }
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null);
+        setError(null);
       }
-    );
+      
+      if (isMounted) {
+        setLoading(false);
+      }
+    });
 
     return () => {
-      mounted = false;
-      subscription.unsubscribe();
+      isMounted = false;
+      subscription?.unsubscribe();
     };
-  }, [logAuth, fetchUserFromDB, createTimeoutPromise]);
+  }, [fetchUser, getSession]);
 
-  const login = useCallback(async (email: string, senha: string): Promise<boolean> => {
-    if (!email || !senha) {
-      setError("Email e senha são obrigatórios.");
-      return false;
-    }
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      setError("Email inválido.");
-      return false;
-    }
-    logAuth('login_attempt', { email });
-    setLoading(true);
-    setError(null);
-    
+  const signIn = async (email: string, password: string) => {
     try {
-      // Use Promise.race with timeout instead of abortSignal
-      const timeoutPromise = createTimeoutPromise(2000, 'TIMEOUT no login após 2s');
-      
-      const loginPromise = supabase.auth.signInWithPassword({
-        email: email.trim().toLowerCase(),
-        password: senha,
-      });
-      
-      const { data, error: authError } = await Promise.race([loginPromise, timeoutPromise]);
-      
-      if (authError) {
-        throw authError;
-      }
-      
-      const dbUser = await fetchUserFromDB(email);
-      if (!dbUser) {
-        setError("Usuário não encontrado na base de dados.");
-        return false;
-      }
-      if (dbUser.ativo === false) {
-        setError("Usuário inativo. Entre em contato com o administrador.");
-        return false;
-      }
-      setUser(dbUser);
-      logAuth('login_success');
-      return true;
-    } catch (err: any) {
-      console.error('[Auth] Erro durante login:', err);
-      
-      if (err.message?.includes('TIMEOUT')) {
-        setError("Timeout no login. Verifique sua conexão.");
-      } else if (err instanceof Error && err.message.includes('Invalid login credentials')) {
-        setError("Email ou senha incorretos.");
-      } else {
-        setError("Erro durante o login. Tente novamente.");
-      }
-      setUser(null);
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  }, [logAuth, fetchUserFromDB, createTimeoutPromise]);
-
-  const logout = useCallback(async () => {
-    logAuth('logout_start');
-    setLoading(true);
-    
-    try {
-      await supabase.auth.signOut();
-      setUser(null);
+      setLoading(true);
       setError(null);
-      logAuth('logout_success');
-    } catch (err) {
-      console.error('[Auth] Erro durante logout:', err);
-      setError("Erro durante logout");
+      console.log('[useAuth] Tentando fazer login...');
+
+      const timeoutPromise = new Promise<never>((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout no login')), 10000)
+      );
+
+      const loginPromise = supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      const { data, error } = await Promise.race([loginPromise, timeoutPromise]);
+
+      if (error) {
+        console.error('[useAuth] Erro no login:', error);
+        setError(error.message);
+        return { success: false, error: error.message };
+      }
+
+      console.log('[useAuth] Login realizado com sucesso');
+      return { success: true };
+    } catch (error: any) {
+      console.error('[useAuth] Erro/timeout no login:', error);
+      const errorMessage = error.message || 'Erro no login';
+      setError(errorMessage);
+      return { success: false, error: errorMessage };
     } finally {
       setLoading(false);
     }
-  }, [logAuth]);
-
-  const contextValue = {
-    user,
-    isAuthenticated: !!user && user.ativo !== false,
-    loading,
-    error,
-    login,
-    logout,
-    refreshUser,
   };
 
-  return (
-    <AuthContext.Provider value={contextValue}>
-      {children}
-    </AuthContext.Provider>
-  );
-};
+  const signOut = async () => {
+    try {
+      setLoading(true);
+      console.log('[useAuth] Fazendo logout...');
+      
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        console.error('[useAuth] Erro no logout:', error);
+        return { success: false, error: error.message };
+      }
 
-export const useAuth = () => useContext(AuthContext);
+      setUser(null);
+      setSession(null);
+      setError(null);
+      console.log('[useAuth] Logout realizado com sucesso');
+      return { success: true };
+    } catch (error: any) {
+      console.error('[useAuth] Erro no logout:', error);
+      return { success: false, error: error.message };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return {
+    user,
+    session,
+    loading,
+    error,
+    signIn,
+    signOut,
+    isAuthenticated: !!user && !!session,
+  };
+};

@@ -1,50 +1,41 @@
 
-import React from "react";
-import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import LoadingScreen from "@/components/ui/LoadingScreen";
+import { LoginForm } from "./LoginForm";
+import { LoadingScreen } from "@/components/ui/LoadingScreen";
+import { useEffect, useState } from "react";
 
 interface PrivateRouteProps {
   children: React.ReactNode;
 }
 
-export const PrivateRoute: React.FC<PrivateRouteProps> = ({ children }) => {
-  const { user, isAuthenticated, loading, error } = useAuth();
-  const location = useLocation();
+export const PrivateRoute = ({ children }: PrivateRouteProps) => {
+  const { user, loading, error } = useAuth();
+  const [showTimeout, setShowTimeout] = useState(false);
 
-  console.log("[PrivateRoute] ETAPA 1 - Estado atual:", { 
-    user: !!user, 
-    isAuthenticated, 
-    loading, 
-    error,
-    pathname: location.pathname,
-    timestamp: new Date().toISOString()
-  });
+  useEffect(() => {
+    // Timeout mais generoso para o carregamento inicial
+    const timer = setTimeout(() => {
+      if (loading && !user) {
+        console.log('[PrivateRoute] Timeout atingido, mostrando tela de login');
+        setShowTimeout(true);
+      }
+    }, 8000); // 8 segundos para carregamento inicial
 
-  // Se há erro crítico de autenticação, redirecionar imediatamente
-  if (error && !loading) {
-    console.error("[PrivateRoute] ETAPA 1 - Erro de autenticação:", error);
-    return <Navigate to="/login" state={{ from: location, error }} replace />;
+    return () => clearTimeout(timer);
+  }, [loading, user]);
+
+  // Se ainda está carregando e não atingiu o timeout
+  if (loading && !showTimeout) {
+    return <LoadingScreen />;
   }
 
-  // Mostrar loading apenas por 2 segundos máximo (reduzido ainda mais)
-  if (loading) {
-    console.log("[PrivateRoute] ETAPA 1 - Aguardando autenticação (máximo 2s)...");
-    return <LoadingScreen timeout={2000} />;
+  // Se há erro ou não há usuário após o carregamento
+  if (error || !user || showTimeout) {
+    console.log('[PrivateRoute] Redirecionando para login:', { error, hasUser: !!user, showTimeout });
+    return <LoginForm />;
   }
 
-  // Se não autenticado, redirecionar para login
-  if (!isAuthenticated || !user) {
-    console.log("[PrivateRoute] ETAPA 1 - Redirecionando para login - não autenticado");
-    return <Navigate to="/login" state={{ from: location }} replace />;
-  }
-
-  // Se usuário inativo, redirecionar para login
-  if (user.ativo === false) {
-    console.log("[PrivateRoute] ETAPA 1 - Redirecionando para login - usuário inativo");
-    return <Navigate to="/login" state={{ from: location }} replace />;
-  }
-
-  console.log("[PrivateRoute] ETAPA 1 - ✅ Acesso permitido para:", user.nome || user.email);
+  // Usuário autenticado
+  console.log('[PrivateRoute] Usuário autenticado, renderizando conteúdo');
   return <>{children}</>;
 };
