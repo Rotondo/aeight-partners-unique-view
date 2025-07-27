@@ -4,26 +4,35 @@ import * as TooltipPrimitive from "@radix-ui/react-tooltip"
 
 import { cn } from "@/lib/utils"
 
-// Safe wrapper for TooltipProvider that handles React initialization
+// Simple non-hook based initialization check
+let isReactReady = false;
+let initTimeout: NodeJS.Timeout;
+
+// Check React readiness without using hooks
+const checkReactInitialization = () => {
+  if (typeof window !== 'undefined' && window.React && typeof window.React.useState === 'function') {
+    isReactReady = true;
+  } else {
+    // Keep checking every 10ms until React is ready
+    initTimeout = setTimeout(checkReactInitialization, 10);
+  }
+};
+
+// Start checking immediately
+checkReactInitialization();
+
+// Safe wrapper that doesn't use hooks during initialization
 const SafeTooltipProvider: React.FC<React.ComponentPropsWithoutRef<typeof TooltipPrimitive.Provider>> = ({ children, ...props }) => {
-  const [isReady, setIsReady] = React.useState(false);
-
-  React.useEffect(() => {
-    // Small delay to ensure React context is fully established
-    const timer = setTimeout(() => setIsReady(true), 100);
-    return () => clearTimeout(timer);
-  }, []);
-
-  // Render children without tooltip provider if not ready yet
-  if (!isReady) {
-    return <>{children}</>;
+  // If React isn't ready, just render children without provider
+  if (!isReactReady) {
+    return React.createElement(React.Fragment, null, children);
   }
 
   try {
-    return <TooltipPrimitive.Provider {...props}>{children}</TooltipPrimitive.Provider>;
+    return React.createElement(TooltipPrimitive.Provider, { ...props, children });
   } catch (error) {
     console.error('[SafeTooltipProvider] Error:', error);
-    return <>{children}</>;
+    return React.createElement(React.Fragment, null, children);
   }
 };
 
