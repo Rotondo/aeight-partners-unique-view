@@ -7,6 +7,7 @@ class AppInitializer {
     this.checkInterval = 50; // Check every 50ms
     this.maxRetries = 3;
     this.currentRetry = 0;
+    this.reactRoot = null; // Store single React root instance
   }
 
   // Check if React is fully loaded and functional
@@ -40,7 +41,7 @@ class AppInitializer {
   // Show loading screen
   showLoadingScreen() {
     const root = document.getElementById('root');
-    if (root) {
+    if (root && !root.hasAttribute('data-react-root')) {
       root.innerHTML = `
         <div style="
           display: flex; 
@@ -76,7 +77,7 @@ class AppInitializer {
   // Show error screen
   showErrorScreen(message, allowRetry = true) {
     const root = document.getElementById('root');
-    if (root) {
+    if (root && !root.hasAttribute('data-react-root')) {
       root.innerHTML = `
         <div style="
           display: flex; 
@@ -178,8 +179,18 @@ class AppInitializer {
         throw new Error('Root element not found');
       }
 
-      const root = createRoot(rootElement);
-      root.render(
+      // Clean the container completely before React takes over
+      rootElement.innerHTML = '';
+      
+      // Mark that React now owns this container
+      rootElement.setAttribute('data-react-root', 'true');
+      
+      // Create and render with a single root
+      if (!this.reactRoot) {
+        this.reactRoot = createRoot(rootElement);
+      }
+      
+      this.reactRoot.render(
         React.createElement(React.StrictMode, null,
           React.createElement(App)
         )

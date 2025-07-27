@@ -11,11 +11,23 @@ const SafeToaster: React.FC<SafeToasterProps> = () => {
   const [isReactReady, setIsReactReady] = React.useState(false);
 
   React.useEffect(() => {
-    // Small delay to ensure React context is fully established
-    const timer = setTimeout(() => {
-      setIsReactReady(true);
-    }, 100);
+    // Verify React context is fully established and we're not in initialization phase
+    const checkReactReady = () => {
+      try {
+        // Ensure React hooks are working properly
+        if (React && 
+            typeof React.useState === 'function' && 
+            typeof React.useEffect === 'function' &&
+            !document.getElementById('root')?.hasAttribute('data-initializing')) {
+          setIsReactReady(true);
+        }
+      } catch (error) {
+        console.warn('[SafeToaster] React not fully ready yet:', error);
+      }
+    };
 
+    // Small delay to ensure React context is fully established
+    const timer = setTimeout(checkReactReady, 150);
     return () => clearTimeout(timer);
   }, []);
 
