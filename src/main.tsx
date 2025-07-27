@@ -1,76 +1,22 @@
 
 import React from 'react';
-import { createRoot } from 'react-dom/client';
-import App from './App.tsx';
-import './index.css';
+import * as ReactDOM from 'react-dom/client';
 
-// Enhanced initialization with comprehensive React availability check
-const initializeApp = () => {
-  try {
-    console.log('[Main] Starting app initialization...');
+// Expose React and ReactDOM globally for the initializer
+(window as any).React = React;
+(window as any).ReactDOM = ReactDOM;
 
-    // Comprehensive React availability check
-    if (!React || 
-        !React.createElement || 
-        !React.useState ||
-        !React.useEffect ||
-        !React.useMemo ||
-        !React.forwardRef ||
-        typeof React.useState !== 'function' ||
-        typeof React.useEffect !== 'function' ||
-        typeof React.useMemo !== 'function') {
-      throw new Error("React hooks are not properly loaded");
-    }
-
-    const rootElement = document.getElementById("root");
-    if (!rootElement) {
-      throw new Error("Root element not found");
-    }
-
-    console.log('[Main] React confirmed fully available, initializing app...');
-
-    // Create and render the React application
-    const root = createRoot(rootElement);
-    
-    root.render(
-      <React.StrictMode>
-        <App />
-      </React.StrictMode>
-    );
-
-    console.log('[Main] Application initialized successfully');
-    
-  } catch (error) {
-    console.error('[Main] Critical initialization error:', error);
-    
-    // Show a simple error fallback
-    const rootElement = document.getElementById("root");
-    if (rootElement) {
-      rootElement.innerHTML = `
-        <div style="display: flex; align-items: center; justify-content: center; min-height: 100vh; font-family: system-ui; background: #f9fafb;">
-          <div style="text-align: center; padding: 2rem; background: white; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
-            <h1 style="color: #dc2626; margin-bottom: 1rem; font-size: 1.5rem;">Application Error</h1>
-            <p style="margin-bottom: 1rem; color: #4b5563;">Failed to initialize the application. Please refresh the page.</p>
-            <button 
-              onclick="window.location.reload()" 
-              style="padding: 0.75rem 1.5rem; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;"
-            >
-              Reload Application
-            </button>
-          </div>
-        </div>
-      `;
-    }
+// Declare global type for TypeScript
+declare global {
+  interface Window {
+    appInitializer?: any;
+    React?: typeof React;
+    ReactDOM?: typeof ReactDOM;
   }
-};
-
-// Wait for DOM to be ready, then initialize with additional delay for module loading
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => {
-    // Extra delay to ensure all React modules are fully loaded
-    setTimeout(initializeApp, 50);
-  });
-} else {
-  // Add a larger delay to ensure all modules are loaded
-  setTimeout(initializeApp, 50);
 }
+
+// Import the vanilla JS initializer after exposing React
+import('./lib/appInitializer.js').then(() => {
+  // Start the initialization process
+  window.appInitializer?.initialize();
+});

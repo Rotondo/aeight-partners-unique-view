@@ -6,7 +6,7 @@ import { PrivacyProvider } from '@/contexts/PrivacyContext';
 import { WishlistProvider } from '@/contexts/WishlistContext';
 import { CrmProvider } from '@/contexts/CrmContext';
 import { PrivateRoute } from '@/components/auth/PrivateRoute';
-import { ReactSafetyProvider } from '@/components/ui/ReactSafetyProvider';
+
 import SafeToaster from '@/components/ui/SafeToaster';
 
 // Imports for all pages
@@ -40,128 +40,126 @@ const queryClient = new QueryClient({
 
 function App() {
   return (
-    <ReactSafetyProvider>
-      <QueryClientProvider client={queryClient}>
-        <PrivacyProvider>
-          <Router>
-            <Routes>
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/" element={
-                <PrivateRoute>
-                  <MainLayout>
-                    <Index />
-                  </MainLayout>
-                </PrivateRoute>
-              } />
-              <Route path="/dashboard" element={
-                <PrivateRoute>
-                  <MainLayout>
-                    <DashboardPage />
-                  </MainLayout>
-                </PrivateRoute>
-              } />
-              <Route path="/oportunidades" element={
-                <PrivateRoute>
-                  <MainLayout>
-                    <OportunidadesPage />
-                  </MainLayout>
-                </PrivateRoute>
-              } />
-              <Route path="/empresas" element={
-                <PrivateRoute>
-                  <MainLayout>
-                    <EmpresasPage />
-                  </MainLayout>
-                </PrivateRoute>
-              } />
-              <Route path="/contatos" element={
-                <PrivateRoute>
-                  <MainLayout>
-                    <ContatosPage />
-                  </MainLayout>
-                </PrivateRoute>
-              } />
-              <Route path="/categorias" element={
-                <PrivateRoute>
-                  <MainLayout>
-                    <CategoriasPage />
-                  </MainLayout>
-                </PrivateRoute>
-              } />
-              <Route path="/indicadores" element={
-                <PrivateRoute>
-                  <MainLayout>
-                    <IndicadoresPage />
-                  </MainLayout>
-                </PrivateRoute>
-              } />
-              <Route path="/admin" element={
-                <PrivateRoute>
-                  <MainLayout>
-                    <AdminPage />
-                  </MainLayout>
-                </PrivateRoute>
-              } />
-              <Route path="/mapa-parceiros" element={
-                <PrivateRoute>
-                  <MainLayout>
-                    <MapaParceirosPage />
-                  </MainLayout>
-                </PrivateRoute>
-              } />
-              <Route path="/onepager" element={
-                <PrivateRoute>
-                  <MainLayout>
-                    <OnePagerPage />
-                  </MainLayout>
-                </PrivateRoute>
-              } />
-              <Route path="/repositorio" element={
-                <PrivateRoute>
-                  <MainLayout>
-                    <RepositorioPage />
-                  </MainLayout>
-                </PrivateRoute>
-              } />
-              <Route path="/quadrante" element={
-                <PrivateRoute>
-                  <MainLayout>
-                    <QuadrantePage />
-                  </MainLayout>
-                </PrivateRoute>
-              } />
-              <Route path="/eventos" element={
-                <PrivateRoute>
-                  <MainLayout>
-                    <EventosPage />
-                  </MainLayout>
-                </PrivateRoute>
-              } />
-              <Route path="/clientes/*" element={
-                <PrivateRoute>
-                  <MainLayout>
-                    <WishlistProvider autoLoad={true}>
-                      <CrmProvider>
-                        <WishlistPage />
-                      </CrmProvider>
-                    </WishlistProvider>
-                  </MainLayout>
-                </PrivateRoute>
-              } />
-              <Route path="/diario" element={
-                <PrivateRoute>
-                  <MainLayout>
-                    <DiarioPage />
-                  </MainLayout>
-                </PrivateRoute>
-              } />
-              <Route path="*" element={<NotFoundPage />} />
-            </Routes>
-            <SafeToaster />
-          </Router>
-        </PrivacyProvider>
-      </QueryClientProvider>
-    </ReactSafetyProvider>
+    <QueryClientProvider client={queryClient}>
+      <PrivacyProvider>
+        <Router>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/" element={
+              <PrivateRoute>
+                <MainLayout>
+                  <Index />
+                </MainLayout>
+              </PrivateRoute>
+            } />
+            <Route path="/dashboard" element={
+              <PrivateRoute>
+                <MainLayout>
+                  <DashboardPage />
+                </MainLayout>
+              </PrivateRoute>
+            } />
+            <Route path="/oportunidades" element={
+              <PrivateRoute>
+                <MainLayout>
+                  <OportunidadesPage />
+                </MainLayout>
+              </PrivateRoute>
+            } />
+            <Route path="/empresas" element={
+              <PrivateRoute>
+                <MainLayout>
+                  <EmpresasPage />
+                </MainLayout>
+              </PrivateRoute>
+            } />
+            <Route path="/contatos" element={
+              <PrivateRoute>
+                <MainLayout>
+                  <ContatosPage />
+                </MainLayout>
+              </PrivateRoute>
+            } />
+            <Route path="/categorias" element={
+              <PrivateRoute>
+                <MainLayout>
+                  <CategoriasPage />
+                </MainLayout>
+              </PrivateRoute>
+            } />
+            <Route path="/indicadores" element={
+              <PrivateRoute>
+                <MainLayout>
+                  <IndicadoresPage />
+                </MainLayout>
+              </PrivateRoute>
+            } />
+            <Route path="/admin" element={
+              <PrivateRoute>
+                <MainLayout>
+                  <AdminPage />
+                </MainLayout>
+              </PrivateRoute>
+            } />
+            <Route path="/mapa-parceiros" element={
+              <PrivateRoute>
+                <MainLayout>
+                  <MapaParceirosPage />
+                </MainLayout>
+              </PrivateRoute>
+            } />
+            <Route path="/onepager" element={
+              <PrivateRoute>
+                <MainLayout>
+                  <OnePagerPage />
+                </MainLayout>
+              </PrivateRoute>
+            } />
+            <Route path="/repositorio" element={
+              <PrivateRoute>
+                <MainLayout>
+                  <RepositorioPage />
+                </MainLayout>
+              </PrivateRoute>
+            } />
+            <Route path="/quadrante" element={
+              <PrivateRoute>
+                <MainLayout>
+                  <QuadrantePage />
+                </MainLayout>
+              </PrivateRoute>
+            } />
+            <Route path="/eventos" element={
+              <PrivateRoute>
+                <MainLayout>
+                  <EventosPage />
+                </MainLayout>
+              </PrivateRoute>
+            } />
+            <Route path="/clientes/*" element={
+              <PrivateRoute>
+                <MainLayout>
+                  <WishlistProvider autoLoad={true}>
+                    <CrmProvider>
+                      <WishlistPage />
+                    </CrmProvider>
+                  </WishlistProvider>
+                </MainLayout>
+              </PrivateRoute>
+            } />
+            <Route path="/diario" element={
+              <PrivateRoute>
+                <MainLayout>
+                  <DiarioPage />
+                </MainLayout>
+              </PrivateRoute>
+            } />
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
+          <SafeToaster />
+        </Router>
+      </PrivacyProvider>
+    </QueryClientProvider>
   );
 }
 
