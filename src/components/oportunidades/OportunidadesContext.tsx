@@ -203,31 +203,37 @@ export const OportunidadesProvider: React.FC<OportunidadesProviderProps> = ({
         throw new Error('Campos obrigatórios faltando');
       }
 
-      // Prepare the insert data with only the fields that exist in the database
-      // Fix: Remove array brackets - insert expects a single object, not an array
+      // Map status to valid database enum values
+      let validStatus: string = 'em_contato'; // default value
+      if (data.status) {
+        const statusMapping: Record<string, string> = {
+          'indicado': 'em_contato',
+          'em_andamento': 'negociando',
+          'fechado': 'ganho',
+          'cancelado': 'perdido'
+        };
+        validStatus = statusMapping[data.status] || data.status;
+      }
+
+      // Prepare the insert data with only fields that exist in the database schema
       const insertData = {
         empresa_origem_id: data.empresa_origem_id,
         empresa_destino_id: data.empresa_destino_id,
         nome_lead: data.nome_lead,
         contato_id: data.contato_id || null,
         valor: data.valor || null,
-        status: data.status || 'em_contato', // Ensure valid status value
+        status: validStatus,
         data_indicacao: data.data_indicacao || new Date().toISOString(),
         data_fechamento: data.data_fechamento || null,
         motivo_perda: data.motivo_perda || null,
         usuario_envio_id: data.usuario_envio_id || null,
         usuario_recebe_id: data.usuario_recebe_id || null,
-        observacoes: data.observacoes || null,
-        tipo_natureza: data.tipo_natureza || null,
-        tipo_movimentacao: data.tipo_movimentacao || null,
-        usuario_origem_id: data.usuario_origem_id || null,
-        usuario_destino_id: data.usuario_destino_id || null,
-        tipo_relacao: data.tipo_relacao || null
+        observacoes: data.observacoes || null
       };
 
       const { error } = await supabase
         .from("oportunidades")
-        .insert(insertData); // Remove the array brackets
+        .insert(insertData);
 
       if (error) throw error;
 
@@ -267,11 +273,6 @@ export const OportunidadesProvider: React.FC<OportunidadesProviderProps> = ({
       if (data.usuario_envio_id !== undefined) updateData.usuario_envio_id = data.usuario_envio_id;
       if (data.usuario_recebe_id !== undefined) updateData.usuario_recebe_id = data.usuario_recebe_id;
       if (data.observacoes !== undefined) updateData.observacoes = data.observacoes;
-      if (data.tipo_natureza) updateData.tipo_natureza = data.tipo_natureza;
-      if (data.tipo_movimentacao !== undefined) updateData.tipo_movimentacao = data.tipo_movimentacao;
-      if (data.usuario_origem_id !== undefined) updateData.usuario_origem_id = data.usuario_origem_id;
-      if (data.usuario_destino_id !== undefined) updateData.usuario_destino_id = data.usuario_destino_id;
-      if (data.tipo_relacao) updateData.tipo_relacao = data.tipo_relacao;
 
       const { error } = await supabase
         .from("oportunidades")
