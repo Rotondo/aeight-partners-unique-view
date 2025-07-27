@@ -4,14 +4,40 @@ import { supabase } from "@/lib/supabase";
 import { Usuario } from "@/types";
 import { Session } from "@supabase/supabase-js";
 
+// Safe hook wrapper
+const useSafeState = <T>(initialValue: T): [T, (value: T) => void] => {
+  if (typeof useState !== 'function') {
+    console.error('[useAuth] useState not available');
+    return [initialValue, () => {}];
+  }
+  return useState(initialValue);
+};
+
+const useSafeEffect = (effect: () => void | (() => void), deps?: any[]) => {
+  if (typeof useEffect !== 'function') {
+    console.error('[useAuth] useEffect not available');
+    return;
+  }
+  return useEffect(effect, deps);
+};
+
+const useSafeCallback = <T extends (...args: any[]) => any>(callback: T, deps: any[]): T => {
+  if (typeof useCallback !== 'function') {
+    console.error('[useAuth] useCallback not available');
+    return callback;
+  }
+  return useCallback(callback, deps);
+};
+
 export const useAuth = () => {
-  const [user, setUser] = useState<Usuario | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // Safe state initialization
+  const [user, setUser] = useSafeState<Usuario | null>(null);
+  const [session, setSession] = useSafeState<Session | null>(null);
+  const [loading, setLoading] = useSafeState(true);
+  const [error, setError] = useSafeState<string | null>(null);
 
   // Função para buscar usuário com timeout mais equilibrado
-  const fetchUser = useCallback(async (userId: string): Promise<Usuario | null> => {
+  const fetchUser = useSafeCallback(async (userId: string): Promise<Usuario | null> => {
     try {
       console.log('[useAuth] Buscando usuário:', userId);
       
@@ -52,7 +78,7 @@ export const useAuth = () => {
   }, []);
 
   // Função para obter sessão com timeout
-  const getSession = useCallback(async (): Promise<Session | null> => {
+  const getSession = useSafeCallback(async (): Promise<Session | null> => {
     try {
       console.log('[useAuth] Obtendo sessão...');
       
@@ -78,7 +104,7 @@ export const useAuth = () => {
   }, []);
 
   // Inicializar autenticação
-  useEffect(() => {
+  useSafeEffect(() => {
     let isMounted = true;
 
     const initAuth = async () => {

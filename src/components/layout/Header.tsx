@@ -16,7 +16,7 @@ import { LogOut, User, Settings } from "lucide-react";
 import { DemoModeToggle } from "@/components/privacy/DemoModeToggle";
 
 export const Header = () => {
-  // Safety check for React hooks
+  // Safety check for React hooks availability
   if (!React || typeof React.useState !== 'function') {
     console.error('[Header] React hooks not available');
     return (

@@ -9,20 +9,48 @@ interface PrivateRouteProps {
 }
 
 export const PrivateRoute = ({ children }: PrivateRouteProps) => {
-  const { user, loading, error } = useAuth();
-  const [showTimeout, setShowTimeout] = useState(false);
+  // Check if React hooks are available
+  if (typeof useAuth !== 'function') {
+    console.error('[PrivateRoute] useAuth hook not available');
+    return <LoginForm />;
+  }
 
-  useEffect(() => {
-    // Timeout mais generoso para o carregamento inicial
-    const timer = setTimeout(() => {
-      if (loading && !user) {
-        console.log('[PrivateRoute] Timeout atingido, mostrando tela de login');
-        setShowTimeout(true);
-      }
-    }, 8000); // 8 segundos para carregamento inicial
+  let authData;
+  try {
+    authData = useAuth();
+  } catch (error) {
+    console.error('[PrivateRoute] Error using useAuth:', error);
+    return <LoginForm />;
+  }
 
-    return () => clearTimeout(timer);
-  }, [loading, user]);
+  const { user, loading, error } = authData;
+
+  // Safe useState usage
+  let showTimeout = false;
+  let setShowTimeout = () => {};
+
+  try {
+    [showTimeout, setShowTimeout] = useState(false);
+  } catch (error) {
+    console.error('[PrivateRoute] Error using useState:', error);
+  }
+
+  // Safe useEffect usage
+  try {
+    useEffect(() => {
+      // Timeout mais generoso para o carregamento inicial
+      const timer = setTimeout(() => {
+        if (loading && !user) {
+          console.log('[PrivateRoute] Timeout atingido, mostrando tela de login');
+          setShowTimeout(true);
+        }
+      }, 8000); // 8 segundos para carregamento inicial
+
+      return () => clearTimeout(timer);
+    }, [loading, user]);
+  } catch (error) {
+    console.error('[PrivateRoute] Error using useEffect:', error);
+  }
 
   // Se ainda está carregando e não atingiu o timeout
   if (loading && !showTimeout) {
