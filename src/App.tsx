@@ -7,7 +7,7 @@ import { WishlistProvider } from '@/contexts/WishlistContext';
 import { CrmProvider } from '@/contexts/CrmContext';
 import { PrivateRoute } from '@/components/auth/PrivateRoute';
 
-import SafeToaster from '@/components/ui/SafeToaster';
+import SimpleToaster from '@/components/ui/SimpleToaster';
 
 // Imports for all pages
 import Index from '@/pages/Index';
@@ -156,7 +156,7 @@ function App() {
             } />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
-          <SafeToaster />
+          <SimpleToaster />
         </Router>
       </PrivacyProvider>
     </QueryClientProvider>
