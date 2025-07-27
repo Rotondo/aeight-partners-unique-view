@@ -4,12 +4,22 @@ import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 
-// Enhanced initialization with React availability check
+// Enhanced initialization with comprehensive React availability check
 const initializeApp = () => {
   try {
-    // Verify React is available before proceeding
-    if (!React || !React.createElement || typeof React.useState !== 'function') {
-      throw new Error("React is not properly loaded");
+    console.log('[Main] Starting app initialization...');
+
+    // Comprehensive React availability check
+    if (!React || 
+        !React.createElement || 
+        !React.useState ||
+        !React.useEffect ||
+        !React.useMemo ||
+        !React.forwardRef ||
+        typeof React.useState !== 'function' ||
+        typeof React.useEffect !== 'function' ||
+        typeof React.useMemo !== 'function') {
+      throw new Error("React hooks are not properly loaded");
     }
 
     const rootElement = document.getElementById("root");
@@ -17,7 +27,7 @@ const initializeApp = () => {
       throw new Error("Root element not found");
     }
 
-    console.log('[Main] React confirmed available, initializing app...');
+    console.log('[Main] React confirmed fully available, initializing app...');
 
     // Create and render the React application
     const root = createRoot(rootElement);
@@ -54,10 +64,13 @@ const initializeApp = () => {
   }
 };
 
-// Wait for DOM to be ready, then initialize
+// Wait for DOM to be ready, then initialize with additional delay for module loading
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initializeApp);
+  document.addEventListener('DOMContentLoaded', () => {
+    // Extra delay to ensure all React modules are fully loaded
+    setTimeout(initializeApp, 50);
+  });
 } else {
-  // Add a small delay to ensure all modules are loaded
-  setTimeout(initializeApp, 10);
+  // Add a larger delay to ensure all modules are loaded
+  setTimeout(initializeApp, 50);
 }
