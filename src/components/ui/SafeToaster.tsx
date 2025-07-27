@@ -7,32 +7,15 @@ interface SafeToasterProps {
 }
 
 const SafeToaster: React.FC<SafeToasterProps> = () => {
-  // Check if React is properly initialized before rendering Toaster
-  const [isReactReady, setIsReactReady] = React.useState(false);
+  // Simple check to ensure component is mounting in proper React context
+  const [isMounted, setIsMounted] = React.useState(false);
 
   React.useEffect(() => {
-    // Verify React context is fully established and we're not in initialization phase
-    const checkReactReady = () => {
-      try {
-        // Ensure React hooks are working properly
-        if (React && 
-            typeof React.useState === 'function' && 
-            typeof React.useEffect === 'function' &&
-            !document.getElementById('root')?.hasAttribute('data-initializing')) {
-          setIsReactReady(true);
-        }
-      } catch (error) {
-        console.warn('[SafeToaster] React not fully ready yet:', error);
-      }
-    };
-
-    // Small delay to ensure React context is fully established
-    const timer = setTimeout(checkReactReady, 150);
-    return () => clearTimeout(timer);
+    // Mark as mounted after React has fully rendered
+    setIsMounted(true);
   }, []);
 
-  // Don't render Toaster until React is confirmed to be ready
-  if (!isReactReady) {
+  if (!isMounted) {
     return null;
   }
 
