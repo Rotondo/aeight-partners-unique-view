@@ -5,36 +5,20 @@ import App from './App.tsx';
 import './index.css';
 
 // Enhanced React availability check
-const isReactAvailable = () => {
-  return (
-    typeof React !== 'undefined' &&
-    React &&
-    typeof React.useState === 'function' &&
-    typeof React.useEffect === 'function' &&
-    typeof React.createElement === 'function'
-  );
-};
-
-// Wait for React to be fully available
-const waitForReact = (callback: () => void, maxAttempts = 10) => {
-  let attempts = 0;
-  
-  const checkReact = () => {
-    attempts++;
-    
-    if (isReactAvailable()) {
-      console.log('[Main] React is available, initializing app');
-      callback();
-    } else if (attempts < maxAttempts) {
-      console.log(`[Main] React not ready, attempt ${attempts}/${maxAttempts}`);
-      setTimeout(checkReact, 100);
-    } else {
-      console.error('[Main] React failed to initialize after maximum attempts');
-      showEmergencyFallback();
-    }
-  };
-  
-  checkReact();
+const isReactFullyAvailable = () => {
+  try {
+    return (
+      typeof React !== 'undefined' &&
+      React !== null &&
+      typeof React.useState === 'function' &&
+      typeof React.useEffect === 'function' &&
+      typeof React.createElement === 'function' &&
+      typeof React.StrictMode === 'function'
+    );
+  } catch (error) {
+    console.error('[Main] Error checking React availability:', error);
+    return false;
+  }
 };
 
 // Show emergency fallback
@@ -58,8 +42,26 @@ const showEmergencyFallback = () => {
   }
 };
 
+// Wait for React with improved checking
+const waitForReact = async (maxAttempts = 20) => {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    console.log(`[Main] Checking React availability, attempt ${attempt}/${maxAttempts}`);
+    
+    if (isReactFullyAvailable()) {
+      console.log('[Main] React is fully available, proceeding with initialization');
+      return true;
+    }
+    
+    // Wait before next attempt
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+  
+  console.error('[Main] React failed to initialize after maximum attempts');
+  return false;
+};
+
 // Initialize the application
-const initializeApp = () => {
+const initializeApp = async () => {
   try {
     console.log('[Main] Starting application initialization...');
 
@@ -68,23 +70,47 @@ const initializeApp = () => {
       throw new Error("Root element not found");
     }
 
-    // Wait for React to be ready before creating root
-    waitForReact(() => {
-      try {
-        const root = createRoot(rootElement);
-        
-        root.render(
-          <React.StrictMode>
-            <App />
-          </React.StrictMode>
-        );
+    // Show loading state
+    rootElement.innerHTML = `
+      <div style="display: flex; align-items: center; justify-content: center; min-height: 100vh; font-family: system-ui;">
+        <div style="text-align: center;">
+          <div style="width: 40px; height: 40px; border: 3px solid #e2e8f0; border-top: 3px solid #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 1rem;"></div>
+          <p style="color: #64748b;">Initializing React...</p>
+        </div>
+      </div>
+      <style>
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+      </style>
+    `;
 
-        console.log('[Main] Application rendered successfully');
-      } catch (error) {
-        console.error('[Main] Error rendering application:', error);
-        showEmergencyFallback();
-      }
-    });
+    // Wait for React to be ready
+    const reactReady = await waitForReact();
+    if (!reactReady) {
+      showEmergencyFallback();
+      return;
+    }
+
+    // Additional safety check before creating root
+    if (!isReactFullyAvailable()) {
+      console.error('[Main] React became unavailable before creating root');
+      showEmergencyFallback();
+      return;
+    }
+
+    try {
+      const root = createRoot(rootElement);
+      
+      root.render(
+        React.createElement(React.StrictMode, null,
+          React.createElement(App)
+        )
+      );
+
+      console.log('[Main] Application rendered successfully');
+    } catch (renderError) {
+      console.error('[Main] Error rendering application:', renderError);
+      showEmergencyFallback();
+    }
     
   } catch (error) {
     console.error('[Main] Critical initialization error:', error);

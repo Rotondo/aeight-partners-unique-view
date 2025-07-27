@@ -50,50 +50,71 @@ const ErrorFallback = ({ message, onReload }: { message: string; onReload: () =>
   </div>
 );
 
+// Enhanced React safety checks
+const isReactSafe = () => {
+  try {
+    return (
+      typeof React !== 'undefined' &&
+      React !== null &&
+      typeof React.useState === 'function' &&
+      typeof React.useEffect === 'function' &&
+      typeof React.createElement === 'function' &&
+      React.useState !== null &&
+      React.useEffect !== null
+    );
+  } catch (error) {
+    console.error('[ReactSafetyProvider] Error in React safety check:', error);
+    return false;
+  }
+};
+
 export const ReactSafetyProvider: React.FC<ReactSafetyProviderProps> = ({ children }) => {
   // Basic React availability check
-  if (typeof React === 'undefined' || !React) {
-    console.error('[ReactSafetyProvider] React is not available');
-    return <ErrorFallback 
-      message="React is not properly loaded. Please refresh the page." 
-      onReload={() => window.location.reload()} 
-    />;
+  if (!isReactSafe()) {
+    console.error('[ReactSafetyProvider] React is not safely available');
+    return React.createElement(ErrorFallback, {
+      message: "React is not properly loaded. Please refresh the page.",
+      onReload: () => window.location.reload()
+    });
   }
 
-  // Check if essential React features are available
-  if (!React.useState || !React.useEffect || !React.createElement) {
-    console.error('[ReactSafetyProvider] Essential React features are missing');
-    return <ErrorFallback 
-      message="React features are not properly initialized. Please refresh the page." 
-      onReload={() => window.location.reload()} 
-    />;
-  }
-
-  // Use hooks only after confirming React is available
+  // Use try-catch around hook usage to prevent crashes
   try {
     const [hasError, setHasError] = React.useState(false);
     const [errorMessage, setErrorMessage] = React.useState<string>('');
 
-    // Error event listener
+    // Error event listener with additional safety checks
     React.useEffect(() => {
+      if (!isReactSafe()) {
+        console.error('[ReactSafetyProvider] React became unsafe during useEffect');
+        setHasError(true);
+        setErrorMessage('React hooks became unavailable');
+        return;
+      }
+
       const handleError = (event: ErrorEvent) => {
         console.error('[ReactSafetyProvider] Runtime error caught:', event.error);
         
-        // Check for React-related errors
-        if (event.error?.message?.includes('useState') || 
-            event.error?.message?.includes('useEffect') ||
-            event.error?.message?.includes('Cannot read properties of null')) {
+        // Check for React-related errors or hook errors
+        const errorMessage = event.error?.message || '';
+        if (errorMessage.includes('useState') || 
+            errorMessage.includes('useEffect') ||
+            errorMessage.includes('Cannot read properties of null') ||
+            errorMessage.includes('hooks') ||
+            errorMessage.includes('React')) {
           setHasError(true);
-          setErrorMessage(event.error.message || 'React hook error detected');
+          setErrorMessage(errorMessage || 'React hook error detected');
         }
       };
 
       const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
         console.error('[ReactSafetyProvider] Promise rejection:', event.reason);
-        if (event.reason?.message?.includes('React') || 
-            event.reason?.message?.includes('hook')) {
+        const reasonMessage = event.reason?.message || '';
+        if (reasonMessage.includes('React') || 
+            reasonMessage.includes('hook') ||
+            reasonMessage.includes('useState')) {
           setHasError(true);
-          setErrorMessage(event.reason.message || 'React promise error detected');
+          setErrorMessage(reasonMessage || 'React promise error detected');
         }
       };
 
@@ -108,20 +129,34 @@ export const ReactSafetyProvider: React.FC<ReactSafetyProviderProps> = ({ childr
 
     // If we caught a React error, show recovery options
     if (hasError) {
-      return <ErrorFallback 
-        message={`React Error: ${errorMessage}`}
-        onReload={() => window.location.reload()} 
-      />;
+      return React.createElement(ErrorFallback, {
+        message: `React Error: ${errorMessage}`,
+        onReload: () => window.location.reload()
+      });
     }
 
+    // Periodic React health check
+    React.useEffect(() => {
+      const healthCheck = setInterval(() => {
+        if (!isReactSafe()) {
+          console.error('[ReactSafetyProvider] React health check failed');
+          setHasError(true);
+          setErrorMessage('React became unavailable during runtime');
+          clearInterval(healthCheck);
+        }
+      }, 5000);
+
+      return () => clearInterval(healthCheck);
+    }, []);
+
     // All good, render children
-    return <>{children}</>;
+    return React.createElement(React.Fragment, null, children);
 
   } catch (hookError) {
     console.error('[ReactSafetyProvider] Error using React hooks:', hookError);
-    return <ErrorFallback 
-      message="Unable to initialize React hooks. Please refresh the page." 
-      onReload={() => window.location.reload()} 
-    />;
+    return React.createElement(ErrorFallback, {
+      message: "Unable to initialize React hooks. Please refresh the page.",
+      onReload: () => window.location.reload()
+    });
   }
 };
