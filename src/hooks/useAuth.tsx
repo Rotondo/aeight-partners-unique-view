@@ -4,8 +4,8 @@ import { supabase } from "@/lib/supabase";
 import { Usuario } from "@/types";
 import { Session } from "@supabase/supabase-js";
 
-// Safe hook wrapper
-const useSafeState = <T>(initialValue: T): [T, (value: T) => void] => {
+// Safe hook wrapper for useState
+const useSafeState = <T,>(initialValue: T): [T, (value: T) => void] => {
   if (typeof useState !== 'function') {
     console.error('[useAuth] useState not available');
     return [initialValue, () => {}];
@@ -13,6 +13,7 @@ const useSafeState = <T>(initialValue: T): [T, (value: T) => void] => {
   return useState(initialValue);
 };
 
+// Safe hook wrapper for useEffect
 const useSafeEffect = (effect: () => void | (() => void), deps?: any[]) => {
   if (typeof useEffect !== 'function') {
     console.error('[useAuth] useEffect not available');
@@ -21,6 +22,7 @@ const useSafeEffect = (effect: () => void | (() => void), deps?: any[]) => {
   return useEffect(effect, deps);
 };
 
+// Safe hook wrapper for useCallback
 const useSafeCallback = <T extends (...args: any[]) => any>(callback: T, deps: any[]): T => {
   if (typeof useCallback !== 'function') {
     console.error('[useAuth] useCallback not available');
