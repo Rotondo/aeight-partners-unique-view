@@ -44,7 +44,7 @@ export const OportunidadesPage: React.FC = () => {
   };
 
   return (
-    <OportunidadesProvider autoLoad={true}>
+    <OportunidadesProvider>
       <div className="space-y-4 md:space-y-6">
         <DemoModeIndicator />
         

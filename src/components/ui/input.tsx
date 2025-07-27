@@ -30,37 +30,18 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
       );
     }
 
-    // Garante valor seguro para inputs controlados (não-arquivo) - com proteção contra React não inicializado
-    let safeValue: string | undefined;
-    
-    try {
-      // Usar useMemo apenas se React estiver disponível
-      if (React && typeof React.useMemo === 'function') {
-        safeValue = React.useMemo(() => {
-          // Se não há value definido, deixar como undefined para componente não controlado
-          if (value === undefined) {
-            return undefined;
-          }
-          // Se value é null ou outro valor, converter para string
-          if (value === null) {
-            return "";
-          }
-          return String(value);
-        }, [value]);
-      } else {
-        // Fallback direto caso React não esteja disponível
-        if (value === undefined) {
-          safeValue = undefined;
-        } else if (value === null) {
-          safeValue = "";
-        } else {
-          safeValue = String(value);
-        }
+    // Garante valor seguro para inputs controlados (não-arquivo)
+    const safeValue = React.useMemo(() => {
+      // Se não há value definido, deixar como undefined para componente não controlado
+      if (value === undefined) {
+        return undefined;
       }
-    } catch (error) {
-      console.error('[Input] Error in value processing:', error);
-      safeValue = value === undefined ? undefined : String(value || "");
-    }
+      // Se value é null ou outro valor, converter para string
+      if (value === null) {
+        return "";
+      }
+      return String(value);
+    }, [value]);
 
     logControlledField("Input", value, props);
 

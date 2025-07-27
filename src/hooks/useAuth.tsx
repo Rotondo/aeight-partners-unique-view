@@ -1,147 +1,225 @@
 
-import { useState, useEffect, useCallback } from "react";
-import { supabase } from "@/lib/supabase";
-import { Usuario } from "@/types";
-import { Session } from "@supabase/supabase-js";
+import React, { createContext, useContext, useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
-// Safe hook wrapper for useState
-const useSafeState = <T,>(initialValue: T): [T, (value: T) => void] => {
-  if (typeof useState !== 'function') {
-    console.error('[useAuth] useState not available');
-    return [initialValue, () => {}];
+// Enhanced React validation with retry mechanism
+const validateReact = () => {
+  if (!React || !useState || !useEffect || !useContext || !createContext) {
+    console.error('[useAuth] React hooks are not available:', {
+      React: !!React,
+      useState: !!useState,
+      useEffect: !!useEffect,
+      useContext: !!useContext,
+      createContext: !!createContext
+    });
+    return false;
   }
-  return useState(initialValue);
+  return true;
 };
 
-// Safe hook wrapper for useEffect
-const useSafeEffect = (effect: () => void | (() => void), deps?: any[]) => {
-  if (typeof useEffect !== 'function') {
-    console.error('[useAuth] useEffect not available');
-    return;
+// Validate React is properly initialized
+if (!validateReact()) {
+  console.error('[useAuth] React is not properly initialized - hooks are not available');
+}
+
+interface User {
+  id: string;
+  nome?: string | null;
+  email: string;
+  papel?: string;
+  empresa_id?: string;
+  ativo?: boolean;
+}
+
+interface AuthContextType {
+  user: User | null;
+  isAuthenticated: boolean;
+  loading: boolean;
+  error: string | null;
+  login: (email: string, senha: string) => Promise<boolean>;
+  logout: () => void;
+  refreshUser: () => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContextType>({
+  user: null,
+  isAuthenticated: false,
+  loading: false,
+  error: null,
+  login: async () => false,
+  logout: () => {},
+  refreshUser: async () => {},
+});
+
+// AuthProvider component with comprehensive React validation
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // Must validate React before ANY hook usage
+  if (!validateReact()) {
+    console.error('[AuthProvider] React hooks are not available - providing fallback');
+    return (
+      <div style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        minHeight: '100vh',
+        fontFamily: 'system-ui',
+        textAlign: 'center',
+        padding: '2rem'
+      }}>
+        <div>
+          <h2 style={{ color: '#dc2626', marginBottom: '1rem' }}>React Loading Error</h2>
+          <p style={{ marginBottom: '1rem' }}>React is not properly initialized. Please wait or reload the page.</p>
+          <button 
+            onClick={() => window.location.reload()}
+            style={{
+              padding: '0.5rem 1rem',
+              background: '#3b82f6',
+              color: 'white',
+              border: 'none',
+              borderRadius: '0.375rem',
+              cursor: 'pointer'
+            }}
+          >
+            Reload Page
+          </button>
+        </div>
+      </div>
+    );
   }
-  return useEffect(effect, deps);
-};
 
-// Safe hook wrapper for useCallback
-const useSafeCallback = <T extends (...args: any[]) => any>(callback: T, deps: any[]): T => {
-  if (typeof useCallback !== 'function') {
-    console.error('[useAuth] useCallback not available');
-    return callback;
-  }
-  return useCallback(callback, deps);
-};
+  // Only use hooks if React is properly initialized
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState<number>(0);
 
-export const useAuth = () => {
-  // Safe state initialization
-  const [user, setUser] = useSafeState<Usuario | null>(null);
-  const [session, setSession] = useSafeState<Session | null>(null);
-  const [loading, setLoading] = useSafeState(true);
-  const [error, setError] = useSafeState<string | null>(null);
+  const isDevelopment = process.env.NODE_ENV === 'development';
 
-  // Função para buscar usuário com timeout mais equilibrado
-  const fetchUser = useSafeCallback(async (userId: string): Promise<Usuario | null> => {
-    try {
-      console.log('[useAuth] Buscando usuário:', userId);
-      
-      // Timeout de 5 segundos (mais equilibrado)
-      const timeoutPromise = new Promise<never>((_, reject) => 
-        setTimeout(() => reject(new Error('Timeout ao buscar usuário')), 5000)
-      );
+  // Timeout para requests de autenticação
+  const AUTH_TIMEOUT = 10000; // 10 segundos
+  const MAX_RETRIES = 3;
 
-      const queryPromise = supabase
-        .from('usuarios')
-        .select(`
-          id,
-          nome,
-          email,
-          papel,
-          empresa_id,
-          ativo,
-          created_at,
-          empresa:empresas(id, nome, tipo)
-        `)
-        .eq('id', userId)
-        .eq('ativo', true)
-        .single();
+  const withTimeout = <T,>(promise: Promise<T>, timeout: number): Promise<T> => {
+    return Promise.race([
+      promise,
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Timeout na autenticação')), timeout)
+      )
+    ]);
+  };
 
-      const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
-
-      if (error) {
-        console.error('[useAuth] Erro ao buscar usuário:', error);
-        return null;
-      }
-
-      console.log('[useAuth] Usuário encontrado:', data);
-      return data as Usuario;
-    } catch (error) {
-      console.error('[useAuth] Erro/timeout ao buscar usuário:', error);
-      return null;
+  const logAuth = (action: string, data?: any) => {
+    if (isDevelopment) {
+      console.log(`[Auth] ${action}:`, data);
     }
-  }, []);
+  };
 
-  // Função para obter sessão com timeout
-  const getSession = useSafeCallback(async (): Promise<Session | null> => {
+  // Busca usuário da tabela usuarios pelo e-mail do Auth com retry
+  const fetchUserFromDB = async (email: string | null | undefined, attempt = 1): Promise<User | null> => {
+    if (!email) return null;
+    
     try {
-      console.log('[useAuth] Obtendo sessão...');
+      logAuth('fetchUserFromDB_attempt', { email, attempt });
       
-      const timeoutPromise = new Promise<never>((_, reject) => 
-        setTimeout(() => reject(new Error('Timeout ao obter sessão')), 3000)
-      );
-
-      const sessionPromise = supabase.auth.getSession();
+      const query = supabase
+        .from("usuarios")
+        .select("*")
+        .eq("email", email)
+        .maybeSingle();
       
-      const { data, error } = await Promise.race([sessionPromise, timeoutPromise]);
+      const result = await withTimeout(Promise.resolve(query), AUTH_TIMEOUT);
+      const { data, error: dbError } = result;
       
-      if (error) {
-        console.error('[useAuth] Erro ao obter sessão:', error);
-        return null;
+      if (dbError) {
+        throw dbError;
       }
       
-      console.log('[useAuth] Sessão obtida:', !!data.session);
-      return data.session;
-    } catch (error) {
-      console.error('[useAuth] Erro/timeout ao obter sessão:', error);
-      return null;
-    }
-  }, []);
-
-  // Inicializar autenticação
-  useSafeEffect(() => {
-    let isMounted = true;
-
-    const initAuth = async () => {
-      try {
-        setError(null);
-        console.log('[useAuth] Inicializando autenticação...');
-
-        const currentSession = await getSession();
+      if (data) {
+        const userData = {
+          id: data.id,
+          nome: data.nome,
+          email: data.email,
+          papel: data.papel,
+          empresa_id: data.empresa_id,
+          ativo: data.ativo,
+        } as User;
         
-        if (!isMounted) return;
+        logAuth('user_found', { userId: userData.id });
+        return userData;
+      }
+      
+      logAuth('user_not_found');
+      return null;
+    } catch (err) {
+      console.error(`[Auth] Erro na fetchUserFromDB (tentativa ${attempt}):`, err);
+      
+      if (attempt < MAX_RETRIES && (err instanceof Error && err.message.includes('Timeout'))) {
+        logAuth('retrying_fetchUserFromDB', { attempt: attempt + 1 });
+        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+        return fetchUserFromDB(email, attempt + 1);
+      }
+      
+      setError(`Erro ao buscar dados do usuário: ${err instanceof Error ? err.message : 'Erro desconhecido'}`);
+      return null;
+    }
+  };
 
-        if (currentSession?.user) {
-          setSession(currentSession);
-          
-          const userData = await fetchUser(currentSession.user.id);
-          
-          if (!isMounted) return;
-          
-          if (userData) {
-            setUser(userData);
-            console.log('[useAuth] Usuário autenticado:', userData.nome);
-          } else {
-            console.log('[useAuth] Usuário não encontrado no banco');
-            setError('Usuário não encontrado');
+  const refreshUser = async () => {
+    logAuth('refreshUser_start');
+    setError(null);
+    
+    try {
+      const { data: authData, error: authError } = await withTimeout(
+        supabase.auth.getUser(),
+        AUTH_TIMEOUT
+      );
+      
+      if (authError || !authData?.user) {
+        logAuth('no_authenticated_user');
+        setUser(null);
+        return;
+      }
+      
+      const dbUser = await fetchUserFromDB(authData.user.email);
+      setUser(dbUser);
+      setRetryCount(0);
+      
+    } catch (err) {
+      console.error('[Auth] Erro em refreshUser:', err);
+      setError(`Erro na autenticação: ${err instanceof Error ? err.message : 'Erro desconhecido'}`);
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    let mounted = true;
+    
+    const initAuth = async () => {
+      logAuth('auth_initialization_start');
+      
+      try {
+        const { data: { session } } = await withTimeout(
+          supabase.auth.getSession(),
+          AUTH_TIMEOUT
+        );
+        
+        if (mounted) {
+          if (session?.user) {
+            const dbUser = await fetchUserFromDB(session.user.email);
+            if (mounted) {
+              setUser(dbUser);
+            }
           }
-        } else {
-          console.log('[useAuth] Nenhuma sessão ativa');
+          setLoading(false);
         }
-      } catch (error) {
-        console.error('[useAuth] Erro na inicialização:', error);
-        if (isMounted) {
-          setError('Erro ao inicializar autenticação');
-        }
-      } finally {
-        if (isMounted) {
+        
+        logAuth('auth_initialization_complete');
+      } catch (err) {
+        console.error('[Auth] Erro na inicialização:', err);
+        if (mounted) {
+          setError('Erro na inicialização da autenticação');
           setLoading(false);
         }
       }
@@ -149,103 +227,133 @@ export const useAuth = () => {
 
     initAuth();
 
-    // Listener para mudanças de autenticação
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('[useAuth] Estado de auth mudou:', event);
-      
-      if (!isMounted) return;
-
-      setSession(session);
-      
-      if (event === 'SIGNED_IN' && session?.user) {
-        const userData = await fetchUser(session.user.id);
-        if (isMounted && userData) {
-          setUser(userData);
-          setError(null);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (!mounted) return;
+        
+        logAuth('auth_state_change', { event });
+        
+        if (session?.user) {
+          setTimeout(async () => {
+            if (mounted) {
+              const dbUser = await fetchUserFromDB(session.user.email);
+              if (mounted) {
+                setUser(dbUser);
+                setLoading(false);
+              }
+            }
+          }, 0);
+        } else {
+          setUser(null);
+          setLoading(false);
         }
-      } else if (event === 'SIGNED_OUT') {
-        setUser(null);
-        setError(null);
       }
-      
-      if (isMounted) {
-        setLoading(false);
-      }
-    });
+    );
 
     return () => {
-      isMounted = false;
-      subscription?.unsubscribe();
+      mounted = false;
+      subscription.unsubscribe();
     };
-  }, [fetchUser, getSession]);
+  }, []);
 
-  const signIn = async (email: string, password: string) => {
+  const login = async (email: string, senha: string): Promise<boolean> => {
+    if (!email || !senha) {
+      setError("Email e senha são obrigatórios.");
+      return false;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError("Email inválido.");
+      return false;
+    }
+
+    logAuth('login_attempt', { email });
+    setLoading(true);
+    setError(null);
+    
     try {
-      setLoading(true);
-      setError(null);
-      console.log('[useAuth] Tentando fazer login...');
-
-      const timeoutPromise = new Promise<never>((_, reject) => 
-        setTimeout(() => reject(new Error('Timeout no login')), 10000)
+      const { data, error: authError } = await withTimeout(
+        supabase.auth.signInWithPassword({
+          email: email.trim().toLowerCase(),
+          password: senha,
+        }),
+        AUTH_TIMEOUT
       );
 
-      const loginPromise = supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      const { data, error } = await Promise.race([loginPromise, timeoutPromise]);
-
-      if (error) {
-        console.error('[useAuth] Erro no login:', error);
-        setError(error.message);
-        return { success: false, error: error.message };
+      if (authError) {
+        throw authError;
       }
 
-      console.log('[useAuth] Login realizado com sucesso');
-      return { success: true };
-    } catch (error: any) {
-      console.error('[useAuth] Erro/timeout no login:', error);
-      const errorMessage = error.message || 'Erro no login';
-      setError(errorMessage);
-      return { success: false, error: errorMessage };
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const signOut = async () => {
-    try {
-      setLoading(true);
-      console.log('[useAuth] Fazendo logout...');
+      const dbUser = await fetchUserFromDB(email);
       
-      const { error } = await supabase.auth.signOut();
-      
-      if (error) {
-        console.error('[useAuth] Erro no logout:', error);
-        return { success: false, error: error.message };
+      if (!dbUser) {
+        setError("Usuário não encontrado na base de dados.");
+        return false;
       }
-
+      
+      if (dbUser.ativo === false) {
+        setError("Usuário inativo. Entre em contato com o administrador.");
+        return false;
+      }
+      
+      setUser(dbUser);
+      setRetryCount(0);
+      logAuth('login_success');
+      return true;
+      
+    } catch (err) {
+      console.error('[Auth] Erro durante login:', err);
+      
+      if (err instanceof Error && err.message.includes('Timeout')) {
+        setError("Timeout na autenticação. Verifique sua conexão.");
+      } else if (err instanceof Error && err.message.includes('Invalid login credentials')) {
+        setError("Email ou senha incorretos.");
+      } else {
+        setError("Erro durante o login. Tente novamente.");
+      }
+      
       setUser(null);
-      setSession(null);
-      setError(null);
-      console.log('[useAuth] Logout realizado com sucesso');
-      return { success: true };
-    } catch (error: any) {
-      console.error('[useAuth] Erro no logout:', error);
-      return { success: false, error: error.message };
+      setRetryCount(prev => prev + 1);
+      return false;
     } finally {
       setLoading(false);
     }
   };
 
-  return {
+  const logout = async () => {
+    logAuth('logout_start');
+    setLoading(true);
+    
+    try {
+      await supabase.auth.signOut();
+      setUser(null);
+      setError(null);
+      setRetryCount(0);
+      logAuth('logout_success');
+    } catch (err) {
+      console.error('[Auth] Erro durante logout:', err);
+      setError("Erro durante logout");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const contextValue = {
     user,
-    session,
+    isAuthenticated: !!user && user.ativo !== false,
     loading,
     error,
-    signIn,
-    signOut,
-    isAuthenticated: !!user && !!session,
+    login,
+    logout,
+    refreshUser,
   };
+
+  return (
+    <AuthContext.Provider value={contextValue}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
+
+export const useAuth = () => useContext(AuthContext);

@@ -16,7 +16,7 @@ import { LogOut, User, Settings } from "lucide-react";
 import { DemoModeToggle } from "@/components/privacy/DemoModeToggle";
 
 export const Header = () => {
-  // Safety check for React hooks availability
+  // Safety check for React hooks
   if (!React || typeof React.useState !== 'function') {
     console.error('[Header] React hooks not available');
     return (
@@ -31,13 +31,13 @@ export const Header = () => {
   }
 
   let user = null;
-  let signOut = () => {};
+  let logout = () => {};
 
   // Safe hook usage with error handling
   try {
     const authContext = useAuth();
     user = authContext?.user;
-    signOut = authContext?.signOut || (() => {});
+    logout = authContext?.logout || (() => {});
   } catch (error) {
     console.error('[Header] Error accessing useAuth:', error);
   }
@@ -50,10 +50,6 @@ export const Header = () => {
       .join("")
       .toUpperCase()
       .slice(0, 2);
-  };
-
-  const handleSignOut = async () => {
-    await signOut();
   };
 
   return (
@@ -101,7 +97,7 @@ export const Header = () => {
                 <span>Configurações</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleSignOut}>
+              <DropdownMenuItem onClick={logout}>
                 <LogOut className="mr-2 h-4 w-4" />
                 <span>Sair</span>
               </DropdownMenuItem>

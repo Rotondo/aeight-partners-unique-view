@@ -36,10 +36,8 @@ interface WishlistContextType {
   stats: WishlistStats | null;
   loading: boolean;
   error: string | null;
-  isLoaded: boolean;
 
-  // Funções de busca (lazy loading)
-  loadData: () => Promise<void>;
+  // Funções de busca
   fetchWishlistItems: () => Promise<void>;
   fetchEmpresasClientes: () => Promise<void>;
   fetchApresentacoes: () => Promise<void>;
@@ -66,11 +64,10 @@ interface WishlistContextType {
 // Criação do contexto
 const WishlistContext = createContext<WishlistContextType | undefined>(undefined);
 
-// Provider component com lazy loading
-export function WishlistProvider({ children, autoLoad = false }: { children: ReactNode; autoLoad?: boolean }) {
+// Provider component
+export function WishlistProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isLoaded, setIsLoaded] = useState(false);
   const initializationRef = useRef(false);
 
   // Usar o hook de dados
@@ -110,14 +107,14 @@ export function WishlistProvider({ children, autoLoad = false }: { children: Rea
     fetchApresentacoesData
   );
 
-  // Função de carregamento manual (lazy loading)
-  const loadData = useCallback(async () => {
-    if (initializationRef.current || isLoaded) {
-      console.log(`${CONSOLE_PREFIX} Dados já carregados ou carregamento em andamento, pulando...`);
+  // Função de inicialização dos dados
+  const initializeData = useCallback(async () => {
+    if (initializationRef.current) {
+      console.log(`${CONSOLE_PREFIX} Inicialização já em andamento, pulando...`);
       return;
     }
 
-    console.log(`${CONSOLE_PREFIX} Iniciando carregamento lazy de dados...`);
+    console.log(`${CONSOLE_PREFIX} Iniciando carregamento inicial de dados...`);
     initializationRef.current = true;
     setLoading(true);
     setError(null);
@@ -135,11 +132,10 @@ export function WishlistProvider({ children, autoLoad = false }: { children: Rea
         fetchStatsData(),
       ]);
 
-      setIsLoaded(true);
       console.log(`${CONSOLE_PREFIX} Todos os dados carregados com sucesso`);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Erro desconhecido";
-      console.error(`${CONSOLE_PREFIX} Erro no carregamento:`, err);
+      console.error(`${CONSOLE_PREFIX} Erro no carregamento inicial:`, err);
       setError(errorMessage);
       toast({
         title: "Erro",
@@ -150,15 +146,13 @@ export function WishlistProvider({ children, autoLoad = false }: { children: Rea
       setLoading(false);
       initializationRef.current = false;
     }
-  }, [fetchEmpresasClientesData, fetchWishlistItemsData, fetchApresentacoesData, fetchStatsData, isLoaded]);
+  }, [fetchEmpresasClientesData, fetchWishlistItemsData, fetchApresentacoesData, fetchStatsData]);
 
-  // Carregar dados automaticamente apenas se autoLoad=true
+  // Carregar dados quando o componente montar
   useEffect(() => {
-    if (autoLoad) {
-      loadData();
-    }
+    initializeData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoLoad]); // Apenas se autoLoad estiver habilitado
+  }, []); // Apenas na montagem inicial
 
   // Função para recarregar todos os dados
   const refreshItems = useCallback(async () => {
@@ -257,10 +251,8 @@ export function WishlistProvider({ children, autoLoad = false }: { children: Rea
     stats,
     loading,
     error,
-    isLoaded,
 
     // Funções de busca
-    loadData,
     fetchWishlistItems,
     fetchEmpresasClientes,
     fetchApresentacoes,

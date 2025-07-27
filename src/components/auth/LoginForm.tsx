@@ -10,24 +10,20 @@ const LoginForm: React.FC = () => {
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [loading, setLoading] = useState(false);
-  const { signIn, error: authError } = useAuth();
+  const { login, error: authError } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  console.log('[LoginForm] Renderizado - authError:', authError);
+  console.log('LoginForm renderizado - authError:', authError);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    const timestamp = new Date().toISOString();
-    console.log('[LoginForm] handleLogin iniciado:', { email, timestamp });
+    console.log('handleLogin chamado com:', { email, senha: '***' });
     
     if (!email || !senha) {
-      const errorMsg = "Por favor, preencha email e senha";
-      console.warn('[LoginForm] Campos obrigatórios vazios');
       toast({
         title: "Erro",
-        description: errorMsg,
+        description: "Por favor, preencha email e senha",
         variant: "destructive",
       });
       return;
@@ -36,34 +32,31 @@ const LoginForm: React.FC = () => {
     setLoading(true);
 
     try {
-      console.log('[LoginForm] Iniciando processo de login...');
-      const result = await signIn(email, senha);
-      console.log('[LoginForm] Resultado do login:', { result, timestamp: new Date().toISOString() });
+      console.log('Tentando fazer login...');
+      const success = await login(email, senha);
+      console.log('Resultado do login:', success);
 
-      if (result.success) {
-        console.log('[LoginForm] Login bem-sucedido, preparando redirecionamento...');
+      if (success) {
         toast({
-          title: "Login realizado",
-          description: "Redirecionando para a página inicial...",
+          title: "Login bem-sucedido",
+          description: "Redirecionando...",
           variant: "default",
         });
-        
-        // Redirecionamento imediato sem delay
-        console.log('[LoginForm] Executando redirecionamento imediato para /');
-        navigate("/", { replace: true });
+        console.log('Login bem-sucedido, redirecionando...');
+        navigate("/");
       } else {
-        console.error('[LoginForm] Login falhou:', { error: result.error, timestamp: new Date().toISOString() });
+        console.log('Login falhou');
         toast({
           title: "Erro no login",
-          description: result.error || "Credenciais inválidas. Verifique email e senha.",
+          description: authError || "Falha na autenticação",
           variant: "destructive",
         });
       }
     } catch (error) {
-      console.error("[LoginForm] Erro inesperado durante login:", error);
+      console.error("Erro durante login:", error);
       toast({
         title: "Erro",
-        description: "Erro de conexão. Verifique sua internet e tente novamente.",
+        description: "Erro interno durante o login",
         variant: "destructive",
       });
     } finally {
@@ -72,57 +65,73 @@ const LoginForm: React.FC = () => {
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg p-10 max-w-md w-full text-center border border-gray-200">
-      <div className="text-center mb-6">
-        <div className="text-3xl font-bold mb-1 text-gray-800">
+    <div style={{
+      background: '#fff',
+      borderRadius: '18px',
+      boxShadow: '0 8px 32px rgba(0,0,0,0.10)',
+      padding: '40px 36px 32px 36px',
+      maxWidth: 380,
+      width: '100%',
+      textAlign: 'center',
+      border: '1.5px solid #ececec'
+    }}>
+      <div style={{ textAlign: 'center', marginBottom: 24 }}>
+        <div style={{ fontSize: '1.8rem', fontWeight: 700, marginBottom: 4, color: '#22223b' }}>
           A&eight Partnership Hub
         </div>
-        <div className="text-gray-600 text-lg mb-5 leading-relaxed">
+        <div style={{
+          color: '#475569',
+          fontSize: '1.06rem',
+          marginBottom: 20,
+          lineHeight: 1.3
+        }}>
           Plataforma Unificada de Parcerias<br />
           <strong>Exclusivo para integrantes e parceiros do Grupo A&eight</strong>
         </div>
       </div>
       
-      <form onSubmit={handleLogin} autoComplete="on" noValidate>
-        <div className="mb-4">
-          <label htmlFor="email" className="block text-left font-semibold mb-2 text-gray-800 text-base">
-            Email
-          </label>
-          <Input
-            id="email"
-            name="email"
-            type="email"
-            placeholder="seu@email.com"
-            required
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            disabled={loading}
-            className="w-full"
-          />
-        </div>
+      <form className="login-form" autoComplete="on" onSubmit={handleLogin}>
+        <label htmlFor="email" style={{
+          display: 'block',
+          textAlign: 'left',
+          fontWeight: 600,
+          marginBottom: 8,
+          color: '#22223b',
+          fontSize: '1.03rem'
+        }}>Email</label>
+        <Input
+          id="email"
+          type="email"
+          placeholder="seu@email.com"
+          required
+          className="mb-4"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          disabled={loading}
+        />
         
-        <div className="mb-4">
-          <label htmlFor="senha" className="block text-left font-semibold mb-2 text-gray-800 text-base">
-            Senha
-          </label>
-          <Input
-            id="senha"
-            name="password"
-            type="password"
-            placeholder="Digite sua senha"
-            required
-            autoComplete="current-password"
-            value={senha}
-            onChange={(e) => setSenha(e.target.value)}
-            disabled={loading}
-            className="w-full"
-          />
-        </div>
+        <label htmlFor="senha" style={{
+          display: 'block',
+          textAlign: 'left',
+          fontWeight: 600,
+          marginBottom: 8,
+          color: '#22223b',
+          fontSize: '1.03rem'
+        }}>Senha</label>
+        <Input
+          id="senha"
+          type="password"
+          placeholder="Digite sua senha"
+          required
+          className="mb-4"
+          value={senha}
+          onChange={(e) => setSenha(e.target.value)}
+          disabled={loading}
+        />
         
         <Button
           type="submit"
-          className="w-full mt-6 text-lg font-bold py-3"
+          className="w-full mt-4 text-lg font-bold"
           variant="default"
           disabled={loading}
         >
@@ -140,7 +149,7 @@ const LoginForm: React.FC = () => {
         Acesso restrito aos integrantes do Grupo A&eight e parceiros autorizados.
       </div>
       
-      <footer className="mt-8 text-xs text-gray-500">
+      <footer style={{ marginTop: 32, fontSize: 12, color: '#888' }}>
         Desenvolvido por Thiago Rotondo
       </footer>
     </div>

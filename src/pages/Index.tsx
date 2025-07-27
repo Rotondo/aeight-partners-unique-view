@@ -1,26 +1,31 @@
 
-import React from "react";
-import { OportunidadesDashboards } from "@/components/dashboard/OportunidadesDashboards";
-import { OportunidadesProvider } from "@/components/oportunidades/OportunidadesContext";
+import { DashboardStats } from "@/components/dashboard/DashboardStats";
+import { QuickAccess } from "@/components/dashboard/QuickAccess";
 import { DemoModeIndicator } from "@/components/privacy/DemoModeIndicator";
+import { useDashboardStats } from "@/hooks/useDashboardStats";
+import { useOportunidades, OportunidadesProvider } from "@/components/oportunidades/OportunidadesContext";
 
-const Index = () => {
-  console.log('[Index] Renderizando página inicial');
+const IndexContent = () => {
+  console.log('Index: Renderizando página principal');
+  
+  const { oportunidades, isLoading } = useOportunidades();
+  const stats = useDashboardStats(oportunidades);
   
   return (
-    <OportunidadesProvider>
-      <div className="space-y-4 md:space-y-6">
-        <DemoModeIndicator />
-        
-        <div className="px-2 md:px-0">
-          <div className="flex items-center justify-between">
-            <h1 className="text-xl md:text-2xl font-bold">Dashboard de Oportunidades</h1>
-          </div>
-        </div>
-        <div className="w-full overflow-hidden">
-          <OportunidadesDashboards />
-        </div>
+    <div className="container mx-auto p-6 space-y-6">
+      <DemoModeIndicator />
+      <div className="space-y-6">
+        <QuickAccess />
+        <DashboardStats stats={stats} loading={isLoading} />
       </div>
+    </div>
+  );
+};
+
+const Index = () => {
+  return (
+    <OportunidadesProvider>
+      <IndexContent />
     </OportunidadesProvider>
   );
 };

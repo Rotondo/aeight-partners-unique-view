@@ -10,7 +10,7 @@ interface DashboardStatsProps {
   loading: boolean;
 }
 
-export const DashboardStats: React.FC<DashboardStatsProps> = ({
+export const DashboardStatsSection: React.FC<DashboardStatsProps> = ({
   stats,
   loading
 }) => {
@@ -22,7 +22,7 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({
 
   // Log para diagnóstico
   if (typeof window !== "undefined" && stats) {
-    console.log("[DashboardStats] Valores renderizados:", {
+    console.log("[DashboardStatsSection] Valores renderizados:", {
       total: totalOportunidades,
       ganhas: oportunidadesGanhas,
       perdidas: oportunidadesPerdidas,
@@ -83,3 +83,6 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({
     </div>
   );
 };
+
+// Export the main component as DashboardStats for backward compatibility
+export const DashboardStats = DashboardStatsSection;
