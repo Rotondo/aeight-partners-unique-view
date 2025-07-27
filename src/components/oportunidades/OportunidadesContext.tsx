@@ -203,16 +203,27 @@ export const OportunidadesProvider: React.FC<OportunidadesProviderProps> = ({
         throw new Error('Campos obrigatórios faltando');
       }
 
-      // Map status to valid database enum values
-      let validStatus: string = 'em_contato'; // default value
+      // Map status to valid database enum values with proper typing
+      type ValidDbStatus = 'em_contato' | 'negociando' | 'proposta_enviada' | 'aguardando_aprovacao' | 'ganho' | 'perdido' | 'Contato' | 'Apresentado' | 'Sem contato';
+      
+      let validStatus: ValidDbStatus = 'em_contato'; // default value
       if (data.status) {
-        const statusMapping: Record<string, string> = {
+        const statusMapping: Record<string, ValidDbStatus> = {
           'indicado': 'em_contato',
           'em_andamento': 'negociando',
           'fechado': 'ganho',
-          'cancelado': 'perdido'
+          'cancelado': 'perdido',
+          'em_contato': 'em_contato',
+          'negociando': 'negociando',
+          'proposta_enviada': 'proposta_enviada',
+          'aguardando_aprovacao': 'aguardando_aprovacao',
+          'ganho': 'ganho',
+          'perdido': 'perdido',
+          'Contato': 'Contato',
+          'Apresentado': 'Apresentado',
+          'Sem contato': 'Sem contato'
         };
-        validStatus = statusMapping[data.status] || data.status;
+        validStatus = statusMapping[data.status] || 'em_contato';
       }
 
       // Prepare the insert data with only fields that exist in the database schema
