@@ -1,63 +1,124 @@
 
 import * as React from "react"
-import * as TooltipPrimitive from "@radix-ui/react-tooltip"
-
 import { cn } from "@/lib/utils"
 
-// Simple non-hook based initialization check
-let isReactReady = false;
-let initTimeout: NodeJS.Timeout;
+// Simple tooltip implementation without external dependencies
+// This avoids React initialization issues with Radix UI
 
-// Check React readiness without using hooks
-const checkReactInitialization = () => {
-  if (typeof window !== 'undefined' && window.React && typeof window.React.useState === 'function') {
-    isReactReady = true;
-  } else {
-    // Keep checking every 10ms until React is ready
-    initTimeout = setTimeout(checkReactInitialization, 10);
-  }
+interface TooltipContextType {
+  open: boolean;
+  setOpen: (open: boolean) => void;
+}
+
+const TooltipContext = React.createContext<TooltipContextType | null>(null);
+
+const TooltipProvider: React.FC<{ children: React.ReactNode; delayDuration?: number }> = ({ 
+  children, 
+  delayDuration = 700 
+}) => {
+  // Simple implementation that just renders children
+  // Tooltips will work but without the advanced Radix features
+  return <>{children}</>;
 };
 
-// Start checking immediately
-checkReactInitialization();
-
-// Safe wrapper that doesn't use hooks during initialization
-const SafeTooltipProvider: React.FC<React.ComponentPropsWithoutRef<typeof TooltipPrimitive.Provider>> = ({ children, ...props }) => {
-  // If React isn't ready, just render children without provider
-  if (!isReactReady) {
-    return React.createElement(React.Fragment, null, children);
-  }
-
-  try {
-    return React.createElement(TooltipPrimitive.Provider, { ...props, children });
-  } catch (error) {
-    console.error('[SafeTooltipProvider] Error:', error);
-    return React.createElement(React.Fragment, null, children);
-  }
+const Tooltip: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [open, setOpen] = React.useState(false);
+  
+  const contextValue = React.useMemo(() => ({ open, setOpen }), [open]);
+  
+  return (
+    <TooltipContext.Provider value={contextValue}>
+      {children}
+    </TooltipContext.Provider>
+  );
 };
 
-SafeTooltipProvider.displayName = "SafeTooltipProvider";
+const TooltipTrigger = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement> & { asChild?: boolean }
+>(({ children, asChild, onMouseEnter, onMouseLeave, onFocus, onBlur, ...props }, ref) => {
+  const context = React.useContext(TooltipContext);
+  
+  const handleMouseEnter = (e: React.MouseEvent<HTMLDivElement>) => {
+    context?.setOpen(true);
+    onMouseEnter?.(e);
+  };
+  
+  const handleMouseLeave = (e: React.MouseEvent<HTMLDivElement>) => {
+    context?.setOpen(false);
+    onMouseLeave?.(e);
+  };
+  
+  const handleFocus = (e: React.FocusEvent<HTMLDivElement>) => {
+    context?.setOpen(true);
+    onFocus?.(e);
+  };
+  
+  const handleBlur = (e: React.FocusEvent<HTMLDivElement>) => {
+    context?.setOpen(false);
+    onBlur?.(e);
+  };
+  
+  if (asChild && React.isValidElement(children)) {
+    return React.cloneElement(children as React.ReactElement<any>, {
+      onMouseEnter: handleMouseEnter,
+      onMouseLeave: handleMouseLeave,
+      onFocus: handleFocus,
+      onBlur: handleBlur,
+    });
+  }
+  
+  return (
+    <div
+      ref={ref}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      onFocus={handleFocus}
+      onBlur={handleBlur}
+      {...props}
+    >
+      {children}
+    </div>
+  );
+});
 
-const TooltipProvider = SafeTooltipProvider;
-
-const Tooltip = TooltipPrimitive.Root
-
-const TooltipTrigger = TooltipPrimitive.Trigger
+TooltipTrigger.displayName = "TooltipTrigger";
 
 const TooltipContent = React.forwardRef<
-  React.ElementRef<typeof TooltipPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof TooltipPrimitive.Content>
->(({ className, sideOffset = 4, ...props }, ref) => (
-  <TooltipPrimitive.Content
-    ref={ref}
-    sideOffset={sideOffset}
-    className={cn(
-      "z-50 overflow-hidden rounded-md border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
-      className
-    )}
-    {...props}
-  />
-))
-TooltipContent.displayName = TooltipPrimitive.Content.displayName
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement> & { 
+    sideOffset?: number;
+    side?: 'top' | 'right' | 'bottom' | 'left';
+    align?: 'start' | 'center' | 'end';
+  }
+>(({ className, sideOffset = 4, side = 'top', align = 'center', children, ...props }, ref) => {
+  const context = React.useContext(TooltipContext);
+  
+  if (!context?.open) {
+    return null;
+  }
+  
+  return (
+    <div
+      ref={ref}
+      className={cn(
+        "absolute z-50 overflow-hidden rounded-md border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95",
+        "pointer-events-none select-none",
+        className
+      )}
+      style={{
+        top: side === 'bottom' ? `${sideOffset}px` : undefined,
+        bottom: side === 'top' ? `${sideOffset}px` : undefined,
+        left: side === 'right' ? `${sideOffset}px` : undefined,
+        right: side === 'left' ? `${sideOffset}px` : undefined,
+      }}
+      {...props}
+    >
+      {children}
+    </div>
+  );
+});
+
+TooltipContent.displayName = "TooltipContent";
 
 export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider }
