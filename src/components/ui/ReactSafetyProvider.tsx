@@ -1,7 +1,6 @@
 
 import React from 'react';
 
-// Emergency React Safety Provider
 interface ReactSafetyProviderProps {
   children: React.ReactNode;
 }
@@ -26,7 +25,7 @@ const ErrorFallback = ({ message, onReload }: { message: string; onReload: () =>
       maxWidth: '500px'
     }}>
       <h1 style={{ color: '#dc2626', marginBottom: '1rem', fontSize: '1.5rem' }}>
-        React Initialization Error
+        Runtime Error
       </h1>
       <p style={{ marginBottom: '1.5rem', color: '#4b5563' }}>
         {message}
@@ -50,113 +49,52 @@ const ErrorFallback = ({ message, onReload }: { message: string; onReload: () =>
   </div>
 );
 
-// Enhanced React safety checks
-const isReactSafe = () => {
-  try {
-    return (
-      typeof React !== 'undefined' &&
-      React !== null &&
-      typeof React.useState === 'function' &&
-      typeof React.useEffect === 'function' &&
-      typeof React.createElement === 'function' &&
-      React.useState !== null &&
-      React.useEffect !== null
-    );
-  } catch (error) {
-    console.error('[ReactSafetyProvider] Error in React safety check:', error);
-    return false;
-  }
-};
-
 export const ReactSafetyProvider: React.FC<ReactSafetyProviderProps> = ({ children }) => {
-  // Basic React availability check
-  if (!isReactSafe()) {
-    console.error('[ReactSafetyProvider] React is not safely available');
-    return React.createElement(ErrorFallback, {
-      message: "React is not properly loaded. Please refresh the page.",
-      onReload: () => window.location.reload()
-    });
-  }
+  const [hasError, setHasError] = React.useState(false);
+  const [errorMessage, setErrorMessage] = React.useState<string>('');
 
-  // Use try-catch around hook usage to prevent crashes
-  try {
-    const [hasError, setHasError] = React.useState(false);
-    const [errorMessage, setErrorMessage] = React.useState<string>('');
-
-    // Error event listener with additional safety checks
-    React.useEffect(() => {
-      if (!isReactSafe()) {
-        console.error('[ReactSafetyProvider] React became unsafe during useEffect');
+  // Error event listener for runtime errors
+  React.useEffect(() => {
+    const handleError = (event: ErrorEvent) => {
+      console.error('[ReactSafetyProvider] Runtime error caught:', event.error);
+      
+      // Check for React-related errors
+      const errorMessage = event.error?.message || '';
+      if (errorMessage.includes('Cannot read properties of null') && 
+          (errorMessage.includes('useState') || errorMessage.includes('useEffect'))) {
         setHasError(true);
-        setErrorMessage('React hooks became unavailable');
-        return;
+        setErrorMessage('React runtime error detected');
       }
+    };
 
-      const handleError = (event: ErrorEvent) => {
-        console.error('[ReactSafetyProvider] Runtime error caught:', event.error);
-        
-        // Check for React-related errors or hook errors
-        const errorMessage = event.error?.message || '';
-        if (errorMessage.includes('useState') || 
-            errorMessage.includes('useEffect') ||
-            errorMessage.includes('Cannot read properties of null') ||
-            errorMessage.includes('hooks') ||
-            errorMessage.includes('React')) {
-          setHasError(true);
-          setErrorMessage(errorMessage || 'React hook error detected');
-        }
-      };
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      console.error('[ReactSafetyProvider] Promise rejection:', event.reason);
+      const reasonMessage = event.reason?.message || '';
+      if (reasonMessage.includes('React') || reasonMessage.includes('hook')) {
+        setHasError(true);
+        setErrorMessage('React promise error detected');
+      }
+    };
 
-      const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
-        console.error('[ReactSafetyProvider] Promise rejection:', event.reason);
-        const reasonMessage = event.reason?.message || '';
-        if (reasonMessage.includes('React') || 
-            reasonMessage.includes('hook') ||
-            reasonMessage.includes('useState')) {
-          setHasError(true);
-          setErrorMessage(reasonMessage || 'React promise error detected');
-        }
-      };
+    window.addEventListener('error', handleError);
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
 
-      window.addEventListener('error', handleError);
-      window.addEventListener('unhandledrejection', handleUnhandledRejection);
+    return () => {
+      window.removeEventListener('error', handleError);
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+    };
+  }, []);
 
-      return () => {
-        window.removeEventListener('error', handleError);
-        window.removeEventListener('unhandledrejection', handleUnhandledRejection);
-      };
-    }, []);
-
-    // If we caught a React error, show recovery options
-    if (hasError) {
-      return React.createElement(ErrorFallback, {
-        message: `React Error: ${errorMessage}`,
-        onReload: () => window.location.reload()
-      });
-    }
-
-    // Periodic React health check
-    React.useEffect(() => {
-      const healthCheck = setInterval(() => {
-        if (!isReactSafe()) {
-          console.error('[ReactSafetyProvider] React health check failed');
-          setHasError(true);
-          setErrorMessage('React became unavailable during runtime');
-          clearInterval(healthCheck);
-        }
-      }, 5000);
-
-      return () => clearInterval(healthCheck);
-    }, []);
-
-    // All good, render children
-    return React.createElement(React.Fragment, null, children);
-
-  } catch (hookError) {
-    console.error('[ReactSafetyProvider] Error using React hooks:', hookError);
-    return React.createElement(ErrorFallback, {
-      message: "Unable to initialize React hooks. Please refresh the page.",
-      onReload: () => window.location.reload()
-    });
+  // If we caught a React error, show recovery options
+  if (hasError) {
+    return (
+      <ErrorFallback
+        message={`Runtime Error: ${errorMessage}`}
+        onReload={() => window.location.reload()}
+      />
+    );
   }
+
+  // All good, render children
+  return <>{children}</>;
 };

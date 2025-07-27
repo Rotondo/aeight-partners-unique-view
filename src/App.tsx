@@ -8,6 +8,7 @@ import { WishlistProvider } from '@/contexts/WishlistContext';
 import { CrmProvider } from '@/contexts/CrmContext';
 import { PrivateRoute } from '@/components/auth/PrivateRoute';
 import { ReactSafetyProvider } from '@/components/ui/ReactSafetyProvider';
+import { Toaster } from '@/components/ui/sonner';
 
 // Imports for all pages
 import Index from '@/pages/Index';
@@ -38,28 +39,7 @@ const queryClient = new QueryClient({
   },
 });
 
-// Lazy load Toaster to avoid React hook issues during initial load
-const LazyToaster = React.lazy(async () => {
-  // Small delay to ensure React is stable
-  await new Promise(resolve => setTimeout(resolve, 100));
-  
-  return import('@/components/ui/sonner').then(module => ({
-    default: module.Toaster
-  }));
-});
-
 function App() {
-  const [showToaster, setShowToaster] = React.useState(false);
-
-  // Enable toaster after React is stable
-  React.useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowToaster(true);
-    }, 1000);
-
-    return () => clearTimeout(timer);
-  }, []);
-
   return (
     <ReactSafetyProvider>
       <QueryClientProvider client={queryClient}>
@@ -178,11 +158,7 @@ function App() {
               } />
               <Route path="*" element={<NotFoundPage />} />
             </Routes>
-            {showToaster && (
-              <React.Suspense fallback={null}>
-                <LazyToaster />
-              </React.Suspense>
-            )}
+            <Toaster />
           </Router>
         </PrivacyProvider>
       </QueryClientProvider>
