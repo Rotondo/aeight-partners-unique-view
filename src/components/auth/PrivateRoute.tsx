@@ -25,32 +25,21 @@ export const PrivateRoute = ({ children }: PrivateRouteProps) => {
 
   const { user, loading, error } = authData;
 
-  // Safe useState usage
-  let showTimeout = false;
-  let setShowTimeout = () => {};
-
-  try {
-    [showTimeout, setShowTimeout] = useState(false);
-  } catch (error) {
-    console.error('[PrivateRoute] Error using useState:', error);
-  }
+  // Safe useState usage with proper typing
+  const [showTimeout, setShowTimeout] = useState(false);
 
   // Safe useEffect usage
-  try {
-    useEffect(() => {
-      // Timeout mais generoso para o carregamento inicial
-      const timer = setTimeout(() => {
-        if (loading && !user) {
-          console.log('[PrivateRoute] Timeout atingido, mostrando tela de login');
-          setShowTimeout(true);
-        }
-      }, 8000); // 8 segundos para carregamento inicial
+  useEffect(() => {
+    // Timeout mais generoso para o carregamento inicial
+    const timer = setTimeout(() => {
+      if (loading && !user) {
+        console.log('[PrivateRoute] Timeout atingido, mostrando tela de login');
+        setShowTimeout(true);
+      }
+    }, 8000); // 8 segundos para carregamento inicial
 
-      return () => clearTimeout(timer);
-    }, [loading, user]);
-  } catch (error) {
-    console.error('[PrivateRoute] Error using useEffect:', error);
-  }
+    return () => clearTimeout(timer);
+  }, [loading, user]);
 
   // Se ainda está carregando e não atingiu o timeout
   if (loading && !showTimeout) {
