@@ -4,7 +4,32 @@ import * as TooltipPrimitive from "@radix-ui/react-tooltip"
 
 import { cn } from "@/lib/utils"
 
-const TooltipProvider = TooltipPrimitive.Provider
+// Safe wrapper for TooltipProvider that handles React initialization
+const SafeTooltipProvider: React.FC<React.ComponentPropsWithoutRef<typeof TooltipPrimitive.Provider>> = ({ children, ...props }) => {
+  const [isReady, setIsReady] = React.useState(false);
+
+  React.useEffect(() => {
+    // Small delay to ensure React context is fully established
+    const timer = setTimeout(() => setIsReady(true), 100);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Render children without tooltip provider if not ready yet
+  if (!isReady) {
+    return <>{children}</>;
+  }
+
+  try {
+    return <TooltipPrimitive.Provider {...props}>{children}</TooltipPrimitive.Provider>;
+  } catch (error) {
+    console.error('[SafeTooltipProvider] Error:', error);
+    return <>{children}</>;
+  }
+};
+
+SafeTooltipProvider.displayName = "SafeTooltipProvider";
+
+const TooltipProvider = SafeTooltipProvider;
 
 const Tooltip = TooltipPrimitive.Root
 
