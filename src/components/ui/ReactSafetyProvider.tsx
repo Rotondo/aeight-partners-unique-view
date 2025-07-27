@@ -6,167 +6,122 @@ interface ReactSafetyProviderProps {
   children: React.ReactNode;
 }
 
+// Simple error fallback component
+const ErrorFallback = ({ message, onReload }: { message: string; onReload: () => void }) => (
+  <div style={{
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: '100vh',
+    fontFamily: 'system-ui',
+    padding: '2rem',
+    textAlign: 'center',
+    background: '#f9fafb'
+  }}>
+    <div style={{
+      background: 'white',
+      padding: '2rem',
+      borderRadius: '8px',
+      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+      maxWidth: '500px'
+    }}>
+      <h1 style={{ color: '#dc2626', marginBottom: '1rem', fontSize: '1.5rem' }}>
+        React Initialization Error
+      </h1>
+      <p style={{ marginBottom: '1.5rem', color: '#4b5563' }}>
+        {message}
+      </p>
+      <button
+        onClick={onReload}
+        style={{
+          padding: '0.75rem 1.5rem',
+          background: '#3b82f6',
+          color: 'white',
+          border: 'none',
+          borderRadius: '6px',
+          cursor: 'pointer',
+          fontSize: '14px',
+          fontWeight: '500'
+        }}
+      >
+        Reload Application
+      </button>
+    </div>
+  </div>
+);
+
 export const ReactSafetyProvider: React.FC<ReactSafetyProviderProps> = ({ children }) => {
-  // Check if React and React hooks are available
-  if (typeof React === 'undefined' || !React || !React.useState || !React.useEffect) {
-    console.error('[ReactSafetyProvider] React hooks are not available');
-    return (
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: '100vh',
-        fontFamily: 'system-ui',
-        padding: '2rem',
-        textAlign: 'center'
-      }}>
-        <div>
-          <h1 style={{ color: '#dc2626', marginBottom: '1rem' }}>
-            React Initialization Error
-          </h1>
-          <p style={{ marginBottom: '1rem' }}>
-            React hooks are not properly initialized. Please refresh the page.
-          </p>
-          <button
-            onClick={() => window.location.reload()}
-            style={{
-              padding: '0.5rem 1rem',
-              background: '#3b82f6',
-              color: 'white',
-              border: 'none',
-              borderRadius: '0.375rem',
-              cursor: 'pointer'
-            }}
-          >
-            Reload Page
-          </button>
-        </div>
-      </div>
-    );
+  // Basic React availability check
+  if (typeof React === 'undefined' || !React) {
+    console.error('[ReactSafetyProvider] React is not available');
+    return <ErrorFallback 
+      message="React is not properly loaded. Please refresh the page." 
+      onReload={() => window.location.reload()} 
+    />;
   }
 
-  // Use a try-catch around hook usage to prevent errors
-  let hasError = false;
-  let errorDetails = '';
-  let setHasError: React.Dispatch<React.SetStateAction<boolean>> | null = null;
-  let setErrorDetails: React.Dispatch<React.SetStateAction<string>> | null = null;
+  // Check if essential React features are available
+  if (!React.useState || !React.useEffect || !React.createElement) {
+    console.error('[ReactSafetyProvider] Essential React features are missing');
+    return <ErrorFallback 
+      message="React features are not properly initialized. Please refresh the page." 
+      onReload={() => window.location.reload()} 
+    />;
+  }
 
+  // Use hooks only after confirming React is available
   try {
-    // Now we can use hooks safely
-    const [internalHasError, internalSetHasError] = React.useState(false);
-    const [internalErrorDetails, internalSetErrorDetails] = React.useState<string>('');
-    
-    hasError = internalHasError;
-    errorDetails = internalErrorDetails;
-    setHasError = internalSetHasError;
-    setErrorDetails = internalSetErrorDetails;
+    const [hasError, setHasError] = React.useState(false);
+    const [errorMessage, setErrorMessage] = React.useState<string>('');
 
-    // Enhanced error boundary
+    // Error event listener
     React.useEffect(() => {
       const handleError = (event: ErrorEvent) => {
         console.error('[ReactSafetyProvider] Runtime error caught:', event.error);
-        if (event.error?.message?.includes('useState') || event.error?.message?.includes('useRef')) {
-          internalSetHasError(true);
-          internalSetErrorDetails(event.error.message);
+        
+        // Check for React-related errors
+        if (event.error?.message?.includes('useState') || 
+            event.error?.message?.includes('useEffect') ||
+            event.error?.message?.includes('Cannot read properties of null')) {
+          setHasError(true);
+          setErrorMessage(event.error.message || 'React hook error detected');
+        }
+      };
+
+      const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+        console.error('[ReactSafetyProvider] Promise rejection:', event.reason);
+        if (event.reason?.message?.includes('React') || 
+            event.reason?.message?.includes('hook')) {
+          setHasError(true);
+          setErrorMessage(event.reason.message || 'React promise error detected');
         }
       };
 
       window.addEventListener('error', handleError);
-      return () => window.removeEventListener('error', handleError);
+      window.addEventListener('unhandledrejection', handleUnhandledRejection);
+
+      return () => {
+        window.removeEventListener('error', handleError);
+        window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+      };
     }, []);
-  } catch (error) {
-    console.error('[ReactSafetyProvider] Error using hooks:', error);
-    return (
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: '100vh',
-        fontFamily: 'system-ui',
-        padding: '2rem',
-        textAlign: 'center'
-      }}>
-        <div>
-          <h1 style={{ color: '#dc2626', marginBottom: '1rem' }}>
-            React Hook Error
-          </h1>
-          <p style={{ marginBottom: '1rem' }}>
-            Unable to initialize React hooks. Please refresh the page.
-          </p>
-          <button
-            onClick={() => window.location.reload()}
-            style={{
-              padding: '0.5rem 1rem',
-              background: '#3b82f6',
-              color: 'white',
-              border: 'none',
-              borderRadius: '0.375rem',
-              cursor: 'pointer'
-            }}
-          >
-            Reload Page
-          </button>
-        </div>
-      </div>
-    );
-  }
 
-  // If we caught a React hook error, show recovery options
-  if (hasError) {
-    return (
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: '100vh',
-        fontFamily: 'system-ui',
-        padding: '2rem',
-        textAlign: 'center'
-      }}>
-        <div>
-          <h1 style={{ color: '#dc2626', marginBottom: '1rem' }}>
-            React Hook Error Detected
-          </h1>
-          <p style={{ marginBottom: '1rem' }}>
-            Error: {errorDetails}
-          </p>
-          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-            <button
-              onClick={() => window.location.reload()}
-              style={{
-                padding: '0.5rem 1rem',
-                background: '#3b82f6',
-                color: 'white',
-                border: 'none',
-                borderRadius: '0.375rem',
-                cursor: 'pointer'
-              }}
-            >
-              Reload Page
-            </button>
-            <button
-              onClick={() => {
-                if (setHasError && setErrorDetails) {
-                  setHasError(false);
-                  setErrorDetails('');
-                }
-              }}
-              style={{
-                padding: '0.5rem 1rem',
-                background: '#059669',
-                color: 'white',
-                border: 'none',
-                borderRadius: '0.375rem',
-                cursor: 'pointer'
-              }}
-            >
-              Try Again
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+    // If we caught a React error, show recovery options
+    if (hasError) {
+      return <ErrorFallback 
+        message={`React Error: ${errorMessage}`}
+        onReload={() => window.location.reload()} 
+      />;
+    }
 
-  return <>{children}</>;
+    // All good, render children
+    return <>{children}</>;
+
+  } catch (hookError) {
+    console.error('[ReactSafetyProvider] Error using React hooks:', hookError);
+    return <ErrorFallback 
+      message="Unable to initialize React hooks. Please refresh the page." 
+      onReload={() => window.location.reload()} 
+    />;
+  }
 };
