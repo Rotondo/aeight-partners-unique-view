@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { supabase } from "@/lib/supabase";
 import { Oportunidade, Empresa, Usuario, OportunidadesFilterParams } from "@/types";
@@ -205,13 +204,14 @@ export const OportunidadesProvider: React.FC<OportunidadesProviderProps> = ({
       }
 
       // Prepare the insert data with only the fields that exist in the database
+      // Fix: Remove array brackets - insert expects a single object, not an array
       const insertData = {
         empresa_origem_id: data.empresa_origem_id,
         empresa_destino_id: data.empresa_destino_id,
         nome_lead: data.nome_lead,
         contato_id: data.contato_id || null,
         valor: data.valor || null,
-        status: data.status || 'em_contato',
+        status: data.status || 'em_contato', // Ensure valid status value
         data_indicacao: data.data_indicacao || new Date().toISOString(),
         data_fechamento: data.data_fechamento || null,
         motivo_perda: data.motivo_perda || null,
@@ -227,7 +227,7 @@ export const OportunidadesProvider: React.FC<OportunidadesProviderProps> = ({
 
       const { error } = await supabase
         .from("oportunidades")
-        .insert([insertData]);
+        .insert(insertData); // Remove the array brackets
 
       if (error) throw error;
 
