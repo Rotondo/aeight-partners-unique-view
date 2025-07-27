@@ -7,7 +7,7 @@ import { SpeedInsights } from "@vercel/speed-insights/react";
 
 import Index from "./pages/Index";
 import LoginPage from "./pages/auth/LoginPage";
-import PrivateRoute from "./components/auth/PrivateRoute";
+import { PrivateRoute } from "./components/auth/PrivateRoute";
 import MainLayout from "./components/layout/MainLayout";
 import DashboardPage from "./pages/dashboard/DashboardPage";
 import OportunidadesPage from "./pages/oportunidades";
@@ -33,7 +33,7 @@ import NotFoundPage from "./pages/NotFoundPage";
 import { PrivacyProvider } from "./contexts/PrivacyContext";
 import { IAProvider } from "./contexts/IAContext";
 import ErrorBoundary from "./components/ErrorBoundary";
-import ReactSafetyProvider from "./components/ui/ReactSafetyProvider";
+import { ReactSafetyProvider } from "./components/ui/ReactSafetyProvider";
 
 const queryClient = new QueryClient({
   defaultOptions: {
