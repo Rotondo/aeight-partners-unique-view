@@ -4,13 +4,20 @@ import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 
-// Simple initialization with proper error handling
+// Enhanced initialization with React availability check
 const initializeApp = () => {
   try {
+    // Verify React is available before proceeding
+    if (!React || !React.createElement || typeof React.useState !== 'function') {
+      throw new Error("React is not properly loaded");
+    }
+
     const rootElement = document.getElementById("root");
     if (!rootElement) {
       throw new Error("Root element not found");
     }
+
+    console.log('[Main] React confirmed available, initializing app...');
 
     // Create and render the React application
     const root = createRoot(rootElement);
@@ -47,9 +54,10 @@ const initializeApp = () => {
   }
 };
 
-// Start initialization when DOM is ready
+// Wait for DOM to be ready, then initialize
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initializeApp);
 } else {
-  initializeApp();
+  // Add a small delay to ensure all modules are loaded
+  setTimeout(initializeApp, 10);
 }

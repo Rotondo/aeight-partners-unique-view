@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -8,7 +7,7 @@ import { WishlistProvider } from '@/contexts/WishlistContext';
 import { CrmProvider } from '@/contexts/CrmContext';
 import { PrivateRoute } from '@/components/auth/PrivateRoute';
 import { ReactSafetyProvider } from '@/components/ui/ReactSafetyProvider';
-import { Toaster } from '@/components/ui/sonner';
+import SafeToaster from '@/components/ui/SafeToaster';
 
 // Imports for all pages
 import Index from '@/pages/Index';
@@ -158,7 +157,7 @@ function App() {
               } />
               <Route path="*" element={<NotFoundPage />} />
             </Routes>
-            <Toaster />
+            <SafeToaster />
           </Router>
         </PrivacyProvider>
       </QueryClientProvider>
