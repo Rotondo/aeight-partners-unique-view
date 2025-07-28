@@ -111,4 +111,5 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ timeout = 15000 }) => {
   );
 };
 
+export { LoadingScreen };
 export default LoadingScreen;
