@@ -33,7 +33,6 @@ import NotFoundPage from "./pages/NotFoundPage";
 import { PrivacyProvider } from "./contexts/PrivacyContext";
 import { IAProvider } from "./contexts/IAContext";
 import ErrorBoundary from "./components/ErrorBoundary";
-import { ReactSafetyProvider } from "./components/ui/ReactSafetyProvider";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -48,65 +47,63 @@ function App() {
   console.log("[App] Rendering main application...");
 
   return (
-    <ReactSafetyProvider>
-      <PrivacyProvider>
-        <IAProvider>
-          <QueryClientProvider client={queryClient}>
-            <Router>
-              <ErrorBoundary>
-                <Routes>
-                  <Route path="/login" element={<LoginPage />} />
-                  <Route
-                    path="/*"
-                    element={
-                      <PrivateRoute>
-                        <MainLayout>
-                          <Routes>
-                            <Route index element={<Index />} />
-                            <Route path="/dashboard" element={<DashboardPage />} />
-                            <Route path="/oportunidades/*" element={<OportunidadesPage />} />
-                            <Route path="/oportunidades-dashboard" element={<OportunidadesDashboard />} />
-                            <Route path="/eventos" element={<EventosPage />} />
-                            <Route path="/quadrante" element={<QuadrantePage />} />
-                            <Route path="/mapa-parceiros" element={<MapaParceirosPage />} />
-                            <Route path="/onepager" element={<OnePagerPage />} />
-                            <Route path="/diario/*" element={<DiarioPage />} />
-                            <Route path="/admin" element={<AdminPage />} />
-                            <Route path="/admin/mapa-parceiro" element={<MapaParceiroAdminPage />} />
-                            <Route path="/admin/usuarios" element={<UsuariosAdminPage />} />
-                            <Route path="/wishlist/*" element={<WishlistPage />} />
-                            {/* Wrap clientes route with WishlistProvider and CrmProvider */}
-                            <Route 
-                              path="/clientes" 
-                              element={
-                                <WishlistProvider>
-                                  <CrmProvider>
-                                    <ClientesSobrepostosPage />
-                                  </CrmProvider>
-                                </WishlistProvider>
-                              } 
-                            />
-                            <Route path="/categorias" element={<CategoriasPage />} />
-                            <Route path="/contatos" element={<ContatosPage />} />
-                            <Route path="/empresas" element={<EmpresasPage />} />
-                            <Route path="/indicadores" element={<IndicadoresPage />} />
-                            <Route path="/repositorio" element={<RepositorioPage />} />
-                            <Route path="*" element={<NotFoundPage />} />
-                          </Routes>
-                        </MainLayout>
-                      </PrivateRoute>
-                    }
-                  />
-                </Routes>
-              </ErrorBoundary>
-              <Toaster />
-              <Sonner />
-              <SpeedInsights />
-            </Router>
-          </QueryClientProvider>
-        </IAProvider>
-      </PrivacyProvider>
-    </ReactSafetyProvider>
+    <PrivacyProvider>
+      <IAProvider>
+        <QueryClientProvider client={queryClient}>
+          <Router>
+            <ErrorBoundary>
+              <Routes>
+                <Route path="/login" element={<LoginPage />} />
+                <Route
+                  path="/*"
+                  element={
+                    <PrivateRoute>
+                      <MainLayout>
+                        <Routes>
+                          <Route index element={<Index />} />
+                          <Route path="/dashboard" element={<DashboardPage />} />
+                          <Route path="/oportunidades/*" element={<OportunidadesPage />} />
+                          <Route path="/oportunidades-dashboard" element={<OportunidadesDashboard />} />
+                          <Route path="/eventos" element={<EventosPage />} />
+                          <Route path="/quadrante" element={<QuadrantePage />} />
+                          <Route path="/mapa-parceiros" element={<MapaParceirosPage />} />
+                          <Route path="/onepager" element={<OnePagerPage />} />
+                          <Route path="/diario/*" element={<DiarioPage />} />
+                          <Route path="/admin" element={<AdminPage />} />
+                          <Route path="/admin/mapa-parceiro" element={<MapaParceiroAdminPage />} />
+                          <Route path="/admin/usuarios" element={<UsuariosAdminPage />} />
+                          <Route path="/wishlist/*" element={<WishlistPage />} />
+                          {/* Wrap clientes route with WishlistProvider and CrmProvider */}
+                          <Route 
+                            path="/clientes" 
+                            element={
+                              <WishlistProvider>
+                                <CrmProvider>
+                                  <ClientesSobrepostosPage />
+                                </CrmProvider>
+                              </WishlistProvider>
+                            } 
+                          />
+                          <Route path="/categorias" element={<CategoriasPage />} />
+                          <Route path="/contatos" element={<ContatosPage />} />
+                          <Route path="/empresas" element={<EmpresasPage />} />
+                          <Route path="/indicadores" element={<IndicadoresPage />} />
+                          <Route path="/repositorio" element={<RepositorioPage />} />
+                          <Route path="*" element={<NotFoundPage />} />
+                        </Routes>
+                      </MainLayout>
+                    </PrivateRoute>
+                  }
+                />
+              </Routes>
+            </ErrorBoundary>
+            <Toaster />
+            <Sonner />
+            <SpeedInsights />
+          </Router>
+        </QueryClientProvider>
+      </IAProvider>
+    </PrivacyProvider>
   );
 }
 

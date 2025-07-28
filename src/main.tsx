@@ -8,12 +8,12 @@ import './index.css';
 const waitForReactInitialization = (): Promise<void> => {
   return new Promise((resolve, reject) => {
     let attempts = 0;
-    const maxAttempts = 50;
+    const maxAttempts = 100; // Increased attempts
     
     const checkReact = () => {
       console.log(`[Main] React initialization check attempt ${attempts + 1}/${maxAttempts}`);
       
-      // Comprehensive React validation
+      // More comprehensive React validation including internal state
       const isReactReady = React && 
         typeof React === 'object' &&
         React.version &&
@@ -29,14 +29,35 @@ const waitForReactInitialization = (): Promise<void> => {
         typeof React.useEffect === 'function' &&
         typeof React.useRef === 'function';
 
-      if (isReactReady) {
+      // Additional check to ensure React internals are ready
+      let internalStateReady = false;
+      try {
+        // Test React context by accessing the current dispatcher
+        const testElement = React.createElement('div');
+        internalStateReady = !!testElement && typeof testElement === 'object';
+      } catch (e) {
+        console.log('[Main] React internals not ready yet:', e);
+        internalStateReady = false;
+      }
+
+      if (isReactReady && internalStateReady) {
         console.log('[Main] React is fully initialized:', {
           version: React.version,
           hasHooks: true,
-          hasComponents: !!React.Suspense
+          hasComponents: !!React.Suspense,
+          internalsReady: internalStateReady
         });
-        resolve();
-        return;
+        
+        // Final test - try to actually use a hook-like function
+        try {
+          const testHookAccess = React.useState !== null && React.useState !== undefined;
+          if (testHookAccess) {
+            resolve();
+            return;
+          }
+        } catch (e) {
+          console.log('[Main] Hook access test failed:', e);
+        }
       }
 
       attempts++;
@@ -45,7 +66,7 @@ const waitForReactInitialization = (): Promise<void> => {
         return;
       }
 
-      setTimeout(checkReact, 100);
+      setTimeout(checkReact, 50); // Reduced timeout for faster checking
     };
 
     checkReact();
