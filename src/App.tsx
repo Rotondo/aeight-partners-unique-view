@@ -32,6 +32,7 @@ import RepositorioPage from "./pages/repositorio/RepositorioPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import { PrivacyProvider } from "./contexts/PrivacyContext";
 import { IAProvider } from "./contexts/IAContext";
+import { AuthProvider } from "./hooks/useAuth";
 import ErrorBoundary from "./components/ErrorBoundary";
 
 const queryClient = new QueryClient({
@@ -47,10 +48,11 @@ function App() {
   console.log("[App] Rendering main application...");
 
   return (
-    <PrivacyProvider>
-      <IAProvider>
-        <QueryClientProvider client={queryClient}>
-          <Router>
+    <AuthProvider>
+      <PrivacyProvider>
+        <IAProvider>
+          <QueryClientProvider client={queryClient}>
+            <Router>
             <ErrorBoundary>
               <Routes>
                 <Route path="/login" element={<LoginPage />} />
@@ -104,6 +106,7 @@ function App() {
         </QueryClientProvider>
       </IAProvider>
     </PrivacyProvider>
+    </AuthProvider>
   );
 }
 
