@@ -38,6 +38,8 @@ const EmpresasClientesPage: React.FC = () => {
     addEmpresaCliente,
     updateEmpresaCliente,
     solicitarApresentacao,
+    initializeData, // <-- nova função manual
+    error: wishlistError
   } = wishlistContext || {};
 
   const { parceiros = [], loading: loadingRelevance, refresh: refreshRelevance } = useParceiroRelevance() || {};
@@ -76,14 +78,7 @@ const EmpresasClientesPage: React.FC = () => {
   // Navegação
   const navigate = useNavigate();
 
-  // Forçar carregamento inicial ao montar o componente
-  useEffect(() => {
-    // Só rodar uma vez na montagem!
-    if (fetchEmpresasClientes) {
-      fetchEmpresasClientes();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // Remover carregamento automático
 
   // Buscar empresas para o formulário
   useEffect(() => {

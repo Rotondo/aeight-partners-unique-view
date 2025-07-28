@@ -59,6 +59,9 @@ interface WishlistContextType {
   updateApresentacao?: (id: string, updates: any) => Promise<void>;
   convertToOportunidade?: (itemId: string, oportunidadeData: any) => Promise<void>;
   solicitarApresentacao?: (data: any) => Promise<void>;
+
+  // Função para inicializar dados
+  initializeData: () => Promise<void>;
 }
 
 // Criação do contexto
@@ -148,11 +151,10 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     }
   }, [fetchEmpresasClientesData, fetchWishlistItemsData, fetchApresentacoesData, fetchStatsData]);
 
-  // Carregar dados quando o componente montar
-  useEffect(() => {
-    initializeData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Apenas na montagem inicial
+  // Remover o carregamento automático ao montar
+  // useEffect(() => {
+  //   initializeData();
+  // }, []);
 
   // Função para recarregar todos os dados
   const refreshItems = useCallback(async () => {
@@ -243,6 +245,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     });
   }, [empresasClientes, wishlistItems, apresentacoes, loading, error]);
 
+  // Adicionar initializeData ao contexto
   const value: WishlistContextType = {
     // Estado
     wishlistItems: wishlistItems || [],
@@ -270,6 +273,9 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     updateApresentacao,
     convertToOportunidade,
     solicitarApresentacao,
+
+    // Função para inicializar dados
+    initializeData,
   };
 
   return (
