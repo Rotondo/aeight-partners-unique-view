@@ -46,7 +46,7 @@ const mainItems = [
   { title: "Categorias", url: "/categorias", icon: Tags },
   { title: "Contatos", url: "/contatos", icon: Contact },
   { title: "Indicadores", url: "/indicadores", icon: TrendingUp },
-  { title: "One Pagers", url: "/one-pagers", icon: FileText },
+  { title: "One Pager", url: "/onepager", icon: FileText },
   { title: "Repositório", url: "/repositorio", icon: Archive },
   { title: "Wishlist", url: "/wishlist", icon: Heart },
   { title: "Eventos", url: "/eventos", icon: Calendar },
