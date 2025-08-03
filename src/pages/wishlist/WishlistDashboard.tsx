@@ -15,14 +15,45 @@ import {
   ArrowRight,
   BarChart3,
   FileText,
-  GitBranch
+  GitBranch,
+  RefreshCw,
+  Database
 } from "lucide-react";
 import { DemoModeToggle } from "@/components/privacy/DemoModeToggle";
 import { DemoModeIndicator } from "@/components/privacy/DemoModeIndicator";
+import { useToast } from "@/hooks/use-toast";
 
 const WishlistDashboard: React.FC = () => {
   const navigate = useNavigate();
-  const { wishlistItems, empresasClientes, apresentacoes, stats } = useWishlist();
+  const { toast } = useToast();
+  const { 
+    wishlistItems, 
+    empresasClientes, 
+    apresentacoes, 
+    stats, 
+    loading, 
+    error, 
+    initializeData 
+  } = useWishlist();
+
+  // Verificar se dados foram carregados
+  const hasData = empresasClientes.length > 0 || wishlistItems.length > 0 || apresentacoes.length > 0;
+
+  const handleLoadData = async () => {
+    try {
+      await initializeData();
+      toast({
+        title: "Dados carregados com sucesso!",
+        description: "Os dados da wishlist foram atualizados.",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro ao carregar dados",
+        description: "Não foi possível carregar os dados da wishlist.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const quickStats = {
     totalEmpresas: empresasClientes.length,
@@ -111,59 +142,112 @@ const WishlistDashboard: React.FC = () => {
             Central de gerenciamento de relacionamentos e apresentações
           </p>
         </div>
-        <DemoModeToggle />
+        <div className="flex items-center gap-3">
+          <Button
+            onClick={handleLoadData}
+            disabled={loading}
+            variant={hasData ? "outline" : "default"}
+            size="sm"
+          >
+            {loading ? (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                Carregando...
+              </>
+            ) : hasData ? (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Atualizar Dados
+              </>
+            ) : (
+              <>
+                <Database className="mr-2 h-4 w-4" />
+                Carregar Dados
+              </>
+            )}
+          </Button>
+          <DemoModeToggle />
+        </div>
       </div>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card>
+      {!hasData && !loading && (
+        <Card className="border-dashed">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Empresas</p>
-                <p className="text-2xl font-bold">{quickStats.totalEmpresas}</p>
-              </div>
-              <Building2 className="h-8 w-8 text-blue-500" />
+            <div className="text-center py-8">
+              <Database className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Nenhum dado carregado</h3>
+              <p className="text-muted-foreground mb-4">
+                Clique no botão "Carregar Dados" para buscar as informações da wishlist.
+              </p>
+              <Button onClick={handleLoadData} disabled={loading}>
+                <Database className="mr-2 h-4 w-4" />
+                Carregar Dados Agora
+              </Button>
             </div>
           </CardContent>
         </Card>
-        
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Itens Pendentes</p>
-                <p className="text-2xl font-bold">{quickStats.itemsPendentes}</p>
+      )}
+
+      {(hasData || loading) && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Total Empresas</p>
+                  <p className="text-2xl font-bold">
+                    {loading ? "..." : quickStats.totalEmpresas}
+                  </p>
+                </div>
+                <Building2 className="h-8 w-8 text-blue-500" />
               </div>
-              <ListChecks className="h-8 w-8 text-yellow-500" />
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Itens Aprovados</p>
-                <p className="text-2xl font-bold">{quickStats.itensAprovados}</p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Itens Pendentes</p>
+                  <p className="text-2xl font-bold">
+                    {loading ? "..." : quickStats.itemsPendentes}
+                  </p>
+                </div>
+                <ListChecks className="h-8 w-8 text-yellow-500" />
               </div>
-              <TrendingUp className="h-8 w-8 text-green-500" />
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Convertidas</p>
-                <p className="text-2xl font-bold">{quickStats.apresentacoesConvertidas}</p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Itens Aprovados</p>
+                  <p className="text-2xl font-bold">
+                    {loading ? "..." : quickStats.itensAprovados}
+                  </p>
+                </div>
+                <TrendingUp className="h-8 w-8 text-green-500" />
               </div>
-              <Presentation className="h-8 w-8 text-purple-500" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Convertidas</p>
+                  <p className="text-2xl font-bold">
+                    {loading ? "..." : quickStats.apresentacoesConvertidas}
+                  </p>
+                </div>
+                <Presentation className="h-8 w-8 text-purple-500" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Main Menu */}
       <div>
