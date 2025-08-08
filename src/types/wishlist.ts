@@ -43,6 +43,10 @@ export interface WishlistApresentacao {
   data_apresentacao: string;
   tipo_apresentacao: TipoApresentacao;
   status_apresentacao: StatusApresentacao;
+  // Identifica a natureza do fluxo
+  // "solicitacao": a interessada pede à proprietária uma apresentação ao cliente desejado
+  // "oferta": a proprietária oferece espontaneamente ao cliente desejado
+  tipo_solicitacao?: "solicitacao" | "oferta";
   feedback?: string;
   converteu_oportunidade: boolean;
   oportunidade_id?: string;

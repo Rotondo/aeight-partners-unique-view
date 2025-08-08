@@ -5,6 +5,8 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { validateUUID, sanitizeString } from "@/utils/inputValidation";
 import { useDemoMask } from "@/utils/demoMask"; // <-- Importação do hook de máscara
+import { features } from "@/config/featureFlags";
+import { mapOpportunityToPipeline } from "@/utils/opportunitySync";
 
 // Database accepted status values
 type DatabaseStatusOportunidade = 
@@ -424,6 +426,27 @@ export const OportunidadesProvider: React.FC<{ children: ReactNode }> = ({ child
         title: "Sucesso",
         description: "Oportunidade atualizada com sucesso!"
       });
+
+      // Sincronismo reverso: Oportunidades -> Wishlist (opcional via feature flag)
+      if (features.wishlistOpportunitySync.backSyncStatusEnabled && updates.status) {
+        try {
+          const pipelineFase = mapOpportunityToPipeline(updates.status);
+          const { data: ap } = await supabase
+            .from('wishlist_apresentacoes')
+            .select('id')
+            .eq('oportunidade_id', id)
+            .maybeSingle();
+
+          if (ap?.id) {
+            await supabase
+              .from('wishlist_apresentacoes')
+              .update({ fase_pipeline: pipelineFase, updated_at: new Date().toISOString() })
+              .eq('id', ap.id);
+          }
+        } catch (syncErr) {
+          console.warn('Back-sync Wishlist falhou (não crítico):', syncErr);
+        }
+      }
 
       await fetchOportunidades();
       return true;

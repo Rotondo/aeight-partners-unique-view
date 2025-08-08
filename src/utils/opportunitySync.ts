@@ -82,8 +82,18 @@ export function shouldAutoCreateOpp(args: {
 export function deriveOrigemEDestino(wishlistItem: {
   empresa_interessada_id: string;
   empresa_desejada_id: string;
-}): { origemId: string; destinoId: string } {
-  // Por padrão: quem deseja (interessada) origina a oportunidade para a desejada
+  empresa_proprietaria_id?: string;
+}, tipo_solicitacao?: "solicitacao" | "oferta" | null): { origemId: string; destinoId: string } {
+  // Regra:
+  //  - solicitacao: interessada -> desejada
+  //  - oferta: proprietaria -> desejada
+  if (tipo_solicitacao === "oferta" && wishlistItem.empresa_proprietaria_id) {
+    return {
+      origemId: wishlistItem.empresa_proprietaria_id,
+      destinoId: wishlistItem.empresa_desejada_id,
+    };
+  }
+
   return {
     origemId: wishlistItem.empresa_interessada_id,
     destinoId: wishlistItem.empresa_desejada_id,

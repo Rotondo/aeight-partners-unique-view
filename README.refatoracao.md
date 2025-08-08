@@ -127,3 +127,69 @@ src/
 - Mudanças isoladas em módulos específicos
 - Menor risco de regressões
 - Testes mais direcionados
+
+---
+
+## Wishlist ↔ Oportunidades – Fluxo unificado (a partir da implementação)
+
+Objetivo: iniciar sempre na Wishlist e automatizar a criação de Oportunidade e o sincronismo de status, respeitando um recorte temporal de ativação.
+
+### Como funciona
+
+1) Ao aprovar um item na Wishlist, criamos automaticamente uma apresentação com `fase_pipeline: "aprovado"`.
+2) Quando a apresentação evolui para `apresentado`, criamos automaticamente uma Oportunidade (se habilitado por feature flag) e vinculamos em `wishlist_apresentacoes.oportunidade_id`.
+3) O status inicial da Oportunidade é derivado da `fase_pipeline` via utilitário `mapPipelineToOpportunityStatus`.
+4) O `wishlist_items.status` é atualizado para `convertido` quando a oportunidade é criada/vinculada.
+5) (Opcional) Sincronismo reverso: quando a Oportunidade muda de status, a `fase_pipeline` correspondente é atualizada via `mapOpportunityToPipeline`.
+
+### Origem e destino da Oportunidade
+
+- `solicitacao`: `empresa_interessada_id` → `empresa_desejada_id`
+- `oferta`: `empresa_proprietaria_id` → `empresa_desejada_id`
+
+Implementado em `src/utils/opportunitySync.ts` (`deriveOrigemEDestino`).
+
+### Mapeamentos de status
+
+Implementados em `src/utils/opportunitySync.ts`:
+
+- Wishlist → Oportunidade (criação): `mapPipelineToOpportunityStatus`
+- Oportunidade → Wishlist (sincronismo): `mapOpportunityToPipeline`
+
+### Recorte temporal e feature flags
+
+Controlado em `src/config/featureFlags.ts`:
+
+```ts
+export const features = {
+  wishlistOpportunitySync: {
+    enabled: false,
+    startAt: null, // ISO string, ex.: "2025-07-20T00:00:00Z"
+    createOnPresented: true,
+    backSyncStatusEnabled: false,
+  },
+}
+```
+
+Observações:
+- Se `enabled=false`, nenhuma criação automática ocorre.
+- `startAt` define o corte: apresentações com `created_at` anterior não disparam criação.
+- O sincronismo reverso só roda com `backSyncStatusEnabled=true`.
+
+### Pontos de integração
+
+- Criação automática: `src/hooks/useWishlistMutations/apresentacao.ts` (no `updateApresentacao`)
+- Conversão manual: `convertToOportunidade` agora também vincula `wishlist_apresentacoes.oportunidade_id` e marca `converteu_oportunidade`.
+- Sincronismo reverso: `src/components/oportunidades/OportunidadesContext.tsx` (no `updateOportunidade`)
+
+### Alterações de tipos
+
+- `WishlistApresentacao` passa a ter `tipo_solicitacao?: "solicitacao" | "oferta"`.
+
+### Ativação em produção
+
+1) Defina `features.wishlistOpportunitySync.enabled = true` e ajuste `startAt`.
+2) (Opcional) Habilite `backSyncStatusEnabled` após validação.
+3) Verifique permissões RLS e teste com um fluxo:
+   - Aprovar item → apresentação (aprovado) → apresentação (apresentado) → oportunidade criada e vinculada.
+   - Alterar status da oportunidade para ganho/perdido → refletir no pipeline.
