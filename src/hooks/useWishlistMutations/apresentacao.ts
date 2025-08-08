@@ -1,7 +1,8 @@
-
 import { supabase } from "@/lib/supabase";
 import { WishlistApresentacao } from "@/types";
 import { toast } from "@/hooks/use-toast";
+import { features } from "@/config/featureFlags";
+import { mapPipelineToOpportunityStatus, shouldAutoCreateOpp } from "@/utils/opportunitySync";
 
 export const useApresentacaoMutations = (
   fetchApresentacoes: () => Promise<void>,
@@ -45,12 +46,74 @@ export const useApresentacaoMutations = (
 
       if (error) throw error;
 
+      // Criação automática de Oportunidade (somente se feature estiver ativa)
+      if (features.wishlistOpportunitySync.enabled && data.fase_pipeline) {
+        const { data: ap, error: apErr } = await supabase
+          .from("wishlist_apresentacoes")
+          .select("id, wishlist_item_id, created_at, oportunidade_id, fase_pipeline")
+          .eq("id", id)
+          .single();
+
+        if (!apErr && ap && shouldAutoCreateOpp({
+          fase_pipeline: ap.fase_pipeline as any,
+          oportunidade_id: (ap as any).oportunidade_id || null,
+          created_at: (ap as any).created_at || null,
+          start_at: features.wishlistOpportunitySync.startAt || null,
+          createOnPresented: features.wishlistOpportunitySync.createOnPresented,
+        })) {
+          const { data: wlItem, error: wlErr } = await supabase
+            .from("wishlist_items")
+            .select("id, empresa_interessada_id, empresa_desejada_id")
+            .eq("id", (ap as any).wishlist_item_id)
+            .single();
+
+          if (!wlErr && wlItem) {
+            const { data: userRes } = await supabase.auth.getUser();
+            const initialStatus = mapPipelineToOpportunityStatus(ap.fase_pipeline as any);
+
+            const { data: opp, error: oppErr } = await supabase
+              .from("oportunidades")
+              .insert({
+                empresa_origem_id: (wlItem as any).empresa_interessada_id,
+                empresa_destino_id: (wlItem as any).empresa_desejada_id,
+                status: initialStatus,
+                data_indicacao: new Date().toISOString(),
+                nome_lead: "Oportunidade via Wishlist",
+                usuario_envio_id: userRes?.user?.id || null,
+              })
+              .select("id")
+              .single();
+
+            if (!oppErr && opp) {
+              await supabase
+                .from("wishlist_apresentacoes")
+                .update({
+                  oportunidade_id: (opp as any).id,
+                  converteu_oportunidade: true,
+                  updated_at: new Date().toISOString(),
+                })
+                .eq("id", id);
+
+              await supabase
+                .from("wishlist_items")
+                .update({ status: "convertido", updated_at: new Date().toISOString() })
+                .eq("id", (ap as any).wishlist_item_id);
+
+              toast({
+                title: "Oportunidade criada",
+                description: "Oportunidade vinculada à apresentação",
+              });
+            }
+          }
+        }
+      }
+
       toast({
         title: "Sucesso",
         description: "Apresentação atualizada com sucesso",
       });
 
-      await fetchApresentacoes();
+      await Promise.all([fetchApresentacoes(), fetchWishlistItems()]);
     } catch (error) {
       console.error("Erro ao atualizar apresentação:", error);
       toast({
