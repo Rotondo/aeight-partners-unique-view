@@ -5,7 +5,7 @@ export function mapPipelineToOpportunityStatus(
 ): StatusOportunidade {
   switch (fase) {
     case "apresentado":
-      return "indicado"; // Indicado após apresentação
+      return "Apresentado"; // Prefer status "Apresentado" for presented phase
     case "aguardando_feedback":
       return "negociando"; // Em negociação/aguardando retorno
     case "convertido":
@@ -88,4 +88,42 @@ export function deriveOrigemEDestino(wishlistItem: {
     origemId: wishlistItem.empresa_interessada_id,
     destinoId: wishlistItem.empresa_desejada_id,
   };
+}
+
+export type DatabaseOpportunityStatus =
+  | "em_contato"
+  | "negociando"
+  | "proposta_enviada"
+  | "aguardando_aprovacao"
+  | "ganho"
+  | "perdido"
+  | "Contato"
+  | "Apresentado"
+  | "Sem contato";
+
+export function toDatabaseStatus(status: StatusOportunidade): DatabaseOpportunityStatus {
+  switch (status) {
+    case "Apresentado":
+    case "indicado":
+      return "Apresentado";
+    case "Contato":
+    case "em_contato":
+      return "em_contato";
+    case "negociando":
+      return "negociando";
+    case "proposta_enviada":
+      return "proposta_enviada";
+    case "aguardando_aprovacao":
+      return "aguardando_aprovacao";
+    case "ganho":
+    case "fechado":
+      return "ganho";
+    case "cancelado":
+    case "perdido":
+      return "perdido";
+    case "Sem contato":
+      return "Sem contato";
+    default:
+      return "em_contato";
+  }
 }

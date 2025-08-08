@@ -2,7 +2,7 @@ import { supabase } from "@/lib/supabase";
 import { WishlistApresentacao } from "@/types";
 import { toast } from "@/hooks/use-toast";
 import { features } from "@/config/featureFlags";
-import { mapPipelineToOpportunityStatus, shouldAutoCreateOpp } from "@/utils/opportunitySync";
+import { mapPipelineToOpportunityStatus, shouldAutoCreateOpp, toDatabaseStatus } from "@/utils/opportunitySync";
 
 export const useApresentacaoMutations = (
   fetchApresentacoes: () => Promise<void>,
@@ -76,7 +76,7 @@ export const useApresentacaoMutations = (
               .insert({
                 empresa_origem_id: (wlItem as any).empresa_interessada_id,
                 empresa_destino_id: (wlItem as any).empresa_desejada_id,
-                status: initialStatus,
+                status: toDatabaseStatus(initialStatus),
                 data_indicacao: new Date().toISOString(),
                 nome_lead: "Oportunidade via Wishlist",
                 usuario_envio_id: userRes?.user?.id || null,
