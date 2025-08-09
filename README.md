@@ -168,8 +168,10 @@ Para suporte técnico ou dúvidas sobre funcionalidades, entre em contato com a 
 
 ## 🧭 Notas técnicas recentes
 
-- Sincronização Wishlist → Oportunidades (feature flag `wishlistOpportunitySync`): quando a fase atingir "apresentado", criamos automaticamente uma oportunidade com status "Apresentado".
-- Compatibilidade de tipos garantida por `toDatabaseStatus`, que normaliza o status para o enum do banco.
-- Arquivos envolvidos: `src/config/featureFlags.ts`, `src/utils/opportunitySync.ts`, `src/hooks/useWishlistMutations/apresentacao.ts`.
+- Sincronização Wishlist → Oportunidades (feature flag `wishlistOpportunitySync`): criação automática ao atingir "apresentado" com status "Apresentado".
+- Normalização de status centralizada via `toDatabaseStatus`.
+- Centralização da criação de oportunidades: novo serviço `src/services/OportunidadesService.ts` com `createOpportunityFromApresentacao` e `normalizeOpportunityInsert`, reduzindo duplicações e queries.
+- Refatoração em `src/hooks/useWishlistMutations/apresentacao.ts`: uso do serviço e remoção de selects redundantes.
+- Arquivos envolvidos: `src/config/featureFlags.ts`, `src/utils/opportunitySync.ts`, `src/hooks/useWishlistMutations/apresentacao.ts`, `src/services/OportunidadesService.ts`.
 
 *Sistema desenvolvido especificamente para o Grupo A&eight - Versão 2.0*

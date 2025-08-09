@@ -2,8 +2,10 @@ import { supabase } from "@/lib/supabase";
 import { WishlistApresentacao } from "@/types";
 import { toast } from "@/hooks/use-toast";
 import { features } from "@/config/featureFlags";
-import { mapPipelineToOpportunityStatus, shouldAutoCreateOpp, toDatabaseStatus, deriveOrigemEDestino } from "@/utils/opportunitySync";
+import { shouldAutoCreateOpp } from "@/utils/opportunitySync";
+import { createOpportunityFromApresentacao, normalizeOpportunityInsert } from "@/services/OportunidadesService";
 
+const CONSOLE_PREFIX = "[useApresentacaoMutations]";
 export const useApresentacaoMutations = (
   fetchApresentacoes: () => Promise<void>,
   fetchWishlistItems: () => Promise<void>
@@ -50,7 +52,7 @@ export const useApresentacaoMutations = (
       if (features.wishlistOpportunitySync.enabled && data.fase_pipeline) {
         const { data: ap, error: apErr } = await supabase
           .from("wishlist_apresentacoes")
-          .select("id, wishlist_item_id, created_at, oportunidade_id, fase_pipeline")
+          .select("id, wishlist_item_id, created_at, oportunidade_id, fase_pipeline, tipo_solicitacao")
           .eq("id", id)
           .single();
 
@@ -69,47 +71,15 @@ export const useApresentacaoMutations = (
 
           if (!wlErr && wlItem) {
             const { data: userRes } = await supabase.auth.getUser();
-            const initialStatus = mapPipelineToOpportunityStatus(ap.fase_pipeline as any);
-            // Buscar tipo_solicitacao da apresentacao para derivar origem/destino corretamente
-            const { data: apFull } = await supabase
-              .from("wishlist_apresentacoes")
-              .select("tipo_solicitacao")
-              .eq("id", id)
-              .single();
+            const created = await createOpportunityFromApresentacao({
+              apresentacaoId: id,
+              wishlistItem: wlItem as any,
+              fase_pipeline: ap.fase_pipeline as any,
+              tipo_solicitacao: (ap as any)?.tipo_solicitacao || null,
+              userId: userRes?.user?.id || null,
+            });
 
-            const { origemId, destinoId } = deriveOrigemEDestino(
-              wlItem as any,
-              (apFull as any)?.tipo_solicitacao || null
-            );
-
-            const { data: opp, error: oppErr } = await supabase
-              .from("oportunidades")
-              .insert({
-                empresa_origem_id: origemId,
-                empresa_destino_id: destinoId,
-                status: toDatabaseStatus(initialStatus),
-                data_indicacao: new Date().toISOString(),
-                nome_lead: "Oportunidade via Wishlist",
-                usuario_envio_id: userRes?.user?.id || null,
-              })
-              .select("id")
-              .single();
-
-            if (!oppErr && opp) {
-              await supabase
-                .from("wishlist_apresentacoes")
-                .update({
-                  oportunidade_id: (opp as any).id,
-                  converteu_oportunidade: true,
-                  updated_at: new Date().toISOString(),
-                })
-                .eq("id", id);
-
-              await supabase
-                .from("wishlist_items")
-                .update({ status: "convertido", updated_at: new Date().toISOString() })
-                .eq("id", (ap as any).wishlist_item_id);
-
+            if (created?.id) {
               toast({
                 title: "Oportunidade criada",
                 description: "Oportunidade vinculada à apresentação",
@@ -140,9 +110,10 @@ export const useApresentacaoMutations = (
     oportunidadeData: any
   ) => {
     try {
+      const insertData = normalizeOpportunityInsert(oportunidadeData);
       const { data: oportunidade, error: oportunidadeError } = await supabase
         .from("oportunidades")
-        .insert([oportunidadeData])
+        .insert([insertData])
         .select()
         .single();
 
