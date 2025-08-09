@@ -77,6 +77,23 @@ const waitForReactInitialization = (): Promise<void> => {
 const initializeApp = async () => {
   try {
     console.log('[Main] Starting application initialization...');
+
+    // One-time cache clear to avoid stale SW bundles causing duplicate React or stale modules
+    if ('serviceWorker' in navigator) {
+      try {
+        const flagKey = 'sw_cache_clear_v2';
+        if (!localStorage.getItem(flagKey)) {
+          const reg = await navigator.serviceWorker.ready;
+          reg.active?.postMessage({ type: 'CLEAR_CACHE' });
+          localStorage.setItem(flagKey, '1');
+          // Give the SW a moment to clear, then hard reload
+          setTimeout(() => window.location.reload(), 250);
+          return; // Stop init; next load continues normally
+        }
+      } catch (e) {
+        console.warn('[Main] SW cache clear skipped:', e);
+      }
+    }
     
     // Wait for React to be fully ready
     await waitForReactInitialization();
