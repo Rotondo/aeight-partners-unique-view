@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Target, TrendingDown, Calculator, Users, Clock, Zap } from "lucide-react";
-import { DashboardStatsSection } from "./DashboardStats";
+import DashboardStats from "./DashboardStats";
 import { OpportunitiesChart } from "./OpportunitiesChart";
 import { IntraExtraAnalysis } from "./IntraExtraAnalysis";
 import { MatrizIntragrupoChart } from "./MatrizIntragrupoChart";
@@ -129,7 +129,7 @@ export const OportunidadesDashboards: React.FC = () => {
           )}
         </div>
         <PeriodIndicator />
-        <DashboardStatsSection stats={stats} loading={isLoading} />
+        <DashboardStats stats={stats} loading={isLoading} />
       </div>
 
       {/* Tabs em desktop/tablet, Dropdown em mobile */}

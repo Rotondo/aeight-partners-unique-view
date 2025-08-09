@@ -84,5 +84,6 @@ export const DashboardStatsSection: React.FC<DashboardStatsProps> = ({
   );
 };
 
-// Export the main component as DashboardStats for backward compatibility
+// Export aliases for backward compatibility
 export const DashboardStats = DashboardStatsSection;
+export default DashboardStatsSection;
