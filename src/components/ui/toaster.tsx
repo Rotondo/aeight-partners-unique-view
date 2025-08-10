@@ -10,19 +10,48 @@ import {
   ToastViewport,
 } from "@/components/ui/toast"
 
-export function Toaster() {
-  // Add comprehensive error boundary protection for React initialization issues
+// Safe React hooks check
+const isReactReady = () => {
   try {
-    // Check if React and useState are properly initialized
-    if (!React || typeof React.useState !== 'function') {
-      console.error('[Toaster] React hooks are not properly initialized')
-      return null
-    }
+    return (
+      typeof React !== 'undefined' &&
+      React !== null &&
+      typeof React.useState === 'function' &&
+      typeof React.useEffect === 'function'
+    );
+  } catch {
+    return false;
+  }
+};
 
-    const { toasts } = useToast()
+// Safe component wrapper that ensures React is ready
+const SafeToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // Only render if React is properly initialized
+  if (!isReactReady()) {
+    console.warn('[SafeToastProvider] React hooks not ready, skipping toast provider');
+    return <>{children}</>;
+  }
+
+  try {
+    return <ToastProvider>{children}</ToastProvider>;
+  } catch (error) {
+    console.error('[SafeToastProvider] ToastProvider failed:', error);
+    return <>{children}</>;
+  }
+};
+
+export function Toaster() {
+  // Early return if React is not ready
+  if (!isReactReady()) {
+    console.warn('[Toaster] React hooks not ready, returning null');
+    return null;
+  }
+
+  try {
+    const { toasts } = useToast();
 
     return (
-      <ToastProvider>
+      <SafeToastProvider>
         {toasts.map(function ({ id, title, description, error, action, ...props }) {
           return (
             <Toast key={id} error={error} {...props}>
@@ -45,11 +74,10 @@ export function Toaster() {
           )
         })}
         <ToastViewport />
-      </ToastProvider>
+      </SafeToastProvider>
     )
   } catch (error) {
-    console.error('[Toaster] Component error:', error)
-    // Return null instead of a visible error to prevent cascading failures
-    return null
+    console.error('[Toaster] Component error:', error);
+    return null;
   }
 }

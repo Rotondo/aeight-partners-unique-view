@@ -1,5 +1,4 @@
 
-
 import * as React from "react"
 
 import type {
@@ -75,8 +74,6 @@ export const reducer = (state: State, action: Action): State => {
     case "DISMISS_TOAST": {
       const { toastId } = action
 
-      // ! Side effects ! - This could be extracted into a dismissToast() action,
-      // but I'll keep it here for simplicity
       if (toastId) {
         addToRemoveQueue(toastId)
       } else {
@@ -157,19 +154,32 @@ function toast({ ...props }: Toast) {
   }
 }
 
-function useToast() {
-  // Add safety check for React hooks
+// Safe React hooks checker
+const isReactHooksReady = () => {
   try {
-    if (!React || typeof React.useState !== 'function') {
-      console.error('[useToast] React is not properly initialized')
-      // Return safe fallback
-      return {
-        toasts: [],
-        toast,
-        dismiss: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId }),
-      }
-    }
-    
+    return (
+      typeof React !== 'undefined' &&
+      React !== null &&
+      typeof React.useState === 'function' &&
+      typeof React.useEffect === 'function'
+    );
+  } catch {
+    return false;
+  }
+};
+
+function useToast() {
+  // Early check for React hooks availability
+  if (!isReactHooksReady()) {
+    console.warn('[useToast] React hooks not ready, returning fallback');
+    return {
+      toasts: [],
+      toast,
+      dismiss: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId }),
+    };
+  }
+
+  try {
     const [state, setState] = React.useState<State>(memoryState)
 
     React.useEffect(() => {
@@ -199,4 +209,3 @@ function useToast() {
 }
 
 export { useToast, toast }
-
