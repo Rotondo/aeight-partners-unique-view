@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
 
 interface PrivacyContextType {
   isDemoMode: boolean;
@@ -14,6 +14,8 @@ interface PrivacyProviderProps {
 }
 
 export const PrivacyProvider: React.FC<PrivacyProviderProps> = ({ children }) => {
+  console.log('[PrivacyProvider] Initializing...');
+
   // Initialize state with a safe default
   const [isDemoMode, setIsDemoMode] = useState<boolean>(() => {
     // Check if we're in browser environment
@@ -58,6 +60,8 @@ export const PrivacyProvider: React.FC<PrivacyProviderProps> = ({ children }) =>
     toggleDemoMode,
     setDemoMode
   }), [isDemoMode, toggleDemoMode, setDemoMode]);
+
+  console.log('[PrivacyProvider] Rendering with isDemoMode:', isDemoMode);
 
   return (
     <PrivacyContext.Provider value={value}>
