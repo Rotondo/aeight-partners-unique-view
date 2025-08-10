@@ -1,11 +1,8 @@
-// Nenhuma alteração necessária agora, pois toda a lógica de aprovação já dispara a criação automática da apresentação.
-// Está correto aprovar aqui e deixar o hook de mutations cuidar da criação.
-// Se quiser feedback visual para o usuário sobre a criação automática do pipeline, podemos adicionar um toast informativo.
 
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useWishlist } from "@/contexts/WishlistContext";
-import { Plus, ChevronLeft } from "lucide-react";
+import { Plus, ChevronLeft, ExternalLink } from "lucide-react";
 import { WishlistStatus, WishlistItem } from "@/types";
 import { toast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
@@ -18,6 +15,7 @@ import WishlistFluxoAprimorado from "@/components/wishlist/WishlistFluxoAprimora
 import FiltroWishlistItens from "@/components/wishlist/FiltroWishlistItens";
 import WishlistItemsTable from "@/components/wishlist/WishlistItemsTable";
 import WishlistStats from "@/components/wishlist/WishlistStats";
+import { WishlistOportunidadeIntegration } from "@/components/wishlist/WishlistOportunidadeIntegration";
 import { filterWishlistItems, sortWishlistItems } from "@/utils/wishlistUtils";
 
 const CONSOLE_PREFIX = "[WishlistItensPage]";
@@ -72,14 +70,20 @@ const WishlistItensPage: React.FC = () => {
   
   const sortedItems = sortWishlistItems(filteredItems, sortField, sortDirection);
 
-  // Aprovar item
+  // Aprovar item com feedback melhorado
   const handleAprovar = async (item: WishlistItem) => {
     setActionLoadingId(item.id);
     try {
       await updateWishlistItem(item.id, { status: "aprovado" });
       toast({
-        title: "Solicitação aprovada",
-        description: "O item foi aprovado com sucesso e enviado para o pipeline.",
+        title: "✅ Solicitação aprovada",
+        description: "O item foi aprovado e uma apresentação foi criada automaticamente no pipeline.",
+        action: (
+          <Button variant="outline" size="sm" onClick={() => navigate("/wishlist/apresentacoes")}>
+            <ExternalLink className="h-3 w-3 mr-1" />
+            Ver Pipeline
+          </Button>
+        ),
       });
     } catch (err) {
       toast({
@@ -164,6 +168,14 @@ const WishlistItensPage: React.FC = () => {
         <div className="flex items-center gap-2 flex-shrink-0">
           <DemoModeToggle />
           <Button
+            variant="outline"
+            onClick={() => navigate("/oportunidades")}
+            className="text-blue-600 border-blue-200 hover:bg-blue-50"
+          >
+            <ExternalLink className="mr-2 h-4 w-4" />
+            Ver Oportunidades
+          </Button>
+          <Button
             onClick={() => setFluxoAprimoradoOpen(true)}
             className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
             data-testid="button-fluxo-aprimorado"
@@ -191,6 +203,9 @@ const WishlistItensPage: React.FC = () => {
           </Button>
         </div>
       </div>
+
+      {/* Integração Wishlist-Oportunidades Explicação */}
+      <WishlistOportunidadeIntegration showDetailedFlow={true} />
 
       {/* Filters */}
       <FiltroWishlistItens

@@ -1,639 +1,246 @@
+
 import React, { useState, useEffect } from "react";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { useWishlist } from "@/contexts/WishlistContext";
-import {
-  Plus,
-  Search,
-  Presentation,
-  Calendar,
-  CheckCircle,
-  ChevronLeft,
-  Loader2,
-} from "lucide-react";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { StatusApresentacao, TipoApresentacao, WishlistItem } from "@/types";
-import { supabase } from "@/lib/supabase";
+import { ChevronLeft, Plus, ExternalLink, Target } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { WishlistApresentacao, PipelineFase, StatusApresentacao } from "@/types";
 import { DemoModeToggle } from "@/components/privacy/DemoModeToggle";
 import { DemoModeIndicator } from "@/components/privacy/DemoModeIndicator";
-import { PrivateData } from "@/components/privacy/PrivateData";
+import { WishlistOportunidadeIntegration } from "@/components/wishlist/WishlistOportunidadeIntegration";
+import { toast } from "@/hooks/use-toast";
 
-type EmpresaOption = {
-  id: string;
-  nome: string;
-  tipo: string;
-};
+const CONSOLE_PREFIX = "[ApresentacoesPage]";
 
 const ApresentacoesPage: React.FC = () => {
   const {
     apresentacoes,
-    loading: loadingApresentacoes,
+    loading,
     fetchApresentacoes,
-    addApresentacao,
-    fetchWishlistItems,
-    wishlistItems,
+    updateApresentacao,
   } = useWishlist();
 
   const navigate = useNavigate();
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<StatusApresentacao | "all">(
-    "all"
-  );
+  const [selectedApresentacao, setSelectedApresentacao] = useState<WishlistApresentacao | null>(null);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
 
-  // Modal states
-  const [modalOpen, setModalOpen] = useState(false);
-  const [modalLoading, setModalLoading] = useState(false);
-
-  // Form state
-  const [empresasFacilitadoras, setEmpresasFacilitadoras] = useState<
-    EmpresaOption[]
-  >([]);
-  const [empresaFacilitadora, setEmpresaFacilitadora] = useState<string>("");
-  const [wishlistItem, setWishlistItem] = useState<string>("");
-  const [tipoApresentacao, setTipoApresentacao] = useState<
-    TipoApresentacao | ""
-  >("");
-  const [statusApresentacao, setStatusApresentacao] =
-    useState<StatusApresentacao | "agendada">("agendada");
-  const [dataApresentacao, setDataApresentacao] = useState<string>("");
-  const [feedback, setFeedback] = useState("");
-  const [converteuOportunidade, setConverteuOportunidade] = useState(false);
-
-  // Carrega empresas facilitadoras para o formulário
-  useEffect(() => {
-    const fetchEmpresas = async () => {
-      const { data, error } = await supabase
-        .from("empresas")
-        .select("id,nome,tipo")
-        .order("nome");
-      if (!error && data) {
-        setEmpresasFacilitadoras(
-          data.filter(
-            (e: EmpresaOption) =>
-              e.tipo === "parceiro" || e.tipo === "intragrupo"
-          )
-        );
+  const handleFaseChange = async (apresentacao: WishlistApresentacao, novaFase: PipelineFase) => {
+    setUpdatingId(apresentacao.id);
+    try {
+      await updateApresentacao?.(apresentacao.id, { fase_pipeline: novaFase });
+      
+      // Se mudou para "apresentado", mostra toast explicativo sobre criação da oportunidade
+      if (novaFase === "apresentado" && !apresentacao.oportunidade_id) {
+        toast({
+          title: "🎯 Apresentação realizada!",
+          description: "Uma oportunidade será criada automaticamente e aparecerá na seção de Oportunidades.",
+          duration: 5000,
+          action: (
+            <Button variant="outline" size="sm" onClick={() => navigate("/oportunidades")}>
+              <Target className="h-3 w-3 mr-1" />
+              Ver Oportunidades
+            </Button>
+          ),
+        });
       }
-    };
-    if (modalOpen) fetchEmpresas();
-  }, [modalOpen]);
-
-  // Reset modal fields
-  const resetModal = () => {
-    setEmpresaFacilitadora("");
-    setWishlistItem("");
-    setTipoApresentacao("");
-    setStatusApresentacao("agendada");
-    setDataApresentacao("");
-    setFeedback("");
-    setConverteuOportunidade(false);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setModalLoading(true);
-    if (
-      !empresaFacilitadora ||
-      !wishlistItem ||
-      !tipoApresentacao ||
-      !statusApresentacao ||
-      !dataApresentacao
-    ) {
-      setModalLoading(false);
-      return;
+    } catch (error) {
+      console.error(`${CONSOLE_PREFIX} Erro ao atualizar fase:`, error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível atualizar a fase da apresentação.",
+        variant: "destructive",
+      });
+    } finally {
+      setUpdatingId(null);
     }
-    await addApresentacao({
-      empresa_facilitadora_id: empresaFacilitadora,
-      wishlist_item_id: wishlistItem,
-      tipo_apresentacao: tipoApresentacao as TipoApresentacao,
-      status_apresentacao: statusApresentacao as StatusApresentacao,
-      data_apresentacao: dataApresentacao,
-      feedback,
-      converteu_oportunidade: converteuOportunidade,
-    });
-    setModalLoading(false);
-    setModalOpen(false);
-    resetModal();
-    fetchApresentacoes();
-    fetchWishlistItems();
   };
 
-  const filteredApresentacoes = apresentacoes.filter((apresentacao) => {
-    const matchesSearch =
-      apresentacao.empresa_facilitadora?.nome
-        ?.toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
-      apresentacao.wishlist_item?.empresa_interessada?.nome
-        ?.toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
-      apresentacao.wishlist_item?.empresa_desejada?.nome
-        ?.toLowerCase()
-        .includes(searchTerm.toLowerCase());
-
-    const matchesStatus =
-      statusFilter === "all" ||
-      apresentacao.status_apresentacao === statusFilter;
-
-    return matchesSearch && matchesStatus;
-  });
-
-  const getStatusColor = (status: StatusApresentacao) => {
+  const getStatusBadgeColor = (status: StatusApresentacao) => {
     switch (status) {
-      case "agendada":
-        return "outline";
-      case "realizada":
-        return "default";
+      case "concluida":
+        return "bg-green-100 text-green-700 border-green-200";
+      case "pendente":
+        return "bg-yellow-100 text-yellow-700 border-yellow-200";
       case "cancelada":
-        return "destructive";
+        return "bg-red-100 text-red-700 border-red-200";
       default:
-        return "secondary";
+        return "bg-gray-100 text-gray-700 border-gray-200";
     }
   };
 
-  const getStatusLabel = (status: StatusApresentacao) => {
-    switch (status) {
-      case "agendada":
-        return "Agendada";
-      case "realizada":
-        return "Realizada";
-      case "cancelada":
-        return "Cancelada";
+  const getFaseBadgeColor = (fase: PipelineFase) => {
+    switch (fase) {
+      case "apresentado":
+        return "bg-blue-100 text-blue-700 border-blue-200";
+      case "aguardando_feedback":
+        return "bg-orange-100 text-orange-700 border-orange-200";
+      case "convertido":
+        return "bg-green-100 text-green-700 border-green-200";
+      case "rejeitado":
+        return "bg-red-100 text-red-700 border-red-200";
       default:
-        return status;
+        return "bg-gray-100 text-gray-700 border-gray-200";
     }
   };
 
-  const getTipoLabel = (tipo: TipoApresentacao) => {
-    switch (tipo) {
-      case "email":
-        return "Email";
-      case "reuniao":
-        return "Reunião";
-      case "evento":
-        return "Evento";
-      case "digital":
-        return "Digital";
-      case "outro":
-        return "Outro";
-      default:
-        return tipo;
-    }
-  };
+  useEffect(() => {
+    console.log(`${CONSOLE_PREFIX} Apresentações carregadas:`, apresentacoes?.length);
+  }, [apresentacoes]);
 
-  if (loadingApresentacoes) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">
-            Carregando apresentações...
-          </p>
+          <p className="mt-4 text-muted-foreground">Carregando apresentações...</p>
         </div>
       </div>
     );
   }
 
-  // Apenas wishlist items não convertidos e aprovados/em_andamento
-  const wishlistItemsDisponiveis: WishlistItem[] = wishlistItems.filter(
-    (item) =>
-      ["aprovado", "em_andamento"].includes(item.status) &&
-      !apresentacoes.some(
-        (a) =>
-          a.wishlist_item_id === item.id &&
-          a.status_apresentacao !== "cancelada"
-      )
-  );
-
   return (
     <div className="space-y-6">
       <DemoModeIndicator />
-
+      
       {/* Header */}
       <div className="flex justify-between items-center flex-wrap gap-4">
         <div className="flex items-center gap-4">
-          <Button
-            variant="outline"
-            onClick={() => navigate("/wishlist")}
-            className="flex-shrink-0"
-          >
+          <Button variant="outline" onClick={() => navigate("/wishlist")} className="flex-shrink-0">
             <ChevronLeft className="h-4 w-4 mr-1" />
             Voltar ao Dashboard
           </Button>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Apresentações</h1>
+            <h1 className="text-3xl font-bold tracking-tight">Pipeline de Apresentações</h1>
             <p className="text-muted-foreground">
-              Acompanhe apresentações e facilitações realizadas
+              Gerencie o progresso das apresentações e acompanhe a criação de oportunidades
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           <DemoModeToggle />
-          <Dialog
-            open={modalOpen}
-            onOpenChange={(o) => {
-              setModalOpen(o);
-              if (!o) resetModal();
-            }}
+          <Button
+            variant="outline"
+            onClick={() => navigate("/oportunidades")}
+            className="text-blue-600 border-blue-200 hover:bg-blue-50"
           >
-            <Button onClick={() => setModalOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Registrar Apresentação
-            </Button>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Registrar Nova Apresentação</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label className="block font-medium mb-1">Facilitador</label>
-                  <Select
-                    value={empresaFacilitadora}
-                    onValueChange={setEmpresaFacilitadora}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione a empresa facilitadora" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {empresasFacilitadoras.map((e) => (
-                        <SelectItem key={e.id} value={e.id}>
-                          {e.nome}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <label className="block font-medium mb-1">
-                    Solicitação/Wishlist
-                  </label>
-                  <Select
-                    value={wishlistItem}
-                    onValueChange={setWishlistItem}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione a solicitação" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {wishlistItemsDisponiveis.map((item) => (
-                        <SelectItem key={item.id} value={item.id}>
-                          {item.empresa_interessada?.nome} →{" "}
-                          {item.empresa_desejada?.nome} (
-                          {item.empresa_proprietaria?.nome})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Só aparecem solicitações aprovadas ou em andamento e ainda
-                    não apresentadas.
-                  </p>
-                </div>
-                <div>
-                  <label className="block font-medium mb-1">
-                    Tipo de Apresentação
-                  </label>
-                  <Select
-                    value={tipoApresentacao}
-                    onValueChange={(v) =>
-                      setTipoApresentacao(v as TipoApresentacao)
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Tipo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="email">Email</SelectItem>
-                      <SelectItem value="reuniao">Reunião</SelectItem>
-                      <SelectItem value="evento">Evento</SelectItem>
-                      <SelectItem value="digital">Digital</SelectItem>
-                      <SelectItem value="outro">Outro</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <label className="block font-medium mb-1">
-                    Status da Apresentação
-                  </label>
-                  <Select
-                    value={statusApresentacao}
-                    onValueChange={(v) =>
-                      setStatusApresentacao(v as StatusApresentacao)
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="agendada">Agendada</SelectItem>
-                      <SelectItem value="realizada">Realizada</SelectItem>
-                      <SelectItem value="cancelada">Cancelada</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <label className="block font-medium mb-1">
-                    Data e Hora
-                  </label>
-                  <Input
-                    type="datetime-local"
-                    value={dataApresentacao}
-                    onChange={(e) => setDataApresentacao(e.target.value)}
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block font-medium mb-1">
-                    Feedback (opcional)
-                  </label>
-                  <Input
-                    value={feedback}
-                    onChange={(e) => setFeedback(e.target.value)}
-                    placeholder="Feedback da apresentação"
-                  />
-                </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="converteu_oportunidade"
-                    checked={converteuOportunidade}
-                    onChange={(e) =>
-                      setConverteuOportunidade(e.target.checked)
-                    }
-                    className="h-4 w-4"
-                  />
-                  <label htmlFor="converteu_oportunidade" className="text-sm">
-                    Convertida em Oportunidade
-                  </label>
-                </div>
-                <div className="flex justify-end">
-                  <Button
-                    type="submit"
-                    disabled={
-                      modalLoading ||
-                      !empresaFacilitadora ||
-                      !wishlistItem ||
-                      !tipoApresentacao ||
-                      !statusApresentacao ||
-                      !dataApresentacao
-                    }
-                  >
-                    {modalLoading && (
-                      <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                    )}
-                    Registrar Apresentação
-                  </Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
+            <ExternalLink className="mr-2 h-4 w-4" />
+            Ver Oportunidades
+          </Button>
+          <Button onClick={() => navigate("/wishlist/itens")}>
+            <Plus className="mr-2 h-4 w-4" />
+            Nova Solicitação
+          </Button>
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="flex items-center space-x-2">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por empresa..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-8"
-          />
-        </div>
-        <Select
-          value={statusFilter}
-          onValueChange={(value: StatusApresentacao | "all") =>
-            setStatusFilter(value)
-          }
-        >
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Filtrar por status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos os status</SelectItem>
-            <SelectItem value="agendada">Agendada</SelectItem>
-            <SelectItem value="realizada">Realizada</SelectItem>
-            <SelectItem value="cancelada">Cancelada</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      {/* Explicação da Integração */}
+      <WishlistOportunidadeIntegration showDetailedFlow={false} className="mb-6" />
 
-      {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total</CardTitle>
-            <Presentation className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{apresentacoes.length}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Realizadas</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {apresentacoes.filter(
-                (a) => a.status_apresentacao === "realizada"
-              ).length}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Agendadas</CardTitle>
-            <Calendar className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {apresentacoes.filter(
-                (a) => a.status_apresentacao === "agendada"
-              ).length}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Conversões</CardTitle>
-            <Badge variant="default">
-              {apresentacoes.filter((a) => a.converteu_oportunidade).length}
-            </Badge>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {apresentacoes.filter((a) => a.converteu_oportunidade).length}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Lista de Apresentações - agora em TABELA */}
-      <div className="bg-white dark:bg-muted rounded-lg border p-0 overflow-x-auto">
-        <table className="min-w-full divide-y divide-muted-foreground/10">
-          <thead>
-            <tr className="bg-muted/50">
-              <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">
-                Cliente
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">
-                Destino
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">
-                Facilitador
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">
-                Tipo
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">
-                Data/Hora
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">
-                Status
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">
-                Conversão
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">
-                Feedback
-              </th>
-              <th className="px-4 py-3 text-right text-xs font-semibold text-muted-foreground">
-                Ações
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredApresentacoes.length === 0 && (
-              <tr>
-                <td
-                  colSpan={9}
-                  className="py-12 text-center text-muted-foreground"
-                >
-                  <Presentation className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                  <div className="text-lg font-semibold mb-2">
-                    Nenhuma apresentação encontrada
-                  </div>
-                  <div className="text-muted-foreground text-center mb-4">
-                    {searchTerm || statusFilter !== "all"
-                      ? "Tente ajustar os filtros de busca"
-                      : "Registre a primeira apresentação"}
-                  </div>
-                  <Button onClick={() => setModalOpen(true)}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Registrar Apresentação
-                  </Button>
-                </td>
-              </tr>
-            )}
-            {filteredApresentacoes.map((apresentacao) => (
-              <tr
-                key={apresentacao.id}
-                className="hover:bg-muted/30 text-sm border-b last:border-0"
-              >
-                <td className="px-4 py-2 font-medium max-w-[180px] truncate">
-                  <PrivateData type="company">
-                    {apresentacao.wishlist_item?.empresa_interessada?.nome}
-                  </PrivateData>
-                </td>
-                <td className="px-4 py-2 font-medium max-w-[180px] truncate">
-                  <PrivateData type="company">
-                    {apresentacao.wishlist_item?.empresa_desejada?.nome}
-                  </PrivateData>
-                </td>
-                <td className="px-4 py-2 max-w-[180px] truncate">
-                  <PrivateData type="company">
-                    {apresentacao.empresa_facilitadora?.nome}
-                  </PrivateData>
-                </td>
-                <td className="px-4 py-2 whitespace-nowrap">
-                  <Badge variant="outline">
-                    {getTipoLabel(apresentacao.tipo_apresentacao)}
-                  </Badge>
-                </td>
-                <td className="px-4 py-2 whitespace-nowrap">
-                  <span className="flex items-center gap-1">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    {format(
-                      new Date(apresentacao.data_apresentacao),
-                      "dd/MM/yyyy HH:mm",
-                      { locale: ptBR }
-                    )}
-                  </span>
-                </td>
-                <td className="px-4 py-2 whitespace-nowrap">
-                  <Badge variant={getStatusColor(apresentacao.status_apresentacao)}>
-                    {getStatusLabel(apresentacao.status_apresentacao)}
-                  </Badge>
-                </td>
-                <td className="px-4 py-2">
-                  {apresentacao.converteu_oportunidade ? (
-                    <Badge variant="default">
-                      <CheckCircle className="mr-1 h-3 w-3" />
-                      Convertido
-                    </Badge>
-                  ) : (
-                    <span className="text-muted-foreground">—</span>
-                  )}
-                </td>
-                <td className="px-4 py-2 max-w-[200px] truncate">
-                  {apresentacao.feedback ? (
-                    <PrivateData type="generic">
-                      {apresentacao.feedback}
-                    </PrivateData>
-                  ) : (
-                    <span className="text-muted-foreground">—</span>
-                  )}
-                </td>
-                <td className="px-4 py-2 text-right whitespace-nowrap">
-                  <div className="flex justify-end gap-2">
-                    {apresentacao.status_apresentacao === "realizada" &&
-                      !apresentacao.converteu_oportunidade && (
-                        <Button variant="outline" size="sm">
-                          Converter em Oportunidade
-                        </Button>
+      {/* Lista de Apresentações */}
+      <div className="grid gap-4">
+        {apresentacoes && apresentacoes.length > 0 ? (
+          apresentacoes.map((apresentacao) => (
+            <Card key={apresentacao.id} className="border-l-4 border-l-blue-500">
+              <CardHeader className="pb-4">
+                <div className="flex justify-between items-start">
+                  <div className="space-y-2">
+                    <CardTitle className="text-lg">
+                      {apresentacao.wishlist_item?.empresa_interessada?.nome} 
+                      {" → "} 
+                      {apresentacao.wishlist_item?.empresa_desejada?.nome}
+                    </CardTitle>
+                    <div className="flex items-center gap-2">
+                      <Badge className={getStatusBadgeColor(apresentacao.status_apresentacao)}>
+                        {apresentacao.status_apresentacao}
+                      </Badge>
+                      <Badge className={getFaseBadgeColor(apresentacao.fase_pipeline)}>
+                        {apresentacao.fase_pipeline}
+                      </Badge>
+                      {apresentacao.oportunidade_id && (
+                        <Badge className="bg-green-100 text-green-700 border-green-200">
+                          <Target className="h-3 w-3 mr-1" />
+                          Oportunidade Criada
+                        </Badge>
                       )}
-                    <Button variant="outline" size="sm">
-                      Editar
-                    </Button>
-                    {apresentacao.status_apresentacao === "agendada" && (
-                      <Button variant="outline" size="sm">
-                        Marcar como Realizada
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    {apresentacao.oportunidade_id && (
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => navigate("/oportunidades")}
+                        className="text-green-600 border-green-200 hover:bg-green-50"
+                      >
+                        <ExternalLink className="h-3 w-3 mr-1" />
+                        Ver Oportunidade
                       </Button>
                     )}
                   </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                </div>
+              </CardHeader>
+              
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="font-medium">Facilitador:</span>{" "}
+                      {apresentacao.empresa_facilitadora?.nome || "Não informado"}
+                    </div>
+                    <div>
+                      <span className="font-medium">Data Planejada:</span>{" "}
+                      {apresentacao.data_planejada 
+                        ? new Date(apresentacao.data_planejada).toLocaleDateString("pt-BR") 
+                        : "Não definida"
+                      }
+                    </div>
+                  </div>
+
+                  {apresentacao.feedback && (
+                    <div className="p-3 bg-gray-50 rounded-lg">
+                      <p className="text-sm text-gray-700">{apresentacao.feedback}</p>
+                    </div>
+                  )}
+
+                  {/* Botões de mudança de fase */}
+                  <div className="flex items-center justify-between pt-4 border-t">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">Alterar fase:</span>
+                      <div className="flex gap-1">
+                        {["planejado", "aprovado", "apresentado", "aguardando_feedback", "convertido", "rejeitado"].map((fase) => (
+                          <Button
+                            key={fase}
+                            variant={apresentacao.fase_pipeline === fase ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => handleFaseChange(apresentacao, fase as PipelineFase)}
+                            disabled={updatingId === apresentacao.id}
+                            className="text-xs"
+                          >
+                            {updatingId === apresentacao.id && apresentacao.fase_pipeline === fase ? "..." : fase}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        ) : (
+          <Card>
+            <CardContent className="flex items-center justify-center h-32">
+              <div className="text-center">
+                <p className="text-muted-foreground mb-4">Nenhuma apresentação encontrada</p>
+                <Button onClick={() => navigate("/wishlist/itens")}>
+                  Criar Nova Solicitação
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );
