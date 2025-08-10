@@ -2,25 +2,70 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
-// Enhanced React validation with retry mechanism
-const validateReact = () => {
-  if (!React || !useState || !useEffect || !useContext || !createContext) {
-    console.error('[useAuth] React hooks are not available:', {
-      React: !!React,
-      useState: !!useState,
-      useEffect: !!useEffect,
-      useContext: !!useContext,
-      createContext: !!createContext
-    });
+// Enhanced React validation with comprehensive checks
+const validateReactHooks = () => {
+  try {
+    // Check if React object exists and has all required properties
+    if (!React || typeof React !== 'object') {
+      console.error('[useAuth] React object not available');
+      return false;
+    }
+
+    // Check if all required hooks are functions
+    const requiredHooks = ['useState', 'useEffect', 'useContext', 'createContext'];
+    for (const hook of requiredHooks) {
+      if (!React[hook] || typeof React[hook] !== 'function') {
+        console.error(`[useAuth] React.${hook} is not available or not a function:`, typeof React[hook]);
+        return false;
+      }
+    }
+
+    // Test that hooks can actually be called (basic functionality test)
+    try {
+      const testContext = React.createContext(null);
+      if (!testContext) {
+        console.error('[useAuth] createContext test failed');
+        return false;
+      }
+    } catch (e) {
+      console.error('[useAuth] React context creation test failed:', e);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('[useAuth] React validation failed with exception:', error);
     return false;
   }
-  return true;
 };
 
-// Validate React is properly initialized
-if (!validateReact()) {
-  console.error('[useAuth] React is not properly initialized - hooks are not available');
-}
+// Wait for React to be fully ready with timeout
+const waitForReactReady = (maxAttempts = 50): Promise<boolean> => {
+  return new Promise((resolve) => {
+    let attempts = 0;
+    
+    const checkReact = () => {
+      attempts++;
+      console.log(`[useAuth] React validation attempt ${attempts}/${maxAttempts}`);
+      
+      if (validateReactHooks()) {
+        console.log('[useAuth] React is fully ready');
+        resolve(true);
+        return;
+      }
+
+      if (attempts >= maxAttempts) {
+        console.error('[useAuth] React failed to initialize after maximum attempts');
+        resolve(false);
+        return;
+      }
+
+      setTimeout(checkReact, 100);
+    };
+
+    checkReact();
+  });
+};
 
 interface User {
   id: string;
@@ -51,11 +96,30 @@ const AuthContext = createContext<AuthContextType>({
   refreshUser: async () => {},
 });
 
-// AuthProvider component with comprehensive React validation
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Must validate React before ANY hook usage
-  if (!validateReact()) {
-    console.error('[AuthProvider] React hooks are not available - providing fallback');
+// Enhanced fallback component with better error handling
+const ReactNotReadyFallback: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [isReactReady, setIsReactReady] = React.useState(false);
+  const [failedToLoad, setFailedToLoad] = React.useState(false);
+
+  React.useEffect(() => {
+    let mounted = true;
+    
+    waitForReactReady().then((ready) => {
+      if (mounted) {
+        if (ready) {
+          setIsReactReady(true);
+        } else {
+          setFailedToLoad(true);
+        }
+      }
+    });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  if (failedToLoad) {
     return (
       <div style={{ 
         display: 'flex', 
@@ -64,30 +128,80 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         minHeight: '100vh',
         fontFamily: 'system-ui',
         textAlign: 'center',
-        padding: '2rem'
+        padding: '2rem',
+        background: '#f9fafb'
       }}>
-        <div>
-          <h2 style={{ color: '#dc2626', marginBottom: '1rem' }}>React Loading Error</h2>
-          <p style={{ marginBottom: '1rem' }}>React is not properly initialized. Please wait or reload the page.</p>
+        <div style={{
+          background: 'white',
+          padding: '2rem',
+          borderRadius: '8px',
+          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+          maxWidth: '400px'
+        }}>
+          <h2 style={{ color: '#dc2626', marginBottom: '1rem' }}>Erro de Inicialização</h2>
+          <p style={{ marginBottom: '1rem', color: '#4b5563' }}>
+            Falha ao carregar o sistema. Por favor, recarregue a página.
+          </p>
           <button 
             onClick={() => window.location.reload()}
             style={{
-              padding: '0.5rem 1rem',
+              padding: '0.75rem 1.5rem',
               background: '#3b82f6',
               color: 'white',
               border: 'none',
-              borderRadius: '0.375rem',
-              cursor: 'pointer'
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontWeight: '500'
             }}
           >
-            Reload Page
+            Recarregar Página
           </button>
         </div>
       </div>
     );
   }
 
-  // Only use hooks if React is properly initialized
+  if (!isReactReady) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        minHeight: '100vh',
+        fontFamily: 'system-ui'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{
+            border: '4px solid #e5e7eb',
+            borderTop: '4px solid #22223b',
+            borderRadius: '50%',
+            width: 48,
+            height: 48,
+            animation: 'spin 1s linear infinite',
+            margin: '0 auto 1rem'
+          }} />
+          <p style={{ color: '#6b7280' }}>Carregando sistema...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return <>{children}</>;
+};
+
+// AuthProvider component with enhanced validation
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // First validate React before using any hooks
+  if (!validateReactHooks()) {
+    console.error('[AuthProvider] React hooks not available - using fallback');
+    return (
+      <ReactNotReadyFallback>
+        {children}
+      </ReactNotReadyFallback>
+    );
+  }
+
+  // Now safe to use hooks
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
