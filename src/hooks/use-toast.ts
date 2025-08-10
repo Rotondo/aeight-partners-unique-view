@@ -125,8 +125,20 @@ function generateId() {
   return Math.random().toString(36).substr(2, 9)
 }
 
+// Enhanced toast function with fallback
 function toast({ ...props }: Toast) {
   const id = generateId()
+
+  // If React is not ready, use DOM manipulation as fallback
+  if (!isReactHooksReady()) {
+    console.warn('[toast] React not ready, using DOM fallback');
+    showFallbackToast(props);
+    return {
+      id,
+      dismiss: () => {},
+      update: () => {},
+    };
+  }
 
   const update = (props: ToasterToast) =>
     dispatch({
@@ -152,6 +164,58 @@ function toast({ ...props }: Toast) {
     dismiss,
     update,
   }
+}
+
+// Fallback toast display using vanilla DOM
+function showFallbackToast(props: Toast) {
+  const container = document.getElementById('fallback-toast-container') || createFallbackContainer();
+  
+  const toastEl = document.createElement('div');
+  toastEl.style.cssText = `
+    background: white;
+    border: 1px solid #ccc;
+    padding: 16px;
+    margin-bottom: 8px;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    max-width: 400px;
+    word-wrap: break-word;
+  `;
+  
+  const title = props.title ? String(props.title) : '';
+  const description = props.description ? String(props.description) : '';
+  
+  toastEl.innerHTML = `
+    ${title ? `<div style="font-weight: bold; margin-bottom: 4px;">${title}</div>` : ''}
+    ${description ? `<div>${description}</div>` : ''}
+  `;
+  
+  container.appendChild(toastEl);
+  container.style.display = 'block';
+  
+  // Auto remove after 5 seconds
+  setTimeout(() => {
+    if (toastEl.parentNode) {
+      toastEl.parentNode.removeChild(toastEl);
+      if (container.children.length === 0) {
+        container.style.display = 'none';
+      }
+    }
+  }, 5000);
+}
+
+function createFallbackContainer() {
+  const container = document.createElement('div');
+  container.id = 'fallback-toast-container';
+  container.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    display: none;
+  `;
+  document.body.appendChild(container);
+  return container;
 }
 
 // Safe React hooks checker

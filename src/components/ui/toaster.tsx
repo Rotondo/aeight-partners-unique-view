@@ -24,34 +24,39 @@ const isReactReady = () => {
   }
 };
 
-// Safe component wrapper that ensures React is ready
-const SafeToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Only render if React is properly initialized
-  if (!isReactReady()) {
-    console.warn('[SafeToastProvider] React hooks not ready, skipping toast provider');
-    return <>{children}</>;
-  }
-
-  try {
-    return <ToastProvider>{children}</ToastProvider>;
-  } catch (error) {
-    console.error('[SafeToastProvider] ToastProvider failed:', error);
-    return <>{children}</>;
-  }
+// Fallback toast display without React hooks
+const FallbackToastDisplay = () => {
+  return (
+    <div 
+      style={{
+        position: 'fixed',
+        top: '20px',
+        right: '20px',
+        zIndex: 9999,
+        display: 'none' // Hidden by default, only shows when needed
+      }}
+      id="fallback-toast-container"
+    />
+  );
 };
 
 export function Toaster() {
   // Early return if React is not ready
   if (!isReactReady()) {
-    console.warn('[Toaster] React hooks not ready, returning null');
-    return null;
+    console.warn('[Toaster] React hooks not ready, returning fallback');
+    return <FallbackToastDisplay />;
   }
 
   try {
     const { toasts } = useToast();
 
+    // If no toasts, don't render ToastProvider at all
+    if (!toasts || toasts.length === 0) {
+      return null;
+    }
+
     return (
-      <SafeToastProvider>
+      <ToastProvider>
         {toasts.map(function ({ id, title, description, error, action, ...props }) {
           return (
             <Toast key={id} error={error} {...props}>
@@ -74,10 +79,10 @@ export function Toaster() {
           )
         })}
         <ToastViewport />
-      </SafeToastProvider>
+      </ToastProvider>
     )
   } catch (error) {
     console.error('[Toaster] Component error:', error);
-    return null;
+    return <FallbackToastDisplay />;
   }
 }
