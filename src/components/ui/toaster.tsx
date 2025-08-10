@@ -1,5 +1,4 @@
 
-
 import * as React from "react"
 import { useToast } from "@/hooks/use-toast"
 import {
@@ -12,11 +11,12 @@ import {
 } from "@/components/ui/toast"
 
 export function Toaster() {
-  // Add error boundary protection
+  // Add comprehensive error boundary protection for React initialization issues
   try {
+    // Check if React and useState are properly initialized
     if (!React || typeof React.useState !== 'function') {
-      console.error('[Toaster] React is not properly initialized')
-      return <div style={{ display: 'none' }} />
+      console.error('[Toaster] React hooks are not properly initialized')
+      return null
     }
 
     const { toasts } = useToast()
@@ -49,8 +49,7 @@ export function Toaster() {
     )
   } catch (error) {
     console.error('[Toaster] Component error:', error)
-    // Return minimal safe component
-    return <div style={{ display: 'none' }} />
+    // Return null instead of a visible error to prevent cascading failures
+    return null
   }
 }
-
