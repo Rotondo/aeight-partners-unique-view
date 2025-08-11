@@ -31,14 +31,14 @@ export const WishlistOportunidadeModal: React.FC<WishlistOportunidadeModalProps>
   // Correct field mapping based on user feedback
   const nomeOportunidade = wishlistItem.empresa_desejada?.nome || "Cliente não identificado";
   const empresaOrigem = wishlistItem.empresa_proprietaria?.nome || "Origem não identificada";
-  const empresaDestino = wishlistItem.empresa_desejada?.nome || "Destino não identificado";
+  const empresaDestino = wishlistItem.empresa_interessada?.nome || "Destino não identificado";
   const dataHoje = format(new Date(), "dd/MM/yyyy");
   const status = "Em contato";
   
-  // Determine tipo based on company types - both proprietaria and desejada
+  // Determine tipo based on company types - both proprietaria and interessada
   const tipoProprietariaIntra = wishlistItem.empresa_proprietaria?.tipo === "intragrupo";
-  const tipoDesejadaIntra = wishlistItem.empresa_desejada?.tipo === "intragrupo";
-  const tipo = (tipoProprietariaIntra && tipoDesejadaIntra) ? "INTRAGRUPO" : "EXTRAGRUPO";
+  const tipoInteressadaIntra = wishlistItem.empresa_interessada?.tipo === "intragrupo";
+  const tipo = (tipoProprietariaIntra && tipoInteressadaIntra) ? "INTRAGRUPO" : "EXTRAGRUPO";
 
   const handleAprovar = async () => {
     if (!wishlistItem) return;
@@ -47,7 +47,7 @@ export const WishlistOportunidadeModal: React.FC<WishlistOportunidadeModalProps>
     try {
       const oportunidadeData = {
         empresa_origem_id: wishlistItem.empresa_proprietaria_id,
-        empresa_destino_id: wishlistItem.empresa_desejada_id,
+        empresa_destino_id: wishlistItem.empresa_interessada_id,
         nome_lead: nomeOportunidade,
         status: "em_contato",
         data_indicacao: new Date().toISOString(),
