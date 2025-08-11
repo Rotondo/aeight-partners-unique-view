@@ -38,10 +38,18 @@ const FiltroWishlistItens: React.FC<FiltroWishlistItensProps> = ({
     new Set(items.map(item => item.empresa_proprietaria?.nome).filter(Boolean))
   ).sort();
 
-  // Empresas únicas para filtro de destino (empresa desejada) - deve refletir exatamente o que está na coluna "Destino"
-  const destinosUnicos = Array.from(
-    new Set(items.map(item => item.empresa_desejada?.nome).filter(Boolean))
-  ).sort();
+  // Empresas únicas para filtro de destino (empresa desejada) - usar IDs para evitar qualquer confusão com nomes
+  const destinosMap = new Map<string, string>();
+  for (const item of items) {
+    const id = item.empresa_desejada_id;
+    const nome = item.empresa_desejada?.nome;
+    if (id && nome && !destinosMap.has(id)) {
+      destinosMap.set(id, nome);
+    }
+  }
+  const destinosUnicos = Array.from(destinosMap.entries())
+    .map(([id, nome]) => ({ id, nome }))
+    .sort((a, b) => a.nome.localeCompare(b.nome));
 
   return (
     <div className="flex flex-wrap items-center gap-4">
@@ -90,8 +98,8 @@ const FiltroWishlistItens: React.FC<FiltroWishlistItensProps> = ({
         <SelectContent>
           <SelectItem value="all">Todos os destinos</SelectItem>
           {destinosUnicos.map((destino) => (
-            <SelectItem key={destino} value={destino}>
-              {destino}
+            <SelectItem key={destino.id} value={destino.id}>
+              {destino.nome}
             </SelectItem>
           ))}
         </SelectContent>

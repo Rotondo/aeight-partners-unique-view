@@ -28,8 +28,9 @@ export const filterWishlistItems = (
       const matchesOrigem = !origemFilter || origemFilter === "all" || 
         item.empresa_proprietaria?.nome === origemFilter;
       
+      // Destino: agora comparamos por ID para evitar colisões com nomes incorretos
       const matchesDestino = !destinoFilter || destinoFilter === "all" || 
-        item.empresa_desejada?.nome === destinoFilter;
+        item.empresa_desejada_id === destinoFilter;
 
       if (
         !item.empresa_interessada?.nome ||

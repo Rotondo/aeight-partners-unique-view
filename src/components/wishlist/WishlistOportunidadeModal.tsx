@@ -10,6 +10,8 @@ import { toast } from "@/hooks/use-toast";
 import { useWishlistMutations } from "@/hooks/useWishlistMutations";
 import { useWishlist } from "@/contexts/WishlistContext";
 import { format } from "date-fns";
+import { supabase } from "@/lib/supabase";
+import { useNavigate } from "react-router-dom";
 
 interface WishlistOportunidadeModalProps {
   isOpen: boolean;
@@ -23,8 +25,29 @@ export const WishlistOportunidadeModal: React.FC<WishlistOportunidadeModalProps>
   wishlistItem,
 }) => {
   const [isCreating, setIsCreating] = useState(false);
+  const [existingOppId, setExistingOppId] = useState<string | null>(null);
   const { fetchWishlistItems, fetchApresentacoes } = useWishlist();
   const { convertToOportunidade } = useWishlistMutations(fetchWishlistItems, fetchWishlistItems, fetchApresentacoes);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const checkExistingOpportunity = async () => {
+      if (!wishlistItem) return;
+      // Busca a apresentação mais recente ligada ao item e verifica se tem oportunidade vinculada
+      const { data: ap, error } = await supabase
+        .from("wishlist_apresentacoes")
+        .select("id, oportunidade_id")
+        .eq("wishlist_item_id", wishlistItem.id)
+        .order("created_at", { ascending: false })
+        .maybeSingle();
+      if (!error && ap?.oportunidade_id) {
+        setExistingOppId(ap.oportunidade_id);
+      } else {
+        setExistingOppId(null);
+      }
+    };
+    checkExistingOpportunity();
+  }, [wishlistItem]);
 
   if (!wishlistItem) return null;
 
@@ -71,6 +94,13 @@ export const WishlistOportunidadeModal: React.FC<WishlistOportunidadeModalProps>
       });
     } finally {
       setIsCreating(false);
+    }
+  };
+
+  const handleIrParaOportunidade = () => {
+    if (existingOppId) {
+      // Navega para a listagem de oportunidades e aplica seleção/ancora por ID (se houver rota de detalhe, ajustar aqui)
+      navigate(`/oportunidades`);
     }
   };
 
@@ -171,14 +201,24 @@ export const WishlistOportunidadeModal: React.FC<WishlistOportunidadeModalProps>
               <XCircle className="h-4 w-4" />
               Cancelar
             </Button>
-            <Button
-              onClick={handleAprovar}
-              disabled={isCreating}
-              className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
-            >
-              <CheckCircle className="h-4 w-4" />
-              {isCreating ? "Criando..." : "Aprovar e Criar"}
-            </Button>
+            {existingOppId ? (
+              <Button
+                onClick={handleIrParaOportunidade}
+                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
+              >
+                <CheckCircle className="h-4 w-4" />
+                Ver Oportunidade
+              </Button>
+            ) : (
+              <Button
+                onClick={handleAprovar}
+                disabled={isCreating}
+                className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
+              >
+                <CheckCircle className="h-4 w-4" />
+                {isCreating ? "Criando..." : "Aprovar e Criar"}
+              </Button>
+            )}
           </div>
         </div>
       </DialogContent>
