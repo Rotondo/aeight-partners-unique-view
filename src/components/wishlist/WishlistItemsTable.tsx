@@ -1,17 +1,26 @@
+
 import React from "react";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Check, X, Edit, ArrowUpDown, ArrowUp, ArrowDown, TrendingUp } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { ArrowUpDown, Edit, CheckCircle, XCircle, Eye } from "lucide-react";
 import { WishlistItem } from "@/types";
+import { PrivateData } from "@/components/privacy/PrivateData";
 import { format } from "date-fns";
-import { useNavigate } from "react-router-dom";
 
 interface WishlistItemsTableProps {
   items: WishlistItem[];
   onAprovar: (item: WishlistItem) => void;
   onRejeitar: (item: WishlistItem) => void;
   onEditar: (item: WishlistItem) => void;
+  onVerOportunidade?: (item: WishlistItem) => void;
   actionLoadingId: string | null;
   sortField: string | null;
   sortDirection: "asc" | "desc";
@@ -23,172 +32,183 @@ const WishlistItemsTable: React.FC<WishlistItemsTableProps> = ({
   onAprovar,
   onRejeitar,
   onEditar,
+  onVerOportunidade,
   actionLoadingId,
   sortField,
   sortDirection,
   onSort,
 }) => {
-  const navigate = useNavigate();
-
   const getSortIcon = (field: string) => {
     if (sortField !== field) return <ArrowUpDown className="h-4 w-4" />;
-    return sortDirection === "asc" ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />;
+    return (
+      <ArrowUpDown
+        className={`h-4 w-4 ${
+          sortDirection === "asc" ? "rotate-180" : ""
+        }`}
+      />
+    );
   };
 
   const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      pendente: { variant: "secondary" as const, label: "Pendente" },
-      em_andamento: { variant: "default" as const, label: "Em Andamento" },
-      aprovado: { variant: "default" as const, label: "Aprovado" },
-      rejeitado: { variant: "destructive" as const, label: "Rejeitado" },
-      convertido: { variant: "default" as const, label: "Convertido" },
+    const variants = {
+      pendente: "bg-yellow-50 text-yellow-700 border-yellow-200",
+      aprovado: "bg-green-50 text-green-700 border-green-200",
+      rejeitado: "bg-red-50 text-red-700 border-red-200",
+      convertido: "bg-blue-50 text-blue-700 border-blue-200",
     };
-    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pendente;
-    return <Badge variant={config.variant}>{config.label}</Badge>;
-  };
 
-  const getPriorityDisplay = (priority: number) => {
     return (
-      <div className="flex items-center justify-center">
-        <span className="text-lg font-semibold">{priority}</span>
-      </div>
+      <Badge
+        variant="outline"
+        className={variants[status as keyof typeof variants] || ""}
+      >
+        {status}
+      </Badge>
     );
   };
 
   if (items.length === 0) {
     return (
-      <div className="text-center py-8">
-        <p className="text-muted-foreground">Nenhum item encontrado</p>
+      <div className="text-center py-8 text-muted-foreground">
+        Nenhum item encontrado.
       </div>
     );
   }
 
   return (
-    <div className="rounded-md border">
+    <div className="rounded-md border overflow-hidden">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>
-              <Button
-                variant="ghost"
-                onClick={() => onSort("empresa_desejada.nome")}
-                className="h-auto p-0 font-semibold hover:bg-transparent"
-              >
-                Cliente {getSortIcon("empresa_desejada.nome")}
-              </Button>
+            <TableHead
+              className="cursor-pointer hover:bg-muted/50"
+              onClick={() => onSort("empresa_interessada.nome")}
+            >
+              <div className="flex items-center gap-2">
+                Interessada
+                {getSortIcon("empresa_interessada.nome")}
+              </div>
             </TableHead>
-            <TableHead>
-              <Button
-                variant="ghost"
-                onClick={() => onSort("empresa_proprietaria.nome")}
-                className="h-auto p-0 font-semibold hover:bg-transparent"
-              >
-                Origem {getSortIcon("empresa_proprietaria.nome")}
-              </Button>
+            <TableHead
+              className="cursor-pointer hover:bg-muted/50"
+              onClick={() => onSort("empresa_desejada.nome")}
+            >
+              <div className="flex items-center gap-2">
+                Desejada
+                {getSortIcon("empresa_desejada.nome")}
+              </div>
             </TableHead>
-            <TableHead>
-              <Button
-                variant="ghost"
-                onClick={() => onSort("empresa_interessada.nome")}
-                className="h-auto p-0 font-semibold hover:bg-transparent"
-              >
-                Destino {getSortIcon("empresa_interessada.nome")}
-              </Button>
+            <TableHead
+              className="cursor-pointer hover:bg-muted/50"
+              onClick={() => onSort("empresa_proprietaria.nome")}
+            >
+              <div className="flex items-center gap-2">
+                Proprietária
+                {getSortIcon("empresa_proprietaria.nome")}
+              </div>
             </TableHead>
-            <TableHead>
-              <Button
-                variant="ghost"
-                onClick={() => onSort("prioridade")}
-                className="h-auto p-0 font-semibold hover:bg-transparent"
-              >
-                Prioridade {getSortIcon("prioridade")}
-              </Button>
+            <TableHead
+              className="cursor-pointer hover:bg-muted/50"
+              onClick={() => onSort("prioridade")}
+            >
+              <div className="flex items-center gap-2">
+                Prioridade
+                {getSortIcon("prioridade")}
+              </div>
             </TableHead>
-            <TableHead>
-              <Button
-                variant="ghost"
-                onClick={() => onSort("status")}
-                className="h-auto p-0 font-semibold hover:bg-transparent"
-              >
-                Status {getSortIcon("status")}
-              </Button>
+            <TableHead
+              className="cursor-pointer hover:bg-muted/50"
+              onClick={() => onSort("status")}
+            >
+              <div className="flex items-center gap-2">
+                Status
+                {getSortIcon("status")}
+              </div>
             </TableHead>
-            <TableHead>
-              <Button
-                variant="ghost"
-                onClick={() => onSort("data_solicitacao")}
-                className="h-auto p-0 font-semibold hover:bg-transparent"
-              >
-                Data Solicitação {getSortIcon("data_solicitacao")}
-              </Button>
+            <TableHead
+              className="cursor-pointer hover:bg-muted/50"
+              onClick={() => onSort("data_solicitacao")}
+            >
+              <div className="flex items-center gap-2">
+                Data
+                {getSortIcon("data_solicitacao")}
+              </div>
             </TableHead>
             <TableHead className="text-right">Ações</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {items.map((item) => (
-            <TableRow key={item.id}>
-              <TableCell className="font-medium">
-                {item.empresa_desejada?.nome || "N/A"}
+            <TableRow key={item.id} className="hover:bg-muted/50">
+              <TableCell>
+                <PrivateData>
+                  {item.empresa_interessada?.nome || "N/A"}
+                </PrivateData>
               </TableCell>
               <TableCell>
-                {item.empresa_proprietaria?.nome || "N/A"}
+                <PrivateData>
+                  {item.empresa_desejada?.nome || "N/A"}
+                </PrivateData>
               </TableCell>
               <TableCell>
-                {item.empresa_interessada?.nome || "N/A"}
+                <PrivateData>
+                  {item.empresa_proprietaria?.nome || "N/A"}
+                </PrivateData>
               </TableCell>
               <TableCell>
-                {getPriorityDisplay(item.prioridade)}
+                <Badge variant="outline">{item.prioridade}</Badge>
               </TableCell>
-              <TableCell>
-                {getStatusBadge(item.status)}
-              </TableCell>
+              <TableCell>{getStatusBadge(item.status)}</TableCell>
               <TableCell>
                 {format(new Date(item.data_solicitacao), "dd/MM/yyyy")}
               </TableCell>
               <TableCell className="text-right">
-                <div className="flex justify-end gap-1">
+                <div className="flex items-center justify-end gap-2">
+                  {/* Ver Oportunidade button */}
+                  {onVerOportunidade && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onVerOportunidade(item)}
+                      className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                    >
+                      <Eye className="h-3 w-3 mr-1" />
+                      Ver oportunidade
+                    </Button>
+                  )}
+
+                  {/* Edit button */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onEditar(item)}
+                  >
+                    <Edit className="h-3 w-3" />
+                  </Button>
+
+                  {/* Action buttons based on status */}
                   {item.status === "pendente" && (
                     <>
                       <Button
-                        size="sm"
                         variant="outline"
+                        size="sm"
                         onClick={() => onAprovar(item)}
                         disabled={actionLoadingId === item.id}
-                        className="h-8 w-8 p-0"
+                        className="text-green-600 border-green-200 hover:bg-green-50"
                       >
-                        <Check className="h-4 w-4 text-green-600" />
+                        <CheckCircle className="h-3 w-3" />
                       </Button>
                       <Button
-                        size="sm"
                         variant="outline"
+                        size="sm"
                         onClick={() => onRejeitar(item)}
                         disabled={actionLoadingId === item.id}
-                        className="h-8 w-8 p-0"
+                        className="text-red-600 border-red-200 hover:bg-red-50"
                       >
-                        <X className="h-4 w-4 text-red-600" />
+                        <XCircle className="h-3 w-3" />
                       </Button>
                     </>
                   )}
-                  {item.status === "aprovado" && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => navigate("/wishlist/pipeline")}
-                      className="h-8 px-2 text-xs"
-                    >
-                      <TrendingUp className="h-4 w-4 mr-1" />
-                      Ver Pipeline
-                    </Button>
-                  )}
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => onEditar(item)}
-                    className="h-8 w-8 p-0"
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
                 </div>
               </TableCell>
             </TableRow>

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useWishlist } from "@/contexts/WishlistContext";
@@ -16,6 +15,7 @@ import FiltroWishlistItens from "@/components/wishlist/FiltroWishlistItens";
 import WishlistItemsTable from "@/components/wishlist/WishlistItemsTable";
 import WishlistStats from "@/components/wishlist/WishlistStats";
 import { WishlistOportunidadeIntegration } from "@/components/wishlist/WishlistOportunidadeIntegration";
+import { WishlistOportunidadeModal } from "@/components/wishlist/WishlistOportunidadeModal";
 import { filterWishlistItems, sortWishlistItems } from "@/utils/wishlistUtils";
 
 const CONSOLE_PREFIX = "[WishlistItensPage]";
@@ -29,9 +29,7 @@ const WishlistItensPage: React.FC = () => {
     updateWishlistItem,
   } = useWishlist();
 
-  // Mutations
   const { deleteWishlistItem } = useWishlistItemMutations(fetchWishlistItems);
-
   const navigate = useNavigate();
 
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -46,10 +44,12 @@ const WishlistItensPage: React.FC = () => {
   const [fluxoAprimoradoOpen, setFluxoAprimoradoOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<WishlistItem | null>(null);
 
-  // Aprovação/Rejeição
+  // New state for opportunity modal
+  const [oportunidadeModalOpen, setOportunidadeModalOpen] = useState(false);
+  const [selectedItemForOportunidade, setSelectedItemForOportunidade] = useState<WishlistItem | null>(null);
+
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
 
-  // Handle sorting
   const handleSort = (field: string) => {
     if (sortField === field) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
@@ -59,7 +59,6 @@ const WishlistItensPage: React.FC = () => {
     }
   };
 
-  // Filter and sort items
   const filteredItems = filterWishlistItems(
     wishlistItems, 
     searchTerm, 
@@ -70,7 +69,6 @@ const WishlistItensPage: React.FC = () => {
   
   const sortedItems = sortWishlistItems(filteredItems, sortField, sortDirection);
 
-  // Aprovar item com feedback melhorado
   const handleAprovar = async (item: WishlistItem) => {
     setActionLoadingId(item.id);
     try {
@@ -96,7 +94,6 @@ const WishlistItensPage: React.FC = () => {
     }
   };
 
-  // Rejeitar item
   const handleRejeitar = async (item: WishlistItem) => {
     setActionLoadingId(item.id);
     try {
@@ -116,7 +113,11 @@ const WishlistItensPage: React.FC = () => {
     }
   };
 
-  // Deletar item (chamado pelo WishlistFormModal)
+  const handleVerOportunidade = (item: WishlistItem) => {
+    setSelectedItemForOportunidade(item);
+    setOportunidadeModalOpen(true);
+  };
+
   const handleItemDeleted = (itemId: string) => {
     if (editingItem?.id === itemId) {
       setEditingItem(null);
@@ -124,7 +125,6 @@ const WishlistItensPage: React.FC = () => {
     fetchWishlistItems();
   };
 
-  // Salvar/Atualizar item (chamado pelo WishlistFormModal)
   const handleItemSaved = () => {
     fetchWishlistItems();
   };
@@ -151,7 +151,6 @@ const WishlistItensPage: React.FC = () => {
     <div className="space-y-6">
       <DemoModeIndicator />
       
-      {/* Header */}
       <div className="flex justify-between items-center flex-wrap gap-4">
         <div className="flex items-center gap-4">
           <Button variant="outline" onClick={() => navigate("/wishlist")} className="flex-shrink-0">
@@ -204,10 +203,8 @@ const WishlistItensPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Integração Wishlist-Oportunidades Explicação */}
       <WishlistOportunidadeIntegration showDetailedFlow={true} />
 
-      {/* Filters */}
       <FiltroWishlistItens
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
@@ -220,10 +217,8 @@ const WishlistItensPage: React.FC = () => {
         items={wishlistItems}
       />
 
-      {/* Stats */}
       <WishlistStats items={wishlistItems} />
 
-      {/* Table */}
       <WishlistItemsTable
         items={sortedItems}
         onAprovar={handleAprovar}
@@ -232,13 +227,13 @@ const WishlistItensPage: React.FC = () => {
           setEditingItem(item);
           setFormModalOpen(true);
         }}
+        onVerOportunidade={handleVerOportunidade}
         actionLoadingId={actionLoadingId}
         sortField={sortField}
         sortDirection={sortDirection}
         onSort={handleSort}
       />
 
-      {/* Modais */}
       <WishlistFluxoAprimorado
         isOpen={fluxoAprimoradoOpen}
         onClose={() => setFluxoAprimoradoOpen(false)}
@@ -255,6 +250,15 @@ const WishlistItensPage: React.FC = () => {
         editingItem={editingItem}
         onItemSaved={handleItemSaved}
         onItemDeleted={handleItemDeleted}
+      />
+
+      <WishlistOportunidadeModal
+        isOpen={oportunidadeModalOpen}
+        onClose={() => {
+          setOportunidadeModalOpen(false);
+          setSelectedItemForOportunidade(null);
+        }}
+        wishlistItem={selectedItemForOportunidade}
       />
     </div>
   );
