@@ -1,7 +1,8 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useOportunidades } from "@/components/oportunidades/OportunidadesContext";
 import { format, getWeek, getYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -13,8 +14,20 @@ interface WeeklyData {
   extraGrupoParceiro: number;
 }
 
+interface LineVisibility {
+  intragrupo: boolean;
+  extraParceiroGrupo: boolean;
+  extraGrupoParceiro: boolean;
+}
+
 export const OportunidadesPorSemanaChart: React.FC = () => {
   const { filteredOportunidades } = useOportunidades();
+  
+  const [lineVisibility, setLineVisibility] = useState<LineVisibility>({
+    intragrupo: true,
+    extraParceiroGrupo: true,
+    extraGrupoParceiro: true,
+  });
 
   const processWeeklyData = (): WeeklyData[] => {
     if (!filteredOportunidades || filteredOportunidades.length === 0) {
@@ -71,6 +84,13 @@ export const OportunidadesPorSemanaChart: React.FC = () => {
 
   const data = processWeeklyData();
 
+  const handleLineToggle = (lineKey: keyof LineVisibility) => {
+    setLineVisibility(prev => ({
+      ...prev,
+      [lineKey]: !prev[lineKey]
+    }));
+  };
+
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
@@ -106,6 +126,50 @@ export const OportunidadesPorSemanaChart: React.FC = () => {
     <Card>
       <CardHeader>
         <CardTitle>Evolução Semanal de Oportunidades</CardTitle>
+        <div className="flex flex-wrap gap-4 mt-4">
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="intragrupo"
+              checked={lineVisibility.intragrupo}
+              onCheckedChange={() => handleLineToggle('intragrupo')}
+            />
+            <label
+              htmlFor="intragrupo"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex items-center gap-2"
+            >
+              <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+              Intragrupo
+            </label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="extraParceiroGrupo"
+              checked={lineVisibility.extraParceiroGrupo}
+              onCheckedChange={() => handleLineToggle('extraParceiroGrupo')}
+            />
+            <label
+              htmlFor="extraParceiroGrupo"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex items-center gap-2"
+            >
+              <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+              Parceiro → Grupo
+            </label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="extraGrupoParceiro"
+              checked={lineVisibility.extraGrupoParceiro}
+              onCheckedChange={() => handleLineToggle('extraGrupoParceiro')}
+            />
+            <label
+              htmlFor="extraGrupoParceiro"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex items-center gap-2"
+            >
+              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+              Grupo → Parceiro
+            </label>
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
         <div className="h-80 w-full">
@@ -131,33 +195,39 @@ export const OportunidadesPorSemanaChart: React.FC = () => {
               <YAxis className="text-xs fill-muted-foreground" />
               <Tooltip content={<CustomTooltip />} />
               <Legend />
-              <Line
-                type="monotone"
-                dataKey="intragrupo"
-                stroke="hsl(var(--primary))"
-                strokeWidth={2}
-                name="Intragrupo"
-                dot={{ r: 4 }}
-                activeDot={{ r: 6 }}
-              />
-              <Line
-                type="monotone"
-                dataKey="extraParceiroGrupo"
-                stroke="hsl(var(--destructive))"
-                strokeWidth={2}
-                name="Parceiro → Grupo"
-                dot={{ r: 4 }}
-                activeDot={{ r: 6 }}
-              />
-              <Line
-                type="monotone"
-                dataKey="extraGrupoParceiro"
-                stroke="hsl(var(--secondary))"
-                strokeWidth={2}
-                name="Grupo → Parceiro"
-                dot={{ r: 4 }}
-                activeDot={{ r: 6 }}
-              />
+              {lineVisibility.intragrupo && (
+                <Line
+                  type="monotone"
+                  dataKey="intragrupo"
+                  stroke="#3B82F6"
+                  strokeWidth={2}
+                  name="Intragrupo"
+                  dot={{ r: 4 }}
+                  activeDot={{ r: 6 }}
+                />
+              )}
+              {lineVisibility.extraParceiroGrupo && (
+                <Line
+                  type="monotone"
+                  dataKey="extraParceiroGrupo"
+                  stroke="#EF4444"
+                  strokeWidth={2}
+                  name="Parceiro → Grupo"
+                  dot={{ r: 4 }}
+                  activeDot={{ r: 6 }}
+                />
+              )}
+              {lineVisibility.extraGrupoParceiro && (
+                <Line
+                  type="monotone"
+                  dataKey="extraGrupoParceiro"
+                  stroke="#10B981"
+                  strokeWidth={2}
+                  name="Grupo → Parceiro"
+                  dot={{ r: 4 }}
+                  activeDot={{ r: 6 }}
+                />
+              )}
             </LineChart>
           </ResponsiveContainer>
         </div>
