@@ -10,6 +10,7 @@ import { MatrizParceriasChart } from "./MatrizParceriasChart";
 import { QualidadeIndicacoesChart } from "./QualidadeIndicacoesChart";
 import { BalancoGrupoParceriasChart } from "./BalancoGrupoParceriasChart";
 import { RankingParceirosChart } from "./RankingParceirosChart";
+import { OportunidadesPorSemanaChart } from "./OportunidadesPorSemanaChart";
 import { PeriodIndicator } from "./PeriodIndicator";
 import { ResultadosControl } from "./ResultadosControl";
 import { RecebimentoAnalysis } from "./RecebimentoAnalysis";
@@ -178,6 +179,9 @@ export const OportunidadesDashboards: React.FC = () => {
                 </CardContent>
               </Card>
             </div>
+            
+            <OportunidadesPorSemanaChart />
+            
             <div className="grid gap-4 md:grid-cols-2">
               <Card>
                 <CardHeader>
