@@ -1,5 +1,4 @@
-
-import { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
 
 interface PrivacyContextType {
   isDemoMode: boolean;
@@ -14,28 +13,24 @@ interface PrivacyProviderProps {
 }
 
 export const PrivacyProvider: React.FC<PrivacyProviderProps> = ({ children }) => {
-  console.log('[PrivacyProvider] Initializing...');
-
-  // Initialize state with a safe default
+  // Inicializa o estado lendo do localStorage de forma segura
   const [isDemoMode, setIsDemoMode] = useState<boolean>(() => {
-    // Check if we're in browser environment
+    // Esta verificação garante que o código não quebre fora do navegador
     if (typeof window === 'undefined') {
       return false;
     }
     
-    // Verificação segura do localStorage
     try {
       const saved = localStorage.getItem('aeight-demo-mode');
       return saved ? JSON.parse(saved) : false;
     } catch (error) {
-      console.warn('[PrivacyContext] Erro ao acessar localStorage:', error);
+      console.warn('[PrivacyContext] Erro ao aceder ao localStorage:', error);
       return false;
     }
   });
 
-  // Salvar no localStorage quando mudar
+  // Efeito para salvar o estado no localStorage sempre que ele mudar
   useEffect(() => {
-    // Check if we're in browser environment
     if (typeof window === 'undefined') {
       return;
     }
@@ -60,8 +55,6 @@ export const PrivacyProvider: React.FC<PrivacyProviderProps> = ({ children }) =>
     toggleDemoMode,
     setDemoMode
   }), [isDemoMode, toggleDemoMode, setDemoMode]);
-
-  console.log('[PrivacyProvider] Rendering with isDemoMode:', isDemoMode);
 
   return (
     <PrivacyContext.Provider value={value}>
