@@ -15,7 +15,7 @@ import OportunidadesDashboard from "./pages/oportunidades-dashboard";
 import EventosPage from "./pages/eventos/EventosPage";
 import QuadrantePage from "./pages/quadrante/QuadrantePage";
 import MapaParceirosPage from "./pages/mapa-parceiros/MapaParceirosPage";
-import ClienteFishbonePage from "./pages/cliente-fishbone/ClienteFishbonePage";
+import ClienteFishbonePage from "./pages/cliente-fishbone/ClienteFishbonePage"; // <-- ADICIONEI ESTA LINHA
 import OnePagerPage from "./pages/onepager/OnePagerPage";
 import DiarioPage from "./pages/diario";
 import AdminPage from "./pages/admin";
@@ -70,7 +70,7 @@ function App() {
                           <Route path="/eventos" element={<EventosPage />} />
                           <Route path="/quadrante" element={<QuadrantePage />} />
                            <Route path="/mapa-parceiros" element={<MapaParceirosPage />} />
-                           <Route path="/cliente-fishbone" element={<ClienteFishbonePage />} />
+                           <Route path="/cliente-fishbone" element={<ClienteFishbonePage />} /> {/* <-- ADICIONEI ESTA LINHA */}
                            <Route path="/onepager" element={<OnePagerPage />} />
                           <Route path="/diario/*" element={<DiarioPage />} />
                           <Route path="/admin" element={<AdminPage />} />
@@ -113,3 +113,4 @@ function App() {
 }
 
 export default App;
+
