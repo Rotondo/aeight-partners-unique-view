@@ -12,16 +12,18 @@ const VERTICAL_SPACING = 120;
 
 /**
  * Hook customizado para gerir a lógica da visualização em espinha de peixe (Fishbone).
- * @param clienteId - O ID do cliente selecionado para visualização.
+ * Agora traz também a lista de clientes disponíveis para seleção.
+ * @param filtros - Filtros (clienteIds, etc) para visualização.
  */
-export const useClienteFishbone = (clienteId: string | null) => {
+export const useClienteFishbone = (filtros: { clienteIds?: string[] }) => {
   const [etapas, setEtapas] = useState<EtapaJornada[]>([]);
   const [mapeamentos, setMapeamentos] = useState<MapeamentoFornecedor[]>([]);
   const [cliente, setCliente] = useState<any>(null);
+  const [clientes, setClientes] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Busca a estrutura de etapas e subníveis uma única vez
+  // Busca estrutura de etapas e subniveis uma única vez
   const fetchEstruturaJornada = useCallback(async () => {
     setLoading(true);
     try {
@@ -35,6 +37,26 @@ export const useClienteFishbone = (clienteId: string | null) => {
       setEtapas(data || []);
     } catch (err: any) {
       setError('Falha ao carregar a estrutura da jornada.');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Busca todos os clientes ativos para o seletor lateral
+  const fetchClientes = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('empresas')
+        .select('id, nome, descricao, tipo, logo_url, status')
+        .eq('tipo', 'cliente')
+        .eq('status', true)
+        .order('nome', { ascending: true });
+      if (error) throw new Error(error.message);
+      setClientes(data || []);
+    } catch (err: any) {
+      setError('Falha ao carregar a lista de clientes.');
       console.error(err);
     } finally {
       setLoading(false);
@@ -83,22 +105,25 @@ export const useClienteFishbone = (clienteId: string | null) => {
     }
   }, []);
 
+  // Carrega estrutura e clientes no mount
   useEffect(() => {
     fetchEstruturaJornada();
-  }, [fetchEstruturaJornada]);
+    fetchClientes();
+  }, [fetchEstruturaJornada, fetchClientes]);
 
+  // Carrega dados do cliente selecionado
   useEffect(() => {
-    if (clienteId) {
-      carregarDadosCliente(clienteId);
+    if (filtros?.clienteIds && filtros.clienteIds.length === 1) {
+      carregarDadosCliente(filtros.clienteIds[0]);
     } else {
       setCliente(null);
       setMapeamentos([]);
     }
-  }, [clienteId, carregarDadosCliente]);
+  }, [filtros?.clienteIds, carregarDadosCliente]);
 
   // Transforma os dados em nós e arestas para o React Flow
   const { nodes, edges } = useMemo(() => {
-    if (!clienteId || !cliente || etapas.length === 0) {
+    if (!filtros?.clienteIds || !cliente || etapas.length === 0) {
       return { nodes: [], edges: [] };
     }
 
@@ -165,12 +190,12 @@ export const useClienteFishbone = (clienteId: string | null) => {
     });
 
     return { nodes: newNodes, edges: newEdges };
-  }, [cliente, etapas, mapeamentos, clienteId]);
+  }, [cliente, etapas, mapeamentos, filtros?.clienteIds]);
 
   // Cálculo das estatísticas para o FishboneControls
   const stats = useMemo(() => {
     // clientes: 1 se cliente está definido, 0 se não
-    const clientes = cliente ? 1 : 0;
+    const clientesCount = cliente ? 1 : 0;
     // totalParceiros: soma dos fornecedores que são parceiros
     const totalParceiros = mapeamentos.filter(m => m.empresa_fornecedora?.tipo === 'parceiro').length;
     // totalFornecedores: soma total dos fornecedores
@@ -202,7 +227,7 @@ export const useClienteFishbone = (clienteId: string | null) => {
     });
 
     return {
-      clientes,
+      clientes: clientesCount,
       totalParceiros,
       totalFornecedores,
       totalGaps,
@@ -213,5 +238,6 @@ export const useClienteFishbone = (clienteId: string | null) => {
     };
   }, [cliente, mapeamentos, etapas]);
 
-  return { nodes, edges, loading, error, cliente, etapas, stats };
+  // Retorna também a lista de clientes para o seletor lateral
+  return { nodes, edges, loading, error, cliente, etapas, stats, clientes };
 };
