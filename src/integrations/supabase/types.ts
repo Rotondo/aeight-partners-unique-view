@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
@@ -125,6 +125,74 @@ export type Database = {
           nome?: string
         }
         Relationships: []
+      }
+      cliente_etapa_fornecedores: {
+        Row: {
+          ativo: boolean
+          cliente_id: string
+          created_at: string
+          data_mapeamento: string
+          empresa_fornecedora_id: string
+          etapa_id: string
+          id: string
+          observacoes: string | null
+          subnivel_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          cliente_id: string
+          created_at?: string
+          data_mapeamento?: string
+          empresa_fornecedora_id: string
+          etapa_id: string
+          id?: string
+          observacoes?: string | null
+          subnivel_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          cliente_id?: string
+          created_at?: string
+          data_mapeamento?: string
+          empresa_fornecedora_id?: string
+          etapa_id?: string
+          id?: string
+          observacoes?: string | null
+          subnivel_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cliente_etapa_fornecedores_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cliente_etapa_fornecedores_empresa_fornecedora_id_fkey"
+            columns: ["empresa_fornecedora_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cliente_etapa_fornecedores_etapa_id_fkey"
+            columns: ["etapa_id"]
+            isOneToOne: false
+            referencedRelation: "etapas_jornada"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cliente_etapa_fornecedores_subnivel_id_fkey"
+            columns: ["subnivel_id"]
+            isOneToOne: false
+            referencedRelation: "subniveis_etapa"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       contatos: {
         Row: {
