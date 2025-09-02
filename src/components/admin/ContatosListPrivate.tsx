@@ -4,6 +4,7 @@ import { PrivateData } from '@/components/privacy/PrivateData';
 
 interface ContatosListPrivateProps {
   // Add props as needed based on your actual ContatosList implementation
+  [key: string]: unknown;
 }
 
 export const ContatosListPrivate: React.FC<ContatosListPrivateProps> = () => {

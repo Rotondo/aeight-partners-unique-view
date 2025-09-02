@@ -32,7 +32,7 @@ const DYNAMIC_COLORS = [
 ];
 
 // Descobre todos os status únicos presentes nos dados, mantendo a ordem dos padrões primeiro
-function getAllStatuses(oportunidades: any[]): string[] {
+function getAllStatuses(oportunidades: Array<{ status?: string }>): string[] {
   const uniqueStatuses = Array.from(new Set(oportunidades.map(op => op.status).filter(Boolean)));
   const ordered = STATUS_ORDER.filter(status => uniqueStatuses.includes(status));
   const extras = uniqueStatuses.filter(status => !STATUS_ORDER.includes(status));

@@ -27,7 +27,7 @@ interface DashboardKpisProps {
   loading?: boolean;
 }
 
-function isStatusGrouped(obj: any): obj is {
+function isStatusGrouped(obj: unknown): obj is {
   em_contato: number;
   negociando: number;
   ganho: number;

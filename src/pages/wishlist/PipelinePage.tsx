@@ -47,7 +47,7 @@ const PipelinePage: React.FC = () => {
 
   // Agrupa as apresentações por parceiro, com filtros aplicados
   const apresentacoesPorParceiro = React.useMemo(() => {
-    let filteredApresentacoes = apresentacoes.filter((apresentacao) => {
+    const filteredApresentacoes = apresentacoes.filter((apresentacao) => {
       if (!apresentacao.fase_pipeline) return false;
 
       const matchesParceiro =

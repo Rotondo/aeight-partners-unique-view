@@ -105,7 +105,7 @@ export default class ErrorBoundary extends React.Component<ErrorBoundaryProps, E
     this.logError('unhandled_rejection', { reason: event.reason });
   };
 
-  private logError = (type: string, data: any) => {
+  private logError = (type: string, data: Record<string, unknown>) => {
     const getCurrentUrl = (): string => {
       try {
         return (typeof window !== 'undefined' && window?.location?.href) || 'unknown';

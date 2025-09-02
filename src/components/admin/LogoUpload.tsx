@@ -40,10 +40,11 @@ export const LogoUpload: React.FC = () => {
 
       // Recarregar a página para mostrar o novo logo
       window.location.reload();
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
       toast({
         title: 'Erro no upload',
-        description: error.message,
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {

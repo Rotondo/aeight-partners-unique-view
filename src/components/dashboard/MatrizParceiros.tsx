@@ -2,12 +2,17 @@ import React from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Empresa } from "@/types";
 
+interface MatrizParceirosRow {
+  parceiro: string;
+  [empresaNome: string]: string | number;
+}
+
 interface MatrizParceirosProps {
-  matrizParceiros: any[];
+  matrizParceiros: MatrizParceirosRow[];
   empresasIntra: Empresa[];
 }
 
-function renderCellValue(value: any) {
+function renderCellValue(value: string | number) {
   if (value === 0) {
     return <span style={{ opacity: 0.3, color: "#888" }}>0</span>;
   }
@@ -33,7 +38,7 @@ export const MatrizParceiros: React.FC<MatrizParceirosProps> = ({ matrizParceiro
           </thead>
           <tbody>
             {matrizParceiros.map((row, idx) => (
-              <tr key={row.parceiro + idx}>
+              <tr key={`${row.parceiro}-${idx}`}>
                 <td className="border p-1 font-bold">{row.parceiro}</td>
                 {empresasIntra.map(intra => (
                   <td className="border p-1 text-center" key={intra.id}>{renderCellValue(row[intra.nome])}</td>

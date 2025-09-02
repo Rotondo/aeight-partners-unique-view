@@ -4,6 +4,7 @@ import { PrivateData } from '@/components/privacy/PrivateData';
 
 interface CategoriasListPrivateProps {
   // Add props as needed based on your actual CategoriasList implementation
+  [key: string]: unknown;
 }
 
 export const CategoriasListPrivate: React.FC<CategoriasListPrivateProps> = () => {

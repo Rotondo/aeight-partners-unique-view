@@ -7,7 +7,12 @@ import { ptBR } from 'date-fns/locale';
 import { APP_CONFIG } from '@/lib/constants';
 
 interface OpportunitiesChartProps {
-  stats: any;
+  stats: {
+    oportunidades?: Array<{
+      created_at?: string;
+      status?: string;
+    }>;
+  };
   loading: boolean;
 }
 

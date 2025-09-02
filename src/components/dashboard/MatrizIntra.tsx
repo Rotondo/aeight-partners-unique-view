@@ -2,12 +2,17 @@ import React from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Empresa } from "@/types";
 
+interface MatrizIntraRow {
+  origem: string;
+  [empresaNome: string]: string | number;
+}
+
 interface MatrizIntraProps {
-  matrizIntra: any[];
+  matrizIntra: MatrizIntraRow[];
   empresasIntra: Empresa[];
 }
 
-function renderCellValue(value: any) {
+function renderCellValue(value: string | number) {
   if (value === 0) {
     return <span style={{ opacity: 0.3, color: "#888" }}>0</span>;
   }
@@ -33,7 +38,7 @@ export const MatrizIntra: React.FC<MatrizIntraProps> = ({ matrizIntra, empresasI
           </thead>
           <tbody>
             {matrizIntra.map((row, idx) => (
-              <tr key={row.origem + idx}>
+              <tr key={`${row.origem}-${idx}`}>
                 <td className="border p-1 font-bold">{row.origem}</td>
                 {empresasIntra.map(dest => (
                   <td className="border p-1 text-center" key={dest.id}>{renderCellValue(row[dest.nome])}</td>

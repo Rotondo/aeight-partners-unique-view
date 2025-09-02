@@ -191,8 +191,8 @@ const FishboneVisualization: React.FC<FishboneVisualizationProps> = ({
 
   const handleNodeClick = (event: React.MouseEvent, node: Node) => {
     if (onNodeClick) {
-      const nodeData = node.data as any;
-      onNodeClick(node.id, nodeData.type);
+      const nodeData = node.data as { type?: string };
+      onNodeClick(node.id, nodeData.type || '');
     }
   };
 
