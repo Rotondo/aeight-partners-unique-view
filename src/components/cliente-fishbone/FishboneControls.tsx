@@ -7,9 +7,7 @@ import {
   ZoomIn, 
   ZoomOut, 
   Eye, 
-  EyeOff, 
   Users, 
-  Building2, 
   Target,
   TrendingUp,
   AlertTriangle
@@ -28,20 +26,20 @@ type ParceirosVsFornecedores = {
 };
 
 type FishboneStats = {
-  clientes: number;
-  totalParceiros: number;
-  totalFornecedores: number;
-  totalGaps: number;
-  totalEtapas: number;
-  coberturaPorcentual: number;
-  parceirosVsFornecedores: ParceirosVsFornecedores;
-  gapsPorEtapa: Record<string, number>;
+  clientes?: number;
+  totalParceiros?: number;
+  totalFornecedores?: number;
+  totalGaps?: number;
+  totalEtapas?: number;
+  coberturaPorcentual?: number;
+  parceirosVsFornecedores?: ParceirosVsFornecedores;
+  gapsPorEtapa?: Record<string, number>;
 };
 
 interface FishboneControlsProps {
   zoomLevel: FishboneZoomLevel;
   onZoomChange: (level: FishboneZoomLevel) => void;
-  stats: FishboneStats;
+  stats?: FishboneStats;
   showOnlyParceiros: boolean;
   onToggleParceiros: (show: boolean) => void;
   showOnlyGaps: boolean;
@@ -163,7 +161,7 @@ const FishboneControls: React.FC<FishboneControlsProps> = ({
           <div className="grid grid-cols-2 gap-2">
             <div className="text-center p-2 bg-muted rounded">
               <div className="text-lg font-bold text-primary">
-                {stats.clientes ?? 0}
+                {stats?.clientes ?? 0}
               </div>
               <div className="text-xs text-muted-foreground">
                 Clientes
@@ -171,7 +169,7 @@ const FishboneControls: React.FC<FishboneControlsProps> = ({
             </div>
             <div className="text-center p-2 bg-muted rounded">
               <div className="text-lg font-bold text-primary">
-                {stats.totalEtapas ?? 0}
+                {stats?.totalEtapas ?? 0}
               </div>
               <div className="text-xs text-muted-foreground">
                 Etapas
@@ -181,7 +179,7 @@ const FishboneControls: React.FC<FishboneControlsProps> = ({
 
           <div className="text-center p-2 bg-muted rounded">
             <div className="text-lg font-bold text-primary">
-              {stats.coberturaPorcentual ?? 0}%
+              {stats?.coberturaPorcentual ?? 0}%
             </div>
             <div className="text-xs text-muted-foreground">
               Cobertura Geral
@@ -192,17 +190,17 @@ const FishboneControls: React.FC<FishboneControlsProps> = ({
             <div className="flex justify-between items-center">
               <span className="text-xs text-muted-foreground">Parceiros</span>
               <Badge variant="default">
-                {stats.parceirosVsFornecedores?.parceiros ?? 0}
+                {stats?.parceirosVsFornecedores?.parceiros ?? 0}
               </Badge>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-xs text-muted-foreground">Fornecedores</span>
               <Badge variant="destructive">
-                {stats.parceirosVsFornecedores?.fornecedores ?? 0}
+                {stats?.parceirosVsFornecedores?.fornecedores ?? 0}
               </Badge>
             </div>
           </div>
-          {stats.gapsPorEtapa && Object.keys(stats.gapsPorEtapa).length > 0 && (
+          {stats?.gapsPorEtapa && Object.keys(stats.gapsPorEtapa).length > 0 && (
             <div className="space-y-1">
               <div className="text-xs font-medium text-muted-foreground">
                 Gaps por Etapa
