@@ -14,19 +14,28 @@ import {
   TrendingUp,
   AlertTriangle
 } from "lucide-react";
-// Remove the incorrect imports and define the types locally
 
+// Tipos robustos
 type FishboneZoomLevel = {
   level: 'overview' | 'medium' | 'detailed';
   showSubniveis: boolean;
   showAllFornecedores: boolean;
 };
 
+type ParceirosVsFornecedores = {
+  parceiros: number;
+  fornecedores: number;
+};
+
 type FishboneStats = {
+  clientes: number;
   totalParceiros: number;
   totalFornecedores: number;
   totalGaps: number;
   totalEtapas: number;
+  coberturaPorcentual: number;
+  parceirosVsFornecedores: ParceirosVsFornecedores;
+  gapsPorEtapa: Record<string, number>;
 };
 
 interface FishboneControlsProps {
@@ -39,6 +48,33 @@ interface FishboneControlsProps {
   onToggleGaps: (show: boolean) => void;
 }
 
+const zoomLevels = [
+  {
+    level: 'overview' as const,
+    label: 'Visão Geral',
+    description: 'Cliente + Etapas principais',
+    icon: <ZoomOut className="h-4 w-4" />
+  },
+  {
+    level: 'medium' as const,
+    label: 'Médio',
+    description: 'Cliente + Etapas + Subníveis',
+    icon: <Eye className="h-4 w-4" />
+  },
+  {
+    level: 'detailed' as const,
+    label: 'Detalhado',
+    description: 'Visão completa com fornecedores',
+    icon: <ZoomIn className="h-4 w-4" />
+  }
+];
+
+const zoomConfig: Record<FishboneZoomLevel['level'], FishboneZoomLevel> = {
+  overview: { level: 'overview', showSubniveis: false, showAllFornecedores: false },
+  medium: { level: 'medium', showSubniveis: true, showAllFornecedores: false },
+  detailed: { level: 'detailed', showSubniveis: true, showAllFornecedores: true }
+};
+
 const FishboneControls: React.FC<FishboneControlsProps> = ({
   zoomLevel,
   onZoomChange,
@@ -48,35 +84,8 @@ const FishboneControls: React.FC<FishboneControlsProps> = ({
   showOnlyGaps,
   onToggleGaps
 }) => {
-  const zoomLevels = [
-    {
-      level: 'overview' as const,
-      label: 'Visão Geral',
-      description: 'Cliente + Etapas principais',
-      icon: <ZoomOut className="h-4 w-4" />
-    },
-    {
-      level: 'medium' as const,
-      label: 'Médio',
-      description: 'Cliente + Etapas + Subníveis',
-      icon: <Eye className="h-4 w-4" />
-    },
-    {
-      level: 'detailed' as const,
-      label: 'Detalhado',
-      description: 'Visão completa com fornecedores',
-      icon: <ZoomIn className="h-4 w-4" />
-    }
-  ];
-
   const handleZoomChange = (newLevel: FishboneZoomLevel['level']) => {
-    const config = {
-      overview: { level: 'overview' as const, showSubniveis: false, showAllFornecedores: false },
-      medium: { level: 'medium' as const, showSubniveis: true, showAllFornecedores: false },
-      detailed: { level: 'detailed' as const, showSubniveis: true, showAllFornecedores: true }
-    };
-
-    onZoomChange(config[newLevel]);
+    onZoomChange(zoomConfig[newLevel]);
   };
 
   return (
@@ -88,6 +97,7 @@ const FishboneControls: React.FC<FishboneControlsProps> = ({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
+
         {/* Zoom Controls */}
         <div className="space-y-3">
           <h4 className="text-sm font-medium flex items-center gap-2">
@@ -150,11 +160,10 @@ const FishboneControls: React.FC<FishboneControlsProps> = ({
             <TrendingUp className="h-4 w-4" />
             Estatísticas
           </h4>
-          
           <div className="grid grid-cols-2 gap-2">
             <div className="text-center p-2 bg-muted rounded">
               <div className="text-lg font-bold text-primary">
-                {stats.clientes}
+                {stats.clientes ?? 0}
               </div>
               <div className="text-xs text-muted-foreground">
                 Clientes
@@ -162,7 +171,7 @@ const FishboneControls: React.FC<FishboneControlsProps> = ({
             </div>
             <div className="text-center p-2 bg-muted rounded">
               <div className="text-lg font-bold text-primary">
-                {stats.totalEtapas}
+                {stats.totalEtapas ?? 0}
               </div>
               <div className="text-xs text-muted-foreground">
                 Etapas
@@ -172,7 +181,7 @@ const FishboneControls: React.FC<FishboneControlsProps> = ({
 
           <div className="text-center p-2 bg-muted rounded">
             <div className="text-lg font-bold text-primary">
-              {stats.coberturaPorcentual}%
+              {stats.coberturaPorcentual ?? 0}%
             </div>
             <div className="text-xs text-muted-foreground">
               Cobertura Geral
@@ -183,18 +192,17 @@ const FishboneControls: React.FC<FishboneControlsProps> = ({
             <div className="flex justify-between items-center">
               <span className="text-xs text-muted-foreground">Parceiros</span>
               <Badge variant="default">
-                {stats.parceirosVsFornecedores.parceiros}
+                {stats.parceirosVsFornecedores?.parceiros ?? 0}
               </Badge>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-xs text-muted-foreground">Fornecedores</span>
               <Badge variant="destructive">
-                {stats.parceirosVsFornecedores.fornecedores}
+                {stats.parceirosVsFornecedores?.fornecedores ?? 0}
               </Badge>
             </div>
           </div>
-
-          {Object.keys(stats.gapsPorEtapa).length > 0 && (
+          {stats.gapsPorEtapa && Object.keys(stats.gapsPorEtapa).length > 0 && (
             <div className="space-y-1">
               <div className="text-xs font-medium text-muted-foreground">
                 Gaps por Etapa
@@ -206,7 +214,7 @@ const FishboneControls: React.FC<FishboneControlsProps> = ({
                       {etapaId.slice(0, 8)}...
                     </span>
                     <Badge variant="outline" className="text-xs">
-                      {gaps}
+                      {Number.isFinite(gaps) ? gaps : 0}
                     </Badge>
                   </div>
                 )
