@@ -3,28 +3,30 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { X, Users } from "lucide-react";
-import { Empresa } from '@/types/empresa';
 import { MultiSelect } from "@/components/ui/MultiSelect";
+import { ClienteOption } from "@/hooks/useClientesPorEmpresa";
 
 interface ClienteSelectorProps {
-  clientes?: Empresa[]; // Torna opcional e faz fallback
+  clientes: ClienteOption[];
   selectedClienteIds: string[];
   onSelectionChange: (clienteIds: string[]) => void;
 }
 
 const ClienteSelector: React.FC<ClienteSelectorProps> = ({
-  clientes = [], // Fallback para []
+  clientes,
   selectedClienteIds,
   onSelectionChange
 }) => {
+  // Gera options do MultiSelect com label enriquecido (nome + proprietária)
   const clientesOptions = clientes.map(cliente => ({
     value: cliente.id,
-    label: cliente.nome
+    label: cliente.empresa_proprietaria
+      ? `${cliente.nome} (${cliente.empresa_proprietaria.nome} - ${cliente.empresa_proprietaria.tipo})`
+      : cliente.nome,
   }));
 
-  const selectedClientes = clientes.filter(c => 
-    selectedClienteIds.includes(c.id)
-  );
+  // Para mostrar badges dos selecionados com vínculo
+  const selectedClientes = clientes.filter(c => selectedClienteIds.includes(c.id));
 
   const handleRemoveCliente = (clienteId: string) => {
     onSelectionChange(selectedClienteIds.filter(id => id !== clienteId));
@@ -62,6 +64,11 @@ const ClienteSelector: React.FC<ClienteSelectorProps> = ({
                   >
                     <span className="truncate max-w-32">
                       {cliente.nome}
+                      {cliente.empresa_proprietaria && (
+                        <span className="ml-1 text-[10px] text-muted-foreground">
+                          ({cliente.empresa_proprietaria.nome} - {cliente.empresa_proprietaria.tipo})
+                        </span>
+                      )}
                     </span>
                     <button
                       onClick={() => handleRemoveCliente(cliente.id)}
