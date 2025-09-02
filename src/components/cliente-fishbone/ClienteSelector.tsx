@@ -7,13 +7,13 @@ import { Empresa } from '@/types/empresa';
 import { MultiSelect } from "@/components/ui/MultiSelect";
 
 interface ClienteSelectorProps {
-  clientes: Empresa[];
+  clientes?: Empresa[]; // Torna opcional e faz fallback
   selectedClienteIds: string[];
   onSelectionChange: (clienteIds: string[]) => void;
 }
 
 const ClienteSelector: React.FC<ClienteSelectorProps> = ({
-  clientes,
+  clientes = [], // Fallback para []
   selectedClienteIds,
   onSelectionChange
 }) => {

@@ -12,6 +12,7 @@ import {
   TrendingUp,
   AlertTriangle
 } from "lucide-react";
+import { EtapaJornada } from "@/types/mapa-parceiros";
 
 // Tipos robustos
 type FishboneZoomLevel = {
@@ -40,6 +41,7 @@ interface FishboneControlsProps {
   zoomLevel: FishboneZoomLevel;
   onZoomChange: (level: FishboneZoomLevel) => void;
   stats?: FishboneStats;
+  etapas?: EtapaJornada[]; // Novo prop!
   showOnlyParceiros: boolean;
   onToggleParceiros: (show: boolean) => void;
   showOnlyGaps: boolean;
@@ -77,6 +79,7 @@ const FishboneControls: React.FC<FishboneControlsProps> = ({
   zoomLevel,
   onZoomChange,
   stats,
+  etapas = [],
   showOnlyParceiros,
   onToggleParceiros,
   showOnlyGaps,
@@ -84,6 +87,12 @@ const FishboneControls: React.FC<FishboneControlsProps> = ({
 }) => {
   const handleZoomChange = (newLevel: FishboneZoomLevel['level']) => {
     onZoomChange(zoomConfig[newLevel]);
+  };
+
+  // Função para pegar o nome da etapa pelo id
+  const getEtapaNome = (etapaId: string) => {
+    const etapa = etapas.find(e => e.id === etapaId);
+    return etapa?.nome ?? etapaId.slice(0, 8) + "...";
   };
 
   return (
@@ -209,7 +218,7 @@ const FishboneControls: React.FC<FishboneControlsProps> = ({
                 gaps > 0 && (
                   <div key={etapaId} className="flex justify-between items-center">
                     <span className="text-xs text-muted-foreground truncate">
-                      {etapaId.slice(0, 8)}...
+                      {getEtapaNome(etapaId)}
                     </span>
                     <Badge variant="outline" className="text-xs">
                       {Number.isFinite(gaps) ? gaps : 0}
