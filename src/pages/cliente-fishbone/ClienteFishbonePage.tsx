@@ -33,7 +33,7 @@ const ClienteFishbonePage: React.FC = () => {
     showOnlyGaps: false
   });
 
-  // Hook: só retorna esses campos!
+  // Hook: retorna dados do fishbone incluindo lista de clientes para seleção
   const {
     nodes,
     edges,
@@ -41,8 +41,9 @@ const ClienteFishbonePage: React.FC = () => {
     error,
     cliente,
     etapas,
-    stats
-  } = useClienteFishbone(filtros.clienteId);
+    stats,
+    clientes
+  } = useClienteFishbone({ clienteIds: filtros.clienteId ? [filtros.clienteId] : [] });
 
   const handleClienteSelectionChange = (ids: string[]) => {
     setFiltros(prev => ({
@@ -81,9 +82,7 @@ const ClienteFishbonePage: React.FC = () => {
     return <LoadingScreen />;
   }
 
-  // Cliente para selector (simples)
-  const clientesSelectorArr = cliente ? [cliente] : [];
-
+  // Usa a lista completa de clientes do hook ao invés de apenas o cliente selecionado
   return (
     <div className="container mx-auto px-4 py-6 space-y-6">
       {/* Header */}
@@ -104,7 +103,7 @@ const ClienteFishbonePage: React.FC = () => {
         {/* Sidebar - Seletor e Controles */}
         <div className="lg:col-span-1 space-y-4">
           <ClienteSelector
-            clientes={clientesSelectorArr}
+            clientes={clientes || []}
             selectedClienteIds={filtros.clienteId ? [filtros.clienteId] : []}
             onSelectionChange={handleClienteSelectionChange}
           />

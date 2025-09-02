@@ -44,17 +44,45 @@ export const useClienteFishbone = (filtros: { clienteIds?: string[] }) => {
   }, []);
 
   // Busca todos os clientes ativos para o seletor lateral
+  // Busca clientes através da tabela empresa_clientes, filtrando por empresas proprietárias do tipo 'intragrupo'
   const fetchClientes = useCallback(async () => {
     setLoading(true);
     try {
       const { data, error } = await supabase
-        .from('empresas')
-        .select('id, nome, descricao, tipo, logo_url, status')
-        .eq('tipo', 'cliente')
+        .from('empresa_clientes')
+        .select(`
+          empresa_cliente:empresas!empresa_clientes_empresa_cliente_id_fkey(id, nome, descricao, tipo, logo_url, status),
+          empresa_proprietaria:empresas!empresa_clientes_empresa_proprietaria_id_fkey(id, nome, tipo)
+        `)
         .eq('status', true)
-        .order('nome', { ascending: true });
+        .eq('empresa_proprietaria.tipo', 'intragrupo')
+        .order('empresa_cliente.nome', { ascending: true });
+
       if (error) throw new Error(error.message);
-      setClientes(data || []);
+
+      // Transforma os dados para o formato esperado pelo componente (Empresa interface)
+      const clientesFormatados = (data || [])
+        .map((rel: any) => 
+          rel.empresa_cliente && rel.empresa_proprietaria
+            ? {
+                id: rel.empresa_cliente.id,
+                nome: rel.empresa_cliente.nome,
+                tipo: rel.empresa_cliente.tipo,
+                descricao: rel.empresa_cliente.descricao,
+                logo_url: rel.empresa_cliente.logo_url,
+                status: rel.empresa_cliente.status,
+                // Informação da empresa proprietária no formato esperado pela interface Empresa
+                parceiro_proprietario: {
+                  id: rel.empresa_proprietaria.id,
+                  nome: rel.empresa_proprietaria.nome,
+                  tipo: rel.empresa_proprietaria.tipo,
+                },
+              }
+            : null
+        )
+        .filter(Boolean);
+
+      setClientes(clientesFormatados);
     } catch (err: any) {
       setError('Falha ao carregar a lista de clientes.');
       console.error(err);
