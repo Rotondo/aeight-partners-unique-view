@@ -1,4 +1,5 @@
 
+import * as React from "react";
 import { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -34,9 +35,9 @@ const AuthContext = createContext<AuthContextType>({
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   console.log('[Auth] AuthProvider initializing...');
 
-  // Safeguard: Check if useState is available
-  if (typeof useState !== 'function') {
-    console.error('[Auth] useState is not available!');
+  // Safeguard: Check if React is available
+  if (!React || typeof React.useState !== 'function') {
+    console.error('[Auth] React hooks are not available!');
     return (
       <div style={{ 
         display: 'flex', 
@@ -73,10 +74,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
   }
 
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-  const [retryCount, setRetryCount] = useState<number>(0);
+  const [user, setUser] = React.useState<User | null>(null);
+  const [loading, setLoading] = React.useState<boolean>(true);
+  const [error, setError] = React.useState<string | null>(null);
+  const [retryCount, setRetryCount] = React.useState<number>(0);
 
   const isDevelopment = process.env.NODE_ENV === 'development';
 
@@ -178,7 +179,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  useEffect(() => {
+  React.useEffect(() => {
     let mounted = true;
     
     const initAuth = async () => {
