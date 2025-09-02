@@ -6,16 +6,24 @@ import ClienteSelector from '@/components/cliente-fishbone/ClienteSelector';
 import FishboneVisualization from '@/components/cliente-fishbone/FishboneVisualization';
 import FishboneControls from '@/components/cliente-fishbone/FishboneControls';
 import { useClienteFishbone } from '@/hooks/useClienteFishbone';
-import { useClienteFishboneActions } from '@/hooks/useClienteFishboneActions';
-import { 
-  ClienteFishboneFilters, 
-  FishboneZoomLevel 
-} from '@/types/cliente-fishbone';
 import LoadingScreen from '@/components/ui/LoadingScreen';
 
+// Tipos locais para filtros
+type ZoomLevel = {
+  level: 'overview' | 'medium' | 'detailed';
+  showSubniveis: boolean;
+  showAllFornecedores: boolean;
+};
+type Filtros = {
+  clienteId: string | null;
+  zoomLevel: ZoomLevel;
+  showOnlyParceiros: boolean;
+  showOnlyGaps: boolean;
+};
+
 const ClienteFishbonePage: React.FC = () => {
-  const [filtros, setFiltros] = useState<ClienteFishboneFilters>({
-    clienteIds: [],
+  const [filtros, setFiltros] = useState<Filtros>({
+    clienteId: null,
     zoomLevel: {
       level: 'overview',
       showSubniveis: false,
@@ -25,24 +33,25 @@ const ClienteFishbonePage: React.FC = () => {
     showOnlyGaps: false
   });
 
+  // Hook: só retorna esses campos!
   const {
+    nodes,
+    edges,
     loading,
-    clientes,
-    fishboneData,
-    stats,
-    refetch
-  } = useClienteFishbone(filtros);
+    error,
+    cliente,
+    etapas,
+    stats
+  } = useClienteFishbone(filtros.clienteId);
 
-  const fishboneActions = useClienteFishboneActions(refetch);
-
-  const handleClienteSelectionChange = (clienteIds: string[]) => {
+  const handleClienteSelectionChange = (ids: string[]) => {
     setFiltros(prev => ({
       ...prev,
-      clienteIds
+      clienteId: ids.length > 0 ? ids[0] : null // Suporte a múltiplos se quiser
     }));
   };
 
-  const handleZoomChange = (zoomLevel: FishboneZoomLevel) => {
+  const handleZoomChange = (zoomLevel: ZoomLevel) => {
     setFiltros(prev => ({
       ...prev,
       zoomLevel
@@ -65,12 +74,15 @@ const ClienteFishbonePage: React.FC = () => {
 
   const handleNodeClick = (nodeId: string, nodeType: string) => {
     console.log('Node clicked:', nodeId, nodeType);
-    // Implementar ações específicas para diferentes tipos de nós
+    // Ação customizada
   };
 
   if (loading) {
     return <LoadingScreen />;
   }
+
+  // Cliente para selector (simples)
+  const clientesSelectorArr = cliente ? [cliente] : [];
 
   return (
     <div className="container mx-auto px-4 py-6 space-y-6">
@@ -92,8 +104,8 @@ const ClienteFishbonePage: React.FC = () => {
         {/* Sidebar - Seletor e Controles */}
         <div className="lg:col-span-1 space-y-4">
           <ClienteSelector
-            clientes={clientes}
-            selectedClienteIds={filtros.clienteIds}
+            clientes={clientesSelectorArr}
+            selectedClienteIds={filtros.clienteId ? [filtros.clienteId] : []}
             onSelectionChange={handleClienteSelectionChange}
           />
 
@@ -101,6 +113,7 @@ const ClienteFishbonePage: React.FC = () => {
             zoomLevel={filtros.zoomLevel}
             onZoomChange={handleZoomChange}
             stats={stats}
+            etapas={etapas}
             showOnlyParceiros={filtros.showOnlyParceiros}
             onToggleParceiros={handleToggleParceiros}
             showOnlyGaps={filtros.showOnlyGaps}
@@ -115,30 +128,30 @@ const ClienteFishbonePage: React.FC = () => {
               <CardTitle className="flex items-center gap-2">
                 <Target className="h-5 w-5" />
                 Visualização Espinha de Peixe
-                {filtros.clienteIds.length > 0 && (
+                {filtros.clienteId && (
                   <span className="text-sm font-normal text-muted-foreground">
-                    ({filtros.clienteIds.length} cliente{filtros.clienteIds.length !== 1 ? 's' : ''} selecionado{filtros.clienteIds.length !== 1 ? 's' : ''})
+                    (1 cliente selecionado)
                   </span>
                 )}
               </CardTitle>
             </CardHeader>
             <Separator />
             <CardContent className="p-6">
-              {filtros.clienteIds.length === 0 ? (
+              {!filtros.clienteId ? (
                 <div className="flex flex-col items-center justify-center h-96 text-center space-y-4">
                   <Fish className="h-16 w-16 text-muted-foreground" />
                   <div>
                     <h3 className="text-lg font-medium text-muted-foreground">
-                      Selecione um ou mais clientes
+                      Selecione um cliente
                     </h3>
                     <p className="text-sm text-muted-foreground">
-                      Escolha os clientes no painel lateral para visualizar suas jornadas
+                      Escolha o cliente no painel lateral para visualizar sua jornada
                     </p>
                   </div>
                 </div>
               ) : (
                 <FishboneVisualization
-                  fishboneData={fishboneData}
+                  fishboneData={nodes}
                   zoomLevel={filtros.zoomLevel}
                   onNodeClick={handleNodeClick}
                 />
@@ -147,7 +160,7 @@ const ClienteFishbonePage: React.FC = () => {
           </Card>
 
           {/* Card de Legenda */}
-          {filtros.clienteIds.length > 0 && (
+          {filtros.clienteId && (
             <Card className="mt-4">
               <CardHeader>
                 <CardTitle className="text-sm">Legenda</CardTitle>
