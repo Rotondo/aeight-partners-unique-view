@@ -1,249 +1,173 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import { 
-  ClienteFishboneView, 
-  ClienteEtapaFornecedor, 
-  EmpresaFornecedora,
-  FishboneStats,
-  ClienteFishboneFilters 
-} from '@/types/cliente-fishbone';
-import { EtapaJornada, SubnivelEtapa } from '@/types/mapa-parceiros';
-import { Empresa } from '@/types/empresa';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { supabase } from '@/lib/supabase';
+import { MapeamentoAgrupado, MapeamentoFornecedor } from '@/types/cliente-fishbone';
+import { EtapaJornada } from '@/types/mapa-parceiros';
+import { Node, Edge } from '@xyflow/react';
 
-export const useClienteFishbone = (filtros: ClienteFishboneFilters) => {
-  const [loading, setLoading] = useState(false);
-  const [clientes, setClientes] = useState<Empresa[]>([]);
-  const [fishboneData, setFishboneData] = useState<ClienteFishboneView[]>([]);
-  const [mapeamentos, setMapeamentos] = useState<ClienteEtapaFornecedor[]>([]);
+// Constantes para o layout do diagrama
+const NODE_WIDTH = 200;
+const NODE_HEIGHT = 60;
+const HORIZONTAL_SPACING = 250;
+const VERTICAL_SPACING = 120;
+
+/**
+ * Hook customizado para gerir a lógica da visualização em espinha de peixe (Fishbone).
+ * @param clienteId - O ID do cliente selecionado para visualização.
+ */
+export const useClienteFishbone = (clienteId: string | null) => {
   const [etapas, setEtapas] = useState<EtapaJornada[]>([]);
-  const [subniveis, setSubniveis] = useState<SubnivelEtapa[]>([]);
-  const [stats, setStats] = useState<FishboneStats>({
-    totalClientes: 0,
-    totalEtapas: 0,
-    coberturaPorcentual: 0,
-    parceirosVsFornecedores: { parceiros: 0, fornecedores: 0 },
-    gapsPorEtapa: {}
-  });
-  const { toast } = useToast();
+  const [mapeamentos, setMapeamentos] = useState<MapeamentoFornecedor[]>([]);
+  const [cliente, setCliente] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Carregar clientes disponíveis
-  const carregarClientes = async () => {
+  // Busca a estrutura de etapas e subníveis uma única vez
+  const fetchEstruturaJornada = useCallback(async () => {
+    setLoading(true);
     try {
       const { data, error } = await supabase
-        .from('empresas')
-        .select('*')
-        .eq('status', true)
-        .eq('tipo', 'cliente')
-        .order('nome');
+        .from('etapas_jornada')
+        .select('*, subniveis_etapa(*)')
+        .eq('ativo', true)
+        .order('ordem', { ascending: true });
 
-      if (error) throw error;
-      setClientes(data || []);
-    } catch (error: any) {
-      console.error('Erro ao carregar clientes:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível carregar os clientes",
-        variant: "destructive"
-      });
+      if (error) throw new Error(error.message);
+      setEtapas(data || []);
+    } catch (err: any) {
+      setError('Falha ao carregar a estrutura da jornada.');
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
-  };
+  }, []);
 
-  // Carregar etapas e subníveis
-  const carregarEtapasSubniveis = async () => {
+  // Busca os dados do cliente e os seus mapeamentos
+  const carregarDadosCliente = useCallback(async (id: string) => {
+    setLoading(true);
+    setError(null);
     try {
-      const [etapasResult, subniveisResult] = await Promise.all([
+      const [clienteRes, mapeamentosRes] = await Promise.all([
+        supabase.from('empresas').select('*').eq('id', id).single(),
         supabase
-          .from('etapas_jornada')
-          .select('*')
-          .eq('ativo', true)
-          .order('ordem'),
-        supabase
-          .from('subniveis_etapa')
-          .select('*')
-          .eq('ativo', true)
-          .order('etapa_id, ordem')
+          .from('cliente_etapa_fornecedores')
+          .select('*, empresa_fornecedora:empresas(*)')
+          .eq('cliente_id', id)
+          .eq('ativo', true),
       ]);
 
-      if (etapasResult.error) throw etapasResult.error;
-      if (subniveisResult.error) throw subniveisResult.error;
-
-      setEtapas(etapasResult.data || []);
-      setSubniveis(subniveisResult.data || []);
-    } catch (error: any) {
-      console.error('Erro ao carregar etapas:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível carregar as etapas",
-        variant: "destructive"
-      });
-    }
-  };
-
-  // Carregar mapeamentos
-  const carregarMapeamentos = async () => {
-    try {
-      if (filtros.clienteIds.length === 0) {
-        setMapeamentos([]);
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from('cliente_etapa_fornecedores')
-        .select(`
-          *,
-          cliente:empresas!cliente_id(*),
-          etapa:etapas_jornada(*),
-          subnivel:subniveis_etapa(*),
-          empresa_fornecedora:empresas!empresa_fornecedora_id(*)
-        `)
-        .in('cliente_id', filtros.clienteIds)
-        .eq('ativo', true);
-
-      if (error) throw error;
+      if (clienteRes.error) throw new Error(`Cliente não encontrado: ${clienteRes.error.message}`);
+      if (mapeamentosRes.error) throw new Error(`Erro ao buscar mapeamentos: ${mapeamentosRes.error.message}`);
       
-      // Mapear dados com campo is_parceiro calculado
-      const mapeamentosComParceiro = (data || []).map(item => ({
-        ...item,
-        empresa_fornecedora: item.empresa_fornecedora ? {
-          ...item.empresa_fornecedora,
-          is_parceiro: item.empresa_fornecedora.tipo === 'parceiro'
-        } : undefined
-      }));
-      
-      setMapeamentos(mapeamentosComParceiro);
-    } catch (error: any) {
-      console.error('Erro ao carregar mapeamentos:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível carregar os mapeamentos",
-        variant: "destructive"
-      });
-    }
-  };
+      setCliente(clienteRes.data);
 
-  // Processar dados do fishbone
-  const processarFishboneData = () => {
-    const clientesSelecionados = clientes.filter(c => 
-      filtros.clienteIds.includes(c.id)
-    );
-
-    const fishboneViews: ClienteFishboneView[] = clientesSelecionados.map(cliente => {
-      const etapasCliente = etapas.map(etapa => {
-        const subniveisEtapa = subniveis.filter(s => s.etapa_id === etapa.id);
-        
-        const mapeamentosEtapa = mapeamentos.filter(m => 
-          m.cliente_id === cliente.id && m.etapa_id === etapa.id
-        );
-
-        const fornecedoresEtapa: EmpresaFornecedora[] = mapeamentosEtapa.map(m => ({
-          ...m.empresa_fornecedora!,
-          is_parceiro: m.empresa_fornecedora?.tipo === 'parceiro'
-        }));
-
-        const subniveisComFornecedores = subniveisEtapa.map(subnivel => {
-          const fornecedoresSubnivel = mapeamentos
-            .filter(m => 
-              m.cliente_id === cliente.id && 
-              m.subnivel_id === subnivel.id
-            )
-            .map(m => ({
-              ...m.empresa_fornecedora!,
-              is_parceiro: m.empresa_fornecedora?.tipo === 'parceiro'
-            }));
-
-          return {
-            ...subnivel,
-            fornecedores: fornecedoresSubnivel
-          };
-        });
-
-        const gaps = subniveisEtapa.filter(s => 
-          !mapeamentos.some(m => 
-            m.cliente_id === cliente.id && m.subnivel_id === s.id
-          )
-        ).length;
-
+      // Corrige o tipo de empresa_fornecedora para garantir compatibilidade com MapeamentoFornecedor
+      const mapeamentosCorrigidos = (mapeamentosRes.data || []).map((mapeamento: any) => {
+        // Se empresa_fornecedora for um objeto válido, mantém, senão define como null
         return {
-          ...etapa,
-          fornecedores: fornecedoresEtapa,
-          subniveis: subniveisComFornecedores,
-          gaps
+          ...mapeamento,
+          empresa_fornecedora:
+            mapeamento.empresa_fornecedora &&
+            typeof mapeamento.empresa_fornecedora === 'object' &&
+            !mapeamento.empresa_fornecedora.error
+              ? mapeamento.empresa_fornecedora
+              : null,
         };
       });
 
-      return {
-        cliente,
-        etapas: etapasCliente
-      };
-    });
+      setMapeamentos(mapeamentosCorrigidos);
 
-    setFishboneData(fishboneViews);
-  };
-
-  // Calcular estatísticas
-  const calcularStats = () => {
-    const totalMapeamentos = mapeamentos.length;
-    const parceiros = mapeamentos.filter(m => 
-      m.empresa_fornecedora?.tipo === 'parceiro'
-    ).length;
-    const fornecedores = totalMapeamentos - parceiros;
-
-    const totalPossivel = filtros.clienteIds.length * subniveis.length;
-    const cobertura = totalPossivel > 0 ? (totalMapeamentos / totalPossivel) * 100 : 0;
-
-    const gapsPorEtapa: Record<string, number> = {};
-    etapas.forEach(etapa => {
-      const subniveisEtapa = subniveis.filter(s => s.etapa_id === etapa.id);
-      const mapeamentosEtapa = mapeamentos.filter(m => m.etapa_id === etapa.id);
-      const gaps = (subniveisEtapa.length * filtros.clienteIds.length) - mapeamentosEtapa.length;
-      gapsPorEtapa[etapa.id] = gaps;
-    });
-
-    setStats({
-      totalClientes: filtros.clienteIds.length,
-      totalEtapas: etapas.length,
-      coberturaPorcentual: Math.round(cobertura),
-      parceirosVsFornecedores: { parceiros, fornecedores },
-      gapsPorEtapa
-    });
-  };
-
-  // Carregar dados iniciais
-  useEffect(() => {
-    const carregarDados = async () => {
-      setLoading(true);
-      await Promise.all([
-        carregarClientes(),
-        carregarEtapasSubniveis()
-      ]);
+    } catch (err: any) {
+      setError(err.message);
+      console.error(err);
+    } finally {
       setLoading(false);
-    };
-
-    carregarDados();
+    }
   }, []);
 
-  // Recarregar mapeamentos quando filtros mudarem
   useEffect(() => {
-    carregarMapeamentos();
-  }, [filtros.clienteIds]);
+    fetchEstruturaJornada();
+  }, [fetchEstruturaJornada]);
 
-  // Processar dados quando mapeamentos mudarem
   useEffect(() => {
-    if (etapas.length > 0 && subniveis.length > 0) {
-      processarFishboneData();
-      calcularStats();
+    if (clienteId) {
+      carregarDadosCliente(clienteId);
+    } else {
+      setCliente(null);
+      setMapeamentos([]);
     }
-  }, [mapeamentos, etapas, subniveis, filtros.clienteIds]);
+  }, [clienteId, carregarDadosCliente]);
 
-  return {
-    loading,
-    clientes,
-    fishboneData,
-    mapeamentos,
-    etapas,
-    subniveis,
-    stats,
-    refetch: carregarMapeamentos
-  };
+  // Transforma os dados em nós e arestas para o React Flow
+  const { nodes, edges } = useMemo(() => {
+    if (!clienteId || !cliente || etapas.length === 0) {
+      return { nodes: [], edges: [] };
+    }
+
+    const newNodes: Node[] = [];
+    const newEdges: Edge[] = [];
+    let yOffset = 0;
+
+    // 1. Nó do Cliente (Cabeça do Peixe)
+    const clienteNodeId = `cliente-${cliente.id}`;
+    newNodes.push({
+      id: clienteNodeId,
+      type: 'fishboneNode',
+      position: { x: 0, y: 0 },
+      data: { label: cliente.nome, type: 'cliente' },
+    });
+    yOffset += VERTICAL_SPACING * 2;
+
+    // 2. Nós das Etapas e Fornecedores
+    etapas.forEach((etapa, etapaIndex) => {
+      const etapaNodeId = `etapa-${etapa.id}`;
+      const etapaY = etapaIndex * (VERTICAL_SPACING * 1.5);
+
+      // Nó da Etapa
+      newNodes.push({
+        id: etapaNodeId,
+        type: 'fishboneNode',
+        position: { x: HORIZONTAL_SPACING, y: etapaY },
+        data: { label: etapa.nome, type: 'etapa', color: etapa.cor },
+      });
+
+      // Aresta do "espinho" principal para a etapa
+      newEdges.push({
+        id: `edge-main-to-${etapa.id}`,
+        source: clienteNodeId,
+        target: etapaNodeId,
+        type: 'smoothstep',
+        style: { stroke: '#CBD5E1', strokeWidth: 2 },
+      });
+
+      const fornecedoresDaEtapa = mapeamentos.filter(m => m.etapa_id === etapa.id);
+
+      fornecedoresDaEtapa.forEach((fornecedor, fornecedorIndex) => {
+        const fornecedorNodeId = `fornecedor-${fornecedor.id}`;
+        newNodes.push({
+          id: fornecedorNodeId,
+          type: 'fishboneNode',
+          position: { x: HORIZONTAL_SPACING * 2, y: etapaY + fornecedorIndex * NODE_HEIGHT * 1.5 },
+          data: {
+            label: fornecedor.empresa_fornecedora.nome,
+            type: 'fornecedor',
+            isParceiro: fornecedor.empresa_fornecedora.tipo === 'parceiro',
+          },
+        });
+        
+        // Aresta da etapa para o fornecedor
+        newEdges.push({
+          id: `edge-${etapa.id}-to-${fornecedor.id}`,
+          source: etapaNodeId,
+          target: fornecedorNodeId,
+          type: 'smoothstep',
+          style: { strokeWidth: 1.5, stroke: fornecedor.empresa_fornecedora.tipo === 'parceiro' ? '#3b82f6' : '#ef4444' }
+        });
+      });
+    });
+
+    return { nodes: newNodes, edges: newEdges };
+  }, [cliente, etapas, mapeamentos, clienteId]);
+
+  return { nodes, edges, loading, error, cliente, etapas };
 };
+

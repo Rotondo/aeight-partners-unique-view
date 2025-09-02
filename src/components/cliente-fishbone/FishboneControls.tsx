@@ -14,7 +14,20 @@ import {
   TrendingUp,
   AlertTriangle
 } from "lucide-react";
-import { FishboneZoomLevel, FishboneStats } from '@/types/cliente-fishbone';
+// Remove the incorrect imports and define the types locally
+
+type FishboneZoomLevel = {
+  level: 'overview' | 'medium' | 'detailed';
+  showSubniveis: boolean;
+  showAllFornecedores: boolean;
+};
+
+type FishboneStats = {
+  totalParceiros: number;
+  totalFornecedores: number;
+  totalGaps: number;
+  totalEtapas: number;
+};
 
 interface FishboneControlsProps {
   zoomLevel: FishboneZoomLevel;
@@ -141,7 +154,7 @@ const FishboneControls: React.FC<FishboneControlsProps> = ({
           <div className="grid grid-cols-2 gap-2">
             <div className="text-center p-2 bg-muted rounded">
               <div className="text-lg font-bold text-primary">
-                {stats.totalClientes}
+                {stats.clientes}
               </div>
               <div className="text-xs text-muted-foreground">
                 Clientes
