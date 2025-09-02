@@ -62,7 +62,6 @@ export const useClienteFishbone = (clienteId: string | null) => {
 
       // Corrige o tipo de empresa_fornecedora para garantir compatibilidade com MapeamentoFornecedor
       const mapeamentosCorrigidos = (mapeamentosRes.data || []).map((mapeamento: any) => {
-        // Se empresa_fornecedora for um objeto válido, mantém, senão define como null
         return {
           ...mapeamento,
           empresa_fornecedora:
@@ -148,9 +147,9 @@ export const useClienteFishbone = (clienteId: string | null) => {
           type: 'fishboneNode',
           position: { x: HORIZONTAL_SPACING * 2, y: etapaY + fornecedorIndex * NODE_HEIGHT * 1.5 },
           data: {
-            label: fornecedor.empresa_fornecedora.nome,
+            label: fornecedor.empresa_fornecedora?.nome ?? '',
             type: 'fornecedor',
-            isParceiro: fornecedor.empresa_fornecedora.tipo === 'parceiro',
+            isParceiro: fornecedor.empresa_fornecedora?.tipo === 'parceiro',
           },
         });
         
@@ -160,7 +159,7 @@ export const useClienteFishbone = (clienteId: string | null) => {
           source: etapaNodeId,
           target: fornecedorNodeId,
           type: 'smoothstep',
-          style: { strokeWidth: 1.5, stroke: fornecedor.empresa_fornecedora.tipo === 'parceiro' ? '#3b82f6' : '#ef4444' }
+          style: { strokeWidth: 1.5, stroke: fornecedor.empresa_fornecedora?.tipo === 'parceiro' ? '#3b82f6' : '#ef4444' }
         });
       });
     });
@@ -168,6 +167,51 @@ export const useClienteFishbone = (clienteId: string | null) => {
     return { nodes: newNodes, edges: newEdges };
   }, [cliente, etapas, mapeamentos, clienteId]);
 
-  return { nodes, edges, loading, error, cliente, etapas };
-};
+  // Cálculo das estatísticas para o FishboneControls
+  const stats = useMemo(() => {
+    // clientes: 1 se cliente está definido, 0 se não
+    const clientes = cliente ? 1 : 0;
+    // totalParceiros: soma dos fornecedores que são parceiros
+    const totalParceiros = mapeamentos.filter(m => m.empresa_fornecedora?.tipo === 'parceiro').length;
+    // totalFornecedores: soma total dos fornecedores
+    const totalFornecedores = mapeamentos.length;
+    // totalGaps: exemplo - etapas sem fornecedores
+    const totalGaps = etapas.reduce((acc, etapa) => {
+      const count = mapeamentos.filter(m => m.etapa_id === etapa.id).length;
+      return acc + (count === 0 ? 1 : 0);
+    }, 0);
+    // totalEtapas
+    const totalEtapas = etapas.length;
+    // coberturaPorcentual: % de etapas que possuem ao menos um fornecedor
+    const etapasComFornecedores = etapas.filter(etapa =>
+      mapeamentos.some(m => m.etapa_id === etapa.id)
+    ).length;
+    const coberturaPorcentual = totalEtapas > 0
+      ? Math.round((etapasComFornecedores / totalEtapas) * 100)
+      : 0;
+    // parceirosVsFornecedores
+    const parceirosVsFornecedores = {
+      parceiros: totalParceiros,
+      fornecedores: totalFornecedores - totalParceiros
+    };
+    // gapsPorEtapa: id da etapa -> número de gaps (0 se tem fornecedor, 1 se não tem)
+    const gapsPorEtapa: Record<string, number> = {};
+    etapas.forEach((etapa) => {
+      const count = mapeamentos.filter(m => m.etapa_id === etapa.id).length;
+      gapsPorEtapa[etapa.id] = count === 0 ? 1 : 0;
+    });
 
+    return {
+      clientes,
+      totalParceiros,
+      totalFornecedores,
+      totalGaps,
+      totalEtapas,
+      coberturaPorcentual,
+      parceirosVsFornecedores,
+      gapsPorEtapa
+    };
+  }, [cliente, mapeamentos, etapas]);
+
+  return { nodes, edges, loading, error, cliente, etapas, stats };
+};
