@@ -25,6 +25,7 @@ export const validateFileName = (fileName: string): { isValid: boolean; error?: 
   }
 
   // Verifica se contém caracteres especiais problemáticos
+  // eslint-disable-next-line no-control-regex
   const invalidChars = /[<>:"/\\|?*\u0000-\u001f]/;
   if (invalidChars.test(fileName)) {
     return { isValid: false, error: 'Nome do arquivo contém caracteres inválidos' };

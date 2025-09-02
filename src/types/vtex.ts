@@ -24,7 +24,7 @@ export interface VtexFeedbackOportunidade {
   telefone_lead: string;
   conseguiu_contato: boolean;
   contexto_breve: string;
-  campos_customizados: Record<string, any>;
+  campos_customizados: Record<string, unknown>;
   usuario_responsavel_id?: string | null;
   status: 'rascunho' | 'enviado';
   created_at: string;
@@ -39,5 +39,5 @@ export interface VtexFeedbackFormData {
   telefone_lead: string;
   conseguiu_contato: boolean;
   contexto_breve: string;
-  campos_customizados: Record<string, any>;
+  campos_customizados: Record<string, unknown>;
 }

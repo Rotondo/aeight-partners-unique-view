@@ -43,7 +43,7 @@ export interface CrmAcao {
   content: string;
   next_step_date?: string;
   next_steps?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   created_at: string;
   // Relações para UI
   parceiro?: {

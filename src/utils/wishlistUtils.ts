@@ -59,8 +59,8 @@ export const sortWishlistItems = (
   if (!sortField) return items;
 
   return [...items].sort((a, b) => {
-    let valueA: any;
-    let valueB: any;
+    let valueA: string | number | Date;
+    let valueB: string | number | Date;
 
     switch (sortField) {
       case "empresa_interessada.nome":

@@ -10,7 +10,7 @@ export class ApiService {
    * Executa uma query do Supabase com error handling padronizado
    */
   static async executeQuery<T>(
-    queryFn: () => Promise<{ data: T | null; error: any }>,
+    queryFn: () => Promise<{ data: T | null; error: unknown }>,
     errorMessage: string = 'Erro na operação'
   ): Promise<T | null> {
     try {
@@ -42,7 +42,7 @@ export class ApiService {
    * Executa uma mutação do Supabase com error handling padronizado
    */
   static async executeMutation<T>(
-    mutationFn: () => Promise<{ data: T | null; error: any }>,
+    mutationFn: () => Promise<{ data: T | null; error: unknown }>,
     successMessage: string,
     errorMessage: string
   ): Promise<T | null> {
