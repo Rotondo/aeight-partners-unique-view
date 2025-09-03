@@ -154,7 +154,6 @@ export const useClienteFishbone = (filtros: { clienteIds?: string[] }) => {
           nome: rel.empresa_cliente!.nome,
           tipo: rel.empresa_cliente!.tipo,
           descricao: rel.empresa_cliente!.descricao,
-          logo_url: undefined, // Field not available in database
           status: rel.empresa_cliente!.status,
           empresa_proprietaria: {
             id: rel.empresa_proprietaria!.id,
