@@ -22,7 +22,7 @@ import {
   Compass,
   BookOpen,
   Settings,
-  GitBranch // <-- 1. ADICIONEI O NOVO ÍCONE AQUI
+  FishSymbol // <-- 1. ADICIONEI O NOVO ÍCONE AQUI
 } from "lucide-react"
 
 import {
@@ -42,7 +42,7 @@ import { useAuth } from "@/hooks/useAuth"
 const mainItems = [
   { title: "Dashboard", url: "/", icon: Home },
   { title: "Mapa Parceiros", url: "/mapa-parceiros", icon: Compass },
-  { title: "Diagnóstico", url: "/cliente-fishbone", icon: GitBranch }, // <-- 2. ADICIONEI O NOVO LINK AQUI
+  { title: "Diagnóstico", url: "/cliente-fishbone", icon: FishSymbol }, // <-- 2. ADICIONEI O NOVO LINK AQUI
   { title: "Empresas", url: "/empresas", icon: Building2 },
   { title: "Categorias", url: "/categorias", icon: Tags },
   { title: "Contatos", url: "/contatos", icon: Contact },
