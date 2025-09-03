@@ -60,7 +60,7 @@ export const useClienteFishbone = (filtros: { clienteIds?: string[] }) => {
 
       if (error) throw new Error(error.message);
 
-      // Transforma os dados para o formato esperado pelo componente (Empresa interface)
+      // Transforma os dados para o formato esperado pelo componente (ClienteOption interface)
       const clientesFormatados = (data || [])
         .map((rel: any) => 
           rel.empresa_cliente && rel.empresa_proprietaria
@@ -71,8 +71,8 @@ export const useClienteFishbone = (filtros: { clienteIds?: string[] }) => {
                 descricao: rel.empresa_cliente.descricao,
                 logo_url: rel.empresa_cliente.logo_url,
                 status: rel.empresa_cliente.status,
-                // Informação da empresa proprietária no formato esperado pela interface Empresa
-                parceiro_proprietario: {
+                // Informação da empresa proprietária no formato esperado pela interface ClienteOption
+                empresa_proprietaria: {
                   id: rel.empresa_proprietaria.id,
                   nome: rel.empresa_proprietaria.nome,
                   tipo: rel.empresa_proprietaria.tipo,
@@ -149,76 +149,66 @@ export const useClienteFishbone = (filtros: { clienteIds?: string[] }) => {
     }
   }, [filtros?.clienteIds, carregarDadosCliente]);
 
-  // Transforma os dados em nós e arestas para o React Flow
-  const { nodes, edges } = useMemo(() => {
+  // Transforma os dados em estrutura ClienteFishboneView
+  const fishboneData = useMemo(() => {
     if (!filtros?.clienteIds || !cliente || etapas.length === 0) {
-      return { nodes: [], edges: [] };
+      return [];
     }
 
-    const newNodes: Node[] = [];
-    const newEdges: Edge[] = [];
-    let yOffset = 0;
-
-    // 1. Nó do Cliente (Cabeça do Peixe)
-    const clienteNodeId = `cliente-${cliente.id}`;
-    newNodes.push({
-      id: clienteNodeId,
-      type: 'fishboneNode',
-      position: { x: 0, y: 0 },
-      data: { label: cliente.nome, type: 'cliente' },
-    });
-    yOffset += VERTICAL_SPACING * 2;
-
-    // 2. Nós das Etapas e Fornecedores
-    etapas.forEach((etapa, etapaIndex) => {
-      const etapaNodeId = `etapa-${etapa.id}`;
-      const etapaY = etapaIndex * (VERTICAL_SPACING * 1.5);
-
-      // Nó da Etapa
-      newNodes.push({
-        id: etapaNodeId,
-        type: 'fishboneNode',
-        position: { x: HORIZONTAL_SPACING, y: etapaY },
-        data: { label: etapa.nome, type: 'etapa', color: etapa.cor },
-      });
-
-      // Aresta do "espinho" principal para a etapa
-      newEdges.push({
-        id: `edge-main-to-${etapa.id}`,
-        source: clienteNodeId,
-        target: etapaNodeId,
-        type: 'smoothstep',
-        style: { stroke: '#CBD5E1', strokeWidth: 2 },
-      });
-
-      const fornecedoresDaEtapa = mapeamentos.filter(m => m.etapa_id === etapa.id);
-
-      fornecedoresDaEtapa.forEach((fornecedor, fornecedorIndex) => {
-        const fornecedorNodeId = `fornecedor-${fornecedor.id}`;
-        newNodes.push({
-          id: fornecedorNodeId,
-          type: 'fishboneNode',
-          position: { x: HORIZONTAL_SPACING * 2, y: etapaY + fornecedorIndex * NODE_HEIGHT * 1.5 },
-          data: {
-            label: fornecedor.empresa_fornecedora?.nome ?? '',
-            type: 'fornecedor',
-            isParceiro: fornecedor.empresa_fornecedora?.tipo === 'parceiro',
-          },
+    const clienteFishboneView = {
+      cliente: {
+        id: cliente.id,
+        nome: cliente.nome,
+        descricao: cliente.descricao,
+        logo_url: cliente.logo_url
+      },
+      etapas: etapas.map(etapa => {
+        const fornecedoresDaEtapa = mapeamentos.filter(m => m.etapa_id === etapa.id && !m.subnivel_id);
+        // Buscar subníveis da etapa no estado global - do Supabase vem como subniveis_etapa
+        const etapaCompleta = etapas.find(e => e.id === etapa.id) as any;
+        const subnivelsDaEtapa = etapaCompleta?.subniveis_etapa || etapaCompleta?.subniveis || [];
+        const subniveis = subnivelsDaEtapa.map((subnivel: any) => {
+          const fornecedoresDoSubnivel = mapeamentos.filter(m => m.subnivel_id === subnivel.id);
+          return {
+            id: subnivel.id,
+            nome: subnivel.nome,
+            descricao: subnivel.descricao,
+            fornecedores: fornecedoresDoSubnivel.map(f => ({
+              id: f.empresa_fornecedora_id,
+              nome: f.empresa_fornecedora?.nome || '',
+              is_parceiro: f.empresa_fornecedora?.tipo === 'parceiro',
+              performance_score: 0,
+              logo_url: f.empresa_fornecedora?.logo_url
+            }))
+          };
         });
-        
-        // Aresta da etapa para o fornecedor
-        newEdges.push({
-          id: `edge-${etapa.id}-to-${fornecedor.id}`,
-          source: etapaNodeId,
-          target: fornecedorNodeId,
-          type: 'smoothstep',
-          style: { strokeWidth: 1.5, stroke: fornecedor.empresa_fornecedora?.tipo === 'parceiro' ? '#3b82f6' : '#ef4444' }
-        });
-      });
-    });
 
-    return { nodes: newNodes, edges: newEdges };
+        return {
+          id: etapa.id,
+          nome: etapa.nome,
+          descricao: etapa.descricao,
+          cor: etapa.cor,
+          gaps: Math.max(0, 1 - fornecedoresDaEtapa.length - subniveis.reduce((acc, sub) => acc + sub.fornecedores.length, 0)),
+          fornecedores: fornecedoresDaEtapa.map(f => ({
+            id: f.empresa_fornecedora_id,
+            nome: f.empresa_fornecedora?.nome || '',
+            descricao: f.empresa_fornecedora?.descricao,
+            is_parceiro: f.empresa_fornecedora?.tipo === 'parceiro',
+            performance_score: 0,
+            logo_url: f.empresa_fornecedora?.logo_url
+          })),
+          subniveis
+        };
+      })
+    };
+
+    return [clienteFishboneView];
   }, [cliente, etapas, mapeamentos, filtros?.clienteIds]);
+
+  // Calculamos nodes e edges vazios para manter compatibilidade
+  const { nodes, edges } = useMemo(() => {
+    return { nodes: [], edges: [] };
+  }, []);
 
   // Cálculo das estatísticas para o FishboneControls
   const stats = useMemo(() => {
@@ -266,6 +256,6 @@ export const useClienteFishbone = (filtros: { clienteIds?: string[] }) => {
     };
   }, [cliente, mapeamentos, etapas]);
 
-  // Retorna também a lista de clientes para o seletor lateral
-  return { nodes, edges, loading, error, cliente, etapas, stats, clientes };
+  // Retorna também a lista de clientes para o seletor lateral e dados da fishbone
+  return { nodes, edges, fishboneData, loading, error, cliente, etapas, stats, clientes };
 };

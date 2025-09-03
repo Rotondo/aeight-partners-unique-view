@@ -516,7 +516,12 @@ const WishlistFluxoAprimorado: React.FC<WishlistFluxoAprimoradoProps> = ({
                 <ClienteMultiSelect
                   clientes={clientesMarcaDisponiveis.map(item => ({
                     id: item.empresa_cliente?.id || '',
-                    nome: item.empresa_cliente?.nome || ''
+                    nome: item.empresa_cliente?.nome || '',
+                    empresa_proprietaria: {
+                      id: item.empresa_proprietaria?.id || '',
+                      nome: item.empresa_proprietaria?.nome || '',
+                      tipo: item.empresa_proprietaria?.tipo || ''
+                    }
                   }))}
                   clientesSelecionados={clientesMarca}
                   onClientesSelecionadosChange={setClientesMarca}

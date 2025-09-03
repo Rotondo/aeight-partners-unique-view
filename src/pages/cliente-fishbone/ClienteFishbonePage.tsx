@@ -35,8 +35,7 @@ const ClienteFishbonePage: React.FC = () => {
 
   // Hook: retorna dados do fishbone incluindo lista de clientes para seleção
   const {
-    nodes,
-    edges,
+    fishboneData,
     loading,
     error,
     cliente,
@@ -150,7 +149,7 @@ const ClienteFishbonePage: React.FC = () => {
                 </div>
               ) : (
                 <FishboneVisualization
-                  fishboneData={nodes}
+                  fishboneData={fishboneData}
                   zoomLevel={filtros.zoomLevel}
                   onNodeClick={handleNodeClick}
                 />

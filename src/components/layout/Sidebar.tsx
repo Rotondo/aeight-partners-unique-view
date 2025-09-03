@@ -7,7 +7,8 @@ import {
   Activity,
   Building2,
   PanelLeft,
-  KanbanSquare
+  KanbanSquare,
+  Users
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 
@@ -51,6 +52,11 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed }) => {
       icon: <KanbanSquare size={18} />,
       label: "Quadrante",
       href: "/quadrante",
+    },
+    {
+      icon: <Users size={18} />,
+      label: "Analista de Clientes",
+      href: "/cliente-fishbone",
     },
     {
       icon: <Settings size={18} />,

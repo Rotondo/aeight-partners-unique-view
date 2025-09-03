@@ -1,16 +1,7 @@
-import React, { useMemo } from 'react';
-import { 
-  ReactFlow, 
-  Node, 
-  Edge, 
-  Controls, 
-  Background,
-  useNodesState,
-  useEdgesState,
-  ConnectionMode
-} from '@xyflow/react';
-import '@xyflow/react/dist/style.css';
-import FishboneNode from './FishboneNode';
+import React, { useState } from 'react';
+import ClienteHead from './ClienteHead';
+import FishboneSpine from './FishboneSpine';
+import FornecedorDot from './FornecedorDot';
 import { ClienteFishboneView, FishboneZoomLevel } from '@/types/cliente-fishbone';
 
 interface FishboneVisualizationProps {
@@ -19,200 +10,167 @@ interface FishboneVisualizationProps {
   onNodeClick?: (nodeId: string, nodeType: string) => void;
 }
 
-const nodeTypes = {
-  fishboneNode: FishboneNode,
-};
-
 const FishboneVisualization: React.FC<FishboneVisualizationProps> = ({
   fishboneData,
   zoomLevel,
   onNodeClick
 }) => {
-  const { nodes, edges } = useMemo(() => {
-    const newNodes: Node[] = [];
-    const newEdges: Edge[] = [];
+  const [expandedEtapas, setExpandedEtapas] = useState<Set<string>>(new Set());
+  const [expandedSubniveis, setExpandedSubniveis] = useState<Set<string>>(new Set());
 
-    fishboneData.forEach((clienteView, clienteIndex) => {
-      const clienteY = clienteIndex * 400;
-      
-      // Node do cliente (cabeça do peixe)
-      const clienteNodeId = `cliente-${clienteView.cliente.id}`;
-      newNodes.push({
-        id: clienteNodeId,
-        type: 'fishboneNode',
-        position: { x: 50, y: clienteY + 150 },
-        data: {
-          type: 'cliente',
-          label: clienteView.cliente.nome,
-          subtitle: clienteView.cliente.descricao || '',
-          logoUrl: clienteView.cliente.logo_url
-        }
-      });
+  if (!fishboneData || fishboneData.length === 0) {
+    return (
+      <div className="h-[600px] w-full border rounded-lg bg-background flex items-center justify-center">
+        <div className="text-center text-muted-foreground">
+          <p>Selecione um cliente para visualizar a espinha de peixe</p>
+        </div>
+      </div>
+    );
+  }
 
-      // Nodes das etapas (espinhas)
-      clienteView.etapas.forEach((etapa, etapaIndex) => {
-        const etapaNodeId = `etapa-${etapa.id}-${clienteView.cliente.id}`;
-        const etapaX = 300 + (etapaIndex * 200);
-        const etapaY = clienteY + 150;
+  const clienteView = fishboneData[0]; // Assumindo um cliente por vez
+  const centerX = 400;
+  const centerY = 300;
 
-        newNodes.push({
-          id: etapaNodeId,
-          type: 'fishboneNode',
-          position: { x: etapaX, y: etapaY },
-          data: {
-            type: 'etapa',
-            label: etapa.nome,
-            subtitle: etapa.descricao || '',
-            gaps: etapa.gaps,
-            color: etapa.cor
-          }
-        });
+  // Calcular estatísticas do cliente
+  const stats = {
+    totalEtapas: clienteView.etapas.length,
+    totalFornecedores: clienteView.etapas.reduce((acc, etapa) => 
+      acc + etapa.fornecedores.length + etapa.subniveis.reduce((subAcc, sub) => 
+        subAcc + sub.fornecedores.length, 0), 0),
+    totalParceiros: clienteView.etapas.reduce((acc, etapa) => 
+      acc + etapa.fornecedores.filter(f => f.is_parceiro).length + 
+      etapa.subniveis.reduce((subAcc, sub) => 
+        subAcc + sub.fornecedores.filter(f => f.is_parceiro).length, 0), 0),
+    coberturaPorcentual: Math.round(
+      (clienteView.etapas.filter(etapa => etapa.fornecedores.length > 0 || 
+        etapa.subniveis.some(sub => sub.fornecedores.length > 0)).length / 
+        clienteView.etapas.length) * 100
+    )
+  };
 
-        // Edge do cliente para etapa
-        newEdges.push({
-          id: `${clienteNodeId}-${etapaNodeId}`,
-          source: etapaIndex === 0 ? clienteNodeId : `etapa-${clienteView.etapas[etapaIndex - 1]?.id}-${clienteView.cliente.id}`,
-          target: etapaNodeId,
-          type: 'smoothstep',
-          style: { stroke: etapa.cor || 'hsl(var(--primary))' }
-        });
-
-        // Nodes dos fornecedores por etapa (se zoom permite)
-        if (zoomLevel.showAllFornecedores) {
-          etapa.fornecedores.forEach((fornecedor, fornecedorIndex) => {
-            const fornecedorNodeId = `fornecedor-${fornecedor.id}-${etapa.id}-${clienteView.cliente.id}`;
-            const fornecedorY = etapaY + (fornecedorIndex - etapa.fornecedores.length / 2 + 0.5) * 80;
-
-            newNodes.push({
-              id: fornecedorNodeId,
-              type: 'fishboneNode',
-              position: { x: etapaX + 250, y: fornecedorY },
-              data: {
-                type: 'fornecedor',
-                label: fornecedor.nome,
-                subtitle: fornecedor.descricao || '',
-                isParceiro: fornecedor.is_parceiro,
-                score: fornecedor.performance_score,
-                logoUrl: fornecedor.logo_url
-              }
-            });
-
-            // Edge da etapa para fornecedor
-            newEdges.push({
-              id: `${etapaNodeId}-${fornecedorNodeId}`,
-              source: etapaNodeId,
-              target: fornecedorNodeId,
-              type: 'smoothstep',
-              style: { 
-                stroke: fornecedor.is_parceiro 
-                  ? 'hsl(var(--primary))' 
-                  : 'hsl(var(--destructive))'
-              }
-            });
-          });
-        }
-
-        // Nodes dos subníveis (se zoom permite)
-        if (zoomLevel.showSubniveis) {
-          etapa.subniveis.forEach((subnivel, subnivelIndex) => {
-            const subnivelNodeId = `subnivel-${subnivel.id}-${clienteView.cliente.id}`;
-            const subnivelY = etapaY + (subnivelIndex - etapa.subniveis.length / 2 + 0.5) * 60;
-
-            newNodes.push({
-              id: subnivelNodeId,
-              type: 'fishboneNode',
-              position: { x: etapaX + 150, y: subnivelY },
-              data: {
-                type: 'etapa',
-                label: subnivel.nome,
-                subtitle: subnivel.descricao || '',
-                color: etapa.cor
-              }
-            });
-
-            // Edge da etapa para subnível
-            newEdges.push({
-              id: `${etapaNodeId}-${subnivelNodeId}`,
-              source: etapaNodeId,
-              target: subnivelNodeId,
-              type: 'smoothstep',
-              style: { stroke: etapa.cor || 'hsl(var(--secondary))' }
-            });
-
-            // Fornecedores do subnível
-            if (zoomLevel.showAllFornecedores) {
-              subnivel.fornecedores.forEach((fornecedor, fornecedorIndex) => {
-                const fornecedorNodeId = `fornecedor-sub-${fornecedor.id}-${subnivel.id}-${clienteView.cliente.id}`;
-                const fornecedorY = subnivelY + (fornecedorIndex * 40);
-
-                newNodes.push({
-                  id: fornecedorNodeId,
-                  type: 'fishboneNode',
-                  position: { x: etapaX + 350, y: fornecedorY },
-                  data: {
-                    type: 'fornecedor',
-                    label: fornecedor.nome,
-                    isParceiro: fornecedor.is_parceiro,
-                    score: fornecedor.performance_score,
-                    logoUrl: fornecedor.logo_url
-                  }
-                });
-
-                // Edge do subnível para fornecedor
-                newEdges.push({
-                  id: `${subnivelNodeId}-${fornecedorNodeId}`,
-                  source: subnivelNodeId,
-                  target: fornecedorNodeId,
-                  type: 'smoothstep',
-                  style: { 
-                    stroke: fornecedor.is_parceiro 
-                      ? 'hsl(var(--primary))' 
-                      : 'hsl(var(--destructive))'
-                  }
-                });
-              });
-            }
-          });
-        }
-      });
-    });
-
-    return { nodes: newNodes, edges: newEdges };
-  }, [fishboneData, zoomLevel]);
-
-  const [reactFlowNodes, setNodes, onNodesChange] = useNodesState(nodes);
-  const [reactFlowEdges, setEdges, onEdgesChange] = useEdgesState(edges);
-
-  // Atualizar nodes quando dados mudarem
-  React.useEffect(() => {
-    setNodes(nodes);
-    setEdges(edges);
-  }, [nodes, edges, setNodes, setEdges]);
-
-  const handleNodeClick = (event: React.MouseEvent, node: Node) => {
-    if (onNodeClick) {
-      const nodeData = node.data as any;
-      onNodeClick(node.id, nodeData.type);
+  const handleToggleEtapa = (etapaId: string) => {
+    const newExpanded = new Set(expandedEtapas);
+    if (newExpanded.has(etapaId)) {
+      newExpanded.delete(etapaId);
+    } else {
+      newExpanded.add(etapaId);
     }
+    setExpandedEtapas(newExpanded);
+  };
+
+  const renderFornecedores = (
+    fornecedores: any[], 
+    basePosition: { x: number; y: number },
+    angle: number,
+    distance: number = 80
+  ) => {
+    return fornecedores.map((fornecedor, index) => {
+      const fornecedorAngle = angle + (index - fornecedores.length / 2 + 0.5) * 0.3;
+      const fornecedorX = basePosition.x + Math.cos(fornecedorAngle) * distance;
+      const fornecedorY = basePosition.y + Math.sin(fornecedorAngle) * distance;
+
+      return (
+        <FornecedorDot
+          key={fornecedor.id}
+          fornecedor={fornecedor}
+          position={{ x: fornecedorX, y: fornecedorY }}
+          onDoubleClick={() => onNodeClick?.(fornecedor.id, 'fornecedor')}
+        />
+      );
+    });
   };
 
   return (
-    <div className="h-[600px] w-full border rounded-lg bg-background">
-      <ReactFlow
-        nodes={reactFlowNodes}
-        edges={reactFlowEdges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onNodeClick={handleNodeClick}
-        nodeTypes={nodeTypes}
-        connectionMode={ConnectionMode.Loose}
-        fitView
-        fitViewOptions={{ padding: 0.1 }}
-        className="bg-background"
-      >
-        <Background color="hsl(var(--muted))" />
-        <Controls />
-      </ReactFlow>
+    <div className="h-[600px] w-full border rounded-lg bg-background relative overflow-hidden">
+      <svg width="100%" height="100%" className="absolute inset-0">
+        {/* Linha principal (espinha dorsal) */}
+        <line
+          x1={centerX - 150}
+          y1={centerY}
+          x2={centerX + 400}
+          y2={centerY}
+          stroke="hsl(var(--primary))"
+          strokeWidth="4"
+          strokeDasharray="5,5"
+          className="opacity-60"
+        />
+
+        {/* Cabeça do cliente */}
+        <ClienteHead
+          cliente={clienteView.cliente}
+          stats={stats}
+          position={{ x: centerX - 150, y: centerY }}
+        />
+
+        {/* Etapas como espinhas */}
+        {clienteView.etapas.map((etapa, index) => {
+          const isEven = index % 2 === 0;
+          const baseAngle = isEven ? -Math.PI / 6 : Math.PI / 6; // 30 graus para cima ou para baixo
+          const spineStartX = centerX + (index * 120);
+          const spineStartY = centerY;
+          
+          const isExpanded = expandedEtapas.has(etapa.id);
+
+          return (
+            <g key={etapa.id}>
+              <FishboneSpine
+                etapa={etapa}
+                isExpanded={isExpanded}
+                onToggleExpanded={() => handleToggleEtapa(etapa.id)}
+                position={{ x: spineStartX, y: spineStartY }}
+                angle={baseAngle}
+              />
+
+              {/* Renderizar fornecedores se expandido e zoom permite */}
+              {isExpanded && (zoomLevel.showAllFornecedores || zoomLevel.level === 'detailed') && (
+                <>
+                  {/* Fornecedores diretos da etapa */}
+                  {renderFornecedores(
+                    etapa.fornecedores,
+                    {
+                      x: spineStartX + Math.cos(baseAngle) * 120,
+                      y: spineStartY + Math.sin(baseAngle) * 120
+                    },
+                    baseAngle
+                  )}
+
+                  {/* Subníveis e seus fornecedores */}
+                  {zoomLevel.showSubniveis && etapa.subniveis.map((subnivel, subIndex) => {
+                    const subAngle = baseAngle + (subIndex - etapa.subniveis.length / 2 + 0.5) * 0.4;
+                    const subBaseX = spineStartX + Math.cos(baseAngle) * 80;
+                    const subBaseY = spineStartY + Math.sin(baseAngle) * 80;
+                    const subEndX = subBaseX + Math.cos(subAngle) * 60;
+                    const subEndY = subBaseY + Math.sin(subAngle) * 60;
+
+                    return (
+                      <g key={subnivel.id}>
+                        {/* Linha do subnível */}
+                        <line
+                          x1={subBaseX}
+                          y1={subBaseY}
+                          x2={subEndX}
+                          y2={subEndY}
+                          stroke={etapa.cor || 'hsl(var(--secondary))'}
+                          strokeWidth="2"
+                        />
+                        
+                        {/* Fornecedores do subnível */}
+                        {renderFornecedores(
+                          subnivel.fornecedores,
+                          { x: subEndX, y: subEndY },
+                          subAngle,
+                          40
+                        )}
+                      </g>
+                    );
+                  })}
+                </>
+              )}
+            </g>
+          );
+        })}
+      </svg>
     </div>
   );
 };

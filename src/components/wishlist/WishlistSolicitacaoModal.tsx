@@ -536,14 +536,11 @@ const WishlistSolicitacaoModal: React.FC<WishlistSolicitacaoModalProps> = ({
               clientes={clientesReciprocidade.map((item: any) => ({
                 id: item.empresa_cliente.id,
                 nome: item.empresa_cliente.nome,
-                email: '', // Placeholder
-                empresa_proprietaria_id: empresaSolicitante,
-                empresa_proprietaria_nome: getEmpresaNome(empresaSolicitante),
-                categorias: [],
-                tags: [],
-                status: true,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
+                empresa_proprietaria: {
+                  id: empresaSolicitante,
+                  nome: getEmpresaNome(empresaSolicitante),
+                  tipo: 'intragrupo'
+                }
               }))}
               clientesSelecionados={clientesReciprocidadeSelecionados}
               onClientesSelecionadosChange={setClientesReciprocidadeSelecionados}
