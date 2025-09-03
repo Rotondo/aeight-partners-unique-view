@@ -4,16 +4,16 @@ import { MapeamentoAgrupado, MapeamentoFornecedor } from '@/types/cliente-fishbo
 import { EtapaJornada } from '@/types/mapa-parceiros';
 import { Node, Edge } from '@xyflow/react';
 
-// Constantes para o layout do diagrama
+// Constantes do layout do diagrama
 const NODE_WIDTH = 200;
 const NODE_HEIGHT = 60;
 const HORIZONTAL_SPACING = 250;
 const VERTICAL_SPACING = 120;
 
 /**
- * Hook customizado para gerir a lógica da visualização em espinha de peixe (Fishbone).
- * Agora traz também a lista de clientes disponíveis para seleção.
- * @param filtros - Filtros (clienteIds, etc) para visualização.
+ * Hook customizado para gerir a lógica da visualização Fishbone (espinha de peixe) e fornecer clientes para seleção.
+ * Corrigido para trazer clientes vinculados às empresas do grupo intragrupo, conforme regras do negócio e documentação.
+ * @param filtros - Filtros opcionais, como clienteIds para visualização específica.
  */
 export const useClienteFishbone = (filtros: { clienteIds?: string[] }) => {
   const [etapas, setEtapas] = useState<EtapaJornada[]>([]);
@@ -23,7 +23,9 @@ export const useClienteFishbone = (filtros: { clienteIds?: string[] }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Busca estrutura de etapas e subniveis uma única vez
+  /**
+   * Busca estrutura das etapas e subníveis da jornada (executa uma única vez no mount).
+   */
   const fetchEstruturaJornada = useCallback(async () => {
     setLoading(true);
     try {
@@ -43,44 +45,46 @@ export const useClienteFishbone = (filtros: { clienteIds?: string[] }) => {
     }
   }, []);
 
-  // Busca todos os clientes ativos para o seletor lateral
-  // Busca clientes através da tabela empresa_clientes, filtrando por empresas proprietárias do tipo 'intragrupo'
+  /**
+   * Busca todos os clientes ativos que são clientes das empresas do grupo intragrupo.
+   * Utiliza a tabela empresa_clientes, garantindo que o campo empresa_proprietaria seja do tipo 'intragrupo'.
+   * Só retorna clientes ativos, evitando duplicidade.
+   */
   const fetchClientes = useCallback(async () => {
     setLoading(true);
     try {
+      // Busca todas as relações empresa_proprietaria (intragrupo) -> empresa_cliente
       const { data, error } = await supabase
         .from('empresa_clientes')
         .select(`
           empresa_cliente:empresas!empresa_clientes_empresa_cliente_id_fkey(id, nome, descricao, tipo, logo_url, status),
           empresa_proprietaria:empresas!empresa_clientes_empresa_proprietaria_id_fkey(id, nome, tipo)
         `)
-        .eq('status', true)
-        .eq('empresa_proprietaria.tipo', 'intragrupo')
         .order('empresa_cliente.nome', { ascending: true });
 
       if (error) throw new Error(error.message);
 
-      // Transforma os dados para o formato esperado pelo componente (ClienteOption interface)
+      // Filtra apenas empresas clientes ativas, vinculadas a proprietárias do tipo intragrupo
       const clientesFormatados = (data || [])
-        .map((rel: any) => 
-          rel.empresa_cliente && rel.empresa_proprietaria
-            ? {
-                id: rel.empresa_cliente.id,
-                nome: rel.empresa_cliente.nome,
-                tipo: rel.empresa_cliente.tipo,
-                descricao: rel.empresa_cliente.descricao,
-                logo_url: rel.empresa_cliente.logo_url,
-                status: rel.empresa_cliente.status,
-                // Informação da empresa proprietária no formato esperado pela interface ClienteOption
-                empresa_proprietaria: {
-                  id: rel.empresa_proprietaria.id,
-                  nome: rel.empresa_proprietaria.nome,
-                  tipo: rel.empresa_proprietaria.tipo,
-                },
-              }
-            : null
+        .filter((rel: any) =>
+          rel.empresa_cliente &&
+          rel.empresa_cliente.status === true &&
+          rel.empresa_proprietaria &&
+          rel.empresa_proprietaria.tipo === 'intragrupo'
         )
-        .filter(Boolean);
+        .map((rel: any) => ({
+          id: rel.empresa_cliente.id,
+          nome: rel.empresa_cliente.nome,
+          tipo: rel.empresa_cliente.tipo,
+          descricao: rel.empresa_cliente.descricao,
+          logo_url: rel.empresa_cliente.logo_url,
+          status: rel.empresa_cliente.status,
+          empresa_proprietaria: {
+            id: rel.empresa_proprietaria.id,
+            nome: rel.empresa_proprietaria.nome,
+            tipo: rel.empresa_proprietaria.tipo,
+          },
+        }));
 
       setClientes(clientesFormatados);
     } catch (err: any) {
@@ -91,7 +95,9 @@ export const useClienteFishbone = (filtros: { clienteIds?: string[] }) => {
     }
   }, []);
 
-  // Busca os dados do cliente e os seus mapeamentos
+  /**
+   * Busca dados detalhados do cliente selecionado e seus mapeamentos (fornecedores por etapa/subnível).
+   */
   const carregarDadosCliente = useCallback(async (id: string) => {
     setLoading(true);
     setError(null);
@@ -149,7 +155,10 @@ export const useClienteFishbone = (filtros: { clienteIds?: string[] }) => {
     }
   }, [filtros?.clienteIds, carregarDadosCliente]);
 
-  // Transforma os dados em estrutura ClienteFishboneView
+  /**
+   * Monta a estrutura do diagrama Fishbone para o cliente selecionado,
+   * agrupando etapas, subníveis e fornecedores.
+   */
   const fishboneData = useMemo(() => {
     if (!filtros?.clienteIds || !cliente || etapas.length === 0) {
       return [];
@@ -164,7 +173,7 @@ export const useClienteFishbone = (filtros: { clienteIds?: string[] }) => {
       },
       etapas: etapas.map(etapa => {
         const fornecedoresDaEtapa = mapeamentos.filter(m => m.etapa_id === etapa.id && !m.subnivel_id);
-        // Buscar subníveis da etapa no estado global - do Supabase vem como subniveis_etapa
+        // Buscar subníveis da etapa (Supabase retorna como subniveis_etapa)
         const etapaCompleta = etapas.find(e => e.id === etapa.id) as any;
         const subnivelsDaEtapa = etapaCompleta?.subniveis_etapa || etapaCompleta?.subniveis || [];
         const subniveis = subnivelsDaEtapa.map((subnivel: any) => {
@@ -205,39 +214,33 @@ export const useClienteFishbone = (filtros: { clienteIds?: string[] }) => {
     return [clienteFishboneView];
   }, [cliente, etapas, mapeamentos, filtros?.clienteIds]);
 
-  // Calculamos nodes e edges vazios para manter compatibilidade
+  // Mantém nodes e edges vazios para compatibilidade futura (diagrama customizado)
   const { nodes, edges } = useMemo(() => {
     return { nodes: [], edges: [] };
   }, []);
 
-  // Cálculo das estatísticas para o FishboneControls
+  /**
+   * Calcula estatísticas para controles e métricas do Fishbone.
+   */
   const stats = useMemo(() => {
-    // clientes: 1 se cliente está definido, 0 se não
     const clientesCount = cliente ? 1 : 0;
-    // totalParceiros: soma dos fornecedores que são parceiros
     const totalParceiros = mapeamentos.filter(m => m.empresa_fornecedora?.tipo === 'parceiro').length;
-    // totalFornecedores: soma total dos fornecedores
     const totalFornecedores = mapeamentos.length;
-    // totalGaps: exemplo - etapas sem fornecedores
     const totalGaps = etapas.reduce((acc, etapa) => {
       const count = mapeamentos.filter(m => m.etapa_id === etapa.id).length;
       return acc + (count === 0 ? 1 : 0);
     }, 0);
-    // totalEtapas
     const totalEtapas = etapas.length;
-    // coberturaPorcentual: % de etapas que possuem ao menos um fornecedor
     const etapasComFornecedores = etapas.filter(etapa =>
       mapeamentos.some(m => m.etapa_id === etapa.id)
     ).length;
     const coberturaPorcentual = totalEtapas > 0
       ? Math.round((etapasComFornecedores / totalEtapas) * 100)
       : 0;
-    // parceirosVsFornecedores
     const parceirosVsFornecedores = {
       parceiros: totalParceiros,
       fornecedores: totalFornecedores - totalParceiros
     };
-    // gapsPorEtapa: id da etapa -> número de gaps (0 se tem fornecedor, 1 se não tem)
     const gapsPorEtapa: Record<string, number> = {};
     etapas.forEach((etapa) => {
       const count = mapeamentos.filter(m => m.etapa_id === etapa.id).length;
@@ -256,6 +259,6 @@ export const useClienteFishbone = (filtros: { clienteIds?: string[] }) => {
     };
   }, [cliente, mapeamentos, etapas]);
 
-  // Retorna também a lista de clientes para o seletor lateral e dados da fishbone
+  // Retorna lista de clientes para o seletor lateral + dados da fishbone
   return { nodes, edges, fishboneData, loading, error, cliente, etapas, stats, clientes };
 };
