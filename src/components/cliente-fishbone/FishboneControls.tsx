@@ -13,14 +13,13 @@ import {
   AlertTriangle
 } from "lucide-react";
 import { EtapaJornada } from "@/types/mapa-parceiros";
+import { 
+  FishboneZoomLevel, 
+  ZOOM_CONFIGS, 
+  validateZoomLevel 
+} from '@/types/cliente-fishbone-filters';
 
 // Tipos robustos
-type FishboneZoomLevel = {
-  level: 'overview' | 'medium' | 'detailed';
-  showSubniveis: boolean;
-  showAllFornecedores: boolean;
-};
-
 type ParceirosVsFornecedores = {
   parceiros: number;
   fornecedores: number;
@@ -69,11 +68,7 @@ const zoomLevels = [
   }
 ];
 
-const zoomConfig: Record<FishboneZoomLevel['level'], FishboneZoomLevel> = {
-  overview: { level: 'overview', showSubniveis: false, showAllFornecedores: false },
-  medium: { level: 'medium', showSubniveis: true, showAllFornecedores: false },
-  detailed: { level: 'detailed', showSubniveis: true, showAllFornecedores: true }
-};
+const zoomConfig = ZOOM_CONFIGS;
 
 const FishboneControls: React.FC<FishboneControlsProps> = ({
   zoomLevel,
@@ -85,14 +80,35 @@ const FishboneControls: React.FC<FishboneControlsProps> = ({
   showOnlyGaps,
   onToggleGaps
 }) => {
+  // Validate input parameters
+  if (!validateZoomLevel(zoomLevel)) {
+    console.warn('[FishboneControls] Invalid zoom level provided:', zoomLevel);
+    return null;
+  }
+
+  if (typeof showOnlyParceiros !== 'boolean') {
+    console.warn('[FishboneControls] showOnlyParceiros must be boolean:', showOnlyParceiros);
+  }
+
+  if (typeof showOnlyGaps !== 'boolean') {
+    console.warn('[FishboneControls] showOnlyGaps must be boolean:', showOnlyGaps);
+  }
+
   const handleZoomChange = (newLevel: FishboneZoomLevel['level']) => {
+    if (!['overview', 'medium', 'detailed'].includes(newLevel)) {
+      console.warn('[FishboneControls] Invalid zoom level:', newLevel);
+      return;
+    }
     onZoomChange(zoomConfig[newLevel]);
   };
 
-  // Função para pegar o nome da etapa pelo id
+  // Função para pegar o nome da etapa pelo id com validação
   const getEtapaNome = (etapaId: string) => {
+    if (!etapaId || typeof etapaId !== 'string') {
+      return 'Etapa inválida';
+    }
     const etapa = etapas.find(e => e.id === etapaId);
-    return etapa?.nome ?? etapaId.slice(0, 8) + "...";
+    return etapa?.nome ?? `Etapa ${etapaId.slice(0, 8)}...`;
   };
 
   return (
@@ -144,6 +160,7 @@ const FishboneControls: React.FC<FishboneControlsProps> = ({
               variant={showOnlyParceiros ? "default" : "outline"}
               onClick={() => onToggleParceiros(!showOnlyParceiros)}
               className="justify-start"
+              disabled={typeof onToggleParceiros !== 'function'}
             >
               <Users className="h-4 w-4 mr-2" />
               {showOnlyParceiros ? 'Mostrando' : 'Mostrar'} apenas Parceiros
@@ -152,6 +169,7 @@ const FishboneControls: React.FC<FishboneControlsProps> = ({
               variant={showOnlyGaps ? "default" : "outline"}
               onClick={() => onToggleGaps(!showOnlyGaps)}
               className="justify-start"
+              disabled={typeof onToggleGaps !== 'function'}
             >
               <AlertTriangle className="h-4 w-4 mr-2" />
               {showOnlyGaps ? 'Mostrando' : 'Mostrar'} apenas Gaps
@@ -214,18 +232,23 @@ const FishboneControls: React.FC<FishboneControlsProps> = ({
               <div className="text-xs font-medium text-muted-foreground">
                 Gaps por Etapa
               </div>
-              {Object.entries(stats.gapsPorEtapa).map(([etapaId, gaps]) => (
-                gaps > 0 && (
+              {Object.entries(stats.gapsPorEtapa)
+                .filter(([etapaId, gaps]) => gaps > 0 && Number.isFinite(gaps))
+                .map(([etapaId, gaps]) => (
                   <div key={etapaId} className="flex justify-between items-center">
                     <span className="text-xs text-muted-foreground truncate">
                       {getEtapaNome(etapaId)}
                     </span>
                     <Badge variant="outline" className="text-xs">
-                      {Number.isFinite(gaps) ? gaps : 0}
+                      {gaps}
                     </Badge>
                   </div>
-                )
-              ))}
+                ))}
+              {Object.entries(stats.gapsPorEtapa).filter(([, gaps]) => gaps > 0).length === 0 && (
+                <div className="text-xs text-muted-foreground italic">
+                  Nenhum gap encontrado
+                </div>
+              )}
             </div>
           )}
         </div>

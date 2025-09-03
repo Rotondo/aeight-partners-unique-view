@@ -4,7 +4,8 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { X, Users } from "lucide-react";
 import { MultiSelect } from "@/components/ui/MultiSelect";
-import { ClienteOption } from "@/hooks/useClientesPorEmpresa";
+import { ClienteOption } from "@/types/cliente-fishbone";
+import { validateClienteOptionArray, logValidationResults } from '@/types/cliente-fishbone-validation';
 
 interface ClienteSelectorProps {
   clientes: ClienteOption[];
@@ -17,6 +18,42 @@ const ClienteSelector: React.FC<ClienteSelectorProps> = ({
   selectedClienteIds,
   onSelectionChange
 }) => {
+  // Validate input data
+  React.useEffect(() => {
+    const validation = validateClienteOptionArray(clientes);
+    logValidationResults('ClienteSelector', validation);
+    
+    if (!validation.isValid) {
+      console.error('[ClienteSelector] Invalid clientes data received');
+    }
+  }, [clientes]);
+
+  // Input validation
+  if (!Array.isArray(clientes)) {
+    console.error('[ClienteSelector] clientes prop must be an array');
+    return (
+      <Card>
+        <CardContent className="p-4">
+          <div className="text-center text-destructive">
+            <p>Erro: Dados de clientes inválidos</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!Array.isArray(selectedClienteIds)) {
+    console.error('[ClienteSelector] selectedClienteIds prop must be an array');
+    return (
+      <Card>
+        <CardContent className="p-4">
+          <div className="text-center text-destructive">
+            <p>Erro: IDs de clientes selecionados inválidos</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
   // Gera options do MultiSelect com label enriquecido (nome + proprietária)
   const clientesOptions = clientes.map(cliente => ({
     value: cliente.id,
@@ -29,7 +66,36 @@ const ClienteSelector: React.FC<ClienteSelectorProps> = ({
   const selectedClientes = clientes.filter(c => selectedClienteIds.includes(c.id));
 
   const handleRemoveCliente = (clienteId: string) => {
+    if (!clienteId || typeof clienteId !== 'string') {
+      console.warn('[ClienteSelector] Invalid clienteId for removal:', clienteId);
+      return;
+    }
+    
+    if (typeof onSelectionChange !== 'function') {
+      console.error('[ClienteSelector] onSelectionChange must be a function');
+      return;
+    }
+    
     onSelectionChange(selectedClienteIds.filter(id => id !== clienteId));
+  };
+
+  const handleSelectionChange = (newIds: string[]) => {
+    if (!Array.isArray(newIds)) {
+      console.warn('[ClienteSelector] New selection must be an array:', newIds);
+      return;
+    }
+    
+    if (!newIds.every(id => typeof id === 'string' && id.length > 0)) {
+      console.warn('[ClienteSelector] All selected IDs must be non-empty strings:', newIds);
+      return;
+    }
+    
+    if (typeof onSelectionChange !== 'function') {
+      console.error('[ClienteSelector] onSelectionChange must be a function');
+      return;
+    }
+    
+    onSelectionChange(newIds);
   };
 
   return (
@@ -46,7 +112,7 @@ const ClienteSelector: React.FC<ClienteSelectorProps> = ({
           <MultiSelect
             options={clientesOptions}
             values={selectedClienteIds}
-            onChange={onSelectionChange}
+            onChange={handleSelectionChange}
             placeholder="Escolha os clientes..."
           />
 
