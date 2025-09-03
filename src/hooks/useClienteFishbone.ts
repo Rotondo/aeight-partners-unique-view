@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
-import { MapeamentoAgrupado, MapeamentoFornecedor } from '@/types/cliente-fishbone';
+import { MapeamentoAgrupado, MapeamentoFornecedor, ClienteOption } from '@/types/cliente-fishbone';
 import { EtapaJornada } from '@/types/mapa-parceiros';
+import { Empresa } from '@/types/empresa';
 import { Node, Edge } from '@xyflow/react';
 
 // Constantes do layout do diagrama
@@ -9,6 +10,22 @@ const NODE_WIDTH = 200;
 const NODE_HEIGHT = 60;
 const HORIZONTAL_SPACING = 250;
 const VERTICAL_SPACING = 120;
+
+// Interface for empresa_clientes relation response
+interface EmpresaClienteRelation {
+  empresa_cliente: {
+    id: string;
+    nome: string;
+    descricao: string | null;
+    tipo: 'intragrupo' | 'parceiro' | 'cliente';
+    status: boolean;
+  } | null;
+  empresa_proprietaria: {
+    id: string;
+    nome: string;
+    tipo: 'intragrupo' | 'parceiro' | 'cliente';
+  } | null;
+}
 
 // Helper function for retry logic
 const retryAsync = async <T>(
@@ -42,8 +59,8 @@ const retryAsync = async <T>(
 export const useClienteFishbone = (filtros: { clienteIds?: string[] }) => {
   const [etapas, setEtapas] = useState<EtapaJornada[]>([]);
   const [mapeamentos, setMapeamentos] = useState<MapeamentoFornecedor[]>([]);
-  const [cliente, setCliente] = useState<any>(null);
-  const [clientes, setClientes] = useState<any[]>([]);
+  const [cliente, setCliente] = useState<Empresa | null>(null);
+  const [clientes, setClientes] = useState<ClienteOption[]>([]);
   
   // Separate loading states for better UX and debugging
   const [loadingEstrutura, setLoadingEstrutura] = useState(false);
@@ -81,7 +98,7 @@ export const useClienteFishbone = (filtros: { clienteIds?: string[] }) => {
       
       console.log('[useClienteFishbone] Estrutura carregada com sucesso:', data?.length, 'etapas');
       setEtapas(data || []);
-    } catch (err: any) {
+    } catch (err: unknown) {
       const errorMessage = 'Falha ao carregar a estrutura da jornada.';
       console.error('[useClienteFishbone] Erro ao carregar estrutura:', err);
       setError(errorMessage);
@@ -102,11 +119,11 @@ export const useClienteFishbone = (filtros: { clienteIds?: string[] }) => {
       
       const data = await retryAsync(async () => {
         // Busca todas as relações empresa_proprietaria (intragrupo) -> empresa_cliente
-        // Fixed: Removed problematic order by nested field
+        // Fixed: Removed problematic order by nested field and logo_url field
         const { data, error } = await supabase
           .from('empresa_clientes')
           .select(`
-            empresa_cliente:empresas!empresa_clientes_empresa_cliente_id_fkey(id, nome, descricao, tipo, logo_url, status),
+            empresa_cliente:empresas!empresa_clientes_empresa_cliente_id_fkey(id, nome, descricao, tipo, status),
             empresa_proprietaria:empresas!empresa_clientes_empresa_proprietaria_id_fkey(id, nome, tipo)
           `);
 
@@ -119,8 +136,8 @@ export const useClienteFishbone = (filtros: { clienteIds?: string[] }) => {
       });
 
       // Filtra apenas empresas clientes ativas, vinculadas a proprietárias do tipo intragrupo
-      const clientesFormatados = (data || [])
-        .filter((rel: any) => {
+      const clientesFormatados: ClienteOption[] = (data || [])
+        .filter((rel: EmpresaClienteRelation) => {
           const isValid = rel.empresa_cliente &&
             rel.empresa_cliente.status === true &&
             rel.empresa_proprietaria &&
@@ -132,24 +149,24 @@ export const useClienteFishbone = (filtros: { clienteIds?: string[] }) => {
           
           return isValid;
         })
-        .map((rel: any) => ({
-          id: rel.empresa_cliente.id,
-          nome: rel.empresa_cliente.nome,
-          tipo: rel.empresa_cliente.tipo,
-          descricao: rel.empresa_cliente.descricao,
-          logo_url: rel.empresa_cliente.logo_url,
-          status: rel.empresa_cliente.status,
+        .map((rel: EmpresaClienteRelation): ClienteOption => ({
+          id: rel.empresa_cliente!.id,
+          nome: rel.empresa_cliente!.nome,
+          tipo: rel.empresa_cliente!.tipo,
+          descricao: rel.empresa_cliente!.descricao,
+          logo_url: undefined, // Field not available in database
+          status: rel.empresa_cliente!.status,
           empresa_proprietaria: {
-            id: rel.empresa_proprietaria.id,
-            nome: rel.empresa_proprietaria.nome,
-            tipo: rel.empresa_proprietaria.tipo,
+            id: rel.empresa_proprietaria!.id,
+            nome: rel.empresa_proprietaria!.nome,
+            tipo: rel.empresa_proprietaria!.tipo,
           },
         }))
         .sort((a, b) => a.nome.localeCompare(b.nome)); // Sort after filtering
 
       console.log('[useClienteFishbone] Clientes carregados com sucesso:', clientesFormatados.length);
       setClientes(clientesFormatados);
-    } catch (err: any) {
+    } catch (err: unknown) {
       const errorMessage = 'Falha ao carregar a lista de clientes.';
       console.error('[useClienteFishbone] Erro ao carregar clientes:', err);
       setError(errorMessage);
@@ -196,9 +213,15 @@ export const useClienteFishbone = (filtros: { clienteIds?: string[] }) => {
       setCliente(clienteData);
 
       // Corrige o tipo de empresa_fornecedora para garantir compatibilidade com MapeamentoFornecedor
-      const mapeamentosCorrigidos = (mapeamentosData || []).map((mapeamento: any) => {
+      const mapeamentosCorrigidos: MapeamentoFornecedor[] = (mapeamentosData || []).map((mapeamento: Record<string, any>): MapeamentoFornecedor => {
         return {
-          ...mapeamento,
+          id: mapeamento.id,
+          cliente_id: mapeamento.cliente_id,
+          etapa_id: mapeamento.etapa_id,
+          subnivel_id: mapeamento.subnivel_id,
+          empresa_fornecedora_id: mapeamento.empresa_fornecedora_id,
+          observacoes: mapeamento.observacoes,
+          ativo: mapeamento.ativo,
           empresa_fornecedora:
             mapeamento.empresa_fornecedora &&
             typeof mapeamento.empresa_fornecedora === 'object' &&
@@ -210,9 +233,9 @@ export const useClienteFishbone = (filtros: { clienteIds?: string[] }) => {
 
       setMapeamentos(mapeamentosCorrigidos);
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('[useClienteFishbone] Erro ao carregar dados do cliente:', err);
-      setError(err.message);
+      setError(err instanceof Error ? err.message : 'Erro desconhecido ao carregar dados do cliente');
     } finally {
       setLoadingDadosCliente(false);
     }
@@ -253,9 +276,9 @@ export const useClienteFishbone = (filtros: { clienteIds?: string[] }) => {
       etapas: etapas.map(etapa => {
         const fornecedoresDaEtapa = mapeamentos.filter(m => m.etapa_id === etapa.id && !m.subnivel_id);
         // Buscar subníveis da etapa (Supabase retorna como subniveis_etapa)
-        const etapaCompleta = etapas.find(e => e.id === etapa.id) as any;
+        const etapaCompleta = etapas.find(e => e.id === etapa.id) as EtapaJornada & { subniveis_etapa?: any[]; subniveis?: any[] };
         const subnivelsDaEtapa = etapaCompleta?.subniveis_etapa || etapaCompleta?.subniveis || [];
-        const subniveis = subnivelsDaEtapa.map((subnivel: any) => {
+        const subniveis = subnivelsDaEtapa.map((subnivel: { id: string; nome: string; descricao?: string }) => {
           const fornecedoresDoSubnivel = mapeamentos.filter(m => m.subnivel_id === subnivel.id);
           return {
             id: subnivel.id,
