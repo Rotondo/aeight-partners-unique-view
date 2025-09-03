@@ -4,6 +4,7 @@ import { MapeamentoAgrupado, MapeamentoFornecedor, ClienteOption } from '@/types
 import { EtapaJornada } from '@/types/mapa-parceiros';
 import { Empresa } from '@/types/empresa';
 import { Node, Edge } from '@xyflow/react';
+import { validateFishboneHookData, logValidationResults } from '@/types/cliente-fishbone-validation';
 
 // Constantes do layout do diagrama
 const NODE_WIDTH = 200;
@@ -57,6 +58,16 @@ const retryAsync = async <T>(
  * @param filtros - Filtros opcionais, como clienteIds para visualização específica.
  */
 export const useClienteFishbone = (filtros: { clienteIds?: string[] }) => {
+  // Input validation
+  if (filtros && filtros.clienteIds && !Array.isArray(filtros.clienteIds)) {
+    console.warn('[useClienteFishbone] clienteIds must be an array, received:', typeof filtros.clienteIds);
+    filtros = { clienteIds: [] };
+  }
+  
+  if (filtros?.clienteIds && !filtros.clienteIds.every(id => typeof id === 'string' && id.length > 0)) {
+    console.warn('[useClienteFishbone] All clienteIds must be non-empty strings:', filtros.clienteIds);
+    filtros = { clienteIds: filtros.clienteIds.filter(id => typeof id === 'string' && id.length > 0) };
+  }
   const [etapas, setEtapas] = useState<EtapaJornada[]>([]);
   const [mapeamentos, setMapeamentos] = useState<MapeamentoFornecedor[]>([]);
   const [cliente, setCliente] = useState<Empresa | null>(null);
@@ -250,6 +261,9 @@ export const useClienteFishbone = (filtros: { clienteIds?: string[] }) => {
   useEffect(() => {
     if (filtros?.clienteIds && filtros.clienteIds.length === 1) {
       carregarDadosCliente(filtros.clienteIds[0]);
+    } else if (filtros?.clienteIds && filtros.clienteIds.length > 1) {
+      console.warn('[useClienteFishbone] Multiple clients selected, but only single client view is supported. Using first client:', filtros.clienteIds[0]);
+      carregarDadosCliente(filtros.clienteIds[0]);
     } else {
       setCliente(null);
       setMapeamentos([]);
@@ -261,7 +275,7 @@ export const useClienteFishbone = (filtros: { clienteIds?: string[] }) => {
    * agrupando etapas, subníveis e fornecedores.
    */
   const fishboneData = useMemo(() => {
-    if (!filtros?.clienteIds || !cliente || etapas.length === 0) {
+    if (!filtros?.clienteIds || filtros.clienteIds.length === 0 || !cliente || etapas.length === 0) {
       return [];
     }
 
@@ -283,13 +297,15 @@ export const useClienteFishbone = (filtros: { clienteIds?: string[] }) => {
             id: subnivel.id,
             nome: subnivel.nome,
             descricao: subnivel.descricao,
-            fornecedores: fornecedoresDoSubnivel.map(f => ({
-              id: f.empresa_fornecedora_id,
-              nome: f.empresa_fornecedora?.nome || '',
-              is_parceiro: f.empresa_fornecedora?.tipo === 'parceiro',
-              performance_score: 0,
-              logo_url: f.empresa_fornecedora?.logo_url
-            }))
+            fornecedores: fornecedoresDoSubnivel
+              .filter(f => f.empresa_fornecedora) // Ensure valid supplier data
+              .map(f => ({
+                id: f.empresa_fornecedora_id,
+                nome: f.empresa_fornecedora?.nome || 'Nome não disponível',
+                is_parceiro: f.empresa_fornecedora?.tipo === 'parceiro',
+                performance_score: 0,
+                logo_url: f.empresa_fornecedora?.logo_url
+              }))
           };
         });
 
@@ -299,14 +315,16 @@ export const useClienteFishbone = (filtros: { clienteIds?: string[] }) => {
           descricao: etapa.descricao,
           cor: etapa.cor,
           gaps: Math.max(0, 1 - fornecedoresDaEtapa.length - subniveis.reduce((acc, sub) => acc + sub.fornecedores.length, 0)),
-          fornecedores: fornecedoresDaEtapa.map(f => ({
-            id: f.empresa_fornecedora_id,
-            nome: f.empresa_fornecedora?.nome || '',
-            descricao: f.empresa_fornecedora?.descricao,
-            is_parceiro: f.empresa_fornecedora?.tipo === 'parceiro',
-            performance_score: 0,
-            logo_url: f.empresa_fornecedora?.logo_url
-          })),
+          fornecedores: fornecedoresDaEtapa
+            .filter(f => f.empresa_fornecedora) // Ensure valid supplier data
+            .map(f => ({
+              id: f.empresa_fornecedora_id,
+              nome: f.empresa_fornecedora?.nome || 'Nome não disponível',
+              descricao: f.empresa_fornecedora?.descricao,
+              is_parceiro: f.empresa_fornecedora?.tipo === 'parceiro',
+              performance_score: 0,
+              logo_url: f.empresa_fornecedora?.logo_url
+            })),
           subniveis
         };
       })
@@ -326,25 +344,25 @@ export const useClienteFishbone = (filtros: { clienteIds?: string[] }) => {
   const stats = useMemo(() => {
     const clientesCount = cliente ? 1 : 0;
     const totalParceiros = mapeamentos.filter(m => m.empresa_fornecedora?.tipo === 'parceiro').length;
-    const totalFornecedores = mapeamentos.length;
+    const totalFornecedores = mapeamentos.filter(m => m.empresa_fornecedora).length; // Only count valid suppliers
     const totalGaps = etapas.reduce((acc, etapa) => {
-      const count = mapeamentos.filter(m => m.etapa_id === etapa.id).length;
+      const count = mapeamentos.filter(m => m.etapa_id === etapa.id && m.empresa_fornecedora).length;
       return acc + (count === 0 ? 1 : 0);
     }, 0);
     const totalEtapas = etapas.length;
     const etapasComFornecedores = etapas.filter(etapa =>
-      mapeamentos.some(m => m.etapa_id === etapa.id)
+      mapeamentos.some(m => m.etapa_id === etapa.id && m.empresa_fornecedora)
     ).length;
     const coberturaPorcentual = totalEtapas > 0
       ? Math.round((etapasComFornecedores / totalEtapas) * 100)
       : 0;
     const parceirosVsFornecedores = {
       parceiros: totalParceiros,
-      fornecedores: totalFornecedores - totalParceiros
+      fornecedores: Math.max(0, totalFornecedores - totalParceiros)
     };
     const gapsPorEtapa: Record<string, number> = {};
     etapas.forEach((etapa) => {
-      const count = mapeamentos.filter(m => m.etapa_id === etapa.id).length;
+      const count = mapeamentos.filter(m => m.etapa_id === etapa.id && m.empresa_fornecedora).length;
       gapsPorEtapa[etapa.id] = count === 0 ? 1 : 0;
     });
 
@@ -378,6 +396,22 @@ export const useClienteFishbone = (filtros: { clienteIds?: string[] }) => {
     return {};
   }, [loadingEstrutura, loadingClientes, loadingDadosCliente, etapas.length, clientes.length, mapeamentos.length, cliente?.nome, error]);
 
+  // Validate all data before returning
+  const validationResult = useMemo(() => {
+    return validateFishboneHookData({
+      fishboneData,
+      clientes,
+      cliente,
+      etapas,
+      mapeamentos
+    });
+  }, [fishboneData, clientes, cliente, etapas, mapeamentos]);
+
+  // Log validation results in development
+  useEffect(() => {
+    logValidationResults('useClienteFishbone', validationResult);
+  }, [validationResult]);
+
   return { 
     nodes, 
     edges, 
@@ -398,10 +432,12 @@ export const useClienteFishbone = (filtros: { clienteIds?: string[] }) => {
     retry: {
       fetchEstruturaJornada,
       fetchClientes,
-      carregarDadosCliente: filtros?.clienteIds && filtros.clienteIds.length === 1 
+      carregarDadosCliente: filtros?.clienteIds && filtros.clienteIds.length >= 1 
         ? () => carregarDadosCliente(filtros.clienteIds[0]) 
         : null
     },
+    // Validation results for debugging
+    validation: validationResult,
     // Debug information (only in development)
     ...(process.env.NODE_ENV === 'development' && { debug: debugInfo })
   };

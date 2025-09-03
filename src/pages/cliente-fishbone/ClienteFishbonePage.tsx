@@ -7,31 +7,16 @@ import FishboneVisualization from '@/components/cliente-fishbone/FishboneVisuali
 import FishboneControls from '@/components/cliente-fishbone/FishboneControls';
 import { useClienteFishbone } from '@/hooks/useClienteFishbone';
 import LoadingScreen from '@/components/ui/LoadingScreen';
-
-// Tipos locais para filtros
-type ZoomLevel = {
-  level: 'overview' | 'medium' | 'detailed';
-  showSubniveis: boolean;
-  showAllFornecedores: boolean;
-};
-type Filtros = {
-  clienteId: string | null;
-  zoomLevel: ZoomLevel;
-  showOnlyParceiros: boolean;
-  showOnlyGaps: boolean;
-};
+import { 
+  ClienteFishboneFilters, 
+  DEFAULT_FILTERS, 
+  ZOOM_CONFIGS,
+  validateFilters,
+  FishboneZoomLevel
+} from '@/types/cliente-fishbone-filters';
 
 const ClienteFishbonePage: React.FC = () => {
-  const [filtros, setFiltros] = useState<Filtros>({
-    clienteId: null,
-    zoomLevel: {
-      level: 'overview',
-      showSubniveis: false,
-      showAllFornecedores: false
-    },
-    showOnlyParceiros: false,
-    showOnlyGaps: false
-  });
+  const [filtros, setFiltros] = useState<ClienteFishboneFilters>(DEFAULT_FILTERS);
 
   // Hook: retorna dados do fishbone incluindo lista de clientes para seleção
   const {
@@ -42,16 +27,26 @@ const ClienteFishbonePage: React.FC = () => {
     etapas,
     stats,
     clientes
-  } = useClienteFishbone({ clienteIds: filtros.clienteId ? [filtros.clienteId] : [] });
+  } = useClienteFishbone({ clienteIds: filtros.clienteIds });
 
   const handleClienteSelectionChange = (ids: string[]) => {
+    if (!Array.isArray(ids) || !ids.every(id => typeof id === 'string')) {
+      console.warn('[ClienteFishbonePage] Invalid cliente IDs provided:', ids);
+      return;
+    }
+    
     setFiltros(prev => ({
       ...prev,
-      clienteId: ids.length > 0 ? ids[0] : null // Suporte a múltiplos se quiser
+      clienteIds: ids
     }));
   };
 
-  const handleZoomChange = (zoomLevel: ZoomLevel) => {
+  const handleZoomChange = (zoomLevel: FishboneZoomLevel) => {
+    if (!zoomLevel || typeof zoomLevel.level !== 'string') {
+      console.warn('[ClienteFishbonePage] Invalid zoom level provided:', zoomLevel);
+      return;
+    }
+    
     setFiltros(prev => ({
       ...prev,
       zoomLevel
@@ -59,6 +54,11 @@ const ClienteFishbonePage: React.FC = () => {
   };
 
   const handleToggleParceiros = (showOnlyParceiros: boolean) => {
+    if (typeof showOnlyParceiros !== 'boolean') {
+      console.warn('[ClienteFishbonePage] Invalid showOnlyParceiros value:', showOnlyParceiros);
+      return;
+    }
+    
     setFiltros(prev => ({
       ...prev,
       showOnlyParceiros
@@ -66,6 +66,11 @@ const ClienteFishbonePage: React.FC = () => {
   };
 
   const handleToggleGaps = (showOnlyGaps: boolean) => {
+    if (typeof showOnlyGaps !== 'boolean') {
+      console.warn('[ClienteFishbonePage] Invalid showOnlyGaps value:', showOnlyGaps);
+      return;
+    }
+    
     setFiltros(prev => ({
       ...prev,
       showOnlyGaps
@@ -73,12 +78,37 @@ const ClienteFishbonePage: React.FC = () => {
   };
 
   const handleNodeClick = (nodeId: string, nodeType: string) => {
+    if (!nodeId || !nodeType) {
+      console.warn('[ClienteFishbonePage] Invalid node click data:', { nodeId, nodeType });
+      return;
+    }
     console.log('Node clicked:', nodeId, nodeType);
     // Ação customizada
   };
 
+  // Validate filters
+  if (!validateFilters(filtros)) {
+    console.error('[ClienteFishbonePage] Invalid filters detected, resetting to defaults');
+    setFiltros(DEFAULT_FILTERS);
+  }
+
   if (loading) {
     return <LoadingScreen />;
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto px-4 py-6">
+        <Card className="border-destructive">
+          <CardContent className="p-6">
+            <div className="text-center space-y-2">
+              <h3 className="text-lg font-medium text-destructive">Erro ao carregar dados</h3>
+              <p className="text-sm text-muted-foreground">{error}</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   // Usa a lista completa de clientes do hook ao invés de apenas o cliente selecionado
@@ -103,7 +133,7 @@ const ClienteFishbonePage: React.FC = () => {
         <div className="lg:col-span-1 space-y-4">
           <ClienteSelector
             clientes={clientes || []}
-            selectedClienteIds={filtros.clienteId ? [filtros.clienteId] : []}
+            selectedClienteIds={filtros.clienteIds}
             onSelectionChange={handleClienteSelectionChange}
           />
 
@@ -126,16 +156,16 @@ const ClienteFishbonePage: React.FC = () => {
               <CardTitle className="flex items-center gap-2">
                 <Target className="h-5 w-5" />
                 Visualização Espinha de Peixe
-                {filtros.clienteId && (
+                {filtros.clienteIds.length > 0 && (
                   <span className="text-sm font-normal text-muted-foreground">
-                    (1 cliente selecionado)
+                    ({filtros.clienteIds.length} cliente{filtros.clienteIds.length > 1 ? 's' : ''} selecionado{filtros.clienteIds.length > 1 ? 's' : ''})
                   </span>
                 )}
               </CardTitle>
             </CardHeader>
             <Separator />
             <CardContent className="p-6">
-              {!filtros.clienteId ? (
+              {filtros.clienteIds.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-96 text-center space-y-4">
                   <Fish className="h-16 w-16 text-muted-foreground" />
                   <div>
@@ -151,6 +181,10 @@ const ClienteFishbonePage: React.FC = () => {
                 <FishboneVisualization
                   fishboneData={fishboneData}
                   zoomLevel={filtros.zoomLevel}
+                  filters={{
+                    showOnlyParceiros: filtros.showOnlyParceiros,
+                    showOnlyGaps: filtros.showOnlyGaps
+                  }}
                   onNodeClick={handleNodeClick}
                 />
               )}
@@ -158,7 +192,7 @@ const ClienteFishbonePage: React.FC = () => {
           </Card>
 
           {/* Card de Legenda */}
-          {filtros.clienteId && (
+          {filtros.clienteIds.length > 0 && (
             <Card className="mt-4">
               <CardHeader>
                 <CardTitle className="text-sm">Legenda</CardTitle>
