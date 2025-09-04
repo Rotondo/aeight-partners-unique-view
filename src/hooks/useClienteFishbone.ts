@@ -108,60 +108,37 @@ export const useClienteFishbone = (filtros: { clienteIds?: string[] }) => {
   }, []);
 
   /**
-   * Busca todos os clientes ativos que são clientes das empresas do grupo intragrupo.
-   * Utiliza a tabela empresa_clientes, garantindo que o campo empresa_proprietaria seja do tipo 'intragrupo'.
-   * Só retorna clientes ativos, evitando duplicidade.
+   * Busca todos os clientes ativos - simplificado para mostrar todas empresas do tipo cliente.
    */
   const fetchClientes = useCallback(async () => {
     setLoadingClientes(true);
     try {
-      console.log('[useClienteFishbone] Carregando lista de clientes...');
+      console.log('[useClienteFishbone] Carregando todos os clientes ativos...');
       
       const data = await retryAsync(async () => {
-        // Busca todas as relações empresa_proprietaria (intragrupo) -> empresa_cliente
-        // Fixed: Removed problematic order by nested field and logo_url field
         const { data, error } = await supabase
-          .from('empresa_clientes')
-          .select(`
-            empresa_cliente:empresas!empresa_clientes_empresa_cliente_id_fkey(id, nome, descricao, tipo, status),
-            empresa_proprietaria:empresas!empresa_clientes_empresa_proprietaria_id_fkey(id, nome, tipo)
-          `);
+          .from('empresas')
+          .select('id, nome, tipo, descricao, status')
+          .eq('tipo', 'cliente')
+          .eq('status', true)
+          .order('nome');
 
         if (error) {
-          console.error('[useClienteFishbone] Erro na query empresa_clientes:', error);
+          console.error('[useClienteFishbone] Erro ao buscar clientes:', error);
           throw new Error(error.message);
         }
         
         return data;
       });
 
-      // Filtra apenas empresas clientes ativas, vinculadas a proprietárias do tipo intragrupo
-      const clientesFormatados: ClienteOption[] = (data || [])
-        .filter((rel: EmpresaClienteRelation) => {
-          const isValid = rel.empresa_cliente &&
-            rel.empresa_cliente.status === true &&
-            rel.empresa_proprietaria &&
-            rel.empresa_proprietaria.tipo === 'intragrupo';
-          
-          if (!isValid) {
-            console.log('[useClienteFishbone] Cliente filtrado:', rel.empresa_cliente?.nome, 'status:', rel.empresa_cliente?.status, 'proprietaria tipo:', rel.empresa_proprietaria?.tipo);
-          }
-          
-          return isValid;
-        })
-        .map((rel: EmpresaClienteRelation): ClienteOption => ({
-          id: rel.empresa_cliente!.id,
-          nome: rel.empresa_cliente!.nome,
-          tipo: rel.empresa_cliente!.tipo,
-          descricao: rel.empresa_cliente!.descricao,
-          status: rel.empresa_cliente!.status,
-          empresa_proprietaria: {
-            id: rel.empresa_proprietaria!.id,
-            nome: rel.empresa_proprietaria!.nome,
-            tipo: rel.empresa_proprietaria!.tipo,
-          },
-        }))
-        .sort((a, b) => a.nome.localeCompare(b.nome)); // Sort after filtering
+      const clientesFormatados: ClienteOption[] = (data || []).map(empresa => ({
+        id: empresa.id,
+        nome: empresa.nome,
+        tipo: empresa.tipo,
+        descricao: empresa.descricao,
+        status: empresa.status,
+        empresa_proprietaria: null // Simplificado - sem relação proprietária por enquanto
+      }));
 
       console.log('[useClienteFishbone] Clientes carregados com sucesso:', clientesFormatados.length);
       setClientes(clientesFormatados);

@@ -4,9 +4,19 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Star, X } from "lucide-react";
-import { ClienteOption } from "@/hooks/useClientesPorEmpresa";
+import { ClienteOption } from "@/types/cliente-fishbone";
 
-export interface ClienteSelecionado extends ClienteOption {
+export interface ClienteSelecionado {
+  id: string;
+  nome: string;
+  tipo?: string;
+  descricao?: string;
+  status?: boolean;
+  empresa_proprietaria: {
+    id: string;
+    nome: string;
+    tipo: string;
+  } | null;
   prioridade: number;
 }
 

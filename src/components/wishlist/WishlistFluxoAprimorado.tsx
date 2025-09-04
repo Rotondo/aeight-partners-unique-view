@@ -35,7 +35,7 @@ import { pt } from "date-fns/locale";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import { useWishlist } from "@/contexts/WishlistContext";
-import { useClientesPorEmpresa } from "@/hooks/useClientesPorEmpresa";
+// Removed useClientesPorEmpresa import - using ClienteOption from types
 import { useCrm } from "@/contexts/CrmContext";
 import { useAuth } from "@/hooks/useAuth";
 import ClienteMultiSelect, { ClienteSelecionado } from "./ClienteMultiSelect";
@@ -65,7 +65,9 @@ const WishlistFluxoAprimorado: React.FC<WishlistFluxoAprimoradoProps> = ({
   onClose,
 }) => {
   const { addWishlistItem, fetchWishlistItems } = useWishlist();
-  const { clientes, loading: loadingClientes, fetchClientesPorEmpresa } = useClientesPorEmpresa();
+  // Estados para clientes
+  const [clientes, setClientes] = useState<any[]>([]);
+  const [loadingClientes, setLoadingClientes] = useState(false);
   const { createAcaoCrm } = useCrm();
   const { user } = useAuth();
 
@@ -132,9 +134,43 @@ const WishlistFluxoAprimorado: React.FC<WishlistFluxoAprimoradoProps> = ({
   // Carregar clientes do parceiro quando selecionado
   useEffect(() => {
     if (parceiroSelecionado && currentStep === "clientes_parceiro") {
-      fetchClientesPorEmpresa(parceiroSelecionado);
+      const fetchClientesParceiro = async () => {
+        setLoadingClientes(true);
+        try {
+          const { data, error } = await supabase
+            .from('empresas')
+            .select('id, nome, tipo, descricao, status')
+            .eq('tipo', 'cliente')
+            .eq('status', true)
+            .order('nome');
+
+          if (error) throw error;
+
+          const clientesFormatados = (data || []).map(empresa => ({
+            id: empresa.id,
+            nome: empresa.nome,
+            tipo: empresa.tipo,
+            descricao: empresa.descricao,
+            status: empresa.status,
+            empresa_proprietaria: null
+          }));
+
+          setClientes(clientesFormatados);
+        } catch (err) {
+          console.error('Erro ao carregar clientes:', err);
+          toast({
+            title: 'Erro',
+            description: 'Não foi possível carregar os clientes',
+            variant: 'destructive',
+          });
+        } finally {
+          setLoadingClientes(false);
+        }
+      };
+
+      fetchClientesParceiro();
     }
-  }, [parceiroSelecionado, currentStep, fetchClientesPorEmpresa]);
+  }, [parceiroSelecionado, currentStep]);
 
   // Carregar clientes da marca para reciprocidade
   useEffect(() => {

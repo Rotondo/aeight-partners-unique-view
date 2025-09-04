@@ -22,7 +22,7 @@ import { ArrowRight, ArrowLeft, Check, Loader2, AlertCircle } from "lucide-react
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import { useWishlist } from "@/contexts/WishlistContext";
-import { useClientesPorEmpresa } from "@/hooks/useClientesPorEmpresa";
+// Removed useClientesPorEmpresa import - using ClienteOption from types
 import { useCrm } from "@/contexts/CrmContext";
 import { useAuth } from "@/hooks/useAuth";
 import ClienteMultiSelect, { ClienteSelecionado } from "./ClienteMultiSelect";
@@ -45,7 +45,9 @@ const WishlistSolicitacaoModal: React.FC<WishlistSolicitacaoModalProps> = ({
   onClose,
 }) => {
   const { addWishlistItem, fetchWishlistItems } = useWishlist();
-  const { clientes, loading: loadingClientes, fetchClientesPorEmpresa } = useClientesPorEmpresa();
+  // Estados para clientes
+  const [clientes, setClientes] = useState<any[]>([]);
+  const [loadingClientes, setLoadingClientes] = useState(false);
   const { createAcaoCrm } = useCrm();
   const { user } = useAuth();
 
@@ -104,9 +106,43 @@ const WishlistSolicitacaoModal: React.FC<WishlistSolicitacaoModalProps> = ({
   // Carregar clientes quando empresa demandada é selecionada
   useEffect(() => {
     if (empresaDemandada && currentStep === "clientes") {
-      fetchClientesPorEmpresa(empresaDemandada);
+      const fetchClientesEmpresa = async () => {
+        setLoadingClientes(true);
+        try {
+          const { data, error } = await supabase
+            .from('empresas')
+            .select('id, nome, tipo, descricao, status')
+            .eq('tipo', 'cliente')
+            .eq('status', true)
+            .order('nome');
+
+          if (error) throw error;
+
+          const clientesFormatados = (data || []).map(empresa => ({
+            id: empresa.id,
+            nome: empresa.nome,
+            tipo: empresa.tipo,
+            descricao: empresa.descricao,
+            status: empresa.status,
+            empresa_proprietaria: null
+          }));
+
+          setClientes(clientesFormatados);
+        } catch (err) {
+          console.error('Erro ao carregar clientes:', err);
+          toast({
+            title: 'Erro',
+            description: 'Não foi possível carregar os clientes',
+            variant: 'destructive',
+          });
+        } finally {
+          setLoadingClientes(false);
+        }
+      };
+
+      fetchClientesEmpresa();
     }
-  }, [empresaDemandada, currentStep, fetchClientesPorEmpresa]);
+  }, [empresaDemandada, currentStep]);
 
   // Carregar clientes para reciprocidade quando entrar no step
   useEffect(() => {

@@ -5,6 +5,7 @@ import { Fish, Target } from "lucide-react";
 import ClienteSelector from '@/components/cliente-fishbone/ClienteSelector';
 import FishboneVisualization from '@/components/cliente-fishbone/FishboneVisualization';
 import FishboneControls from '@/components/cliente-fishbone/FishboneControls';
+import FishboneErrorBoundary from '@/components/cliente-fishbone/ErrorBoundary';
 import { useClienteFishbone } from '@/hooks/useClienteFishbone';
 import LoadingScreen from '@/components/ui/LoadingScreen';
 
@@ -148,11 +149,13 @@ const ClienteFishbonePage: React.FC = () => {
                   </div>
                 </div>
               ) : (
-                <FishboneVisualization
-                  fishboneData={fishboneData}
-                  zoomLevel={filtros.zoomLevel}
-                  onNodeClick={handleNodeClick}
-                />
+                <FishboneErrorBoundary>
+                  <FishboneVisualization
+                    fishboneData={fishboneData}
+                    zoomLevel={filtros.zoomLevel}
+                    onNodeClick={handleNodeClick}
+                  />
+                </FishboneErrorBoundary>
               )}
             </CardContent>
           </Card>
