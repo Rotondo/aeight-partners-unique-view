@@ -2,21 +2,35 @@ import React, { useState } from 'react';
 import ClienteHead from './ClienteHead';
 import FishboneSpine from './FishboneSpine';
 import FornecedorDot from './FornecedorDot';
+import EtapaDetailsModal from './EtapaDetailsModal';
+import FornecedorSelectionModal from './FornecedorSelectionModal';
 import { ClienteFishboneView, FishboneZoomLevel } from '@/types/cliente-fishbone';
+import { useToast } from "@/hooks/use-toast";
 
 interface FishboneVisualizationProps {
   fishboneData: ClienteFishboneView[];
   zoomLevel: FishboneZoomLevel;
   onNodeClick?: (nodeId: string, nodeType: string) => void;
+  onDataRefresh?: () => void;
 }
 
 const FishboneVisualization: React.FC<FishboneVisualizationProps> = ({
   fishboneData,
   zoomLevel,
-  onNodeClick
+  onNodeClick,
+  onDataRefresh
 }) => {
   const [expandedEtapas, setExpandedEtapas] = useState<Set<string>>(new Set());
   const [expandedSubniveis, setExpandedSubniveis] = useState<Set<string>>(new Set());
+  const [selectedEtapa, setSelectedEtapa] = useState<any>(null);
+  const [showEtapaDetails, setShowEtapaDetails] = useState(false);
+  const [showFornecedorSelection, setShowFornecedorSelection] = useState(false);
+  const [selectionContext, setSelectionContext] = useState<{
+    clienteId: string;
+    etapaId: string;
+    subnivelId?: string;
+  } | null>(null);
+  const { toast } = useToast();
 
   if (!fishboneData || fishboneData.length === 0) {
     return (
@@ -57,6 +71,38 @@ const FishboneVisualization: React.FC<FishboneVisualizationProps> = ({
       newExpanded.add(etapaId);
     }
     setExpandedEtapas(newExpanded);
+  };
+
+  const handleShowEtapaDetails = (etapa: any) => {
+    setSelectedEtapa(etapa);
+    setShowEtapaDetails(true);
+  };
+
+  const handleAddFornecedor = (etapaId: string, subnivelId?: string) => {
+    if (!fishboneData[0]?.cliente?.id) {
+      toast({
+        title: "Erro",
+        description: "Cliente não identificado",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setSelectionContext({
+      clienteId: fishboneData[0].cliente.id,
+      etapaId,
+      subnivelId
+    });
+    setShowFornecedorSelection(true);
+    setShowEtapaDetails(false);
+  };
+
+  const handleFornecedorAdded = () => {
+    onDataRefresh?.();
+    toast({
+      title: "Sucesso",
+      description: "Fornecedor adicionado com sucesso"
+    });
   };
 
   const renderFornecedores = (
@@ -118,6 +164,7 @@ const FishboneVisualization: React.FC<FishboneVisualizationProps> = ({
                 etapa={etapa}
                 isExpanded={isExpanded}
                 onToggleExpanded={() => handleToggleEtapa(etapa.id)}
+                onShowDetails={() => handleShowEtapaDetails(etapa)}
                 position={{ x: spineStartX, y: spineStartY }}
                 angle={baseAngle}
               />
@@ -171,6 +218,36 @@ const FishboneVisualization: React.FC<FishboneVisualizationProps> = ({
           );
         })}
       </svg>
+
+      {/* Modals */}
+      {selectedEtapa && (
+        <EtapaDetailsModal
+          isOpen={showEtapaDetails}
+          onClose={() => setShowEtapaDetails(false)}
+          etapa={selectedEtapa}
+          onAddFornecedor={handleAddFornecedor}
+          onEditFornecedor={(fornecedorId) => {
+            toast({
+              title: "Funcionalidade em desenvolvimento",
+              description: "A edição de fornecedores será implementada em breve"
+            });
+          }}
+        />
+      )}
+
+      {selectionContext && (
+        <FornecedorSelectionModal
+          isOpen={showFornecedorSelection}
+          onClose={() => {
+            setShowFornecedorSelection(false);
+            setSelectionContext(null);
+          }}
+          clienteId={selectionContext.clienteId}
+          etapaId={selectionContext.etapaId}
+          subnivelId={selectionContext.subnivelId}
+          onFornecedorAdded={handleFornecedorAdded}
+        />
+      )}
     </div>
   );
 };

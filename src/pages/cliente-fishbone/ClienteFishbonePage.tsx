@@ -42,8 +42,15 @@ const ClienteFishbonePage: React.FC = () => {
     cliente,
     etapas,
     stats,
-    clientes
+    clientes,
+    retry
   } = useClienteFishbone({ clienteIds: filtros.clienteId ? [filtros.clienteId] : [] });
+
+  const carregarDadosCliente = (clienteId: string) => {
+    if (retry?.carregarDadosCliente) {
+      retry.carregarDadosCliente();
+    }
+  };
 
   const handleClienteSelectionChange = (ids: string[]) => {
     setFiltros(prev => ({
@@ -154,6 +161,12 @@ const ClienteFishbonePage: React.FC = () => {
                     fishboneData={fishboneData}
                     zoomLevel={filtros.zoomLevel}
                     onNodeClick={handleNodeClick}
+                    onDataRefresh={() => {
+                      // Force refresh by updating the hook dependency
+                      if (filtros.clienteId) {
+                        setFiltros(prev => ({ ...prev }));
+                      }
+                    }}
                   />
                 </FishboneErrorBoundary>
               )}
@@ -167,22 +180,26 @@ const ClienteFishbonePage: React.FC = () => {
                 <CardTitle className="text-sm">Legenda</CardTitle>
               </CardHeader>
               <CardContent className="pt-2">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-xs">
                   <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded bg-primary"></div>
-                    <span>Cliente</span>
+                    <div className="w-3 h-3 rounded" style={{ backgroundColor: 'hsl(var(--fishbone-partner))' }}></div>
+                    <span>Parceiro Ativo</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded bg-secondary"></div>
-                    <span>Etapa</span>
+                    <div className="w-3 h-3 rounded" style={{ backgroundColor: 'hsl(var(--fishbone-supplier))' }}></div>
+                    <span>Empresa/Intragrupo</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded bg-primary"></div>
-                    <span>Parceiro</span>
+                    <div className="w-3 h-3 rounded" style={{ backgroundColor: 'hsl(var(--fishbone-gap-critical))' }}></div>
+                    <span>Gap Crítico</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded bg-destructive"></div>
-                    <span>Fornecedor</span>
+                    <div className="w-3 h-3 rounded" style={{ backgroundColor: 'hsl(var(--fishbone-gap-warning))' }}></div>
+                    <span>Poucos Fornecedores</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded" style={{ backgroundColor: 'hsl(var(--primary))' }}></div>
+                    <span>Cliente Selecionado</span>
                   </div>
                 </div>
               </CardContent>

@@ -35,6 +35,14 @@
     --warning: 38 92% 50%;
     --warning-foreground: 222.2 47.4% 11.2%;
 
+    /* Fishbone specific colors */
+    --fishbone-partner: 142 76% 36%;
+    --fishbone-supplier: 201 89% 48%;
+    --fishbone-gap-critical: 0 84.2% 60.2%;
+    --fishbone-gap-warning: 38 92% 50%;
+    --fishbone-spine-active: 142 76% 36%;
+    --fishbone-spine-inactive: 215.4 16.3% 46.9%;
+
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
     --ring: 222.2 84% 4.9%;

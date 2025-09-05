@@ -20,13 +20,16 @@ const FornecedorDot: React.FC<FornecedorDotProps> = ({
 }) => {
   const getColor = () => {
     if (fornecedor.is_parceiro) {
-      return 'hsl(var(--primary))';
+      return 'hsl(var(--fishbone-partner))';
     }
-    return 'hsl(var(--destructive))';
+    return 'hsl(var(--fishbone-supplier))';
   };
 
   const getSize = () => {
-    if (fornecedor.performance_score && fornecedor.performance_score > 70) {
+    if (fornecedor.performance_score && fornecedor.performance_score > 80) {
+      return 10;
+    }
+    if (fornecedor.performance_score && fornecedor.performance_score > 60) {
       return 8;
     }
     return 6;
@@ -43,7 +46,7 @@ const FornecedorDot: React.FC<FornecedorDotProps> = ({
             fill={getColor()}
             stroke="white"
             strokeWidth="2"
-            className="cursor-pointer hover:opacity-80 transition-opacity"
+            className="cursor-pointer hover:scale-110 transition-all duration-200 hover:stroke-width-3"
             onDoubleClick={onDoubleClick}
           />
         </TooltipTrigger>
