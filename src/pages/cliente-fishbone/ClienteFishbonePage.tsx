@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Fish, Target } from "lucide-react";
+import { Fish, Target, BarChart3 } from "lucide-react";
 import ClienteSelector from '@/components/cliente-fishbone/ClienteSelector';
 import FishboneVisualization from '@/components/cliente-fishbone/FishboneVisualization';
 import FishboneControls from '@/components/cliente-fishbone/FishboneControls';
 import FishboneErrorBoundary from '@/components/cliente-fishbone/ErrorBoundary';
+import InsightsDashboard from '@/components/cliente-fishbone/InsightsDashboard';
 import { useClienteFishbone } from '@/hooks/useClienteFishbone';
+import { useToast } from "@/hooks/use-toast";
 import LoadingScreen from '@/components/ui/LoadingScreen';
 
 // Tipos locais para filtros
@@ -80,9 +82,34 @@ const ClienteFishbonePage: React.FC = () => {
     }));
   };
 
+  const { toast } = useToast();
+
   const handleNodeClick = (nodeId: string, nodeType: string) => {
     console.log('Node clicked:', nodeId, nodeType);
     // Ação customizada
+  };
+
+  const handleQuickAction = (action: string, data: any) => {
+    switch (action) {
+      case 'fill_critical_gaps':
+        toast({
+          title: "Ação rápida",
+          description: `Identificamos ${data?.length || 0} gaps críticos para preenchimento`
+        });
+        break;
+      case 'diversify_suppliers':
+        toast({
+          title: "Diversificação",
+          description: `${data?.length || 0} etapas precisam de mais fornecedores`
+        });
+        break;
+      case 'promote_partners':
+        toast({
+          title: "Promoção de parceiros",
+          description: "Identifique fornecedores para promover a parceiros"
+        });
+        break;
+    }
   };
 
   if (loading) {
@@ -106,8 +133,8 @@ const ClienteFishbonePage: React.FC = () => {
       </Card>
 
       {/* Layout Principal */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Sidebar - Seletor e Controles */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        {/* Sidebar Esquerda - Seletor e Controles */}
         <div className="lg:col-span-1 space-y-4">
           <ClienteSelector
             clientes={clientes || []}
@@ -206,6 +233,30 @@ const ClienteFishbonePage: React.FC = () => {
             </Card>
           )}
         </div>
+
+        {/* Sidebar Direita - Insights */}
+        {filtros.clienteId && (
+          <div className="lg:col-span-1 space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <BarChart3 className="h-4 w-4" />
+                  Insights & Ações
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <InsightsDashboard
+                  fishboneData={fishboneData}
+                  onAddFornecedor={(etapaId, subnivelId) => {
+                    // Trigger the add fornecedor flow
+                    console.log('Add fornecedor from insights:', etapaId, subnivelId);
+                  }}
+                  onQuickAction={handleQuickAction}
+                />
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </div>
     </div>
   );
