@@ -34,49 +34,10 @@ const AuthContext = createContext<AuthContextType>({
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   console.log('[Auth] AuthProvider initializing...');
 
-  // Safeguard: Check if React is available
-  if (!React || typeof React.useState !== 'function') {
-    console.error('[Auth] React hooks are not available!');
-    return (
-      <div style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center', 
-        minHeight: '100vh',
-        background: '#f9fafb',
-        fontFamily: 'system-ui'
-      }}>
-        <div style={{ 
-          textAlign: 'center', 
-          padding: '2rem', 
-          background: 'white', 
-          borderRadius: '8px',
-          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-        }}>
-          <h2 style={{ color: '#dc2626', marginBottom: '1rem' }}>Authentication Error</h2>
-          <p style={{ marginBottom: '1rem', color: '#4b5563' }}>React hooks are not properly loaded.</p>
-          <button 
-            onClick={() => window.location.reload()}
-            style={{ 
-              padding: '0.75rem 1.5rem', 
-              background: '#3b82f6', 
-              color: 'white', 
-              border: 'none', 
-              borderRadius: '6px', 
-              cursor: 'pointer' 
-            }}
-          >
-            Reload Application
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  const [user, setUser] = React.useState<User | null>(null);
-  const [loading, setLoading] = React.useState<boolean>(true);
-  const [error, setError] = React.useState<string | null>(null);
-  const [retryCount, setRetryCount] = React.useState<number>(0);
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState<number>(0);
 
   const isDevelopment = process.env.NODE_ENV === 'development';
 
@@ -178,7 +139,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     let mounted = true;
     
     const initAuth = async () => {

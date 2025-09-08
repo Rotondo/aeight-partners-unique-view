@@ -108,60 +108,37 @@ export const useClienteFishbone = (filtros: { clienteIds?: string[] }) => {
   }, []);
 
   /**
-   * Busca todos os clientes ativos que são clientes das empresas do grupo intragrupo.
-   * Utiliza a tabela empresa_clientes, garantindo que o campo empresa_proprietaria seja do tipo 'intragrupo'.
-   * Só retorna clientes ativos, evitando duplicidade.
+   * Busca todos os clientes ativos - simplificado para mostrar todas empresas do tipo cliente.
    */
   const fetchClientes = useCallback(async () => {
     setLoadingClientes(true);
     try {
-      console.log('[useClienteFishbone] Carregando lista de clientes...');
+      console.log('[useClienteFishbone] Carregando todos os clientes ativos...');
       
       const data = await retryAsync(async () => {
-        // Busca todas as relações empresa_proprietaria (intragrupo) -> empresa_cliente
-        // Fixed: Removed problematic order by nested field and logo_url field
         const { data, error } = await supabase
-          .from('empresa_clientes')
-          .select(`
-            empresa_cliente:empresas!empresa_clientes_empresa_cliente_id_fkey(id, nome, descricao, tipo, status),
-            empresa_proprietaria:empresas!empresa_clientes_empresa_proprietaria_id_fkey(id, nome, tipo)
-          `);
+          .from('empresas')
+          .select('id, nome, tipo, descricao, status')
+          .eq('tipo', 'cliente')
+          .eq('status', true)
+          .order('nome');
 
         if (error) {
-          console.error('[useClienteFishbone] Erro na query empresa_clientes:', error);
+          console.error('[useClienteFishbone] Erro ao buscar clientes:', error);
           throw new Error(error.message);
         }
         
         return data;
       });
 
-      // Filtra apenas empresas clientes ativas, vinculadas a proprietárias do tipo intragrupo
-      const clientesFormatados: ClienteOption[] = (data || [])
-        .filter((rel: EmpresaClienteRelation) => {
-          const isValid = rel.empresa_cliente &&
-            rel.empresa_cliente.status === true &&
-            rel.empresa_proprietaria &&
-            rel.empresa_proprietaria.tipo === 'intragrupo';
-          
-          if (!isValid) {
-            console.log('[useClienteFishbone] Cliente filtrado:', rel.empresa_cliente?.nome, 'status:', rel.empresa_cliente?.status, 'proprietaria tipo:', rel.empresa_proprietaria?.tipo);
-          }
-          
-          return isValid;
-        })
-        .map((rel: EmpresaClienteRelation): ClienteOption => ({
-          id: rel.empresa_cliente!.id,
-          nome: rel.empresa_cliente!.nome,
-          tipo: rel.empresa_cliente!.tipo,
-          descricao: rel.empresa_cliente!.descricao,
-          status: rel.empresa_cliente!.status,
-          empresa_proprietaria: {
-            id: rel.empresa_proprietaria!.id,
-            nome: rel.empresa_proprietaria!.nome,
-            tipo: rel.empresa_proprietaria!.tipo,
-          },
-        }))
-        .sort((a, b) => a.nome.localeCompare(b.nome)); // Sort after filtering
+      const clientesFormatados: ClienteOption[] = (data || []).map(empresa => ({
+        id: empresa.id,
+        nome: empresa.nome,
+        tipo: empresa.tipo,
+        descricao: empresa.descricao,
+        status: empresa.status,
+        empresa_proprietaria: null // Simplificado - sem relação proprietária por enquanto
+      }));
 
       console.log('[useClienteFishbone] Clientes carregados com sucesso:', clientesFormatados.length);
       setClientes(clientesFormatados);
@@ -178,41 +155,48 @@ export const useClienteFishbone = (filtros: { clienteIds?: string[] }) => {
    * Busca dados detalhados do cliente selecionado e seus mapeamentos (fornecedores por etapa/subnível).
    */
   const carregarDadosCliente = useCallback(async (id: string) => {
+    // Previne múltiplas chamadas simultâneas
+    if (loadingDadosCliente) {
+      console.log('[useClienteFishbone] Carregamento já em andamento, ignorando chamada duplicada');
+      return;
+    }
+
     setLoadingDadosCliente(true);
     setError(null);
+    
     try {
       console.log('[useClienteFishbone] Carregando dados do cliente:', id);
       
-      const [clienteData, mapeamentosData] = await retryAsync(async () => {
-        const [clienteRes, mapeamentosRes] = await Promise.all([
-          supabase.from('empresas').select('*').eq('id', id).single(),
-          supabase
-            .from('cliente_etapa_fornecedores')
-            .select('*, empresa_fornecedora:empresas(*)')
-            .eq('cliente_id', id)
-            .eq('ativo', true),
-        ]);
+      // Query sem retry - uma tentativa apenas para evitar loop
+      const [clienteRes, mapeamentosRes] = await Promise.all([
+        supabase.from('empresas').select('*').eq('id', id).single(),
+        supabase
+          .from('cliente_etapa_fornecedores')
+          .select(`
+            *,
+            empresa_fornecedora:empresas!cliente_etapa_fornecedores_empresa_fornecedora_id_fkey(*)
+          `)
+          .eq('cliente_id', id)
+          .eq('ativo', true),
+      ]);
 
-        if (clienteRes.error) {
-          console.error('[useClienteFishbone] Erro ao buscar cliente:', clienteRes.error);
-          throw new Error(`Cliente não encontrado: ${clienteRes.error.message}`);
-        }
-        
-        if (mapeamentosRes.error) {
-          console.error('[useClienteFishbone] Erro ao buscar mapeamentos:', mapeamentosRes.error);
-          throw new Error(`Erro ao buscar mapeamentos: ${mapeamentosRes.error.message}`);
-        }
-        
-        return [clienteRes.data, mapeamentosRes.data];
-      });
+      if (clienteRes.error) {
+        console.error('[useClienteFishbone] Erro ao buscar cliente:', clienteRes.error);
+        throw new Error(`Cliente não encontrado: ${clienteRes.error.message}`);
+      }
       
-      console.log('[useClienteFishbone] Cliente carregado:', clienteData?.nome);
-      console.log('[useClienteFishbone] Mapeamentos carregados:', mapeamentosData?.length);
+      if (mapeamentosRes.error) {
+        console.error('[useClienteFishbone] Erro ao buscar mapeamentos:', mapeamentosRes.error);
+        throw new Error(`Erro ao buscar mapeamentos: ${mapeamentosRes.error.message}`);
+      }
       
-      setCliente(clienteData);
+      console.log('[useClienteFishbone] Cliente carregado:', clienteRes.data?.nome);
+      console.log('[useClienteFishbone] Mapeamentos carregados:', mapeamentosRes.data?.length);
+      
+      setCliente(clienteRes.data);
 
       // Corrige o tipo de empresa_fornecedora para garantir compatibilidade com MapeamentoFornecedor
-      const mapeamentosCorrigidos: MapeamentoFornecedor[] = (mapeamentosData || []).map((mapeamento: Record<string, any>): MapeamentoFornecedor => {
+      const mapeamentosCorrigidos: MapeamentoFornecedor[] = (mapeamentosRes.data || []).map((mapeamento: Record<string, any>): MapeamentoFornecedor => {
         return {
           id: mapeamento.id,
           cliente_id: mapeamento.cliente_id,
@@ -235,26 +219,33 @@ export const useClienteFishbone = (filtros: { clienteIds?: string[] }) => {
     } catch (err: unknown) {
       console.error('[useClienteFishbone] Erro ao carregar dados do cliente:', err);
       setError(err instanceof Error ? err.message : 'Erro desconhecido ao carregar dados do cliente');
+      // Limpa dados em caso de erro para evitar estado inconsistente
+      setCliente(null);
+      setMapeamentos([]);
     } finally {
       setLoadingDadosCliente(false);
     }
-  }, []);
+  }, [loadingDadosCliente]);
 
-  // Carrega estrutura e clientes no mount
+  // Carrega estrutura e clientes no mount (apenas uma vez)
   useEffect(() => {
     fetchEstruturaJornada();
     fetchClientes();
-  }, [fetchEstruturaJornada, fetchClientes]);
+  }, []); // Array vazio para executar apenas no mount
 
-  // Carrega dados do cliente selecionado
+  // Carrega dados do cliente selecionado (com debounce implícito via guard clause)
   useEffect(() => {
-    if (filtros?.clienteIds && filtros.clienteIds.length === 1) {
-      carregarDadosCliente(filtros.clienteIds[0]);
-    } else {
+    const clienteId = filtros?.clienteIds?.[0];
+    
+    if (clienteId && clienteId !== cliente?.id && !loadingDadosCliente) {
+      carregarDadosCliente(clienteId);
+    } else if (!clienteId) {
+      // Limpa dados apenas se não há cliente selecionado
       setCliente(null);
       setMapeamentos([]);
+      setError(null);
     }
-  }, [filtros?.clienteIds, carregarDadosCliente]);
+  }, [filtros?.clienteIds?.[0]]); // Apenas o primeiro clienteId como dependência
 
   /**
    * Monta a estrutura do diagrama Fishbone para o cliente selecionado,

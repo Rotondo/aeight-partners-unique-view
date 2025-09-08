@@ -2,21 +2,36 @@ import React, { useState } from 'react';
 import ClienteHead from './ClienteHead';
 import FishboneSpine from './FishboneSpine';
 import FornecedorDot from './FornecedorDot';
+import EtapaDetailsModal from './EtapaDetailsModal';
+import FornecedorSelectionModal from './FornecedorSelectionModal';
+import FishboneCanvas from './FishboneCanvas';
 import { ClienteFishboneView, FishboneZoomLevel } from '@/types/cliente-fishbone';
+import { useToast } from "@/hooks/use-toast";
 
 interface FishboneVisualizationProps {
   fishboneData: ClienteFishboneView[];
   zoomLevel: FishboneZoomLevel;
   onNodeClick?: (nodeId: string, nodeType: string) => void;
+  onDataRefresh?: () => void;
 }
 
 const FishboneVisualization: React.FC<FishboneVisualizationProps> = ({
   fishboneData,
   zoomLevel,
-  onNodeClick
+  onNodeClick,
+  onDataRefresh
 }) => {
   const [expandedEtapas, setExpandedEtapas] = useState<Set<string>>(new Set());
   const [expandedSubniveis, setExpandedSubniveis] = useState<Set<string>>(new Set());
+  const [selectedEtapa, setSelectedEtapa] = useState<any>(null);
+  const [showEtapaDetails, setShowEtapaDetails] = useState(false);
+  const [showFornecedorSelection, setShowFornecedorSelection] = useState(false);
+  const [selectionContext, setSelectionContext] = useState<{
+    clienteId: string;
+    etapaId: string;
+    subnivelId?: string;
+  } | null>(null);
+  const { toast } = useToast();
 
   if (!fishboneData || fishboneData.length === 0) {
     return (
@@ -59,6 +74,38 @@ const FishboneVisualization: React.FC<FishboneVisualizationProps> = ({
     setExpandedEtapas(newExpanded);
   };
 
+  const handleShowEtapaDetails = (etapa: any) => {
+    setSelectedEtapa(etapa);
+    setShowEtapaDetails(true);
+  };
+
+  const handleAddFornecedor = (etapaId: string, subnivelId?: string) => {
+    if (!fishboneData[0]?.cliente?.id) {
+      toast({
+        title: "Erro",
+        description: "Cliente não identificado",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setSelectionContext({
+      clienteId: fishboneData[0].cliente.id,
+      etapaId,
+      subnivelId
+    });
+    setShowFornecedorSelection(true);
+    setShowEtapaDetails(false);
+  };
+
+  const handleFornecedorAdded = () => {
+    onDataRefresh?.();
+    toast({
+      title: "Sucesso",
+      description: "Fornecedor adicionado com sucesso"
+    });
+  };
+
   const renderFornecedores = (
     fornecedores: any[], 
     basePosition: { x: number; y: number },
@@ -82,96 +129,131 @@ const FishboneVisualization: React.FC<FishboneVisualizationProps> = ({
   };
 
   return (
-    <div className="h-[600px] w-full border rounded-lg bg-background relative overflow-hidden">
-      <svg width="100%" height="100%" className="absolute inset-0">
-        {/* Linha principal (espinha dorsal) */}
-        <line
-          x1={centerX - 150}
-          y1={centerY}
-          x2={centerX + 400}
-          y2={centerY}
-          stroke="hsl(var(--primary))"
-          strokeWidth="4"
-          strokeDasharray="5,5"
-          className="opacity-60"
-        />
+    <>
+    <FishboneCanvas
+      fishboneData={fishboneData}
+      zoomLevel={zoomLevel}
+      onNodeClick={onNodeClick}
+    >
+      {/* Linha principal (espinha dorsal) */}
+      <line
+        x1={centerX - 150}
+        y1={centerY}
+        x2={centerX + 400}
+        y2={centerY}
+        stroke="hsl(var(--primary))"
+        strokeWidth="4"
+        strokeDasharray="5,5"
+        className="opacity-60"
+      />
 
-        {/* Cabeça do cliente */}
-        <ClienteHead
-          cliente={clienteView.cliente}
-          stats={stats}
-          position={{ x: centerX - 150, y: centerY }}
-        />
+      {/* Cabeça do cliente */}
+      <ClienteHead
+        cliente={clienteView.cliente}
+        stats={stats}
+        position={{ x: centerX - 150, y: centerY }}
+      />
 
-        {/* Etapas como espinhas */}
-        {clienteView.etapas.map((etapa, index) => {
-          const isEven = index % 2 === 0;
-          const baseAngle = isEven ? -Math.PI / 6 : Math.PI / 6; // 30 graus para cima ou para baixo
-          const spineStartX = centerX + (index * 120);
-          const spineStartY = centerY;
-          
-          const isExpanded = expandedEtapas.has(etapa.id);
+      {/* Etapas como espinhas */}
+      {clienteView.etapas.map((etapa, index) => {
+        const isEven = index % 2 === 0;
+        const baseAngle = isEven ? -Math.PI / 6 : Math.PI / 6;
+        const spineStartX = centerX + (index * 120);
+        const spineStartY = centerY;
+        
+        const isExpanded = expandedEtapas.has(etapa.id);
 
-          return (
-            <g key={etapa.id}>
-              <FishboneSpine
-                etapa={etapa}
-                isExpanded={isExpanded}
-                onToggleExpanded={() => handleToggleEtapa(etapa.id)}
-                position={{ x: spineStartX, y: spineStartY }}
-                angle={baseAngle}
-              />
+        return (
+          <g key={etapa.id}>
+            <FishboneSpine
+              etapa={etapa}
+              isExpanded={isExpanded}
+              onToggleExpanded={() => handleToggleEtapa(etapa.id)}
+              onShowDetails={() => handleShowEtapaDetails(etapa)}
+              position={{ x: spineStartX, y: spineStartY }}
+              angle={baseAngle}
+            />
 
-              {/* Renderizar fornecedores se expandido e zoom permite */}
-              {isExpanded && (zoomLevel.showAllFornecedores || zoomLevel.level === 'detailed') && (
-                <>
-                  {/* Fornecedores diretos da etapa */}
-                  {renderFornecedores(
-                    etapa.fornecedores,
-                    {
-                      x: spineStartX + Math.cos(baseAngle) * 120,
-                      y: spineStartY + Math.sin(baseAngle) * 120
-                    },
-                    baseAngle
-                  )}
+            {/* Renderizar fornecedores se expandido */}
+            {isExpanded && (zoomLevel.showAllFornecedores || zoomLevel.level === 'detailed') && (
+              <>
+                {/* Fornecedores diretos da etapa */}
+                {renderFornecedores(
+                  etapa.fornecedores,
+                  {
+                    x: spineStartX + Math.cos(baseAngle) * 120,
+                    y: spineStartY + Math.sin(baseAngle) * 120
+                  },
+                  baseAngle
+                )}
 
-                  {/* Subníveis e seus fornecedores */}
-                  {zoomLevel.showSubniveis && etapa.subniveis.map((subnivel, subIndex) => {
-                    const subAngle = baseAngle + (subIndex - etapa.subniveis.length / 2 + 0.5) * 0.4;
-                    const subBaseX = spineStartX + Math.cos(baseAngle) * 80;
-                    const subBaseY = spineStartY + Math.sin(baseAngle) * 80;
-                    const subEndX = subBaseX + Math.cos(subAngle) * 60;
-                    const subEndY = subBaseY + Math.sin(subAngle) * 60;
+                {/* Subníveis e seus fornecedores */}
+                {zoomLevel.showSubniveis && etapa.subniveis.map((subnivel, subIndex) => {
+                  const subAngle = baseAngle + (subIndex - etapa.subniveis.length / 2 + 0.5) * 0.4;
+                  const subBaseX = spineStartX + Math.cos(baseAngle) * 80;
+                  const subBaseY = spineStartY + Math.sin(baseAngle) * 80;
+                  const subEndX = subBaseX + Math.cos(subAngle) * 60;
+                  const subEndY = subBaseY + Math.sin(subAngle) * 60;
 
-                    return (
-                      <g key={subnivel.id}>
-                        {/* Linha do subnível */}
-                        <line
-                          x1={subBaseX}
-                          y1={subBaseY}
-                          x2={subEndX}
-                          y2={subEndY}
-                          stroke={etapa.cor || 'hsl(var(--secondary))'}
-                          strokeWidth="2"
-                        />
-                        
-                        {/* Fornecedores do subnível */}
-                        {renderFornecedores(
-                          subnivel.fornecedores,
-                          { x: subEndX, y: subEndY },
-                          subAngle,
-                          40
-                        )}
-                      </g>
-                    );
-                  })}
-                </>
-              )}
-            </g>
-          );
-        })}
-      </svg>
-    </div>
+                  return (
+                    <g key={subnivel.id}>
+                      {/* Linha do subnível */}
+                      <line
+                        x1={subBaseX}
+                        y1={subBaseY}
+                        x2={subEndX}
+                        y2={subEndY}
+                        stroke={etapa.cor || 'hsl(var(--secondary))'}
+                        strokeWidth="2"
+                      />
+                      
+                      {/* Fornecedores do subnível */}
+                      {renderFornecedores(
+                        subnivel.fornecedores,
+                        { x: subEndX, y: subEndY },
+                        subAngle,
+                        40
+                      )}
+                    </g>
+                  );
+                })}
+              </>
+            )}
+          </g>
+        );
+      })}
+    </FishboneCanvas>
+
+    {/* Modals */}
+    {selectedEtapa && (
+      <EtapaDetailsModal
+        isOpen={showEtapaDetails}
+        onClose={() => setShowEtapaDetails(false)}
+        etapa={selectedEtapa}
+        onAddFornecedor={handleAddFornecedor}
+        onEditFornecedor={(fornecedorId) => {
+          toast({
+            title: "Funcionalidade em desenvolvimento",
+            description: "A edição de fornecedores será implementada em breve"
+          });
+        }}
+      />
+    )}
+
+    {selectionContext && (
+      <FornecedorSelectionModal
+        isOpen={showFornecedorSelection}
+        onClose={() => {
+          setShowFornecedorSelection(false);
+          setSelectionContext(null);
+        }}
+        clienteId={selectionContext.clienteId}
+        etapaId={selectionContext.etapaId}
+        subnivelId={selectionContext.subnivelId}
+        onFornecedorAdded={handleFornecedorAdded}
+      />
+    )}
+    </>
   );
 };
 

@@ -28,7 +28,7 @@ export interface MapeamentoFornecedor {
   empresa_fornecedora: Empresa;
 }
 
-// Interface for client options in selectors
+// Interface for client options in selectors - unified with useClientesPorEmpresa
 export interface ClienteOption {
   id: string;
   nome: string;
@@ -36,11 +36,11 @@ export interface ClienteOption {
   descricao?: string;
   logo_url?: string;
   status?: boolean;
-  empresa_proprietaria?: {
+  empresa_proprietaria: {
     id: string;
     nome: string;
     tipo: string;
-  };
+  } | null;
 }
 
 // Interface for fishbone zoom level control

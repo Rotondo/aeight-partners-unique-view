@@ -4,7 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { X, Users } from "lucide-react";
 import { MultiSelect } from "@/components/ui/MultiSelect";
-import { ClienteOption } from "@/hooks/useClientesPorEmpresa";
+import { ClienteOption } from "@/types/cliente-fishbone";
 
 interface ClienteSelectorProps {
   clientes: ClienteOption[];
@@ -65,9 +65,9 @@ const ClienteSelector: React.FC<ClienteSelectorProps> = ({
                     <span className="truncate max-w-32">
                       {cliente.nome}
                       {cliente.empresa_proprietaria && (
-                        <span className="ml-1 text-[10px] text-muted-foreground">
-                          ({cliente.empresa_proprietaria.nome} - {cliente.empresa_proprietaria.tipo})
-                        </span>
+                       <span className="ml-1 text-[10px] text-muted-foreground">
+                         ({cliente.empresa_proprietaria.nome} - {cliente.empresa_proprietaria.tipo})
+                       </span>
                       )}
                     </span>
                     <button
