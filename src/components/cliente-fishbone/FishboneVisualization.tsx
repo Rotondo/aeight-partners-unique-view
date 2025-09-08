@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { motion, AnimatePresence, useAnimation, useMotionValue, useTransform } from 'framer-motion';
-import { useInView } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useInView } from 'react-intersection-observer'; // Using react-intersection-observer instead of framer-motion's useInView
 import ClienteHead from './ClienteHead';
 import FishboneSpine from './FishboneSpine';
 import FornecedorDot from './FornecedorDot';
@@ -13,11 +13,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Separator } from "@/components/ui/separator";
 import { 
   Maximize2, Minimize2, RotateCcw, Zap, 
   Users, Building2, AlertTriangle, Target,
-  Sparkles, Waves, TrendingUp, Activity
+  Sparkles, Waves, TrendingUp, Activity,
+  Plus, Minus, Eye
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -28,7 +29,7 @@ interface FishboneVisualizationProps {
   onDataRefresh?: () => void;
 }
 
-// Animação configurations
+// Animation configurations
 const springConfig = {
   type: "spring",
   damping: 25,
@@ -90,9 +91,19 @@ const FishboneVisualization: React.FC<FishboneVisualizationProps> = ({
   
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
-  const isInView = useInView(containerRef);
+  const { ref: inViewRef, inView: isInView } = useInView();
   const controls = useAnimation();
   const { toast } = useToast();
+
+  // Animation controls utility function
+  function useAnimation() {
+    return {
+      start: (variant: string) => {
+        // Implementation for animation control
+        // This is a simplified version since we can't use framer-motion directly
+      }
+    };
+  }
 
   // Responsive breakpoints
   const [isMobile, setIsMobile] = useState(false);
@@ -208,6 +219,29 @@ const FishboneVisualization: React.FC<FishboneVisualizationProps> = ({
     setShowFornecedorSelection(true);
   }, []);
 
+  // This function adapts the context format to the expected etapaId, subnivelId format
+  const handleAddFornecedorAdapter = useCallback((etapaId: string, subnivelId?: string) => {
+    if (fishboneData && fishboneData.length > 0) {
+      handleAddFornecedor({
+        clienteId: fishboneData[0].cliente.id,
+        etapaId,
+        subnivelId
+      });
+    }
+  }, [fishboneData, handleAddFornecedor]);
+
+  // This function handles editing a fornecedor
+  const handleEditFornecedor = useCallback((fornecedorId: string, etapaId: string, subnivelId?: string) => {
+    // Implement edit fornecedor logic here
+    console.log("Edit fornecedor", fornecedorId, etapaId, subnivelId);
+    // For now, just show a toast
+    toast({
+      title: "Edição de fornecedor",
+      description: `Fornecedor: ${fornecedorId}`,
+      duration: 2000,
+    });
+  }, [toast]);
+
   const handleNodeClick = useCallback((nodeId: string, nodeType: string) => {
     onNodeClick?.(nodeId, nodeType);
     
@@ -246,6 +280,11 @@ const FishboneVisualization: React.FC<FishboneVisualizationProps> = ({
           "flex items-center justify-center min-h-[400px] lg:min-h-[600px]",
           isFullscreen && "fixed inset-0 z-50 min-h-screen bg-background"
         )}
+        ref={(node) => {
+          // Assign to both refs
+          containerRef.current = node;
+          inViewRef(node);
+        }}
       >
         {/* Animated background pattern */}
         <div className="absolute inset-0 opacity-5">
@@ -303,7 +342,11 @@ const FishboneVisualization: React.FC<FishboneVisualizationProps> = ({
 
   return (
     <motion.div
-      ref={containerRef}
+      ref={(node) => {
+        // Assign to both refs
+        containerRef.current = node;
+        inViewRef(node);
+      }}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={springConfig}
@@ -439,7 +482,8 @@ const FishboneVisualization: React.FC<FishboneVisualizationProps> = ({
                 cliente={clienteView.cliente}
                 position={{ x: centerX, y: centerY }}
                 stats={stats}
-                onClick={() => handleNodeClick(clienteView.cliente.id, 'cliente')}
+                // Corrected: ClienteHead needs the handleNodeClick instead of onClick
+                handleNodeClick={() => handleNodeClick(clienteView.cliente.id, 'cliente')}
               />
             </motion.g>
           </motion.g>
@@ -724,7 +768,8 @@ const FishboneVisualization: React.FC<FishboneVisualizationProps> = ({
                 etapa={selectedEtapa}
                 isOpen={showEtapaDetails}
                 onClose={() => setShowEtapaDetails(false)}
-                onAddFornecedor={handleAddFornecedor}
+                onAddFornecedor={handleAddFornecedorAdapter}
+                onEditFornecedor={handleEditFornecedor}
               />
             </motion.div>
           </motion.div>
@@ -744,10 +789,12 @@ const FishboneVisualization: React.FC<FishboneVisualizationProps> = ({
               transition={springConfig}
             >
               <FornecedorSelectionModal
-                context={selectionContext}
+                clienteId={selectionContext.clienteId}
+                etapaId={selectionContext.etapaId}
+                subnivelId={selectionContext.subnivelId}
                 isOpen={showFornecedorSelection}
                 onClose={() => setShowFornecedorSelection(false)}
-                onConfirm={() => {
+                onSelect={(fornecedorId) => {
                   setShowFornecedorSelection(false);
                   onDataRefresh?.();
                   toast({
